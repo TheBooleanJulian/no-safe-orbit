@@ -1,0 +1,58 @@
+{
+	"schema_version": 1,
+	"name": "Frigate Mk I",
+	"designer": "Template",
+	"modules": [
+		{ "id": "m1", "def": "nose_section", "pos": [2, 0, 0], "rot": 0 },
+		{ "id": "m2", "def": "fuselage_section", "pos": [2, 0, 4], "rot": 0 },
+		{ "id": "m3", "def": "fuselage_section", "pos": [2, 0, 8], "rot": 0 },
+		{ "id": "m4", "def": "engine_section", "pos": [2, 0, 12], "rot": 0 },
+		{ "id": "m5", "def": "side_pod", "pos": [0, 0, 6], "rot": 0 },
+		{ "id": "m6", "def": "side_pod", "pos": [6, 0, 6], "rot": 2 }
+	],
+	"rooms": [
+		{ "id": "r7", "def": "bridge", "deck": 1, "rect": [2, 0, 4, 3] },
+		{ "id": "r8", "def": "corridor", "deck": 1, "rect": [3, 3, 2, 10] },
+		{ "id": "r9", "def": "crew_quarters", "deck": 1, "rect": [2, 4, 1, 4] },
+		{ "id": "r10", "def": "crew_quarters", "deck": 1, "rect": [5, 4, 1, 4] },
+		{ "id": "r11", "def": "life_support", "deck": 1, "rect": [2, 8, 1, 4] },
+		{ "id": "r12", "def": "magazine", "deck": 1, "rect": [5, 8, 1, 4] },
+		{ "id": "r13", "def": "engine_room", "deck": 1, "rect": [2, 13, 4, 2] },
+		{ "id": "r14", "def": "corridor", "deck": 0, "rect": [2, 4, 4, 4] },
+		{ "id": "r15", "def": "reactor_room", "deck": 0, "rect": [2, 8, 4, 3] },
+		{ "id": "r16", "def": "cargo_hold", "deck": 0, "rect": [0, 6, 2, 6] },
+		{ "id": "r17", "def": "cargo_hold", "deck": 0, "rect": [6, 6, 2, 6] }
+	],
+	"hatches": [
+		{ "id": "h18", "a": [3, 1, 2], "b": [3, 1, 3] },
+		{ "id": "h19", "a": [3, 1, 5], "b": [2, 1, 5] },
+		{ "id": "h20", "a": [4, 1, 5], "b": [5, 1, 5] },
+		{ "id": "h21", "a": [3, 1, 9], "b": [2, 1, 9] },
+		{ "id": "h22", "a": [4, 1, 9], "b": [5, 1, 9] },
+		{ "id": "h23", "a": [3, 1, 12], "b": [3, 1, 13] },
+		{ "id": "h24", "a": [3, 1, 6], "b": [3, 0, 6] },
+		{ "id": "h25", "a": [3, 0, 7], "b": [3, 0, 8] },
+		{ "id": "h26", "a": [2, 0, 6], "b": [1, 0, 6] },
+		{ "id": "h27", "a": [5, 0, 6], "b": [6, 0, 6] }
+	],
+	"equipment": [
+		{ "id": "e28", "def": "fusion_reactor", "cell": [3, 0, 8] },
+		{ "id": "e29", "def": "main_engine", "cell": [3, 0, 14], "face": "aft" },
+		{ "id": "e30", "def": "main_engine", "cell": [4, 0, 14], "face": "aft" },
+		{ "id": "e31", "def": "main_engine", "cell": [3, 1, 14], "face": "aft" },
+		{ "id": "e32", "def": "main_engine", "cell": [4, 1, 14], "face": "aft" },
+		{ "id": "e33", "def": "rcs_block", "cell": [2, 1, 1], "face": "port" },
+		{ "id": "e34", "def": "rcs_block", "cell": [5, 1, 1], "face": "starboard" },
+		{ "id": "e35", "def": "rcs_block", "cell": [3, 1, 1], "face": "dorsal" },
+		{ "id": "e36", "def": "rcs_block", "cell": [4, 0, 1], "face": "ventral" },
+		{ "id": "e37", "def": "rcs_block", "cell": [2, 1, 13], "face": "port" },
+		{ "id": "e38", "def": "rcs_block", "cell": [5, 1, 13], "face": "starboard" },
+		{ "id": "e39", "def": "rcs_block", "cell": [3, 1, 13], "face": "dorsal" },
+		{ "id": "e40", "def": "rcs_block", "cell": [4, 0, 13], "face": "ventral" },
+		{ "id": "e41", "def": "kinetic_cannon", "cell": [3, 2, 4], "face": "dorsal" },
+		{ "id": "e42", "def": "radiator", "cell": [2, 2, 10], "face": "dorsal" },
+		{ "id": "e43", "def": "radiator", "cell": [5, 2, 10], "face": "dorsal" },
+		{ "id": "e44", "def": "radiator", "cell": [2, 0, 11], "face": "ventral" },
+		{ "id": "e45", "def": "radiator", "cell": [5, 0, 11], "face": "ventral" }
+	]
+}

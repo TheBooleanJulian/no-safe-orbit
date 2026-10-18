@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="HullModuleDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/hull_module_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"engine_section"
+display_name = "Engine section"
+size_cells = Vector3i(4, 2, 3)
+structure_mass_kg = 34000.0
+connectors = {
+"fore": "spine"
+}
+interior = true
+armor_mm = 20.0
+color = Color(0.5, 0.54, 0.6, 1)

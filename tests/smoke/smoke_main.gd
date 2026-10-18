@@ -35,6 +35,8 @@ func _run() -> void:
 
 	_check(main.world != null and main.world.has_ship(&"player") and main.world.has_ship(&"target_01"),
 		"world spawned player and target")
+	_check(main.world.get_ship(&"player").config.display_name == "Frigate Mk I",
+		"player flies the Frigate Mk I template compiled from its blueprint")
 	var player := main.world.get_ship(&"player")
 	var alt_km := main.world.altitude_of(player) / 1000.0
 	_check(absf(alt_km - 400.0) < 1.0, "player starts in Earth orbit at 400 km (actual %.2f km)" % alt_km)
@@ -46,7 +48,7 @@ func _run() -> void:
 	await _run_until_sim_time(main, 1.0)
 	Input.action_release("thrust_forward")
 	var fwd := -player.body_velocity().z
-	var expected := FRIGATE_ACCEL * 1.0
+	var expected := player.config.thrust_forward_n / player.config.mass_kg * 1.0
 	_check(fwd > expected * 0.8 and fwd < expected * 1.3,
 		"forward speed after ~1 s of W: expected ≈%.1f m/s, actual %.2f m/s" % [expected, fwd])
 
@@ -72,11 +74,12 @@ func _run() -> void:
 	await process_frame
 	_check(main.player_input.velocity_hold == PlayerInput.VelocityHold.TARGET and main.hud.flight_label.text.contains("MATCH TARGET"),
 		"X switches velocity hold to MATCH TARGET")
-	# RCS is 2 m/s² per axis, so 3 s removes ≥ ~6 m/s of relative velocity.
+	# Each axis nulls at the RCS limit, so 3 s removes at least ~0.8 × a·t.
 	await _run_until_sim_time(main, 3.0)
 	var rel_after := (player.velocity - target.velocity).length()
-	_check(rel_before - rel_after > 5.0,
-		"match-target assist reduces relative speed at the RCS limit (%.1f → %.1f m/s in 3 s)" % [rel_before, rel_after])
+	var a_rcs := player.config.thrust_lateral_n / player.config.mass_kg
+	_check(rel_before - rel_after > 0.8 * a_rcs * 3.0,
+		"match-target assist reduces relative speed at the RCS limit (%.1f → %.1f m/s in 3 s, a_rcs %.2f m/s²)" % [rel_before, rel_after, a_rcs])
 
 	# Toggle assist off through the real input path.
 	_press_action("toggle_flight_assist")
@@ -106,5 +109,3 @@ func _press_action(action: String) -> void:
 	ev.pressed = true
 	Input.parse_input_event(ev)
 
-
-const FRIGATE_ACCEL := 2.5e6 / 250_000.0  # placeholder frigate main-engine m/s²
