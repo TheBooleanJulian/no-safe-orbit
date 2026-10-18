@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/hud_overlay.gd" id="2_ovl"]
 [ext_resource type="Script" path="res://scripts/ui/radar_display.gd" id="3_radar"]
 [ext_resource type="Script" path="res://scripts/ui/controls_panel.gd" id="4_controls"]
+[ext_resource type="Script" path="res://scripts/ui/hit_cam.gd" id="5_hitcam"]
 
 [sub_resource type="SystemFont" id="SystemFont_mono"]
 font_names = PackedStringArray("DejaVu Sans Mono", "Consolas", "Menlo", "Monospace")
@@ -129,6 +130,20 @@ grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
 script = ExtResource("3_radar")
+
+[node name="HitCam" type="PanelContainer" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -436.0
+offset_top = 340.0
+offset_right = -16.0
+offset_bottom = 340.0
+grow_horizontal = 0
+mouse_filter = 2
+script = ExtResource("5_hitcam")
 
 [node name="HelpLabel" type="Label" parent="Root"]
 layout_mode = 1

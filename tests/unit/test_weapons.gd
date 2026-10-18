@@ -153,26 +153,37 @@ func test_segment_box_cases() -> void:
 	assert_near(HitTest.segment_box(Vector3(-5, 0, 0), Vector3(-2, 0, 0), c, h), -1.0, 0.0, "stops short: miss")
 
 
-func test_round_burns_up_at_entry_interface() -> void:
-	# Fired straight down at 1.5 km/s from 400 km with a long lifetime: removed
-	# when it crosses 100 km, well before its lifetime runs out.
-	var long_life: KineticCannonConfig = CONFIG.cannon.duplicate()
-	long_life.round_lifetime_s = 1000.0
+func test_round_coasts_far_and_reenters_on_time() -> void:
+	# Fired straight down at 1.5 km/s from 400 km: it leaves the engagement
+	# (far mode, analytic orbit) and is removed when its orbit crosses 100 km.
 	var world := _orbit_world()
-	world.add_ship(ShipState.create(&"s", "S", _config_with(long_life), Vector3.ZERO, Vector3.ZERO, Quaternion(Vector3.RIGHT, -PI / 2)))
+	world.add_ship(ShipState.create(&"s", "S", CONFIG, Vector3.ZERO, Vector3.ZERO, Quaternion(Vector3.RIGHT, -PI / 2)))
 	world.set_input(&"s", _fire_input())
 	world.step()
 	world.set_input(&"s", ShipControlInput.neutral())
 	var shot := world.projectiles()[0]
-	var last_alt := 0.0
-	var ticks := 0
-	while not world.projectiles().is_empty() and ticks < 60 * 400:
-		last_alt = world.frame.altitude(shot.position)
+	var orbit := OrbitElements.from_state(EARTH.mu_m3_s2, world.pci_position(shot.position), world.pci_velocity(shot.velocity))
+	var predicted := world.sim_time + orbit.time_to_radius_descending(EARTH.entry_radius_m())
+	var went_far := false
+	var gone_at := -1.0
+	while world.sim_time < predicted + 10.0:
 		world.step()
-		ticks += 1
-	assert_true(world.projectiles().is_empty(), "round removed")
-	assert_true(ticks * DT < long_life.round_lifetime_s, "removed before lifetime expired (%.1f s)" % (ticks * DT))
-	assert_near(last_alt, EARTH.entry_interface_altitude_m, 1500.0, "altitude when removed ≈ 100 km (m)")
+		went_far = went_far or not world.far_projectiles().is_empty()
+		if gone_at < 0.0 and world.round_count() == 0:
+			gone_at = world.sim_time
+	assert_true(went_far, "round left the engagement and coasted in far mode")
+	assert_near(gone_at, predicted, 1.5, "removed at its predicted entry-interface crossing (s)")
+
+
+func test_rounds_never_expire() -> void:
+	var world := WorldSimulation.new()
+	world.add_ship(ShipState.create(&"s", "S", CONFIG))
+	world.set_input(&"s", _fire_input())
+	world.step()
+	world.set_input(&"s", ShipControlInput.neutral())
+	for i in 60 * 60:  # a minute later
+		world.step()
+	assert_true(world.round_count() == 1, "the round is still flying after 60 s (%d)" % world.round_count())
 
 
 func test_intercept_time_known_geometry() -> void:

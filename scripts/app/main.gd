@@ -174,6 +174,9 @@ func _process(delta: float) -> void:
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
 	for ev in hits:
 		hit_flashes.add(ev)
+		if ev.shooter_id == PLAYER_ID and ev.report != null and _designs.has(ev.target_id):
+			var struck := world.get_ship(ev.target_id)
+			hud.hit_cam.show_hit(ev, _designs[ev.target_id], struck.systems, struck.display_name)
 
 	var render_origin := player.interpolated_position(alpha)
 	for id: StringName in _views:
