@@ -48,9 +48,12 @@ func _ready() -> void:
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
-## Keep the field fixed in world space while rendering around `render_origin`.
-func update_origin(render_origin: Vector3) -> void:
+## Keep the field fixed in the local frame while rendering around the render
+## origin. `continuous_origin` is the render origin in rebase-continuous
+## coordinates (WorldSimulation.continuous_position), so frame rebases never
+## make the dust jump.
+func update_origin(continuous_origin: Vec3d) -> void:
 	position = -Vector3(
-		fposmod(render_origin.x, tile_size_m),
-		fposmod(render_origin.y, tile_size_m),
-		fposmod(render_origin.z, tile_size_m))
+		fposmod(continuous_origin.x, tile_size_m),
+		fposmod(continuous_origin.y, tile_size_m),
+		fposmod(continuous_origin.z, tile_size_m))

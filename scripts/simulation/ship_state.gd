@@ -3,6 +3,12 @@ extends RefCounted
 ## Authoritative runtime state of one physical vessel. Rendering reads this;
 ## it never writes it. Positions are in the local engagement frame (metres).
 
+enum Status {
+	ACTIVE,
+	## Crossed the body's entry interface; no longer simulated.
+	ENTERED_ATMOSPHERE,
+}
+
 ## Stable identity — never derived from scene-tree position.
 var id: StringName
 var display_name: String
@@ -26,6 +32,16 @@ var last_torque_body: Vector3 = Vector3.ZERO
 ## thruster group burns propellant independently. Feeds the future propellant model.
 var delta_v_expended: float = 0.0
 
+var status: Status = Status.ACTIVE
+## Simulation time at which status last changed away from ACTIVE (s).
+var status_time: float = 0.0
+
+## Cannon state (unused when config.cannon is null).
+var cannon_rounds: int = 0
+var cannon_cooldown_s: float = 0.0
+var rounds_fired: int = 0
+var hits_taken: int = 0
+
 
 static func create(
 		p_id: StringName,
@@ -41,8 +57,14 @@ static func create(
 	state.position = p_position
 	state.velocity = p_velocity
 	state.orientation = p_orientation.normalized()
+	if p_config.cannon != null:
+		state.cannon_rounds = p_config.cannon.magazine_rounds
 	state.snapshot_previous()
 	return state
+
+
+func is_active() -> bool:
+	return status == Status.ACTIVE
 
 
 func snapshot_previous() -> void:

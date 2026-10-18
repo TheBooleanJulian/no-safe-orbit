@@ -1,12 +1,15 @@
 class_name HudOverlay
 extends Control
-## World-space markers drawn in screen space: heading reticle, prograde /
-## retrograde (velocity is NOT heading in space), target bracket with an
-## edge arrow when off-screen, and the mouse virtual-stick indicator.
+## World-space markers drawn in screen space: heading reticle, orbital
+## prograde / retrograde (velocity is NOT heading in space), projected orbit
+## path with apsis and entry markers, target bracket with an edge arrow when
+## off-screen, the lead (fire-control) pip, and the mouse virtual stick.
 
 const COLOR_HEADING := Color(0.85, 0.9, 1.0, 0.85)
 const COLOR_PROGRADE := Color(0.35, 1.0, 0.55, 0.95)
+const COLOR_PATH := Color(0.35, 1.0, 0.55, 0.45)
 const COLOR_TARGET := Color(1.0, 0.45, 0.3, 0.95)
+const COLOR_LEAD := Color(1.0, 0.8, 0.35, 0.95)
 const COLOR_STICK := Color(0.85, 0.9, 1.0, 0.5)
 const MARKER_DISTANCE_M := 5000.0
 const EDGE_MARGIN := 48.0
@@ -15,11 +18,21 @@ const MIN_PROGRADE_SPEED := 0.5
 var camera: Camera3D
 var ship_render_pos := Vector3.ZERO
 var ship_forward := Vector3.FORWARD
+## Direction the ship is actually moving (orbital velocity when in orbit).
 var ship_velocity := Vector3.ZERO
 var has_target := false
 var target_render_pos := Vector3.ZERO
 var target_label := ""
+var has_lead := false
+var lead_render_pos := Vector3.ZERO
+var lead_label := ""
 var mouse_stick := Vector2.ZERO
+## Projected orbit, render space; occluded where the planet is in the way.
+var orbit_path := PackedVector3Array()
+## Labelled points on the path: [{pos: Vector3, text: String, color: Color}].
+var orbit_markers: Array[Dictionary] = []
+var planet_center := Vector3.ZERO
+var planet_radius := 0.0
 
 
 func _draw() -> void:
@@ -27,6 +40,8 @@ func _draw() -> void:
 		return
 	var font := ThemeDB.fallback_font
 	var center := size * 0.5
+
+	_draw_orbit_path(font)
 
 	# Mouse virtual stick around screen centre.
 	draw_arc(center, 60.0, 0.0, TAU, 48, COLOR_STICK, 1.0)
@@ -61,7 +76,7 @@ func _draw() -> void:
 			draw_line(q + Vector2(-6, -6), q + Vector2(6, 6), COLOR_PROGRADE, 2.0)
 			draw_line(q + Vector2(-6, 6), q + Vector2(6, -6), COLOR_PROGRADE, 2.0)
 
-	# Target bracket or edge arrow.
+	# Target bracket or edge arrow (line of sight).
 	if has_target:
 		var on_screen := false
 		var tp := Vector2.ZERO
@@ -73,6 +88,57 @@ func _draw() -> void:
 			draw_string(font, tp + Vector2(22, -6), target_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, COLOR_TARGET)
 		else:
 			_draw_edge_arrow(center, font)
+
+	# Lead pip: where to point the nose so rounds meet the target.
+	if has_lead and not camera.is_position_behind(lead_render_pos):
+		var lp := camera.unproject_position(lead_render_pos)
+		if _inner_rect().has_point(lp):
+			var d := 8.0
+			draw_polyline(PackedVector2Array([lp + Vector2(0, -d), lp + Vector2(d, 0), lp + Vector2(0, d),
+				lp + Vector2(-d, 0), lp + Vector2(0, -d)]), COLOR_LEAD, 2.0)
+			draw_circle(lp, 1.5, COLOR_LEAD)
+			# Below-left, clear of the target bracket and its range label.
+			var text_w := font.get_string_size(lead_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+			draw_string(font, lp + Vector2(-text_w - 12, 24), lead_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COLOR_LEAD)
+
+
+func _draw_orbit_path(font: Font) -> void:
+	var cam := camera.global_position
+	var prev := Vector2.ZERO
+	var prev_ok := false
+	for point in orbit_path:
+		var ok := _visible(point, cam)
+		var sp := camera.unproject_position(point) if ok else Vector2.ZERO
+		if ok and prev_ok and prev.distance_to(sp) < size.length():
+			draw_line(prev, sp, COLOR_PATH, 1.5, true)
+		prev = sp
+		prev_ok = ok
+	for marker in orbit_markers:
+		var pos: Vector3 = marker.pos
+		if not _visible(pos, cam):
+			continue
+		var p := camera.unproject_position(pos)
+		var color: Color = marker.color
+		draw_circle(p, 3.5, color)
+		draw_string(font, p + Vector2(7, -5), marker.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, color)
+
+
+## In front of the camera and not hidden behind the planet.
+func _visible(point: Vector3, cam: Vector3) -> bool:
+	if camera.is_position_behind(point):
+		return false
+	if planet_radius <= 0.0:
+		return true
+	var d := point - cam
+	var dist := d.length()
+	var dir := d / dist
+	var oc := cam - planet_center
+	var b := oc.dot(dir)
+	var disc := b * b - (oc.dot(oc) - planet_radius * planet_radius)
+	if disc <= 0.0:
+		return true
+	var t_hit := -b - sqrt(disc)
+	return t_hit <= 0.0 or t_hit >= dist
 
 
 ## Screen area treated as "on screen"; collapses safely on tiny viewports.

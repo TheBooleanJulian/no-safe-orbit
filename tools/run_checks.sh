@@ -15,7 +15,12 @@ run_step() {
 	"$@" >"$log" 2>&1
 	local code=$?
 	local errors
-	errors=$(grep -E "SCRIPT ERROR|Parse Error|^ERROR:|^USER ERROR|Failed loading" "$log" || true)
+	# Ignore exactly one known-benign engine error: on Windows virtual drives
+	# (e.g. Google Drive) Godot cannot query the filesystem type.
+	errors=$(awk '/^ERROR:/ { held = $0; next }
+		held != "" { if ($0 !~ /get_filesystem_type/) print held; held = "" }
+		{ print } END { if (held != "") print held }' "$log" \
+		| grep -E "SCRIPT ERROR|Parse Error|^ERROR:|^USER ERROR|Failed loading" || true)
 	if [[ $code -ne 0 || -n "$errors" ]]; then
 		echo "✗ $name (exit $code) — see $log"
 		[[ -n "$errors" ]] && echo "$errors" | head -20

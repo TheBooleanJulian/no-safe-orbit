@@ -1,6 +1,7 @@
 extends SceneTree
-## Renders scripted flight moments to PNG for visual review (needs a real
-## renderer, e.g. under Xvfb):
+## Renders scripted flight moments to PNG for visual review. Needs a real
+## renderer (a desktop session, or Xvfb on Linux):
+##   godot --path . -s res://tools/capture_screens.gd
 ##   xvfb-run -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compatibility \
 ##       -s res://tools/capture_screens.gd
 ## Output: build/screens/*.png
@@ -39,16 +40,32 @@ func _run() -> void:
 	await _hold(main, [], 0.3)
 	await _shot("01_start")
 
-	# Burn forward, then strafe right: velocity (prograde) now differs from heading.
-	Input.action_press("thrust_forward")
-	await _hold(main, [], 2.0)
+	# Burn forward, then strafe: local velocity differs from heading.
+	await _hold(main, ["thrust_forward"], 2.0)
 	await _shot("02a_main_engine_burn")
-	Input.action_release("thrust_forward")
 	await _hold(main, ["strafe_right", "thrust_up"], 2.0)
 	await _shot("02_prograde_vs_heading")
 
+	# Fire a burst at the target: tracers in flight, lead pip, TOF.
+	await _hold(main, ["fire"], 1.2)
+	await _shot("03_firing")
+
+	# Pitch down towards Earth: surface, terminator side, limb glow.
+	await _hold(main, ["pitch_down"], 2.2)
+	await _hold(main, [], 1.0)
+	await _shot("04_looking_down")
+
 	# Yaw hard right until the target falls off-screen → edge arrow.
+	await _hold(main, ["pitch_up"], 2.2)
 	await _hold(main, ["yaw_right"], 3.5)
 	await _hold(main, [], 1.0)
-	await _shot("03_target_offscreen")
+	await _shot("05_target_offscreen")
+
+	# Kill 130 m/s of orbital speed (scripted, not flown): periapsis drops
+	# below the 100 km entry interface → warning and path entry marker.
+	var player := main.world.get_ship(Main.PLAYER_ID)
+	player.velocity += Vector3(0, 0, 130.0)
+	await _hold(main, ["yaw_left"], 3.5)
+	await _hold(main, [], 1.0)
+	await _shot("06_deorbit_warning")
 	quit(0)

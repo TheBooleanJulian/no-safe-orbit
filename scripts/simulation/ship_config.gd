@@ -29,6 +29,17 @@ extends Resource
 ## Angular rate that full rotation input requests while flight assist is on.
 @export var assist_max_rate_rad_s: Vector3 = Vector3(0.5, 0.5, 0.9)
 
+@export_group("Collision")
+## Body-frame hit box (placeholder until hull modules provide real geometry).
+@export var hit_box_center: Vector3 = Vector3(0, 1.5, -4)
+@export var hit_box_half_extents: Vector3 = Vector3(10, 6, 30)
+
+@export_group("Armament")
+## Optional; null means unarmed. Placeholder for a blueprint weapon mount.
+@export var cannon: KineticCannonConfig
+## Muzzle position in the body frame. Rounds fire along the nose (-Z).
+@export var cannon_muzzle_body: Vector3 = Vector3(0, 0, -34)
+
 
 ## Maximum thrust (N) that can push the ship along `axis` (0=X, 1=Y, 2=Z)
 ## in the positive or negative body direction.
@@ -59,4 +70,9 @@ func validate() -> PackedStringArray:
 			problems.append("assist_max_rate_rad_s[%d] must not be negative" % axis)
 		if max_thrust(axis, true) < 0.0 or max_thrust(axis, false) < 0.0:
 			problems.append("thrust on axis %d must not be negative" % axis)
+		if hit_box_half_extents[axis] <= 0.0:
+			problems.append("hit_box_half_extents[%d] must be positive" % axis)
+	if cannon != null:
+		for p in cannon.validate():
+			problems.append("cannon: %s" % p)
 	return problems
