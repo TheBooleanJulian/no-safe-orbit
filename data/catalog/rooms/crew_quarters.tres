@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RoomDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/room_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"crew_quarters"
+display_name = "Crew quarters"
+role = &"quarters"
+mass_per_cell_kg = 1000.0
+power_kw_per_cell = -2.0
+heat_kw_per_cell = 2.0
+crew_capacity_per_cell = 2
+rounds_per_cell = 0
+cargo_m3_per_cell = 0.0
+color = Color(0.45, 0.75, 0.45, 1)

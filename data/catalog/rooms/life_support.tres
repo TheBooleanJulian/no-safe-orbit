@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RoomDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/room_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"life_support"
+display_name = "Life support"
+role = &"life_support"
+mass_per_cell_kg = 1400.0
+power_kw_per_cell = -15.0
+heat_kw_per_cell = 15.0
+crew_capacity_per_cell = 0
+rounds_per_cell = 0
+cargo_m3_per_cell = 0.0
+color = Color(0.3, 0.8, 0.7, 1)

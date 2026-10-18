@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+[ext_resource type="Resource" path="res://data/weapons/medium_kinetic_cannon.tres" id="2_ext"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"kinetic_cannon"
+display_name = "Kinetic cannon"
+kind = 3
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"fore", &"port", &"starboard", &"dorsal", &"ventral"])
+mass_kg = 6000.0
+power_kw = -120.0
+heat_kw = 80.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+color = Color(1.0, 0.45, 0.3, 1)
+cannon = ExtResource("2_ext")

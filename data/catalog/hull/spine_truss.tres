@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="HullModuleDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/hull_module_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"spine_truss"
+display_name = "Spine truss (unpressurised)"
+size_cells = Vector3i(2, 2, 4)
+structure_mass_kg = 9000.0
+connectors = {
+"fore": "spine",
+"aft": "spine",
+"port": "pod",
+"starboard": "pod"
+}
+interior = false
+armor_mm = 5.0
+color = Color(0.42, 0.44, 0.48, 1)

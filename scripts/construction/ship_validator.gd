@@ -1,0 +1,318 @@
+class_name ShipValidator
+extends RefCounted
+## Checks a blueprint (spec §6 "Validation"). ERRORS mean the design is
+## physically or structurally invalid and cannot launch. WARNINGS are
+## trade-offs the player may accept: unconventional designs are allowed.
+## Every message names the part and says what to change.
+
+
+enum Severity { ERROR, WARNING }
+
+
+class Issue:
+	var severity: Severity
+	## Stable machine-readable code, e.g. "module_detached" (used by tests/UI).
+	var code: StringName
+	var message: String
+	## Id of the module/room/hatch/equipment concerned ("" for whole-ship).
+	var subject: String
+
+	func _to_string() -> String:
+		return "%s %s: %s" % ["ERROR" if severity == Severity.ERROR else "WARN", code, message]
+
+
+class Report:
+	var issues: Array[Issue] = []
+
+	func has_errors() -> bool:
+		return issues.any(func(i: Issue) -> bool: return i.severity == Severity.ERROR)
+
+	func errors() -> Array[Issue]:
+		return _with(Severity.ERROR)
+
+	func warnings() -> Array[Issue]:
+		return _with(Severity.WARNING)
+
+	func _with(severity: Severity) -> Array[Issue]:
+		var out: Array[Issue] = []
+		for i in issues:
+			if i.severity == severity:
+				out.append(i)
+		return out
+
+	func has_code(code: StringName) -> bool:
+		return issues.any(func(i: Issue) -> bool: return i.code == code)
+
+	func summary() -> String:
+		return "\n".join(issues.map(func(i: Issue) -> String: return str(i)))
+
+
+## Engine thrust may use at most this fraction of RCS torque to hold attitude.
+const MAX_THRUST_TORQUE_FRACTION := 0.5
+
+
+static func validate(bp: ShipBlueprint, catalog: ConstructionCatalog,
+		grid: ShipGrid = null, stats: ShipStats = null) -> Report:
+	var report := Report.new()
+	if grid == null:
+		grid = ShipGrid.build(bp, catalog)
+	for msg in grid.unknown:
+		_add(report, Severity.ERROR, &"unknown_definition", msg, "")
+	if bp.modules.is_empty():
+		_add(report, Severity.ERROR, &"no_hull", "The design has no hull modules.", "")
+		return report
+	_check_structure(bp, grid, report)
+	_check_rooms(bp, grid, report)
+	_check_hatches(bp, grid, report)
+	_check_equipment(bp, grid, report)
+	_check_access(bp, grid, report)
+	if stats == null:
+		stats = ShipStats.compute(bp, grid)
+	_check_systems(bp, grid, stats, report)
+	return report
+
+
+static func _add(report: Report, severity: Severity, code: StringName, message: String, subject: String) -> void:
+	var issue := Issue.new()
+	issue.severity = severity
+	issue.code = code
+	issue.message = message
+	issue.subject = subject
+	report.issues.append(issue)
+
+
+static func _cell_text(c: Vector3i) -> String:
+	return "(x %d, deck %d, z %d)" % [c.x, c.y, c.z]
+
+
+# --- Hull -------------------------------------------------------------------
+
+static func _check_structure(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	var reported := {}
+	for o in grid.module_overlaps:
+		var key := "%d-%d" % [o[1], o[2]]
+		if reported.has(key):
+			continue
+		reported[key] = true
+		_add(report, Severity.ERROR, &"module_overlap", "Modules %s and %s overlap at %s." % [
+			bp.modules[o[1]].id, bp.modules[o[2]].id, _cell_text(o[0])], bp.modules[o[2]].id)
+
+	# Attachment graph: modules that touch with matching connectors.
+	var n := bp.modules.size()
+	var attached: Array[Array] = []
+	var mismatched := {}  # module index -> "touches X but connectors don't match (a vs b)"
+	for i in n:
+		attached.append([])
+	for i in n:
+		if grid.module_def(i) == null:
+			continue
+		for cell in grid.module_cells(i):
+			for face: StringName in ShipGrid.FACE_NORMALS:
+				var other: int = grid.module_at.get(cell + ShipGrid.FACE_NORMALS[face], -1)
+				if other < 0 or other == i:
+					continue
+				var opposite := ShipGrid.face_of(-ShipGrid.FACE_NORMALS[face])
+				var mine := grid.module_connector(i, face)
+				var theirs := grid.module_connector(other, opposite)
+				if mine != &"" and mine == theirs:
+					if not attached[i].has(other):
+						attached[i].append(other)
+				else:
+					mismatched[i] = "touches %s but the connectors there don't match (%s vs %s)" % [
+						bp.modules[other].id, _connector_text(mine), _connector_text(theirs)]
+	# Everything must be attached, directly or indirectly, to the first module.
+	var seen := {0: true}
+	var queue := [0]
+	while not queue.is_empty():
+		var i: int = queue.pop_front()
+		for j in attached[i]:
+			if not seen.has(j):
+				seen[j] = true
+				queue.append(j)
+	for i in n:
+		if seen.has(i) or grid.module_def(i) == null:
+			continue
+		var why: String = mismatched.get(i, "does not touch any other module")
+		_add(report, Severity.ERROR, &"module_detached",
+			"Module %s (%s) is not structurally attached: it %s. Move it against a matching connector." % [
+				bp.modules[i].id, grid.module_def(i).display_name, why], bp.modules[i].id)
+
+
+static func _connector_text(c: StringName) -> String:
+	return "none" if c == &"" else String(c)
+
+
+# --- Rooms and hatches ------------------------------------------------------
+
+static func _check_rooms(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	for r in bp.rooms:
+		if r.rect.size.x <= 0 or r.rect.size.y <= 0:
+			_add(report, Severity.ERROR, &"room_empty", "Room %s has no cells." % r.id, r.id)
+			continue
+		for cell in ShipGrid.room_cells(r):
+			if not grid.is_interior(cell):
+				var where := "outside the hull" if not grid.is_hull(cell) else "in an unpressurised module"
+				_add(report, Severity.ERROR, &"room_outside_hull",
+					"Room %s (%s) extends %s at %s." % [r.id, _room_name(grid, r), where, _cell_text(cell)], r.id)
+				break
+	var reported := {}
+	for o in grid.room_overlaps:
+		var key := "%d-%d" % [o[1], o[2]]
+		if not reported.has(key):
+			reported[key] = true
+			_add(report, Severity.ERROR, &"room_overlap", "Rooms %s and %s overlap at %s." % [
+				bp.rooms[o[1]].id, bp.rooms[o[2]].id, _cell_text(o[0])], bp.rooms[o[2]].id)
+
+
+static func _room_name(grid: ShipGrid, r: ShipBlueprint.PlacedRoom) -> String:
+	var def: RoomDefinition = grid.catalog.rooms.get(r.def_id)
+	return def.display_name if def != null else String(r.def_id)
+
+
+static func _check_hatches(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	for h in bp.hatches:
+		var d := h.b - h.a
+		if absi(d.x) + absi(d.y) + absi(d.z) != 1:
+			_add(report, Severity.ERROR, &"hatch_not_adjacent",
+				"Hatch %s joins %s and %s, which are not neighbouring cells." % [h.id, _cell_text(h.a), _cell_text(h.b)], h.id)
+			continue
+		var ra: int = grid.room_at.get(h.a, -1)
+		var rb: int = grid.room_at.get(h.b, -1)
+		if ra < 0 or rb < 0:
+			_add(report, Severity.ERROR, &"hatch_not_between_rooms",
+				"Hatch %s must have a room on both sides (%s → %s)." % [h.id, _cell_text(h.a), _cell_text(h.b)], h.id)
+		elif ra == rb:
+			_add(report, Severity.ERROR, &"hatch_inside_room",
+				"Hatch %s is inside room %s; hatches join two different rooms." % [h.id, bp.rooms[ra].id], h.id)
+
+
+## Crew access: every room must be reachable from a command room via hatches.
+static func _check_access(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	var start := -1
+	for i in bp.rooms.size():
+		var def: RoomDefinition = grid.catalog.rooms.get(bp.rooms[i].def_id)
+		if def != null and def.role == &"command":
+			start = i
+			break
+	if start < 0:
+		_add(report, Severity.ERROR, &"no_command",
+			"No command room (bridge): the ship cannot be piloted. Add a bridge.", "")
+		return
+	var links := {}
+	for h in bp.hatches:
+		var ra: int = grid.room_at.get(h.a, -1)
+		var rb: int = grid.room_at.get(h.b, -1)
+		if ra >= 0 and rb >= 0 and ra != rb:
+			links.get_or_add(ra, []).append(rb)
+			links.get_or_add(rb, []).append(ra)
+	var seen := {start: true}
+	var queue := [start]
+	while not queue.is_empty():
+		var i: int = queue.pop_front()
+		for j in links.get(i, []):
+			if not seen.has(j):
+				seen[j] = true
+				queue.append(j)
+	for i in bp.rooms.size():
+		if not seen.has(i) and grid.catalog.rooms.has(bp.rooms[i].def_id):
+			_add(report, Severity.WARNING, &"room_unreachable",
+				"Room %s (%s) cannot be reached from the bridge: crew cannot get there to operate or repair it. Add a hatch." % [
+					bp.rooms[i].id, _room_name(grid, bp.rooms[i])], bp.rooms[i].id)
+
+
+# --- Equipment ----------------------------------------------------------------
+
+static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	var mounts := {}  # "cell|face" -> equipment id
+	for i in bp.equipment.size():
+		var e := bp.equipment[i]
+		var def := grid.equipment_def(i)
+		if def == null:
+			continue
+		if def.is_external():
+			if not def.allowed_faces.has(e.face):
+				_add(report, Severity.ERROR, &"equipment_bad_face",
+					"%s %s cannot mount on a %s face (allowed: %s)." % [def.display_name, e.id, e.face,
+						", ".join(def.allowed_faces.map(func(f: StringName) -> String: return String(f)))], e.id)
+			elif not grid.is_exterior_face(e.cell, e.face):
+				_add(report, Severity.ERROR, &"equipment_not_exterior",
+					"%s %s must sit on an exterior hull face; the %s face of %s is %s." % [def.display_name, e.id,
+						e.face, _cell_text(e.cell), "not hull" if not grid.is_hull(e.cell) else "covered by another module"], e.id)
+			var key := "%s|%s" % [e.cell, e.face]
+			if mounts.has(key):
+				_add(report, Severity.ERROR, &"equipment_overlap",
+					"%s and %s are mounted on the same face." % [mounts[key], e.id], e.id)
+			mounts[key] = e.id
+			continue
+		# Internal: whole footprint inside one room of an allowed role.
+		var room_index := -2
+		for cell in grid.equipment_cells(i):
+			var r: int = grid.room_at.get(cell, -1)
+			room_index = r if room_index == -2 else (room_index if room_index == r else -1)
+		if room_index < 0:
+			_add(report, Severity.ERROR, &"equipment_outside_room",
+				"%s %s must fit entirely inside one room." % [def.display_name, e.id], e.id)
+			continue
+		var room := bp.rooms[room_index]
+		var room_def: RoomDefinition = grid.catalog.rooms.get(room.def_id)
+		if room_def != null and not def.allowed_room_roles.has(room_def.role):
+			_add(report, Severity.ERROR, &"equipment_wrong_room",
+				"%s %s cannot be installed in %s (%s); it needs a room with role: %s." % [def.display_name, e.id,
+					room.id, room_def.display_name,
+					", ".join(def.allowed_room_roles.map(func(r: StringName) -> String: return String(r)))], e.id)
+	var reported := {}
+	for o in grid.equipment_overlaps:
+		var key := "%d-%d" % [o[1], o[2]]
+		if not reported.has(key):
+			reported[key] = true
+			_add(report, Severity.ERROR, &"equipment_overlap", "%s and %s overlap at %s." % [
+				bp.equipment[o[1]].id, bp.equipment[o[2]].id, _cell_text(o[0])], bp.equipment[o[2]].id)
+
+
+# --- Systems (warnings: trade-offs, not invalid designs) --------------------
+
+static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, report: Report) -> void:
+	if stats.power_draw_kw > stats.power_generation_kw:
+		_add(report, Severity.WARNING, &"power_deficit",
+			"Power deficit: systems draw %.0f kW but reactors supply %.0f kW. Add a reactor or remove loads." % [
+				stats.power_draw_kw, stats.power_generation_kw], "")
+	if stats.heat_generation_kw > stats.heat_rejection_kw:
+		_add(report, Severity.WARNING, &"heat_deficit",
+			"Heat deficit at full power: %.0f kW generated, %.0f kW rejected. Add radiators." % [
+				stats.heat_generation_kw, stats.heat_rejection_kw], "")
+	if stats.thrust_forward_n <= 0.0:
+		_add(report, Severity.WARNING, &"no_main_engine",
+			"No main engine on an aft face: only RCS thrust is available.", "")
+	if stats.rcs_count == 0:
+		_add(report, Severity.WARNING, &"no_rcs",
+			"No RCS blocks: the ship cannot rotate or thrust sideways.", "")
+	for axis in 3:
+		var need := stats.thrust_misalignment_torque_nm[axis]
+		var have := stats.torque_nm[axis]
+		if need > 0.0 and need > MAX_THRUST_TORQUE_FRACTION * have:
+			_add(report, Severity.WARNING, &"thrust_misaligned",
+				"Main engines are off the centre of mass: full thrust needs %.0f%% of RCS %s authority to fly straight. Centre the engines or move mass." % [
+					100.0 * need / maxf(have, 1.0), ["pitch", "yaw", "roll"][axis]], "")
+			break
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def == null or def.kind != EquipmentDefinition.Kind.CANNON:
+			continue
+		var e := bp.equipment[i]
+		if _arc_obstructed(grid, e):
+			_add(report, Severity.WARNING, &"weapon_arc_obstructed",
+				"%s %s fires forward into its own hull. Mount it where nothing is ahead of it." % [def.display_name, e.id], e.id)
+		if stats.rounds_capacity == 0:
+			_add(report, Severity.WARNING, &"weapon_no_magazine",
+				"%s %s has no magazine to feed it: 0 rounds. Add a magazine room." % [def.display_name, e.id], e.id)
+
+
+## Fixed forward-firing mounts: anything in the hull straight ahead (−z) of
+## the mount, in the cell layer just outside its face, blocks the line of fire.
+static func _arc_obstructed(grid: ShipGrid, e: ShipBlueprint.PlacedEquipment) -> bool:
+	var start: Vector3i = e.cell + ShipGrid.FACE_NORMALS.get(e.face, Vector3i.ZERO)
+	var lo := int(floor(grid.cell_bounds().position.z))
+	for z in range(start.z - 1, lo - 1, -1):
+		if grid.is_hull(Vector3i(start.x, start.y, z)):
+			return true
+	return false

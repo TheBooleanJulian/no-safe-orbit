@@ -55,11 +55,50 @@ projectile timing pass tests. Automated part met: 46 unit tests + 14 smoke
 checks pass, zero engine errors. Frames reviewed under Forward+ on a real GPU.
 "Understandable" still needs a human play-test (KNOWN_ISSUES.md).
 
-## Milestone 2 — Ship blueprint and builder ⏭ next
+## Milestone 2 — Ship blueprint and builder ✅ (2026-10-19)
+
+Spec exit criteria: the player can modify a ship, validate it, save it and
+launch it.
+
+### 2a — blueprint model, validation, derived stats ✅ (2026-10-19)
+
+| Acceptance criterion | Verified by | Result |
+|---|---|---|
+| Valid blueprint saves and loads without data loss (versioned JSON) | `test_blueprint_round_trip_has_no_data_loss` | identical JSON in memory and via file |
+| Unsupported / malformed files rejected safely | `test_unsupported_or_malformed_files_are_rejected_safely` | newer schema, bad JSON, missing version, bad field |
+| Invalid module attachment detected (overlap, floating, mismatched connectors) | `test_overlapping_modules_detected`, `test_detached_module_detected`, `test_incompatible_connectors_do_not_attach` | pass |
+| Room / access connections valid (inside pressurised hull, no overlap, hatches join neighbouring rooms, every room reachable from the bridge) | `test_rooms_must_be_inside_pressurised_hull`, `test_overlapping_rooms_detected`, `test_hatches_must_join_neighbouring_rooms`, `test_room_without_access_route_is_reported`, `test_missing_bridge_is_an_error` | pass |
+| Equipment fits its mounting volume (room role, exterior face, allowed face) | `test_internal_equipment_needs_a_suitable_room`, `test_external_equipment_needs_an_exterior_face` | pass |
+| Mass and centre of mass calculated consistently | `test_mass_and_center_of_mass_hand_computed`, `test_inertia_uses_parallel_axis` | exact to 10⁻⁴ m / 1 kg·m² |
+| Propulsion/torque from placed thrusters; off-axis thrust reported | `test_thrust_and_torque_come_from_placed_thrusters`, `test_off_axis_thrust_reported` | pass |
+| Missing power reported; obstructed weapon arcs reported; unfed cannon reported | `test_power_deficit_and_missing_magazine_reported`, `test_obstructed_weapon_arc_reported` | pass |
+| Prebuilt frigate template validates clean and flies with its own numbers | `test_frigate_template_validates_clean_and_compiles`, `test_compiled_design_flies_with_its_own_numbers`, smoke | 392 t, 0 errors, 0 warnings; F/m exact in flight |
+
+Mutation-checked: breaking connector matching, the parallel-axis term or the
+exterior-face test each fails exactly the matching test.
+
+### 2b — shipyard UI ✅ (2026-10-19)
+
+| Acceptance criterion | Verified by | Result |
+|---|---|---|
+| Deck grid editor with palette and tools — place, select/move, rotate, remove — for modules, rooms, equipment, hatches | `test_ship_editor.gd` (5 tests); `smoke_shipyard` places a radiator with a real mouse click | pass |
+| Side and front orthographic views, 3D preview of the flight model | visual review (Forward+) | pass |
+| Live stats and validation panel; clicking an issue highlights the part | `smoke_shipyard`; visual review | pass |
+| Save / load player designs; load a prebuilt template | `smoke_shipyard` (save → reload identical) | pass |
+| Launch a test flight (blocked while errors exist); B returns to the shipyard | `smoke_shipyard` | pass; flight uses the design's mass and name |
+| Placement preview: ghost turns red and names the error before you click | `test_preview_reports_new_errors_without_editing`; visual review | pass |
+
+Exit criteria met: the player can modify a ship, validate it, save it and
+launch it — verified end to end by `smoke_shipyard` (15 checks).
+Human usability testing of the editor has not happened yet (KNOWN_ISSUES.md).
+
+## Milestone 3 — Physical damage and ship systems ⏭ next
 
 Not started. See GAME_DESIGN.md §17. Acceptance criteria will be stated here
-before implementation begins.
+before implementation begins. The blueprint already carries what it needs:
+module armour thickness, room/equipment positions, and power/heat budgets
+that become real graphs.
 
-## Milestones 3–8
+## Milestones 4–8
 
 Not started. See GAME_DESIGN.md §17.
