@@ -4,6 +4,30 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-19 — Milestone 2: ship blueprint and builder
+
+### Added
+- Construction model (`scripts/construction/`): hull module, room and
+  equipment definitions (`data/catalog/`), `ShipBlueprint` (versioned JSON),
+  `ShipGrid`, `ShipValidator` (errors block launch; warnings are trade-offs),
+  `ShipStats` (mass, CoM, inertia, thrust/torque from placed thrusters,
+  power/heat, crew/rounds/cargo) compiled into the flight `ShipConfig`.
+- Frigate Mk I template (`data/blueprints/frigate_mk1.json`): 392 t, six
+  modules, eleven rooms, full crew access, validates with no issues.
+- Shipyard (`scenes/shipyard/`, `scripts/shipyard/`): palette, deck grid
+  editor (place / select / move / rotate / remove / hatches), placement
+  ghost that names the error before you click, side and front views, 3D
+  preview, live stats, clickable validation panel, save/load, templates,
+  launch (blocked while errors exist).
+- Flight: ships are built from their blueprints (geometry and numbers);
+  `B` opens the shipyard with the flown design.
+- Tests: `test_blueprint.gd` (22), `test_ship_editor.gd` (5),
+  `smoke_shipyard.gd` (15 checks); 120 s watchdog on both smoke tests.
+
+### Changed
+- The player and target fly the compiled Frigate Mk I instead of the fixed
+  placeholder config (which remains as a test fixture).
+
 ## [0.2.0] — 2026-10-19 — Milestone 1b: Earth orbit, cannon, fire control
 
 ### Added

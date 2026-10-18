@@ -7,6 +7,7 @@ extends Node3D
 const PLAYER_ID := &"player"
 const TARGET_ID := &"target_01"
 const EARTH: OrbitalBody = preload("res://data/bodies/earth.tres")
+const SHIPYARD_SCENE := "res://scenes/shipyard/shipyard.tscn"
 const SHIP_VIEW_SCENE: PackedScene = preload("res://scenes/ships/ship_view.tscn")
 ## Scenario: circular equatorial orbit at ISS-like altitude, on the day side.
 const START_ALTITUDE_M := 400_000.0
@@ -116,7 +117,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		GameLog.info("main", "Scenario restarted")
 		_start_scenario()
 		return
+	elif event.is_action_pressed("open_shipyard"):
+		open_shipyard()
+		return
 	player_input.handle_event(event)
+
+
+## Leave flight for the shipyard, taking the design being flown.
+func open_shipyard() -> void:
+	launch_blueprint = _designs[PLAYER_ID].blueprint
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().change_scene_to_file(SHIPYARD_SCENE)
 
 
 func _process(delta: float) -> void:

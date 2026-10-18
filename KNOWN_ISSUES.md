@@ -8,12 +8,25 @@ also tabulated in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **No human play-test yet.** Everything below "understandable" in the M1 exit
   criteria was checked by tests and by reviewing rendered frames, not by a
   person flying it. Mouse feel, readability of the orbit path and whether
-  real-scale orbital drift is noticeable in a fight are all unverified.
+  real-scale orbital drift is noticeable in a fight are all unverified. The
+  shipyard has likewise only been driven by the smoke test and screenshots.
+- **Shipyard: no undo.** Right-click removes immediately. Load the template or
+  your last save to recover.
+- **Shipyard: moving or rotating a module does not carry its rooms and
+  equipment.** They stay where they were and the validator flags them.
+- **Shipyard: modules rotate about their corner cell**, so a rotated module
+  usually needs moving back into place (arrow keys).
+- **Off-axis engine thrust is only a warning.** Flight still treats thrust and
+  torque as independent, so an unbalanced design doesn't actually yaw in flight.
+- **Power and heat are budgets, not networks** (no wiring, coolant or
+  breakers yet), and only the first cannon on a design fires.
+- **Exported builds:** the JSON templates in `data/blueprints/` need a
+  `*.json` include filter in the export preset (no export preset exists yet).
 - **No drag; the 100 km entry interface is a hard line.** Crossing it removes
   the vessel (or round). Skimming just above it costs nothing.
-- **Hit box is a single box** per ship, so rounds can "hit" the gap between
-  the hull and the sponsons. Hits are counted and flashed, but do no damage
-  until Milestone 3.
+- **Hit box is a single box** around the whole hull, so rounds can "hit" empty
+  space beside the side pods or above the nose. Hits are counted and flashed,
+  but do no damage until Milestone 3.
 - **Target ship is passive** — no AI, no evasion. The lead solution assumes a
   coasting target.
 - **No propellant limit.** Δv spent is tracked and displayed but nothing runs out.

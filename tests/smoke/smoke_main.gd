@@ -8,7 +8,14 @@ extends SceneTree
 var _failures := PackedStringArray()
 
 
+## A script error aborts the coroutine before quit(); never hang the checks.
+const WATCHDOG_S := 120.0
+
+
 func _initialize() -> void:
+	create_timer(WATCHDOG_S).timeout.connect(func() -> void:
+		print("smoke: TIMEOUT after %d s (script error or stuck await)" % WATCHDOG_S)
+		quit(2))
 	_run.call_deferred()
 
 

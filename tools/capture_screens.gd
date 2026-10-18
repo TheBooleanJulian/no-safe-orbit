@@ -68,4 +68,27 @@ func _run() -> void:
 	await _hold(main, ["yaw_left"], 3.5)
 	await _hold(main, [], 1.0)
 	await _shot("06_deorbit_warning")
+
+	# B → shipyard with the flown design.
+	current_scene = main
+	main.open_shipyard()
+	for i in 6:
+		await process_frame
+	var yard := current_scene as Shipyard
+	await _shot("07_shipyard")
+	yard.change_deck(-1)  # deck 0: reactor, lower corridor, cargo pods
+	await _shot("08_shipyard_deck0")
+	# Invalid placement ghost: a reactor over the corridor.
+	yard.select_palette("equipment", &"fusion_reactor")
+	var hover := yard.deck_editor.cell_rect(Vector3i(3, 0, 5)).get_center()
+	var motion := InputEventMouseMotion.new()
+	motion.position = yard.deck_editor.get_global_rect().position + hover
+	motion.global_position = motion.position
+	Input.parse_input_event(motion)
+	await _shot("09_shipyard_bad_ghost")
+	# An error in the validation panel, highlighted.
+	yard.set_tool(Shipyard.Tool.SELECT)
+	yard.editor.move("m5", Vector3i(-2, 0, 0))
+	yard._on_issue_clicked("m5")
+	await _shot("10_shipyard_error")
 	quit(0)

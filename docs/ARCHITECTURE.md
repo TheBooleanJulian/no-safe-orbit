@@ -28,7 +28,7 @@ Input (InputMap) ──► PlayerInput ──► ShipControlInput ─┐
 
 | Type | Role |
 |---|---|
-| `ShipConfig` (Resource, `data/ships/*.tres`) | Immutable tuning: mass, inertia, per-direction thrust, torque, assist rates, hit box, cannon + muzzle position. Stand-in for blueprint-derived values until Milestone 2. |
+| `ShipConfig` | Flight tuning: mass, inertia, per-direction thrust, torque, assist rates, hit box, cannon + muzzle position. Compiled from a blueprint by `ShipStats.to_ship_config()`; `data/ships/placeholder_frigate.tres` remains as a fixed fixture for flight unit tests. |
 | `KineticCannonConfig` (Resource, `data/weapons/*.tres`) | Muzzle velocity, rate of fire, magazine, round mass, round lifetime. |
 | `OrbitalBody` (Resource, `data/bodies/*.tres`) | μ, radius, entry-interface altitude (Earth: 100 km). |
 | `ShipState` | Physical vessel: stable `id`, local position/velocity, orientation, body-frame angular velocity, last thrust/torque, Δv spent, status (active / entered atmosphere), cannon ammo and cooldown. |
@@ -42,6 +42,44 @@ Input (InputMap) ──► PlayerInput ──► ShipControlInput ─┐
 | `FireControl` | Straight-line intercept time and lead point. |
 | `WorldSimulation` | Fixed-timestep clock, deterministic update order, frame, rounds, hits, entry check, rebasing, interpolation alpha. |
 | `RelativeMotion` | Range, range rate, relative velocity. |
+
+## Construction (Milestone 2)
+
+```text
+data/catalog/{hull,rooms,equipment}/*.tres ──► ConstructionCatalog
+data/blueprints/*.json, user://blueprints/*.json ──► BlueprintIO ──► ShipBlueprint
+                                                                          │
+     ShipGrid (cell occupancy) ◄──────────────────────────────────────────┤
+          │                                                               │
+          ├──► ShipValidator → Report (ERROR blocks launch, WARNING = trade-off)
+          └──► ShipStats (mass, CoM, inertia, thrust/torque, power, heat,
+                          crew, rounds, cargo) ──► to_ship_config() ──► flight
+ShipEditor (scripts/shipyard): edits a blueprint, re-derives the above
+Shipyard UI: palette, DeckEditor, OrthoView ×2, ShipPreview3D, panels
+```
+
+| Type | Role |
+|---|---|
+| `HullModuleDefinition`, `RoomDefinition`, `EquipmentDefinition` (Resources) | Immutable parts. Modules: size in cells, mass, per-face connectors, pressurised or not, armour. Rooms: role and per-cell mass/power/heat/capacity. Equipment: internal (room roles) or external (faces), mass, power, heat, thrust, cannon. |
+| `ConstructionCatalog` | Loads every definition by scanning `data/catalog/*/`; adding a part is adding a `.tres`. |
+| `ShipBlueprint` | The design: placed modules (cell, quarter-turn rotation), rooms (deck + rectangle), hatches (two cells), equipment (cell [+ face]). Stable string ids. `to_dict`/`from_dict` with `schema_version`. |
+| `ShipGrid` | Which module/room/equipment occupies each cell; overlaps and unknown ids recorded. Face/rotation helpers. |
+| `ShipValidator` | Structure (overlap, attachment graph through matching connectors), rooms (inside pressurised hull, no overlap), hatches, equipment mounting, crew access from the bridge, systems warnings. |
+| `ShipStats` | Derived engineering numbers and the flight `ShipConfig`. |
+| `BlueprintIO` | JSON files. JSON, not `.tres`: a shared blueprint is plain data and cannot run code on load. |
+| `ShipEditor` | UI-free editing operations + "what errors would this placement add?" preview. |
+| `ShipModelBuilder` | Placeholder 3D geometry from a blueprint, shared by flight and shipyard. |
+
+Grid conventions: a cell is a 3 m cube; `Vector3i(x, deck, z)` with +x
+starboard, +deck up, +z aft — so the nose is at low z and grid axes equal body
+axes (body origin = centre of mass). Module rotation is quarter turns about +Y,
+counter-clockwise from above (fore → port → aft → starboard).
+
+The shipyard draws the deck with the nose to the right and starboard down; side
+view nose right; front view seen from ahead (starboard on the left).
+
+Scene flow: flight (`main.tscn`) ⇄ shipyard (`shipyard.tscn`) via
+`change_scene_to_file`; the design crosses over in `Main.launch_blueprint`.
 
 ## Conventions
 
@@ -117,9 +155,14 @@ speed, apsides and prograde use the full PCI state.
 | Rounds inherit the ship's CoM velocity; muzzle velocity from rotation (ω × r) ignored | Firing while turning hard is slightly more accurate than reality (~1 % lateral at 0.5 rad/s) | When weapon mounts are placed (M2/M3) |
 | Hit box is one oriented box per ship | Hits register on empty space between sponsons; no localised damage yet | M2 (hull modules) / M3 (damage) |
 | Fire control assumes straight-line relative motion, no target acceleration | Lead is exact for coasting targets over seconds (tidal error ~cm); a manoeuvring target defeats it | Missiles / AI (M6–M7) |
-| Diagonal inertia, gyroscopic term (ω × Iω) ignored | Multi-axis tumbles don't precess; spins are "too clean" | When asymmetric hulls exist (M2) |
-| Thrust and torque are independent budgets | Rotating doesn't cost translation thrust or vice versa | When thrusters become placed components (M2/M3) |
-| Δv is counted, propellant is not modelled | No fuel limit yet; Δv spent is shown so the cost of assist is visible | Propellant graph (M2/M3) |
+| Diagonal inertia, gyroscopic term (ω × Iω) ignored | Multi-axis tumbles don't precess; asymmetric designs spin "too cleanly" | M3 or when it visibly matters |
+| Thrust and torque are independent budgets; engine thrust off the CoM is only a shipyard *warning* | Off-axis engines don't actually make the ship turn in flight | M3 (placed-thruster dynamics) |
+| RCS blocks thrust equally in all six directions; torque = thrust × perpendicular lever arm | Block orientation doesn't matter; no per-nozzle layout | When RCS needs real quads |
+| Power and heat are ship-wide budgets (one shared bus); no wiring or coolant loops | A deficit is a warning, not a failure; cutting a cable does nothing yet | M3 (power and thermal graphs) |
+| Hull modules are boxes; collision is one box around the whole hull | Hits land on empty corners of the bounding box | M3 (hits resolved against module cells) |
+| Only the first cannon is flown | Extra cannons add mass/power/heat but don't fire | When weapon groups exist |
+| Ammunition mass not counted | A full magazine weighs nothing | M3/M4 (inventory) |
+| Δv is counted, propellant is not modelled | No fuel limit yet; Δv spent is shown so the cost of assist is visible | Propellant graph (M3/M4) |
 | Rotation: semi-implicit Euler | Fine for the current rates; untested for long, fast tumbles beyond normalisation | If gyroscopic coupling lands |
 
 ## Testing
@@ -129,6 +172,10 @@ speed, apsides and prograde use the full PCI state.
   measured quantity, expected and actual.
 - `tests/smoke/smoke_main.gd` — boots the real main scene and drives it via
   InputMap actions.
+- `tests/smoke/smoke_shipyard.gd` — shipyard end to end: real mouse click on
+  the deck editor, validation, save/reload, launch into flight, B back.
+- Both smoke tests have a 120 s watchdog so a script error fails the run
+  instead of hanging it.
 - `tools/run_checks.sh` — runs everything and also fails on engine errors in logs.
 - `tools/capture_screens.gd` — renders scripted moments to PNG for visual review.
 - Long orbit tests use a 1 s step for 10 orbits (≈2 s run time); one full

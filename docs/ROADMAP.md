@@ -55,7 +55,7 @@ projectile timing pass tests. Automated part met: 46 unit tests + 14 smoke
 checks pass, zero engine errors. Frames reviewed under Forward+ on a real GPU.
 "Understandable" still needs a human play-test (KNOWN_ISSUES.md).
 
-## Milestone 2 — Ship blueprint and builder 🟡 in progress
+## Milestone 2 — Ship blueprint and builder ✅ (2026-10-19)
 
 Spec exit criteria: the player can modify a ship, validate it, save it and
 launch it.
@@ -77,21 +77,28 @@ launch it.
 Mutation-checked: breaking connector matching, the parallel-axis term or the
 exterior-face test each fails exactly the matching test.
 
-### 2b — shipyard UI (next)
+### 2b — shipyard UI ✅ (2026-10-19)
 
-1. Shipyard scene: deck grid editor (top view per deck) with palette and
-   tools — place, select/move (arrow keys), rotate, remove — for hull
-   modules, rooms, equipment and hatches.
-2. Side and front orthographic views and a 3D preview of the same model the
-   flight view uses.
-3. Mass / thrust / power / heat / storage summary and a validation panel,
-   updated on every edit; selecting an issue highlights its part.
-4. Save / load player designs (user://blueprints), load a prebuilt template.
-5. Launch a test flight with the current design (blocked while errors
-   exist); return to the shipyard from flight.
-6. Smoke test: load template → edit through the editor → validation reacts →
-   save → reload identical → launch → flight uses the design's numbers.
+| Acceptance criterion | Verified by | Result |
+|---|---|---|
+| Deck grid editor with palette and tools — place, select/move, rotate, remove — for modules, rooms, equipment, hatches | `test_ship_editor.gd` (5 tests); `smoke_shipyard` places a radiator with a real mouse click | pass |
+| Side and front orthographic views, 3D preview of the flight model | visual review (Forward+) | pass |
+| Live stats and validation panel; clicking an issue highlights the part | `smoke_shipyard`; visual review | pass |
+| Save / load player designs; load a prebuilt template | `smoke_shipyard` (save → reload identical) | pass |
+| Launch a test flight (blocked while errors exist); B returns to the shipyard | `smoke_shipyard` | pass; flight uses the design's mass and name |
+| Placement preview: ghost turns red and names the error before you click | `test_preview_reports_new_errors_without_editing`; visual review | pass |
 
-## Milestones 3–8
+Exit criteria met: the player can modify a ship, validate it, save it and
+launch it — verified end to end by `smoke_shipyard` (15 checks).
+Human usability testing of the editor has not happened yet (KNOWN_ISSUES.md).
+
+## Milestone 3 — Physical damage and ship systems ⏭ next
+
+Not started. See GAME_DESIGN.md §17. Acceptance criteria will be stated here
+before implementation begins. The blueprint already carries what it needs:
+module armour thickness, room/equipment positions, and power/heat budgets
+that become real graphs.
+
+## Milestones 4–8
 
 Not started. See GAME_DESIGN.md §17.

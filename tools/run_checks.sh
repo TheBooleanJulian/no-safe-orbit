@@ -33,7 +33,8 @@ run_step() {
 run_step import    "$GODOT" --headless --path . --import
 run_step unit      "$GODOT" --headless --path . -s res://tests/run_tests.gd
 run_step smoke     "$GODOT" --headless --path . -s res://tests/smoke/smoke_main.gd
+run_step shipyard  "$GODOT" --headless --path . -s res://tests/smoke/smoke_shipyard.gd
 run_step boot_main "$GODOT" --headless --path . --quit-after 600
 
-grep -hE "tests, |smoke: " "$LOG_DIR/unit.log" "$LOG_DIR/smoke.log" 2>/dev/null
+grep -hE "tests, |smoke: |smoke_shipyard: " "$LOG_DIR/unit.log" "$LOG_DIR/smoke.log" "$LOG_DIR/shipyard.log" 2>/dev/null
 exit $status
