@@ -10,7 +10,7 @@ decision changes.
 
 **Title:** NO SAFE ORBIT — *Keep the Delta-V Positive, or Else.*
 A hard-sci-fi spacecraft engineering and combat simulator.\
-**Engine:** Godot 4.x (pinned to 4.5.1-stable for development and CI),
+**Engine:** Godot 4.x (pinned to 4.7.2-stable for development and CI),
 using GDScript initially. Keep simulation rules
 decoupled from Godot scene/rendering code so performance-critical
 modules can later move to C# or a native extension if measurements

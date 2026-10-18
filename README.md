@@ -11,11 +11,11 @@ sandbox) playable. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Requirements
 
-- Godot **4.5.1-stable** (standard build, GDScript only — no .NET needed).
+- Godot **4.7.2-stable** (standard build, GDScript only — no .NET needed).
 
 ## Run
 
-Open the folder in Godot and press F5, or from a terminal:
+Open the folder in Godot 4.7.2 and press F5, or from a terminal:
 
 ```bash
 godot --path .
