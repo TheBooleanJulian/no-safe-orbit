@@ -303,8 +303,13 @@ atmosphere under the model being used.
 
 ### Decisions (2026-10-19)
 
+-   **Real sky.** Stars (Yale Bright Star Catalogue), the Sun and Earth's
+    rotation match the real view from the Solar System for the scenario date
+    (2026-10-19 12:00 UTC). The sandbox orbit is therefore prograde and
+    equatorial, flying with Earth's spin like a real station.
 -   **Central body: Earth at real scale.** μ = 3.986004418×10¹⁴ m³/s²,
-    mean radius 6,371 km (spherical, non-rotating). The sandbox starts in
+    mean radius 6,371 km (spherical gravity; the surface turns at the
+    sidereal rate). The sandbox starts in
     a 400 km circular orbit: 7.67 km/s, ~92.4 min period. Consequence:
     within a few-minute engagement, orbital effects show up as slow
     relative drift between ships, not as visibly curving flight paths;

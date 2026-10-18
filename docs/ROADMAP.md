@@ -92,13 +92,34 @@ Exit criteria met: the player can modify a ship, validate it, save it and
 launch it — verified end to end by `smoke_shipyard` (15 checks).
 Human usability testing of the editor has not happened yet (KNOWN_ISSUES.md).
 
-## Milestone 3 — Physical damage and ship systems ⏭ next
+## Milestone 3 — Physical damage and ship systems ✅ (2026-10-19)
 
-Not started. See GAME_DESIGN.md §17. Acceptance criteria will be stated here
-before implementation begins. The blueprint already carries what it needs:
-module armour thickness, room/equipment positions, and power/heat budgets
-that become real graphs.
+Spec exit criteria: two different layouts react differently to identical
+attacks for explainable reasons.
 
-## Milestones 4–8
+| # | Acceptance criterion | Verified by | Result |
+|---|---|---|---|
+| 1 | Armour stops a round whose penetration is insufficient; obliquity thickens armour | `test_armour_stops_insufficient_penetration`, `test_oblique_hit_meets_thicker_armour` | 20 mm vs 30 mm stopped; 50 mm passes head-on, stopped at 60° |
+| 2 | A penetrating round damages components along its path | `test_penetrating_round_damages_systems_along_its_path` | corridor + reactor room breached, hatch h25 destroyed, reactor takes its 35 mm shielding |
+| 3 | Hits use the real hull, not a bounding box | `test_hits_use_hull_cells_not_the_bounding_box` | round over the nose flies on; fuselage face hit at the right point |
+| 4 | Destroying a power junction affects connected loads but not independent networks | `test_wrecked_module_cuts_its_network_but_not_an_independent_one` | 1 reactor: engines dead; 2 reactors: engines and tail RCS stay up |
+| 5 | A breach changes pressure/access by adjacent boundaries | `test_breach_seals_hatches_and_cuts_crew_access` | corridor vents, neighbours sealed but cut off; destroyed hatch vents the bridge |
+| 6 | Heat accumulation throttles / shuts down a system | `test_heat_throttles_then_scrams_the_reactor` | no radiators at full thrust: throttle ~3 min, scram ~11 min; intact radiators stay normal |
+| 7 | Damage changes flight | `test_damage_reduces_thrust_torque_and_guns`, `test_destroyed_tank_spills_its_share_of_propellant` | half thrust + yaw torque from one-sided engine loss; dead cannon silent; ¼ propellant lost with a tank |
+| — | **Exit:** two layouts, identical attack, different explainable outcomes | `test_two_layouts_react_differently_to_the_same_attack` | template keeps power (rounds spent in nose/corridor bulkheads); nose-reactor layout loses reactor and all thrust, report says why |
+| — | Enemy gunner tracks and hits a crossing target | `test_gunnery_ai_turns_onto_target_and_hits`, smoke | ≥ 20 hits in 30 s at > 60 % accuracy; hits the player in-game |
+
+Mutation-checked: removing armour obliquity, letting wrecked junctions conduct,
+never destroying hatches, or removing the AI's line-of-sight feed-forward each
+fails exactly the matching test.
+
+## Milestone 4 — Persistence and recovery ⏭ next
+
+Not started. See GAME_DESIGN.md §17 (ship instance separate from blueprint,
+persistent damage, salvage, spare parts, repair tasks, workshop). Acceptance
+criteria will be stated here before implementation begins. `ShipSystems`
+already is the per-instance damage state that needs saving.
+
+## Milestones 5–8
 
 Not started. See GAME_DESIGN.md §17.

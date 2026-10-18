@@ -14,12 +14,18 @@ var tint: Color = Color.WHITE
 
 var _plumes: Array[Node3D] = []
 var _plume_material: StandardMaterial3D
+var _parts: Dictionary = {}
+var _wreck_material: StandardMaterial3D
 
 
 func _ready() -> void:
 	var model := ShipModelBuilder.build(blueprint, grid, stats.center_of_mass_m, tint)
 	add_child(model.root)
+	_parts = model.parts
 	_build_plumes(model.engine_nozzles)
+	_wreck_material = StandardMaterial3D.new()
+	_wreck_material.albedo_color = Color(0.12, 0.1, 0.09)
+	_wreck_material.roughness = 1.0
 
 
 ## Position relative to the floating render origin (usually the player ship).
@@ -33,6 +39,19 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 		pivot.visible = fwd_fraction > 0.01
 		pivot.scale = Vector3(1.0, 1.0, lerpf(0.2, 1.0, fwd_fraction))
 	_plume_material.albedo_color.a = 0.15 + 0.4 * fwd_fraction
+	if state.systems != null:
+		_show_damage(state.systems)
+
+
+## Destroyed external systems disappear; wrecked modules turn charred.
+func _show_damage(systems: ShipSystems) -> void:
+	for e in systems.equipment:
+		if e.destroyed() and _parts.has(e.id):
+			(_parts[e.id] as Node3D).visible = false
+	for i in systems.modules.size():
+		var id := systems.blueprint.modules[i].id
+		if systems.modules[i].wrecked() and _parts.has(id):
+			(_parts[id] as MeshInstance3D).material_override = _wreck_material
 
 
 ## One additive cone per main engine, pointing aft; length ∝ main thrust.

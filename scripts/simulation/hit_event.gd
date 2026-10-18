@@ -13,3 +13,5 @@ var point_body: Vector3
 var relative_speed: float
 ## Kinetic energy relative to the target (J).
 var energy_j: float
+## What the round did inside the ship (null for ships without systems).
+var report: DamageReport

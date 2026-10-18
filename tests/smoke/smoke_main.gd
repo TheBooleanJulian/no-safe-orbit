@@ -105,6 +105,19 @@ func _run() -> void:
 	var target_text: String = main.hud.target_label.text
 	_check(target_text.contains("RANGE") and target_text.contains("km"), "HUD target panel shows range in km")
 	_check(main.camera.current, "chase camera is the active camera")
+	_check(main.hud.flight_label.text.contains("POWER") and main.hud.target_label.text.contains("SYSTEMS"),
+		"HUD shows own power/heat and the target's systems")
+
+	# T: the target shoots back. Within 40 s the player takes a hit, and the
+	# HUD reports what it did.
+	_press_action("toggle_target_ai")
+	await process_frame
+	var t0 := main.world.sim_time
+	while player.hits_taken == 0 and main.world.sim_time - t0 < 40.0:
+		await process_frame
+	await process_frame
+	_check(player.hits_taken > 0 and main.hud.flight_label.text.contains("HIT TAKEN"),
+		"hostile target hits the player and the HUD reports it (after %.1f s)" % (main.world.sim_time - t0))
 
 	print("smoke: %d failure(s)" % _failures.size())
 	quit(1 if not _failures.is_empty() else 0)

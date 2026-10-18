@@ -41,6 +41,29 @@ enum Mount { INTERNAL, EXTERNAL }
 @export var isp_s: float = 0.0
 ## PROPELLANT_TANK: propellant held when full (kg; mass_kg is the dry tank).
 @export var propellant_capacity_kg: float = 0.0
+@export_group("Damage")
+## Damage (mm of penetration absorbed) before it is destroyed; 0 = default for its kind.
+@export var hit_points: float = 0.0
+## Penetration (mm) a round loses passing through it; 0 = default for its kind.
+@export var shield_mm: float = 0.0
+
+## Per-kind defaults: [hit points, shield mm].
+const DAMAGE_DEFAULTS := {
+	Kind.REACTOR: [60.0, 35.0],
+	Kind.MAIN_ENGINE: [40.0, 20.0],
+	Kind.RCS: [10.0, 5.0],
+	Kind.CANNON: [30.0, 15.0],
+	Kind.RADIATOR: [10.0, 3.0],
+	Kind.PROPELLANT_TANK: [25.0, 10.0],
+}
+
+
+func max_hit_points() -> float:
+	return hit_points if hit_points > 0.0 else DAMAGE_DEFAULTS.get(kind, [20.0, 10.0])[0]
+
+
+func shielding_mm() -> float:
+	return shield_mm if shield_mm > 0.0 else DAMAGE_DEFAULTS.get(kind, [20.0, 10.0])[1]
 ## CANNON only.
 @export var cannon: KineticCannonConfig
 @export var color: Color = Color(0.8, 0.8, 0.8)

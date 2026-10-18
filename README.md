@@ -6,10 +6,11 @@ A hard-sci-fi spacecraft engineering and combat simulator, built in Godot 4.
 Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
-**Status:** Milestones 0–2 complete — design a ship in the shipyard, then fly
-it in a real-scale 400 km Earth orbit with a kinetic cannon, fire control,
-radar and an orbital HUD. Next: Milestone 3 (physical damage and ship
-systems). See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**Status:** Milestones 0–3 complete — design a ship in the shipyard, then fly
+and fight it in a real-scale 400 km Earth orbit under the real sky. Rounds
+penetrate armour and wreck the systems in their path; power, heat, pressure
+and propellant are simulated. Next: Milestone 4 (persistence and recovery).
+See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Requirements
 
@@ -23,22 +24,37 @@ Open the folder in Godot 4.7.2 and press F5, or from a terminal:
 godot --path .
 ```
 
-## Controls (all rebindable in Project → Project Settings → Input Map)
+## Controls (rebind in game with F1; saved per user)
 
-| Action | Default |
-|---|---|
-| Main engine / reverse thrusters | W / S |
-| Strafe left / right | A / D |
-| Thrust up / down | Space or R / Ctrl or F |
-| Pitch up / down | ↑ / ↓ |
-| Yaw left / right | ← / → |
-| Roll left / right | Q / E |
-| Mouse virtual stick | click to capture, Esc to release |
-| Toggle flight assist | Z |
-| Velocity hold: orbit ↔ match target | X |
-| Fire cannon | Left mouse (once captured) or Enter |
-| Restart scenario | Backspace |
-| Open the shipyard (with the ship you're flying) | B |
+| Action | Keyboard / mouse | Gamepad |
+|---|---|---|
+| Main engine / reverse thrusters | W / S | left stick up / down |
+| Strafe left / right | A / D | left stick left / right |
+| Thrust up / down | Space or R / Ctrl or F | RT / LT |
+| Pitch up / down | ↑ / ↓ | right stick down / up |
+| Yaw left / right | ← / → | right stick left / right |
+| Roll left / right | Q / E | LB / RB |
+| Mouse virtual stick | click to capture, Esc to release | — |
+| Toggle flight assist | Z | Y |
+| Velocity hold: orbit ↔ match target | X | X |
+| Fire cannon | Left mouse (once captured) or Enter | A |
+| Target hostile on/off | T | B |
+| Restart scenario | Backspace | Back |
+| Open the shipyard (with the ship you're flying) | B | Start |
+| Controls panel (rebinding) | F1 | Guide |
+
+**Propellant:** the Frigate Mk I carries 80 t — about 1.6 km/s of main-engine
+Δv; RCS burns three times as much per m/s. Flight assist's target-matching and
+every manoeuvre spend it. Empty tanks mean no thrust and no RCS.
+
+**Combat:** T makes the target shoot back. Rounds penetrate armour (thicker at
+angles), then breach rooms, destroy hatches and damage whatever systems lie on
+their path. Lost reactors, wrecked modules (which cut their power junction)
+and overheating (throttle at 380 K, scram at 450 K) take systems offline. The
+target panel and the HIT TAKEN lines explain every hit.
+
+**Sky:** stars, Sun and Earth's rotation are real for 2026-10-19 12:00 UTC
+(Yale Bright Star Catalogue, NASA Blue Marble; see `data/ATTRIBUTION.md`).
 
 **Flight assist ON** (default) damps rotation to the requested turn rate. For
 translation it has two holds:

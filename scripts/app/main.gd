@@ -33,6 +33,8 @@ static var launch_blueprint: ShipBlueprint
 
 var world: WorldSimulation
 var celestial: CelestialFrame
+## The target shoots back (toggle with T).
+var target_hostile: bool = false
 var player_input := PlayerInput.new()
 var _views: Dictionary = {}  # StringName -> ShipView
 ## Compiled designs: {blueprint, grid, stats, config} per ship id.
@@ -63,13 +65,16 @@ func _start_scenario() -> void:
 	var r0 := EARTH.radius_m + START_ALTITUDE_M
 	world.set_central_body(EARTH, Vec3d.new(0, r0, 0), Vec3d.new(0, 0, -EARTH.circular_speed(r0)))
 	world.anchor_id = PLAYER_ID
-	world.add_ship(ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config))
+	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
+	player.attach_systems(_new_systems(PLAYER_ID))
+	world.add_ship(player)
 	# Target: 2.5 km ahead and off-axis on a slightly different orbit, crossing
 	# the bow at ~25 m/s so range, lead and radar all have something to show.
 	var target := ShipState.create(
 		TARGET_ID, "TGT-01 KESTREL", _designs[TARGET_ID].config,
 		Vector3(400, 120, -2500), Vector3(-25, 1.5, 6.0), Quaternion(Vector3.UP, 0.9))
 	target.angular_velocity = Vector3(0.0, 0.03, 0.01)
+	target.attach_systems(_new_systems(TARGET_ID))
 	world.add_ship(target)
 	world.set_input(TARGET_ID, ShipControlInput.neutral())
 
@@ -102,6 +107,11 @@ func _compile(bp: ShipBlueprint, fallback: ShipBlueprint) -> Dictionary:
 	return {"blueprint": bp, "grid": grid, "stats": stats, "config": stats.to_ship_config(bp.name)}
 
 
+func _new_systems(id: StringName) -> ShipSystems:
+	var d: Dictionary = _designs[id]
+	return ShipSystems.create(d.blueprint, d.grid, d.stats, d.config)
+
+
 func _spawn_view(id: StringName, tint: Color) -> void:
 	var view: ShipView = SHIP_VIEW_SCENE.instantiate()
 	view.ship_id = id
@@ -128,6 +138,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("open_shipyard"):
 		open_shipyard()
 		return
+	elif event.is_action_pressed("toggle_target_ai"):
+		target_hostile = not target_hostile
+		hud.target_hostile = target_hostile
+		GameLog.info("main", "Target %s" % ("HOSTILE — guns free" if target_hostile else "passive"))
+		if not target_hostile:
+			world.set_input(TARGET_ID, ShipControlInput.neutral())
+		return
 	elif event.is_action_pressed("toggle_controls"):
 		hud.controls.toggle()
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -147,6 +164,8 @@ func _process(delta: float) -> void:
 	var target := world.get_ship(TARGET_ID)
 	var target_id := TARGET_ID if target.is_active() else &""
 	world.set_input(PLAYER_ID, player_input.build_input(delta, target_id))
+	if target_hostile and target.is_active():
+		world.set_input(TARGET_ID, GunneryAI.command(target, player))
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
 	var running := player.is_active() and not hud.controls.visible

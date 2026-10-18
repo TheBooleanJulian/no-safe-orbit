@@ -193,6 +193,74 @@ func hull_bounds_m() -> AABB:
 	return box
 
 
+## Structural attachments: for each module index, the modules it touches
+## through matching connectors. `mismatches` (optional) receives, per module,
+## a description of a contact whose connectors don't match.
+func attachments(mismatches: Dictionary = {}) -> Array[Array]:
+	var n := blueprint.modules.size()
+	var attached: Array[Array] = []
+	for i in n:
+		attached.append([])
+	for i in n:
+		if module_def(i) == null:
+			continue
+		for cell in module_cells(i):
+			for face: StringName in FACE_NORMALS:
+				var other: int = module_at.get(cell + FACE_NORMALS[face], -1)
+				if other < 0 or other == i:
+					continue
+				var mine := module_connector(i, face)
+				var theirs := module_connector(other, face_of(-FACE_NORMALS[face]))
+				if mine != &"" and mine == theirs:
+					if not attached[i].has(other):
+						attached[i].append(other)
+				else:
+					mismatches[i] = [other, mine, theirs]
+	return attached
+
+
+## Hatch id between two neighbouring cells, or "".
+func hatch_between(a: Vector3i, b: Vector3i) -> String:
+	for h in blueprint.hatches:
+		if (h.a == a and h.b == b) or (h.a == b and h.b == a):
+			return h.id
+	return ""
+
+
+## Cells a ray passes through (Amanatides–Woo voxel traversal), in grid cell
+## units: `start` and the result positions are in cells, `dir` is a unit
+## vector, `max_cells` the length to walk. Each step is
+## {cell: Vector3i, t: float (cells from start), normal: Vector3i (face of
+## the previous cell crossed into this one; ZERO for the first)}.
+static func traverse(start: Vector3, dir: Vector3, max_cells: float) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var cell := Vector3i(floori(start.x), floori(start.y), floori(start.z))
+	var step := Vector3i(signi(int(signf(dir.x))), signi(int(signf(dir.y))), signi(int(signf(dir.z))))
+	var t_next := Vector3(INF, INF, INF)
+	var t_delta := Vector3(INF, INF, INF)
+	for axis in 3:
+		if absf(dir[axis]) > 1e-9:
+			t_delta[axis] = 1.0 / absf(dir[axis])
+			var boundary := float(cell[axis] + (1 if step[axis] > 0 else 0))
+			t_next[axis] = (boundary - start[axis]) / dir[axis]
+	out.append({"cell": cell, "t": 0.0, "normal": Vector3i.ZERO})
+	for i in 512:
+		var axis := 0
+		if t_next.y < t_next[axis]:
+			axis = 1
+		if t_next.z < t_next[axis]:
+			axis = 2
+		var t := t_next[axis]
+		if t > max_cells:
+			break
+		var normal := Vector3i.ZERO
+		normal[axis] = step[axis]
+		cell += normal
+		t_next[axis] += t_delta[axis]
+		out.append({"cell": cell, "t": t, "normal": normal})
+	return out
+
+
 ## Range of occupied decks / x / z across the hull (for editor views).
 func cell_bounds() -> AABB:
 	var b := hull_bounds_m()

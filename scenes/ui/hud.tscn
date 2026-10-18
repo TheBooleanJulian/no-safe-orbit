@@ -146,7 +146,7 @@ theme_override_constants/shadow_offset_y = 1
 theme_override_colors/font_color = Color(0.82, 0.9, 1, 0.6)
 theme_override_font_sizes/font_size = 13
 text = "W/S main / reverse   A/D strafe   SPACE·R / CTRL·F up / down   ARROWS pitch & yaw   Q/E roll
-MOUSE virtual stick (click to capture, ESC to release)   LMB·ENTER fire   BACKSPACE restart   B shipyard   F1 controls
+MOUSE virtual stick (click to capture, ESC to release)   LMB·ENTER fire   BACKSPACE restart   B shipyard   T hostile target   F1 controls
 Z assist on/off   X hold: orbit ↔ match target   ·   green ring = orbital prograde   ·   ◇ = lead (aim here)"
 
 [node name="Overlay" type="Control" parent="Root"]

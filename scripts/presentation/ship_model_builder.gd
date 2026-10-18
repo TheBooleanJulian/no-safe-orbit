@@ -10,6 +10,9 @@ class Model:
 	var root: Node3D
 	## Main-engine nozzle positions (body frame), for plumes.
 	var engine_nozzles: Array[Vector3] = []
+	## Blueprint id → node holding that module's / external system's meshes
+	## (so views can hide destroyed parts and darken wrecked modules).
+	var parts: Dictionary = {}
 
 
 ## `origin_m`: grid-metre point placed at the model origin (normally the
@@ -26,7 +29,8 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 			continue
 		var size_m := Vector3(grid.module_size(i)) * c
 		var center := Vector3(bp.modules[i].position) * c + size_m * 0.5 - origin_m
-		_box(model.root, size_m - Vector3.ONE * 0.15, center, _mat(mats, def.color * tint))
+		var part := _box(model.root, size_m - Vector3.ONE * 0.15, center, _mat(mats, def.color * tint))
+		model.parts[bp.modules[i].id] = part
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
 		if def == null or not def.is_external():
@@ -34,21 +38,25 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 		var normal := Vector3(ShipGrid.FACE_NORMALS.get(bp.equipment[i].face, Vector3i.ZERO))
 		var mount := grid.equipment_position_m(i) - origin_m
 		var mat := _mat(mats, def.color * tint)
+		var part := Node3D.new()
+		part.name = bp.equipment[i].id
+		model.root.add_child(part)
+		model.parts[bp.equipment[i].id] = part
 		match def.kind:
 			EquipmentDefinition.Kind.MAIN_ENGINE:
 				# Cylinder +Y is rotated to +Z (aft): top = aft end = wide mouth.
-				var bell := _cylinder(model.root, 1.4, 0.7, 2.4, mount + normal * 1.2, mat)
+				var bell := _cylinder(part, 1.4, 0.7, 2.4, mount + normal * 1.2, mat)
 				bell.rotation_degrees = Vector3(90, 0, 0)
 				model.engine_nozzles.append(mount + normal * 2.4)
 			EquipmentDefinition.Kind.RCS:
-				_box(model.root, Vector3.ONE * 0.9, mount + normal * 0.45, mat)
+				_box(part, Vector3.ONE * 0.9, mount + normal * 0.45, mat)
 			EquipmentDefinition.Kind.CANNON:
-				_box(model.root, Vector3(1.8, 0.9, 1.8), mount + normal * 0.45, mat)
-				var barrel := _cylinder(model.root, 0.16, 0.16, 5.0, mount + normal * 0.6 + Vector3(0, 0, -2.5), mat)
+				_box(part, Vector3(1.8, 0.9, 1.8), mount + normal * 0.45, mat)
+				var barrel := _cylinder(part, 0.16, 0.16, 5.0, mount + normal * 0.6 + Vector3(0, 0, -2.5), mat)
 				barrel.rotation_degrees = Vector3(90, 0, 0)
 			EquipmentDefinition.Kind.RADIATOR:
 				var fin := Vector3(0.12, 3.0, 2.8) if normal.y != 0.0 else Vector3(3.0, 0.12, 2.8)
-				_box(model.root, fin, mount + normal * 1.5, mat)
+				_box(part, fin, mount + normal * 1.5, mat)
 	return model
 
 

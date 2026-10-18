@@ -28,6 +28,7 @@ const ACTIONS := [
 	[&"toggle_velocity_hold", "Hold orbit / match target"],
 	[&"restart_scenario", "Restart scenario"],
 	[&"open_shipyard", "Open shipyard"],
+	[&"toggle_target_ai", "Target hostile on/off"],
 	[&"release_mouse", "Release mouse"],
 	[&"toggle_controls", "Controls panel"],
 ]

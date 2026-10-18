@@ -39,6 +39,11 @@ var status_time: float = 0.0
 ## Propellant on board (kg); unused when config.unlimited_propellant.
 var propellant_kg: float = 0.0
 
+## Runtime condition of a ship built from a blueprint (damage, power, heat,
+## pressure); null for fixed test configs. When set, `config` is its
+## effective (damage-reduced) config.
+var systems: ShipSystems
+
 ## Cannon state (unused when config.cannon is null). Rounds are shared by
 ## every mount; each mount has its own cooldown.
 var cannon_rounds: int = 0
@@ -91,6 +96,12 @@ func delta_v_remaining() -> float:
 
 func is_active() -> bool:
 	return status == Status.ACTIVE
+
+
+## Attach the runtime systems of the ship's blueprint and fly their config.
+func attach_systems(p_systems: ShipSystems) -> void:
+	systems = p_systems
+	config = p_systems.effective_config()
 
 
 func snapshot_previous() -> void:

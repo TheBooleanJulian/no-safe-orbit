@@ -13,10 +13,20 @@ extends Resource
 @export var round_mass_kg: float = 4.0
 ## Rounds are removed after this long in flight (s). Max range ≈ v_muzzle × lifetime.
 @export var round_lifetime_s: float = 30.0
+## Armour penetration (mm of hull armour) at an impact speed equal to the
+## muzzle velocity. Scales with impact speed^1.4 (de Marre-style).
+@export var penetration_mm: float = 60.0
+
+const PENETRATION_SPEED_EXPONENT := 1.4
 
 
 func fire_interval_s() -> float:
 	return 60.0 / rate_of_fire_rpm
+
+
+## Penetration (mm) at a given impact speed relative to the target.
+func penetration_at(impact_speed_mps: float) -> float:
+	return penetration_mm * pow(maxf(impact_speed_mps, 0.0) / muzzle_velocity_mps, PENETRATION_SPEED_EXPONENT)
 
 
 func validate() -> PackedStringArray:
