@@ -29,6 +29,8 @@ var target_hostile: bool = false
 
 var _last_hit_time := -INF
 var _hits_scored := 0
+var _rounds_near := 0
+var _rounds_far := 0
 ## Latest damage report on the target (our hits) and on us (incoming).
 var _outgoing: DamageReport
 var _incoming: DamageReport
@@ -68,6 +70,8 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	_update_flight_panel(player, input, world.sim_time, has_target)
 	_update_orbit_panel(world, player, orbit)
 	_update_target_panel(world, player, target)
+	_rounds_near = world.projectiles().size()
+	_rounds_far = world.far_projectiles().size()
 	_update_warning(world, player, orbit)
 
 	overlay.camera = camera
@@ -110,6 +114,8 @@ func _update_flight_panel(player: ShipState, input: PlayerInput, sim_time: float
 		"Δv SPENT   %.1f m/s" % player.delta_v_expended,
 		"PROPELLANT %s" % _propellant_text(player),
 		"CANNON     %s" % gun,
+		"ROUNDS UP  %d near · %d far orbit   recoil %.1f kN·s" % [
+			_rounds_near, _rounds_far, player.recoil_impulse / 1000.0],
 	] + _systems_lines(player, sim_time) + [
 		"T+         %s" % HudFormat.clock(sim_time),
 	])
@@ -204,8 +210,6 @@ func _update_target_panel(world: WorldSimulation, player: ShipState, target: Shi
 	var tof := "NO FIRING SOLUTION"
 	if not lead.is_empty():
 		tof = "%.2f s  (lead ◇)" % lead.time
-		if lead.time > player.config.cannon.round_lifetime_s:
-			tof = "%.1f s  BEYOND ROUND LIFE" % lead.time
 	var hit_age := world.sim_time - _last_hit_time
 	var hits := "%d" % _hits_scored
 	if hit_age < 3.0:
@@ -240,6 +244,12 @@ func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElem
 		warning_label.add_theme_color_override("font_color", COLOR_DANGER)
 		warning_label.visible = true
 		return
+	var incoming := incoming_round_time(world, player)
+	if incoming >= 0.0:
+		warning_label.text = "INCOMING ROUND — IMPACT IN %.1f s" % incoming
+		warning_label.add_theme_color_override("font_color", COLOR_DANGER)
+		warning_label.visible = true
+		return
 	var sys := player.systems
 	if sys != null and (sys.reactor_state != ShipSystems.Reactor.NORMAL or sys.power_unmet_kw > 0.0):
 		if sys.reactor_state == ShipSystems.Reactor.SCRAM:
@@ -260,6 +270,26 @@ func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElem
 			warning_label.visible = true
 			return
 	warning_label.visible = false
+
+
+## Seconds until the nearest round on a collision course reaches `ship`
+## (straight-line closest approach within the hull's radius, next 10 s;
+## includes the ship's own rounds once armed), or -1.
+static func incoming_round_time(world: WorldSimulation, ship: ShipState) -> float:
+	var radius := ship.config.hit_box_half_extents.length()
+	var best := INF
+	for shot in world.projectiles():
+		if shot.shooter_id == ship.id and shot.age_s < WorldSimulation.ARM_TIME_S:
+			continue
+		var p := shot.position - ship.position
+		var v := shot.velocity - ship.velocity
+		var vv := v.length_squared()
+		if vv < 1e-6:
+			continue
+		var t := -p.dot(v) / vv
+		if t > 0.0 and t < 10.0 and (p + v * t).length() < radius and t < best:
+			best = t
+	return best if best < INF else -1.0
 
 
 ## {time, direction} for the player's cannon against the target, or {}.
