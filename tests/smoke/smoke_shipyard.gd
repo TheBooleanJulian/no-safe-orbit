@@ -47,6 +47,17 @@ func _click(control: Control, local_pos: Vector2, button: MouseButton = MOUSE_BU
 		await process_frame
 
 
+func _key(keycode: Key, ctrl: bool = false) -> void:
+	for pressed in [true, false]:
+		var ev := InputEventKey.new()
+		ev.keycode = keycode
+		ev.physical_keycode = keycode
+		ev.ctrl_pressed = ctrl
+		ev.pressed = pressed
+		Input.parse_input_event(ev)
+		await process_frame
+
+
 func _run() -> void:
 	print("== smoke_shipyard")
 	root.size = Vector2i(1600, 900)
@@ -85,13 +96,17 @@ func _run() -> void:
 	# An overlapping module is an error: launch blocked.
 	yard.select_palette("hull", &"nose_section")
 	yard.apply_at(Vector3i(2, 0, 0), &"dorsal")
-	var bad_id := yard.selected_id
 	await _frames(1)
 	_check(ed.report.has_code(&"module_overlap") and yard.launch_button.disabled, "overlapping module is an error and disables launch")
 	_check(not yard.launch(), "launch() refuses a design with errors")
-	ed.remove(bad_id)
-	ed.place_equipment(&"fusion_reactor", Vector3i(3, 0, 8))
-	_check(not ed.report.has_errors() and not ed.report.has_code(&"power_deficit"), "design valid again after fixes")
+	# Ctrl+Z twice (real key events): takes back the nose and the reactor removal.
+	for i in 2:
+		await _key(KEY_Z, true)
+	_check(not ed.report.has_errors() and not ed.report.has_code(&"power_deficit") and ed.item_at(Vector3i(3, 2, 6), &"dorsal") != "",
+		"two Ctrl+Z undo the last two edits, keeping the radiator")
+	await _key(KEY_Y, true)
+	_check(ed.report.has_code(&"power_deficit"), "Ctrl+Y redoes the reactor removal")
+	await _key(KEY_Z, true)
 
 	# Save, reload, compare.
 	yard.name_edit.text = "Smoke Test Frigate"

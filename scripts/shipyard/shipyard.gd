@@ -62,6 +62,8 @@ func _ready() -> void:
 	%LoadTemplate.pressed.connect(func() -> void: load_design(template_list.get_item_metadata(template_list.selected)))
 	%LoadDesign.pressed.connect(_on_load_design_pressed)
 	%Save.pressed.connect(save_design)
+	%Undo.pressed.connect(undo)
+	%Redo.pressed.connect(redo)
 	launch_button.pressed.connect(launch)
 	name_edit.text_changed.connect(func(t: String) -> void: editor.blueprint.name = t)
 	deck_editor.cell_pressed.connect(apply_at)
@@ -79,7 +81,20 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
 		return
-	var key := (event as InputEventKey).keycode
+	var k := event as InputEventKey
+	var key := k.keycode
+	if k.ctrl_pressed or k.meta_pressed:
+		match key:
+			KEY_Z:
+				redo() if k.shift_pressed else undo()
+			KEY_Y:
+				redo()
+			KEY_S:
+				save_design()
+			_:
+				return
+		get_viewport().set_input_as_handled()
+		return
 	match key:
 		KEY_PAGEUP:
 			change_deck(1)
@@ -120,7 +135,7 @@ func set_tool(t: Tool) -> void:
 		place_kind = ""
 		place_def = &""
 		info_label.text = {
-			Tool.SELECT: "SELECT — click a part to select it. Arrow keys move it, R rotates a module, Delete removes. Right-click removes anything.",
+			Tool.SELECT: "SELECT — click a part to select it. Arrow keys move it (a module carries its rooms and equipment), R turns a module in place, Delete removes. Right-click removes anything. Ctrl+Z / Ctrl+Y undo / redo.",
 			Tool.HATCH: "HATCH — click near an edge between two rooms to add/remove a door; click a cell's centre for a ladder to the deck above.",
 		}[t]
 	deck_editor.drag_rooms = t == Tool.PLACE and place_kind == "room"
@@ -146,11 +161,25 @@ func change_deck(delta: int) -> void:
 
 
 func rotate_current() -> void:
-	if tool == Tool.PLACE and place_kind == "hull":
+	if tool == Tool.PLACE and (place_kind == "hull" or place_kind == "equipment"):
 		place_rotation = (place_rotation + 1) % 4
 		_update_ghost()
 	elif selected_id != "":
 		editor.rotate_module(selected_id)
+
+
+func undo() -> void:
+	if editor.undo():
+		_set_status("Undone")
+	else:
+		_set_status("Nothing to undo")
+
+
+func redo() -> void:
+	if editor.redo():
+		_set_status("Redone")
+	else:
+		_set_status("Nothing to redo")
 
 
 ## Apply the current tool at a cell (deck editor click, or tests).
@@ -178,7 +207,7 @@ func apply_at(cell: Vector3i, face: StringName, button: MouseButton = MOUSE_BUTT
 				"room":
 					selected_id = editor.place_room(place_def, cell.y, Rect2i(cell.x, cell.z, 1, 1))
 				"equipment":
-					selected_id = editor.place_equipment(place_def, cell, face)
+					selected_id = editor.place_equipment(place_def, cell, face, place_rotation)
 			_set_status("Placed %s" % selected_id)
 
 
@@ -335,12 +364,16 @@ func _update_ghost() -> void:
 					deck_editor.ghost_face = _hover_face
 					hint = "%s — %s face (edges: fore/aft/port/starboard, centre: dorsal, Shift: ventral)" % [def.display_name, _hover_face]
 				else:
-					for x in def.footprint_cells.x:
-						for z in def.footprint_cells.y:
+					var fp := def.footprint_cells
+					if place_rotation % 2 == 1:
+						fp = Vector2i(fp.y, fp.x)
+					for x in fp.x:
+						for z in fp.y:
 							deck_editor.ghost_cells.append(cell + Vector3i(x, 0, z))
-					hint = "%s — %d×%d" % [def.display_name, def.footprint_cells.x, def.footprint_cells.y]
+					hint = "%s — %d×%d [R rotates]" % [def.display_name, fp.x, fp.y]
 				var face := _hover_face if def.is_external() else &""
-				edit = func(bp: ShipBlueprint) -> void: bp.add_equipment(place_def, cell, face)
+				var rot := 0 if def.is_external() else place_rotation
+				edit = func(bp: ShipBlueprint) -> void: bp.add_equipment(place_def, cell, face, rot)
 		var new_errors := editor.preview_new_errors(edit)
 		deck_editor.ghost_ok = new_errors.is_empty()
 		if not new_errors.is_empty():
