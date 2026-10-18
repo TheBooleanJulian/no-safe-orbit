@@ -20,6 +20,7 @@ const NEAR_PATH_SAMPLES := 80
 @onready var target_label: Label = $Root/TargetPanel/Margin/TargetLabel
 @onready var warning_label: Label = $Root/WarningLabel
 @onready var controls: ControlsPanel = $Root/Controls
+@onready var hit_cam: HitCam = $Root/HitCam
 
 ## Real-sky frame, for the sunlight / eclipse readout (set by Main).
 var celestial: CelestialFrame
