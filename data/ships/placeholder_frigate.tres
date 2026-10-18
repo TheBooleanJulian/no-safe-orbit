@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ShipConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/ship_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+display_name = "Placeholder Frigate"
+mass_kg = 250000.0
+inertia_kgm2 = Vector3(7.8e7, 8e7, 7.7e6)
+thrust_forward_n = 2500000.0
+thrust_reverse_n = 500000.0
+thrust_lateral_n = 500000.0
+thrust_vertical_n = 500000.0
+max_torque_nm = Vector3(2.4e7, 2.4e7, 3e6)
+assist_max_rate_rad_s = Vector3(0.5, 0.5, 0.9)

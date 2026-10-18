@@ -1,0 +1,102 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+[ext_resource type="Script" path="res://scripts/ui/hud_overlay.gd" id="2_ovl"]
+
+[sub_resource type="SystemFont" id="SystemFont_mono"]
+font_names = PackedStringArray("DejaVu Sans Mono", "Consolas", "Menlo", "Monospace")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.03, 0.05, 0.08, 0.72)
+border_width_left = 2
+border_color = Color(0.35, 0.65, 0.9, 0.7)
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+
+[sub_resource type="Theme" id="Theme_hud"]
+default_font = SubResource("SystemFont_mono")
+default_font_size = 15
+Label/colors/font_color = Color(0.82, 0.9, 1, 1)
+PanelContainer/styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Hud" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = SubResource("Theme_hud")
+
+[node name="Overlay" type="Control" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_ovl")
+
+[node name="FlightPanel" type="PanelContainer" parent="Root"]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 16.0
+offset_bottom = 16.0
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/FlightPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="FlightLabel" type="Label" parent="Root/FlightPanel/Margin"]
+layout_mode = 2
+text = "FLIGHT"
+
+[node name="TargetPanel" type="PanelContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 16.0
+grow_horizontal = 0
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/TargetPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="TargetLabel" type="Label" parent="Root/TargetPanel/Margin"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.62, 0.5, 1)
+text = "TARGET"
+
+[node name="HelpLabel" type="Label" parent="Root"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = -16.0
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.82, 0.9, 1, 0.6)
+theme_override_font_sizes/font_size = 13
+text = "W/S main / reverse   A/D strafe   SPACE·R / CTRL·F up / down
+ARROWS pitch & yaw   Q/E roll   MOUSE virtual stick (click to capture, ESC to release)
+Z flight assist   ·   green ring = where you're GOING (prograde)   ·   white reticle = where you're POINTING"

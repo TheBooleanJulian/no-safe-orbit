@@ -1,0 +1,74 @@
+extends SceneTree
+## End-to-end smoke test of the real main scene, driven through InputMap
+## actions exactly as a player would.
+##   godot --headless --path . -s res://tests/smoke/smoke_main.gd
+## Measures: scene boots; forward thrust key moves the player ship forward;
+## assist toggle reaches the simulation and HUD; HUD shows target range.
+
+var _failures := PackedStringArray()
+
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+
+func _check(condition: bool, what: String) -> void:
+	print("  %s  %s" % ["PASS" if condition else "FAIL", what])
+	if not condition:
+		_failures.append(what)
+
+
+func _run_until_sim_time(main: Main, seconds: float) -> void:
+	var stop := main.world.sim_time + seconds
+	var guard := 0
+	while main.world.sim_time < stop and guard < 100_000:
+		await process_frame
+		guard += 1
+
+
+func _run() -> void:
+	print("== smoke_main")
+	var main: Main = (load("res://scenes/main/main.tscn") as PackedScene).instantiate()
+	root.add_child(main)
+	await process_frame
+	await process_frame
+
+	_check(main.world != null and main.world.has_ship(&"player") and main.world.has_ship(&"target_01"),
+		"world spawned player and target")
+	var player := main.world.get_ship(&"player")
+
+	# Hold W for 1 s of simulation time.
+	Input.action_press("thrust_forward")
+	await _run_until_sim_time(main, 1.0)
+	Input.action_release("thrust_forward")
+	var fwd := -player.body_velocity().z
+	var expected := FRIGATE_ACCEL * 1.0
+	_check(fwd > expected * 0.8 and fwd < expected * 1.3,
+		"forward speed after ~1 s of W: expected ≈%.1f m/s, actual %.2f m/s" % [expected, fwd])
+
+	# Toggle assist off through the real input path.
+	var ev := InputEventAction.new()
+	ev.action = "toggle_flight_assist"
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	await process_frame
+	await process_frame
+	_check(not main.player_input.flight_assist, "Z toggles flight assist off")
+	var hud_text: String = main.hud.flight_label.text
+	_check(hud_text.contains("MANUAL"), "HUD shows manual mode")
+
+	# Manual mode: coasting keeps forward speed (no hidden damping).
+	var before := -player.body_velocity().z
+	await _run_until_sim_time(main, 0.5)
+	var after := -player.body_velocity().z
+	_check(absf(after - before) < 0.05, "manual coast keeps speed: before %.3f, after %.3f" % [before, after])
+
+	var target_text: String = main.hud.target_label.text
+	_check(target_text.contains("RANGE") and target_text.contains("km"), "HUD target panel shows range in km")
+	_check(main.camera.current, "chase camera is the active camera")
+
+	print("smoke: %d failure(s)" % _failures.size())
+	quit(1 if not _failures.is_empty() else 0)
+
+
+const FRIGATE_ACCEL := 2.5e6 / 250_000.0  # placeholder frigate main-engine m/s²
