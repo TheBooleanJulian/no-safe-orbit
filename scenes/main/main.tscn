@@ -42,6 +42,12 @@ script = ExtResource("8_stars")
 [node name="DustField" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("3_dust")
 
+[node name="DustFieldFar" type="MultiMeshInstance3D" parent="."]
+script = ExtResource("3_dust")
+tile_size_m = 1900.0
+motes_per_tile = 90
+seed_value = 4242
+
 [node name="ProjectileView" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("6_rounds")
 

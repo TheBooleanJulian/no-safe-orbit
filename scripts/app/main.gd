@@ -20,6 +20,7 @@ const SUN_ENERGY := 1.4
 @onready var camera: ChaseCamera = $ChaseCamera
 @onready var hud: Hud = $Hud
 @onready var dust: DustField = $DustField
+@onready var dust_far: DustField = $DustFieldFar
 @onready var sky: PlanetSky = $WorldEnvironment
 @onready var sun: DirectionalLight3D = $Sun
 @onready var stars: Starfield = $Starfield
@@ -39,6 +40,7 @@ var _designs: Dictionary = {}
 
 
 func _ready() -> void:
+	InputBindings.apply_saved()
 	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
 	stars.build(celestial)
 	hud.celestial = celestial
@@ -126,6 +128,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("open_shipyard"):
 		open_shipyard()
 		return
+	elif event.is_action_pressed("toggle_controls"):
+		hud.controls.toggle()
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		return
 	player_input.handle_event(event)
 
 
@@ -141,8 +147,10 @@ func _process(delta: float) -> void:
 	var target := world.get_ship(TARGET_ID)
 	var target_id := TARGET_ID if target.is_active() else &""
 	world.set_input(PLAYER_ID, player_input.build_input(delta, target_id))
-	# Freeze the moment the player is lost; Backspace restarts.
-	var alpha := world.advance(delta) if player.is_active() else 1.0
+	# Freeze the moment the player is lost (Backspace restarts) and while the
+	# controls panel is open.
+	var running := player.is_active() and not hud.controls.visible
+	var alpha := world.advance(delta) if running else 1.0
 	var hits := world.take_hit_events()
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
 	for ev in hits:
@@ -156,7 +164,9 @@ func _process(delta: float) -> void:
 		view.sync_from(ship, alpha, render_origin)
 
 	camera.follow(_views[PLAYER_ID], delta)
-	dust.update_origin(world.continuous_position(render_origin))
+	var continuous := world.continuous_position(render_origin)
+	dust.update_origin(continuous)
+	dust_far.update_origin(continuous)
 	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin)).to_vector3()
 	_update_sun(player)
 	sky.update_view(planet_center, camera, celestial, world.sim_time)

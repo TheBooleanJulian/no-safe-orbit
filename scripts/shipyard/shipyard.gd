@@ -44,6 +44,7 @@ var _hover_face: StringName = &""
 
 
 func _ready() -> void:
+	InputBindings.apply_saved()
 	var catalog := ConstructionCatalog.default_catalog()
 	var start: ShipBlueprint = Main.launch_blueprint.duplicate_blueprint() if Main.launch_blueprint != null else _load_or_null(BlueprintIO.DEFAULT_TEMPLATE)
 	editor = ShipEditor.new(start, catalog)

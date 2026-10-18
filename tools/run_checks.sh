@@ -35,6 +35,15 @@ run_step unit      "$GODOT" --headless --path . -s res://tests/run_tests.gd
 run_step smoke     "$GODOT" --headless --path . -s res://tests/smoke/smoke_main.gd
 run_step shipyard  "$GODOT" --headless --path . -s res://tests/smoke/smoke_shipyard.gd
 run_step boot_main "$GODOT" --headless --path . --quit-after 600
+# Exported data: pack the project with the export preset (no templates
+# needed) and boot from the pack, so missing include filters fail here.
+mkdir -p build/export
+run_step export    "$GODOT" --headless --path . --export-pack "Windows Desktop" build/export/NoSafeOrbit.pck
+run_step pck_boot  "$GODOT" --headless --main-pack build/export/NoSafeOrbit.pck --quit-after 300
+if ! grep -q "Orbital sandbox ready" "$LOG_DIR/pck_boot.log"; then
+	echo "✗ pck_boot did not reach the flight scene"
+	status=1
+fi
 
 grep -hE "tests, |smoke: |smoke_shipyard: " "$LOG_DIR/unit.log" "$LOG_DIR/smoke.log" "$LOG_DIR/shipyard.log" 2>/dev/null
 exit $status
