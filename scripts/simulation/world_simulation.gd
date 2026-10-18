@@ -170,24 +170,26 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 	var cannon := ship.config.cannon
 	if cannon == null:
 		return
-	ship.cannon_cooldown_s = maxf(ship.cannon_cooldown_s - fixed_dt, 0.0)
-	if not input.fire or ship.cannon_cooldown_s > 1e-9 or ship.cannon_rounds <= 0:
-		return
-	var nose := ship.forward()
-	var shot := ProjectileState.new()
-	shot.id = _next_round_id
-	_next_round_id += 1
-	shot.shooter_id = ship.id
-	shot.position = ship.position + ship.orientation * ship.config.cannon_muzzle_body
-	shot.prev_position = shot.position
-	shot.velocity = ship.velocity + nose * cannon.muzzle_velocity_mps
-	shot.lifetime_s = cannon.round_lifetime_s
-	spawned.append(shot)
-	# Recoil conserves momentum: m_ship·Δv = m_round·v_muzzle.
-	ship.velocity -= nose * (cannon.muzzle_velocity_mps * cannon.round_mass_kg / ship.config.mass_kg)
-	ship.cannon_rounds -= 1
-	ship.rounds_fired += 1
-	ship.cannon_cooldown_s += cannon.fire_interval_s()
+	var muzzles := ship.config.cannon_muzzles_body
+	for k in muzzles.size():
+		ship.cannon_cooldowns[k] = maxf(ship.cannon_cooldowns[k] - fixed_dt, 0.0)
+		if not input.fire or ship.cannon_cooldowns[k] > 1e-9 or ship.cannon_rounds <= 0:
+			continue
+		var nose := ship.forward()
+		var shot := ProjectileState.new()
+		shot.id = _next_round_id
+		_next_round_id += 1
+		shot.shooter_id = ship.id
+		shot.position = ship.position + ship.orientation * muzzles[k]
+		shot.prev_position = shot.position
+		shot.velocity = ship.velocity + nose * cannon.muzzle_velocity_mps
+		shot.lifetime_s = cannon.round_lifetime_s
+		spawned.append(shot)
+		# Recoil conserves momentum: m_ship·Δv = m_round·v_muzzle.
+		ship.velocity -= nose * (cannon.muzzle_velocity_mps * cannon.round_mass_kg / ship.mass_kg())
+		ship.cannon_rounds -= 1
+		ship.rounds_fired += 1
+		ship.cannon_cooldowns[k] += cannon.fire_interval_s()
 
 
 func _step_rounds() -> void:

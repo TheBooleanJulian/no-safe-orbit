@@ -136,14 +136,24 @@ func equipment_def(index: int) -> EquipmentDefinition:
 	return catalog.equipment.get(blueprint.equipment[index].def_id)
 
 
+## Internal footprint in cells (x, z) after the equipment's rotation.
+func equipment_footprint(index: int) -> Vector2i:
+	var def := equipment_def(index)
+	if def == null:
+		return Vector2i.ONE
+	var fp := def.footprint_cells
+	return Vector2i(fp.y, fp.x) if posmod(blueprint.equipment[index].rotation, 2) == 1 else fp
+
+
 func equipment_cells(index: int) -> Array[Vector3i]:
 	var e := blueprint.equipment[index]
 	var def := equipment_def(index)
 	var cells: Array[Vector3i] = []
 	if def == null or def.is_external():
 		return cells
-	for x in def.footprint_cells.x:
-		for z in def.footprint_cells.y:
+	var fp := equipment_footprint(index)
+	for x in fp.x:
+		for z in fp.y:
 			cells.append(e.cell + Vector3i(x, 0, z))
 	return cells
 
@@ -155,8 +165,8 @@ func equipment_position_m(index: int) -> Vector3:
 	var def := equipment_def(index)
 	if def != null and def.is_external():
 		return cell_center_m(e.cell) + Vector3(FACE_NORMALS.get(e.face, Vector3i.ZERO)) * CELL_SIZE_M * 0.5
-	var size := Vector3(def.footprint_cells.x, 1, def.footprint_cells.y) if def != null else Vector3.ONE
-	return (Vector3(e.cell) + size * 0.5) * CELL_SIZE_M
+	var fp := equipment_footprint(index)
+	return (Vector3(e.cell) + Vector3(fp.x, 1, fp.y) * 0.5) * CELL_SIZE_M
 
 
 func is_hull(cell: Vector3i) -> bool:

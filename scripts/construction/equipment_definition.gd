@@ -13,6 +13,8 @@ enum Kind {
 	RCS,
 	CANNON,
 	RADIATOR,
+	## Holds propellant for main engines and RCS.
+	PROPELLANT_TANK,
 }
 
 enum Mount { INTERNAL, EXTERNAL }
@@ -35,6 +37,10 @@ enum Mount { INTERNAL, EXTERNAL }
 @export var heat_rejection_kw: float = 0.0
 ## MAIN_ENGINE: forward thrust. RCS: thrust available in each direction.
 @export var thrust_n: float = 0.0
+## MAIN_ENGINE / RCS: specific impulse (s); propellant flow = F / (Isp·g0).
+@export var isp_s: float = 0.0
+## PROPELLANT_TANK: propellant held when full (kg; mass_kg is the dry tank).
+@export var propellant_capacity_kg: float = 0.0
 ## CANNON only.
 @export var cannon: KineticCannonConfig
 @export var color: Color = Color(0.8, 0.8, 0.8)
@@ -56,6 +62,10 @@ func validate() -> PackedStringArray:
 		problems.append("%s: external equipment needs allowed_faces" % id)
 	if kind == Kind.CANNON and cannon == null:
 		problems.append("%s: cannon equipment needs a KineticCannonConfig" % id)
+	if (kind == Kind.MAIN_ENGINE or kind == Kind.RCS) and isp_s <= 0.0:
+		problems.append("%s: thrusters need a positive isp_s" % id)
+	if kind == Kind.PROPELLANT_TANK and propellant_capacity_kg <= 0.0:
+		problems.append("%s: tanks need a positive propellant_capacity_kg" % id)
 	for face in allowed_faces:
 		if not ShipGrid.FACE_NORMALS.has(face):
 			problems.append("%s: unknown face '%s'" % [id, face])

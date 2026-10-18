@@ -90,9 +90,18 @@ func _update_flight_panel(player: ShipState, input: PlayerInput, sim_time: float
 		"  up       %s" % HudFormat.signed_speed(v_body.y),
 		"RATE °/s   P %+5.1f  Y %+5.1f  R %+5.1f" % [rad_to_deg(w.x), rad_to_deg(w.y), rad_to_deg(w.z)],
 		"Δv SPENT   %.1f m/s" % player.delta_v_expended,
+		"PROPELLANT %s" % _propellant_text(player),
 		"CANNON     %s" % gun,
 		"T+         %s" % HudFormat.clock(sim_time),
 	])
+
+
+func _propellant_text(ship: ShipState) -> String:
+	if ship.config.unlimited_propellant:
+		return "unlimited"
+	if ship.propellant_kg <= 0.0:
+		return "EMPTY — engines dead"
+	return "%.1f t  Δv left %.0f m/s" % [ship.propellant_kg / 1000.0, ship.delta_v_remaining()]
 
 
 func _assist_text(input: PlayerInput, has_target: bool) -> String:
@@ -181,6 +190,11 @@ func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElem
 		warning_label.add_theme_color_override("font_color", COLOR_DANGER)
 		warning_label.visible = true
 		return
+	if not player.config.unlimited_propellant and player.propellant_kg <= 0.0:
+		warning_label.text = "PROPELLANT EXHAUSTED — NO THRUST, NO RCS"
+		warning_label.add_theme_color_override("font_color", COLOR_DANGER)
+		warning_label.visible = true
+		return
 	if orbit != null:
 		var t_entry := orbit.time_to_radius_descending(world.body.entry_radius_m())
 		if not is_nan(t_entry):
@@ -197,7 +211,7 @@ func _lead_solution(player: ShipState, target: ShipState) -> Dictionary:
 	var cannon := player.config.cannon
 	if cannon == null:
 		return {}
-	var muzzle := player.position + player.orientation * player.config.cannon_muzzle_body
+	var muzzle := player.position + player.orientation * player.config.primary_muzzle()
 	var aim := target.position + target.orientation * target.config.hit_box_center
 	var rel_pos := aim - muzzle
 	var rel_vel := target.velocity - player.velocity

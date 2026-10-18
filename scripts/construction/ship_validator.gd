@@ -283,6 +283,9 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 	if stats.thrust_forward_n <= 0.0:
 		_add(report, Severity.WARNING, &"no_main_engine",
 			"No main engine on an aft face: only RCS thrust is available.", "")
+	if stats.propellant_capacity_kg <= 0.0 and (stats.thrust_forward_n > 0.0 or stats.rcs_count > 0):
+		_add(report, Severity.WARNING, &"no_propellant",
+			"No propellant tanks: engines and RCS have nothing to burn. Add a propellant tank in a cargo hold or engineering room.", "")
 	if stats.rcs_count == 0:
 		_add(report, Severity.WARNING, &"no_rcs",
 			"No RCS blocks: the ship cannot rotate or thrust sideways.", "")

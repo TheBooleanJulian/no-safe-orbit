@@ -55,7 +55,7 @@ func _run() -> void:
 	await _run_until_sim_time(main, 1.0)
 	Input.action_release("thrust_forward")
 	var fwd := -player.body_velocity().z
-	var expected := player.config.thrust_forward_n / player.config.mass_kg * 1.0
+	var expected := player.config.thrust_forward_n / player.mass_kg() * 1.0
 	_check(fwd > expected * 0.8 and fwd < expected * 1.3,
 		"forward speed after ~1 s of W: expected ≈%.1f m/s, actual %.2f m/s" % [expected, fwd])
 
@@ -84,7 +84,7 @@ func _run() -> void:
 	# Each axis nulls at the RCS limit, so 3 s removes at least ~0.8 × a·t.
 	await _run_until_sim_time(main, 3.0)
 	var rel_after := (player.velocity - target.velocity).length()
-	var a_rcs := player.config.thrust_lateral_n / player.config.mass_kg
+	var a_rcs := player.config.thrust_lateral_n / player.mass_kg()
 	_check(rel_before - rel_after > 0.8 * a_rcs * 3.0,
 		"match-target assist reduces relative speed at the RCS limit (%.1f → %.1f m/s in 3 s, a_rcs %.2f m/s²)" % [rel_before, rel_after, a_rcs])
 

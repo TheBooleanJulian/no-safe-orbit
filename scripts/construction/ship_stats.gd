@@ -6,12 +6,12 @@ extends RefCounted
 ##
 ## Simplifications (docs/ARCHITECTURE.md):
 ## - Mass elements are boxes (modules, rooms, internal equipment) or points
-##   (external equipment); inertia is diagonal about the centre of mass.
+##   (external equipment); inertia is diagonal about the centre of mass and
+##   computed with full tanks.
 ## - RCS blocks thrust in all six directions; torque about an axis is
 ##   thrust × lever arm perpendicular to that axis.
-## - Power and heat are ship-wide budgets (one shared bus); the power and
-##   thermal graphs arrive in Milestone 3.
-## - Only the first cannon is flown (the flight model has one weapon).
+## - Power and heat totals here are the design budget; the running ship
+##   resolves them through its power and thermal networks (ShipSystems).
 
 ## Passive heat rejection of bare hull, per module (kW).
 const PASSIVE_REJECTION_KW_PER_MODULE := 30.0
@@ -20,17 +20,25 @@ const ASSIST_RATE_SECONDS := 1.5
 const ASSIST_RATE_MIN := 0.05
 const ASSIST_RATE_MAX := 0.9
 
+## Dry mass (no propellant).
 var mass_kg: float = 0.0
-## Centre of mass in grid metres.
+var propellant_capacity_kg: float = 0.0
+## Centre of mass with full tanks, in grid metres.
 var center_of_mass_m: Vector3 = Vector3.ZERO
-## Principal moments about body X (pitch), Y (yaw), Z (roll) through the CoM.
+## Principal moments about body X (pitch), Y (yaw), Z (roll) through the CoM,
+## with full tanks.
 var inertia_kgm2: Vector3 = Vector3.ZERO
 var thrust_forward_n: float = 0.0
+## Thrust-weighted specific impulse of the main engines and of the RCS (s).
+var main_isp_s: float = 0.0
+var rcs_isp_s: float = 0.0
 ## RCS thrust available in each direction.
 var thrust_rcs_n: float = 0.0
 var rcs_count: int = 0
 var torque_nm: Vector3 = Vector3.ZERO
-## Torque the main engines exert about the CoM at full thrust (magnitude per axis).
+## Torque the main engines exert about the CoM at full thrust (signed, body).
+var thrust_torque_body: Vector3 = Vector3.ZERO
+## |thrust_torque_body| per axis, for the misalignment warning.
 var thrust_misalignment_torque_nm: Vector3 = Vector3.ZERO
 var power_generation_kw: float = 0.0
 var power_draw_kw: float = 0.0
@@ -41,9 +49,9 @@ var rounds_capacity: int = 0
 var cargo_m3: float = 0.0
 ## Hull bounds in grid metres.
 var hull_bounds_m: AABB = AABB()
-## Index of the cannon that the flight model uses, or -1.
-var cannon_index: int = -1
-var cannon_position_m: Vector3 = Vector3.ZERO
+## Every cannon mount: equipment ids and grid-metre positions (same order).
+var cannon_ids: PackedStringArray = PackedStringArray()
+var cannon_positions_m: PackedVector3Array = PackedVector3Array()
 var cannon_config: KineticCannonConfig
 
 
@@ -72,14 +80,20 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 		s.rounds_capacity += def.rounds_per_cell * cells
 		s.cargo_m3 += def.cargo_m3_per_cell * cells
 	var engines: Array[Vector3] = []
-	var rcs: Array[Vector3] = []
 	var engine_thrust: Array[float] = []
+	var rcs: Array[Vector3] = []
+	var main_flow := 0.0  # Σ F/Isp, for the thrust-weighted Isp
+	var rcs_flow := 0.0
+	var propellant: Array[Dictionary] = []
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
 		if def == null:
 			continue
 		var pos := grid.equipment_position_m(i)
-		var size_m := Vector3(def.footprint_cells.x, 1, def.footprint_cells.y) * c if not def.is_external() else Vector3.ZERO
+		var size_m := Vector3.ZERO
+		if not def.is_external():
+			var fp := grid.equipment_footprint(i)
+			size_m = Vector3(fp.x, 1, fp.y) * c
 		elements.append({"mass": def.mass_kg, "center": pos, "size": size_m})
 		_add_power(s, def.power_kw)
 		s.heat_generation_kw += def.heat_kw
@@ -88,27 +102,35 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 			EquipmentDefinition.Kind.MAIN_ENGINE:
 				if bp.equipment[i].face == &"aft":
 					s.thrust_forward_n += def.thrust_n
+					main_flow += def.thrust_n / def.isp_s
 					engines.append(pos)
 					engine_thrust.append(def.thrust_n)
 			EquipmentDefinition.Kind.RCS:
 				s.thrust_rcs_n += def.thrust_n
+				rcs_flow += def.thrust_n / def.isp_s
 				s.rcs_count += 1
 				rcs.append(pos)
 			EquipmentDefinition.Kind.CANNON:
-				if s.cannon_index < 0:
-					s.cannon_index = i
-					s.cannon_position_m = pos
-					s.cannon_config = def.cannon
+				s.cannon_ids.append(bp.equipment[i].id)
+				s.cannon_positions_m.append(pos)
+				s.cannon_config = def.cannon
+			EquipmentDefinition.Kind.PROPELLANT_TANK:
+				s.propellant_capacity_kg += def.propellant_capacity_kg
+				propellant.append({"mass": def.propellant_capacity_kg, "center": pos, "size": size_m})
+	s.main_isp_s = s.thrust_forward_n / main_flow if main_flow > 0.0 else 0.0
+	s.rcs_isp_s = s.thrust_rcs_n / rcs_flow if rcs_flow > 0.0 else 0.0
 
 	for e in elements:
 		s.mass_kg += e.mass
 	if s.mass_kg <= 0.0:
 		return s
+	# Centre of mass and inertia with full tanks.
+	elements.append_array(propellant)
+	var wet := s.mass_kg + s.propellant_capacity_kg
 	var weighted := Vector3.ZERO
 	for e in elements:
 		weighted += (e.center as Vector3) * (e.mass as float)
-	s.center_of_mass_m = weighted / s.mass_kg
-
+	s.center_of_mass_m = weighted / wet
 	for e in elements:
 		var r: Vector3 = (e.center as Vector3) - s.center_of_mass_m
 		var m: float = e.mass
@@ -122,10 +144,9 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 		var r := p - s.center_of_mass_m
 		s.torque_nm += per_block * Vector3(Vector2(r.y, r.z).length(), Vector2(r.x, r.z).length(), Vector2(r.x, r.y).length())
 	# Engines push along −Z at their mount points: torque = r × F.
-	var engine_torque := Vector3.ZERO
 	for k in engines.size():
-		engine_torque += (engines[k] - s.center_of_mass_m).cross(Vector3(0, 0, -engine_thrust[k]))
-	s.thrust_misalignment_torque_nm = engine_torque.abs()
+		s.thrust_torque_body += (engines[k] - s.center_of_mass_m).cross(Vector3(0, 0, -engine_thrust[k]))
+	s.thrust_misalignment_torque_nm = s.thrust_torque_body.abs()
 	s.hull_bounds_m = grid.hull_bounds_m()
 	return s
 
@@ -137,17 +158,33 @@ static func _add_power(s: ShipStats, kw: float) -> void:
 		s.power_draw_kw -= kw
 
 
+func wet_mass_kg() -> float:
+	return mass_kg + propellant_capacity_kg
+
+
+## Δv of a full load on the main engines (rocket equation), m/s.
+func delta_v_m_s() -> float:
+	if main_isp_s <= 0.0 or mass_kg <= 0.0:
+		return 0.0
+	return main_isp_s * ShipDynamics.G0 * log(wet_mass_kg() / mass_kg)
+
+
 ## Flight tuning for this design. Only meaningful when validation has no errors.
 func to_ship_config(display_name: String) -> ShipConfig:
 	var cfg := ShipConfig.new()
 	cfg.display_name = display_name
 	cfg.mass_kg = mass_kg
+	cfg.unlimited_propellant = false
+	cfg.propellant_capacity_kg = propellant_capacity_kg
+	cfg.main_isp_s = main_isp_s if main_isp_s > 0.0 else 1.0
+	cfg.rcs_isp_s = rcs_isp_s if rcs_isp_s > 0.0 else 1.0
 	cfg.inertia_kgm2 = inertia_kgm2
 	cfg.thrust_forward_n = thrust_forward_n
 	cfg.thrust_reverse_n = thrust_rcs_n
 	cfg.thrust_lateral_n = thrust_rcs_n
 	cfg.thrust_vertical_n = thrust_rcs_n
 	cfg.max_torque_nm = torque_nm
+	cfg.thrust_torque_body = thrust_torque_body
 	var rates := Vector3.ZERO
 	for axis in 3:
 		if torque_nm[axis] > 0.0:
@@ -159,7 +196,13 @@ func to_ship_config(display_name: String) -> ShipConfig:
 		var gun: KineticCannonConfig = cannon_config.duplicate()
 		gun.magazine_rounds = rounds_capacity
 		cfg.cannon = gun
-		cfg.cannon_muzzle_body = cannon_position_m - center_of_mass_m
+		var muzzles := PackedVector3Array()
+		for p in cannon_positions_m:
+			muzzles.append(p - center_of_mass_m)
+		cfg.cannon_muzzles_body = muzzles
+		cfg.cannon_mount_ids = cannon_ids
+	else:
+		cfg.cannon_muzzles_body = PackedVector3Array()
 	return cfg
 
 

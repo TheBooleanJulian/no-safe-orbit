@@ -257,10 +257,11 @@ func _refresh_stats() -> void:
 	var cfg := s.to_ship_config(editor.blueprint.name)
 	var g := 9.80665
 	stats_label.text = "\n".join([
-		"MASS       %.1f t" % (s.mass_kg / 1000.0),
+		"MASS       %.1f t dry · %.1f t wet" % [s.mass_kg / 1000.0, s.wet_mass_kg() / 1000.0],
 		"CoM        x %.1f  y %.1f  z %.1f m" % [s.center_of_mass_m.x, s.center_of_mass_m.y, s.center_of_mass_m.z],
-		"MAIN       %.2f MN  %.2f m/s² (%.2f g)" % [s.thrust_forward_n / 1e6, s.thrust_forward_n / s.mass_kg, s.thrust_forward_n / s.mass_kg / g],
-		"RCS        %.0f kN  %.2f m/s²  (%d blocks)" % [s.thrust_rcs_n / 1000.0, s.thrust_rcs_n / s.mass_kg, s.rcs_count],
+		"MAIN       %.2f MN  %.2f m/s² (%.2f g) wet" % [s.thrust_forward_n / 1e6, s.thrust_forward_n / s.wet_mass_kg(), s.thrust_forward_n / s.wet_mass_kg() / g],
+		"RCS        %.0f kN  %.2f m/s²  (%d blocks)" % [s.thrust_rcs_n / 1000.0, s.thrust_rcs_n / s.wet_mass_kg(), s.rcs_count],
+		"PROPELLANT %.0f t  Δv %.0f m/s  (Isp %.0f / %.0f s)" % [s.propellant_capacity_kg / 1000.0, s.delta_v_m_s(), s.main_isp_s, s.rcs_isp_s],
 		"TURN RATE  P %.0f  Y %.0f  R %.0f °/s" % [rad_to_deg(cfg.assist_max_rate_rad_s.x), rad_to_deg(cfg.assist_max_rate_rad_s.y), rad_to_deg(cfg.assist_max_rate_rad_s.z)],
 		"POWER      %.0f / %.0f kW" % [s.power_draw_kw, s.power_generation_kw],
 		"HEAT       %.0f / %.0f kW rejected" % [s.heat_generation_kw, s.heat_rejection_kw],
