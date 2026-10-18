@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="OrbitalBody" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/orbital_body.gd" id="1_body"]
+
+[resource]
+script = ExtResource("1_body")
+display_name = "Earth"
+mu_m3_s2 = 3.986004418e14
+radius_m = 6371000.0
+entry_interface_altitude_m = 100000.0

@@ -4,6 +4,97 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-19 — Real sky, known-issue fixes, Milestone 3
+
+### Added
+- Real sky for the scenario date: the 9,096 stars of the Yale Bright Star
+  Catalogue (J2000), the Sun's true direction, Earth's pole and sidereal
+  rotation (`CelestialFrame`, tested against Meeus); NASA Blue Marble
+  geography; eclipse darkens ships in Earth's shadow; HUD sunset/sunrise.
+- Milestone 3 — damage and ship systems: hull-cell hit detection, armour
+  penetration with obliquity, damage along the round's path, room breaches
+  and hatch sealing, crew access cut-offs, power networks through module
+  junctions with load shedding, ship heat with reactor throttle/scram and
+  over-temperature damage, damage-reduced flight config, readable damage
+  reports, destroyed parts shown on the model.
+- Enemy gunner (T): aims at the lead point with line-of-sight feed-forward.
+- Propellant and Δv: tanks, engine/RCS Isp, falling mass, empty = no thrust.
+- Shipyard undo/redo; modules carry their contents and turn in place.
+- Gamepad defaults; in-game rebinding (F1), saved per user.
+- Windows export preset; checks export a .pck and boot from it.
+
+### Changed
+- Sandbox orbit is prograde equatorial (it was retrograde relative to Earth's
+  spin once the sky was made real).
+- Off-axis engine thrust now torques the ship; rotation includes the
+  gyroscopic term (RK4); every cannon mount fires.
+- Two dust layers so the field no longer visibly repeats.
+
+### Fixed
+- Enemy aim lagged crossing targets by rate/gain (~0.6°) and stopped firing;
+  feed-forward removes the lag.
+
+## [0.3.0] — 2026-10-19 — Milestone 2: ship blueprint and builder
+
+### Added
+- Construction model (`scripts/construction/`): hull module, room and
+  equipment definitions (`data/catalog/`), `ShipBlueprint` (versioned JSON),
+  `ShipGrid`, `ShipValidator` (errors block launch; warnings are trade-offs),
+  `ShipStats` (mass, CoM, inertia, thrust/torque from placed thrusters,
+  power/heat, crew/rounds/cargo) compiled into the flight `ShipConfig`.
+- Frigate Mk I template (`data/blueprints/frigate_mk1.json`): 392 t, six
+  modules, eleven rooms, full crew access, validates with no issues.
+- Shipyard (`scenes/shipyard/`, `scripts/shipyard/`): palette, deck grid
+  editor (place / select / move / rotate / remove / hatches), placement
+  ghost that names the error before you click, side and front views, 3D
+  preview, live stats, clickable validation panel, save/load, templates,
+  launch (blocked while errors exist).
+- Flight: ships are built from their blueprints (geometry and numbers);
+  `B` opens the shipyard with the flown design.
+- Tests: `test_blueprint.gd` (22), `test_ship_editor.gd` (5),
+  `smoke_shipyard.gd` (15 checks); 120 s watchdog on both smoke tests.
+
+### Changed
+- The player and target fly the compiled Frigate Mk I instead of the fixed
+  placeholder config (which remains as a test fixture).
+
+## [0.2.0] — 2026-10-19 — Milestone 1b: Earth orbit, cannon, fire control
+
+### Added
+- Real-scale Earth (`data/bodies/earth.tres`): two-body gravity, 100 km
+  Kármán-line entry interface. Sandbox starts in a 400 km circular orbit.
+- `LocalFrame`: free-falling, double-precision engagement frame with tidal
+  acceleration and automatic rebasing on the player (`Vec3d` for PCI maths).
+- `OrbitElements`: apsides, period, time to apsis, time to entry interface,
+  projected path points.
+- Atmospheric entry: ships and rounds crossing 100 km leave the engagement;
+  the HUD predicts it ("ENTRY IN m:ss") and shows a loss screen. Backspace
+  restarts.
+- Kinetic cannon (`data/weapons/medium_kinetic_cannon.tres`): inherited
+  velocity, recoil, rate of fire, magazine, round lifetime; rounds feel
+  gravity. Swept hit tests (no tunnelling), hit events and flashes.
+- Fire control: intercept time and lead pip; round TOF in the target panel.
+- Flat radar (bearing, range, elevation stalk, closing/opening, motion tail).
+- Orbit panel (altitude, orbital speed, Ap/Pe with times, period, entry
+  status), projected orbit path with Ap/Pe/entry markers, entry warning banner.
+- Planet, limb glow, sun and stars rendered as a ray-traced sky shader.
+- Input actions: `fire` (LMB, Enter), `toggle_velocity_hold` (X),
+  `restart_scenario` (Backspace).
+- Tests: `test_orbit.gd`, `test_weapons.gd`, `test_radar.gd` (46 unit tests
+  total); smoke test extended to 14 checks.
+
+### Changed
+- Godot 4.7.2 (was 4.5.1).
+- Flight assist: holds the current orbit by default (no translation damping,
+  no Δv while coasting); X switches to matching target velocity.
+- Ship translation integrates with kick-drift-kick leapfrog.
+- Prograde/retrograde markers show orbital velocity.
+- Dust field stays continuous across frame rebases.
+
+### Removed
+- Mesh starfield (replaced by stars in the sky shader, which can be hidden by
+  the planet).
+
 ## [0.1.0] — 2026-10-19 — Milestone 0 + Milestone 1a
 
 ### Added

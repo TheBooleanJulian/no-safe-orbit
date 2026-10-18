@@ -1,7 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/hud_overlay.gd" id="2_ovl"]
+[ext_resource type="Script" path="res://scripts/ui/radar_display.gd" id="3_radar"]
+[ext_resource type="Script" path="res://scripts/ui/controls_panel.gd" id="4_controls"]
 
 [sub_resource type="SystemFont" id="SystemFont_mono"]
 font_names = PackedStringArray("DejaVu Sans Mono", "Consolas", "Menlo", "Monospace")
@@ -32,34 +34,45 @@ grow_vertical = 2
 mouse_filter = 2
 theme = SubResource("Theme_hud")
 
-[node name="Overlay" type="Control" parent="Root"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("2_ovl")
-
-[node name="FlightPanel" type="PanelContainer" parent="Root"]
+[node name="LeftColumn" type="VBoxContainer" parent="Root"]
 layout_mode = 1
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 16.0
 offset_bottom = 16.0
 mouse_filter = 2
+theme_override_constants/separation = 10
 
-[node name="Margin" type="MarginContainer" parent="Root/FlightPanel"]
+[node name="FlightPanel" type="PanelContainer" parent="Root/LeftColumn"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/LeftColumn/FlightPanel"]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 8
 
-[node name="FlightLabel" type="Label" parent="Root/FlightPanel/Margin"]
+[node name="FlightLabel" type="Label" parent="Root/LeftColumn/FlightPanel/Margin"]
 layout_mode = 2
 text = "FLIGHT"
+
+[node name="OrbitPanel" type="PanelContainer" parent="Root/LeftColumn"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/LeftColumn/OrbitPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="OrbitLabel" type="Label" parent="Root/LeftColumn/OrbitPanel/Margin"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 1, 0.72, 1)
+text = "ORBIT"
 
 [node name="TargetPanel" type="PanelContainer" parent="Root"]
 layout_mode = 1
@@ -85,6 +98,38 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.62, 0.5, 1)
 text = "TARGET"
 
+[node name="WarningLabel" type="Label" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_top = 24.0
+offset_bottom = 24.0
+grow_horizontal = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 18
+text = "WARNING"
+horizontal_alignment = 1
+
+[node name="Radar" type="Control" parent="Root"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -256.0
+offset_top = -256.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("3_radar")
+
 [node name="HelpLabel" type="Label" parent="Root"]
 layout_mode = 1
 anchors_preset = 2
@@ -95,8 +140,33 @@ offset_top = -16.0
 offset_right = 16.0
 offset_bottom = -16.0
 grow_vertical = 0
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
 theme_override_colors/font_color = Color(0.82, 0.9, 1, 0.6)
 theme_override_font_sizes/font_size = 13
-text = "W/S main / reverse   A/D strafe   SPACE·R / CTRL·F up / down
-ARROWS pitch & yaw   Q/E roll   MOUSE virtual stick (click to capture, ESC to release)
-Z flight assist   ·   green ring = where you're GOING (prograde)   ·   white reticle = where you're POINTING"
+text = "W/S main / reverse   A/D strafe   SPACE·R / CTRL·F up / down   ARROWS pitch & yaw   Q/E roll
+MOUSE virtual stick (click to capture, ESC to release)   LMB·ENTER fire   BACKSPACE restart   B shipyard   T hostile target   F1 controls
+Z assist on/off   X hold: orbit ↔ match target   ·   green ring = orbital prograde   ·   ◇ = lead (aim here)"
+
+[node name="Overlay" type="Control" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_ovl")
+
+[node name="Controls" type="PanelContainer" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_controls")

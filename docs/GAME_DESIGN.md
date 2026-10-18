@@ -10,7 +10,7 @@ decision changes.
 
 **Title:** NO SAFE ORBIT — *Keep the Delta-V Positive, or Else.*
 A hard-sci-fi spacecraft engineering and combat simulator.\
-**Engine:** Godot 4.x (pinned to 4.5.1-stable for development and CI),
+**Engine:** Godot 4.x (pinned to 4.7.2-stable for development and CI),
 using GDScript initially. Keep simulation rules
 decoupled from Godot scene/rendering code so performance-critical
 modules can later move to C# or a native extension if measurements
@@ -300,6 +300,29 @@ atmosphere under the model being used.
 -   Use numerical integration appropriate for the desired stability;
     validate energy/trajectory behaviour with tests.
 -   Do not simulate full n-body gravity in the first prototype.
+
+### Decisions (2026-10-19)
+
+-   **Real sky.** Stars (Yale Bright Star Catalogue), the Sun and Earth's
+    rotation match the real view from the Solar System for the scenario date
+    (2026-10-19 12:00 UTC). The sandbox orbit is therefore prograde and
+    equatorial, flying with Earth's spin like a real station.
+-   **Central body: Earth at real scale.** μ = 3.986004418×10¹⁴ m³/s²,
+    mean radius 6,371 km (spherical gravity; the surface turns at the
+    sidereal rate). The sandbox starts in
+    a 400 km circular orbit: 7.67 km/s, ~92.4 min period. Consequence:
+    within a few-minute engagement, orbital effects show up as slow
+    relative drift between ships, not as visibly curving flight paths;
+    deliberate orbit changes take tens to hundreds of m/s.
+-   **Entry interface: the 100 km Kármán line.** There is no drag model.
+    Any trajectory that crosses 100 km altitude counts as atmospheric
+    entry: the vessel or round leaves the orbital engagement. Periapsis
+    below 100 km is therefore a deorbit, and the HUD predicts the time to
+    entry. This is the "model being used" for the impact rule above.
+-   **Flight assist under gravity** holds the ship's current orbit by
+    default (no translation damping, so no Δv is spent coasting), or
+    matches the target's velocity on request. Rotation damping is
+    unchanged. Manual mode is unchanged.
 
 ## Projectiles and weapons
 

@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="ShipConfig" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="ShipConfig" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/simulation/ship_config.gd" id="1_cfg"]
+[ext_resource type="Resource" path="res://data/weapons/medium_kinetic_cannon.tres" id="2_gun"]
 
 [resource]
 script = ExtResource("1_cfg")
@@ -13,3 +14,7 @@ thrust_lateral_n = 500000.0
 thrust_vertical_n = 500000.0
 max_torque_nm = Vector3(2.4e7, 2.4e7, 3e6)
 assist_max_rate_rad_s = Vector3(0.5, 0.5, 0.9)
+hit_box_center = Vector3(0, 1.5, -4)
+hit_box_half_extents = Vector3(10, 6, 30)
+cannon = ExtResource("2_gun")
+cannon_muzzles_body = PackedVector3Array(0, 0, -34)

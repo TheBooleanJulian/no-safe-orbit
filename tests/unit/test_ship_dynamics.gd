@@ -118,3 +118,99 @@ func test_orientation_stays_normalized_under_long_tumble() -> void:
 	ship.angular_velocity = Vector3(0.31, -0.47, 1.3)
 	_run(ship, ShipControlInput.neutral(), 600.0)
 	assert_near(ship.orientation.length(), 1.0, 1e-5, "orientation quaternion length")
+
+
+func _rocket(propellant: float) -> ShipConfig:
+	var cfg := ShipConfig.new()
+	cfg.mass_kg = 100_000.0
+	cfg.unlimited_propellant = false
+	cfg.propellant_capacity_kg = propellant
+	cfg.main_isp_s = 300.0
+	cfg.rcs_isp_s = 200.0
+	cfg.thrust_forward_n = 1.0e6
+	cfg.thrust_reverse_n = 1.0e5
+	cfg.thrust_lateral_n = 1.0e5
+	cfg.thrust_vertical_n = 1.0e5
+	cfg.inertia_kgm2 = Vector3(1e7, 1e7, 2e6)
+	cfg.max_torque_nm = Vector3(1e6, 1e6, 2e5)
+	cfg.cannon_muzzles_body = PackedVector3Array()
+	return cfg
+
+
+func test_rocket_equation_burn_to_empty() -> void:
+	# 100 t dry + 50 t propellant at Isp 300 s: Δv = 300·g0·ln(150/100) ≈ 1,193 m/s.
+	var ship := ShipState.create(&"r", "R", _rocket(50_000.0))
+	var burn := ShipControlInput.create(Vector3(0, 0, -1), Vector3.ZERO, false)
+	var ticks := 0
+	while ship.propellant_kg > 0.0 and ticks < 60 * 300:
+		ShipDynamics.step(ship, burn, DT)
+		ticks += 1
+	var expected := 300.0 * ShipDynamics.G0 * log(1.5)
+	assert_near(-ship.velocity.z, expected, expected * 0.002, "final speed vs the rocket equation (m/s)")
+	assert_near(ticks * DT, 50_000.0 / (1.0e6 / (300.0 * ShipDynamics.G0)), 2.0 * DT, "burn time = propellant / mass flow (s)")
+	var v := ship.velocity
+	_run(ship, burn, 1.0)
+	assert_vec_near(ship.velocity, v, 1e-6, "no thrust once the tanks are empty")
+
+
+func test_empty_tanks_mean_no_rcs_either() -> void:
+	var ship := ShipState.create(&"r", "R", _rocket(0.0))
+	_run(ship, ShipControlInput.create(Vector3(1, 1, 1), Vector3(1, 1, 1), false), 1.0)
+	assert_vec_near(ship.velocity, Vector3.ZERO, 1e-9, "no translation with empty tanks")
+	assert_vec_near(ship.angular_velocity, Vector3.ZERO, 1e-9, "no rotation with empty tanks")
+
+
+func test_rcs_burns_at_rcs_isp() -> void:
+	var ship := ShipState.create(&"r", "R", _rocket(10_000.0))
+	_run(ship, ShipControlInput.create(Vector3(1, 0, 0), Vector3.ZERO, false), 1.0)
+	assert_near(10_000.0 - ship.propellant_kg, 1.0e5 / (200.0 * ShipDynamics.G0), 0.05, "propellant used by 1 s of lateral RCS (kg)")
+
+
+func test_off_axis_engine_torque_turns_the_ship() -> void:
+	# Engines 2 MN·m off-axis in yaw: manual full thrust spins the ship.
+	var cfg: ShipConfig = CONFIG.duplicate()
+	cfg.thrust_torque_body = Vector3(0, 2.0e6, 0)
+	var ship := _ship()
+	ship.config = cfg
+	_run(ship, ShipControlInput.create(Vector3(0, 0, -1), Vector3.ZERO, false), 1.0)
+	assert_near(ship.angular_velocity.y, 2.0e6 / cfg.inertia_kgm2.y, 1e-5, "yaw rate after 1 s of off-axis thrust (rad/s)")
+	# With assist, RCS cancels it and the nose stays put.
+	var held := _ship()
+	held.config = cfg
+	_run(held, ShipControlInput.create(Vector3(0, 0, -1), Vector3.ZERO, true), 5.0)
+	assert_less_equal(held.angular_velocity.length(), 1e-5, "assist holds attitude under off-axis thrust (rad/s)")
+	assert_near(held.last_torque_body.y, 0.0, 1.0, "net torque ≈ 0: RCS cancels the engines (N·m)")
+
+
+func test_off_axis_thrust_beyond_rcs_authority_wins() -> void:
+	var cfg: ShipConfig = CONFIG.duplicate()
+	cfg.thrust_torque_body = Vector3(0, cfg.max_torque_nm.y * 2.0, 0)
+	var ship := _ship()
+	ship.config = cfg
+	_run(ship, ShipControlInput.create(Vector3(0, 0, -1), Vector3.ZERO, true), 1.0)
+	assert_near(ship.angular_velocity.y, cfg.max_torque_nm.y / cfg.inertia_kgm2.y, 1e-4,
+		"assist saturates: residual torque = engine − RCS max (rad/s after 1 s)")
+
+
+func test_torque_free_tumble_conserves_momentum_and_energy() -> void:
+	# Asymmetric body spinning near its intermediate axis (Dzhanibekov effect):
+	# the gyroscopic term makes it flip, while |L| and energy stay constant.
+	var cfg := ShipConfig.new()
+	cfg.inertia_kgm2 = Vector3(1.0e6, 2.0e6, 3.0e6)
+	var ship := ShipState.create(&"t", "T", cfg)
+	ship.angular_velocity = Vector3(0.01, 1.0, 0.01)
+	var inertia := cfg.inertia_kgm2
+	var l0 := ship.orientation * (inertia * ship.angular_velocity)
+	var e0 := 0.5 * ship.angular_velocity.dot(inertia * ship.angular_velocity)
+	var flipped := false
+	var worst_l := 0.0
+	var worst_e := 0.0
+	for i in roundi(60.0 / DT):
+		ShipDynamics.step(ship, ShipControlInput.neutral(), DT)
+		var l := ship.orientation * (inertia * ship.angular_velocity)
+		worst_l = maxf(worst_l, (l - l0).length() / l0.length())
+		worst_e = maxf(worst_e, absf(0.5 * ship.angular_velocity.dot(inertia * ship.angular_velocity) - e0) / e0)
+		flipped = flipped or ship.angular_velocity.y < -0.5
+	assert_true(flipped, "spin about the intermediate axis flips (gyroscopic coupling present)")
+	assert_less_equal(worst_l, 2e-3, "world angular momentum drift over 60 s (fraction)")
+	assert_less_equal(worst_e, 2e-3, "rotational energy drift over 60 s (fraction)")

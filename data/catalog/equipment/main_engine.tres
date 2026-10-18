@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"main_engine"
+display_name = "Main engine"
+kind = 1
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"aft"])
+mass_kg = 9000.0
+power_kw = -150.0
+heat_kw = 300.0
+heat_rejection_kw = 0.0
+thrust_n = 800000.0
+isp_s = 900.0
+color = Color(0.35, 0.65, 1.0, 1)

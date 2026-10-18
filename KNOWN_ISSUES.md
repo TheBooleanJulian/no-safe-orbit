@@ -1,34 +1,63 @@
 # Known issues
 
 Honest list of limitations in the current build. Design simplifications are
-also tabulated in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Open
 
-- **No gravity yet.** The sandbox is inertial free space; there is no planet or
-  orbit. (Milestone 1b.)
-- **Float32 positions.** `Vector3` is single precision. Adequate for the current
-  km-scale sandbox, not for orbital radii. A double-precision frame origin is
-  planned before gravity is added (ARCHITECTURE.md → Planned: orbital precision).
-- **Flight assist will fight gravity.** Assist currently drives velocity to zero
-  in the fixed local frame. Under gravity that would burn continuously. It must
-  hold velocity relative to an orbital or target reference instead. (Milestone 1b, item 2.)
-- **No propellant limit.** Δv spent is tracked and displayed but nothing runs out.
-- **Gyroscopic coupling ignored** (diagonal inertia only).
-- **Target ship is passive** — no AI, it drifts and turns slowly.
-- **No weapons yet.**
-- **Visual verification is partial.** Frames were reviewed only under the
-  Compatibility (OpenGL) renderer with software GL via Xvfb. The Forward+
-  renderer the project defaults to was boot-tested headlessly (dummy renderer)
-  but not visually inspected. Mouse feel has not been tested by a human.
-- **Rebinding only via Project Settings** — no in-game rebinding UI; no gamepad
-  bindings yet.
-- **Dust field repeats** every 1.5 km per axis; distance fade hides the seams but
-  a sharp eye may spot the repetition.
-- **No audio.**
+- **No human play-test yet.** Flight, the shipyard and combat were verified by
+  automated tests, end-to-end smoke tests and reviewed renders — not by a person
+  playing. Mouse and gamepad feel, readability of the orbit path and damage
+  reports, and whether real-scale orbital drift matters in a fight are untested.
+- **The enemy is only a gunner.** With T it turns and shoots; it doesn't
+  manoeuvre, evade, manage heat or retreat. It is passive by default.
+  (Directives and tactics: Milestone 6.)
+- **Damage has no repairs yet.** Destroyed systems, breaches and wrecked
+  modules stay that way until restart. (Repair, salvage: Milestone 4; crew and
+  damage control: Milestone 5.)
+- **Crew consequences are not modelled.** Breached rooms and rooms cut off from
+  the bridge are reported, but nothing stops working because of them yet (M5).
+- **Ship geometry is placeholder boxes.** Wrecked modules turn dark and
+  destroyed external systems disappear, but nothing breaks off.
+- **Earth's texture is 2048 × 1024 (~20 km per pixel)** with procedural detail
+  on top; looking straight down, the ground is soft. Clouds are procedural, not
+  real weather. The Compatibility (OpenGL) renderer shows Earth slightly more
+  saturated than Forward+.
+- **Full Windows .exe export is unverified**: export templates aren't installed
+  on the development machine. The data export is verified — every check run
+  packs the project with the Windows preset and boots the game from the pack.
+- **Shipyard: rotating or moving a module carries only what lies entirely
+  inside it.** A room spanning two modules stays put (and the validator flags
+  it). Carrying is ambiguous while modules overlap.
+- **In-game rebinding covers keys, mouse buttons and gamepad buttons/axes**;
+  the mouse virtual stick itself is fixed to mouse movement.
+- **No audio.** (Milestone 8.)
+
+## Design decisions (not defects)
+
+- **No drag; the 100 km Kármán line is a hard entry interface** (decided
+  2026-10-19). Crossing it removes the vessel or round; skimming above it costs
+  nothing.
 
 ## Environment notes
 
+- On Google Drive (or other Windows virtual drives) Godot logs
+  `get_filesystem_type` errors at startup. Harmless; `run_checks.sh` ignores
+  exactly that error. Drive can also briefly lock files during git operations;
+  retry once the lock clears.
 - In containers without a sound card Godot logs ALSA errors and falls back to the
   dummy audio driver. Harmless; `run_checks.sh` runs with `--headless`, which
   avoids it.
+- If the Godot editor is open while `project.godot` changes on disk (e.g. new
+  input actions), reload the project (Project → Reload Current Project) so the
+  editor doesn't save its stale copy over it.
+
+## Fixed (2026-10-19, second pass)
+
+Undo/redo in the shipyard · modules carry their contents and turn in place ·
+off-axis engine thrust torques the ship · propellant and Δv · gyroscopic
+coupling · every cannon fires · hits use hull cells, not one box · ships go dark
+in Earth's shadow · real Earth geography, rotating · real star sky · orbit path
+dense near the ship · gamepad defaults and in-game rebinding · export includes
+data files · dust no longer visibly repeats · Compatibility renderer checked ·
+power and heat are networks, not just budgets.

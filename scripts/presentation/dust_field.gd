@@ -4,6 +4,8 @@ extends MultiMeshInstance3D
 ## only cue for translation, so it is a gameplay aid rather than decoration.
 ## A cube of motes is tiled 3×3×3 and wrapped around the render origin, so it
 ## stays seamless however far the ship travels (no float precision growth).
+## Main runs two layers with different tile sizes (1.5 km and 1.9 km), so the
+## combined pattern only repeats every ~28 km.
 
 @export var tile_size_m: float = 1500.0
 @export var motes_per_tile: int = 140
@@ -48,9 +50,12 @@ func _ready() -> void:
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
-## Keep the field fixed in world space while rendering around `render_origin`.
-func update_origin(render_origin: Vector3) -> void:
+## Keep the field fixed in the local frame while rendering around the render
+## origin. `continuous_origin` is the render origin in rebase-continuous
+## coordinates (WorldSimulation.continuous_position), so frame rebases never
+## make the dust jump.
+func update_origin(continuous_origin: Vec3d) -> void:
 	position = -Vector3(
-		fposmod(render_origin.x, tile_size_m),
-		fposmod(render_origin.y, tile_size_m),
-		fposmod(render_origin.z, tile_size_m))
+		fposmod(continuous_origin.x, tile_size_m),
+		fposmod(continuous_origin.y, tile_size_m),
+		fposmod(continuous_origin.z, tile_size_m))

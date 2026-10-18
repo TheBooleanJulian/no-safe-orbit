@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="HullModuleDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/hull_module_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"side_pod"
+display_name = "Side pod"
+size_cells = Vector3i(2, 2, 6)
+structure_mass_kg = 22000.0
+connectors = {
+"starboard": "pod"
+}
+interior = true
+armor_mm = 15.0
+color = Color(0.52, 0.56, 0.62, 1)
