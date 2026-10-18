@@ -98,7 +98,6 @@ func test_hits_use_hull_cells_not_the_bounding_box() -> void:
 	shot.position = _body(ship, Vector3(-30.0, 7.5, 4.5))
 	shot.prev_position = shot.position
 	shot.velocity = Vector3(1500, 0, 0)
-	shot.lifetime_s = 30.0
 	world.projectiles().append(shot)
 	for i in 6:
 		world.step()
@@ -209,13 +208,13 @@ func test_destroyed_tank_spills_its_share_of_propellant() -> void:
 	var shot := ProjectileState.new()
 	shot.id = 1
 	shot.shooter_id = &"gun"
+	shot.weapon = load("res://data/weapons/medium_kinetic_cannon.tres")
 	var shooter := ShipState.create(&"gun", "G", load("res://data/ships/placeholder_frigate.tres"), Vector3(0, 0, 9e5))
 	world.add_ship(shooter)
 	var pod_cell_center := Vector3(0.5 * CELL, 0.5 * CELL, 7.5 * CELL)
 	shot.position = _body(ship, pod_cell_center + Vector3(-60.0, 0, 0))
 	shot.prev_position = shot.position
 	shot.velocity = Vector3(1500, 0, 0)
-	shot.lifetime_s = 30.0
 	world.projectiles().append(shot)
 	var report: DamageReport = null
 	for i in 10:

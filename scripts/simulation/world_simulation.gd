@@ -15,6 +15,20 @@ const _ACCUMULATOR_EPSILON := 1e-9
 ## Re-centre the local frame on the anchor ship beyond this offset. Keeps
 ## 32-bit local positions at sub-millimetre resolution.
 const REBASE_DISTANCE_M := 5000.0
+## Rounds beyond FAR_RADIUS_M of the frame origin coast analytically; they
+## come back to local integration inside NEAR_RADIUS_M (hysteresis).
+const FAR_RADIUS_M := 80_000.0
+const NEAR_RADIUS_M := 60_000.0
+## Each far round is re-checked this often (s, simulated).
+const FAR_CHECK_INTERVAL_S := 1.0
+## Far rounds tracked at most (oldest dropped first).
+const MAX_FAR_ROUNDS := 5000
+## Far rounds farther than this many planet radii and receding are gone.
+const ESCAPE_RADII := 30.0
+## Without a planet there is no orbit to come back on: drop rounds this far out.
+const INERTIAL_MAX_RANGE_M := 200_000.0
+## A round cannot hit its own ship until it has flown this long (s).
+const ARM_TIME_S := 1.0
 
 var fixed_dt: float = DEFAULT_FIXED_DT
 var tick: int = 0
@@ -36,6 +50,10 @@ var _inputs: Dictionary = {}  # StringName -> ShipControlInput
 var _ship_order: Array[StringName] = []  # deterministic update order
 var _neutral_input := ShipControlInput.neutral()
 var _rounds: Array[ProjectileState] = []
+var _far_rounds: Array[ProjectileState] = []
+var _far_cursor: int = 0
+## Rounds that went through a ship this tick and fly on beyond it.
+var _continuing: Array[ProjectileState] = []
 var _next_round_id: int = 1
 var _hit_events: Array[HitEvent] = []
 
@@ -63,6 +81,13 @@ func add_ship(state: ShipState) -> void:
 	_ship_order.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 
 
+## Take a ship out of the simulation (salvaged wrecks). Its rounds fly on.
+func remove_ship(id: StringName) -> void:
+	_ships.erase(id)
+	_inputs.erase(id)
+	_ship_order.erase(id)
+
+
 func has_ship(id: StringName) -> bool:
 	return _ships.has(id)
 
@@ -79,8 +104,18 @@ func set_input(id: StringName, input: ShipControlInput) -> void:
 	_inputs[id] = input
 
 
+## Rounds near the engagement (integrated and hit-tested every tick).
 func projectiles() -> Array[ProjectileState]:
 	return _rounds
+
+
+## Rounds coasting on far orbits.
+func far_projectiles() -> Array[ProjectileState]:
+	return _far_rounds
+
+
+func round_count() -> int:
+	return _rounds.size() + _far_rounds.size()
 
 
 ## Hit events since the last call (each event is returned once).
@@ -109,6 +144,8 @@ func step() -> void:
 	tick += 1
 	sim_time = tick * fixed_dt
 	_step_rounds()
+	if frame != null:
+		_step_far_rounds()
 	_rounds.append_array(spawned)  # fired at end of tick; first move next tick
 	_check_entry_interface()
 	_rebase_if_needed()
@@ -184,18 +221,24 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		shot.id = _next_round_id
 		_next_round_id += 1
 		shot.shooter_id = ship.id
+		shot.weapon = cannon
 		shot.position = ship.position + ship.orientation * muzzles[k]
 		shot.prev_position = shot.position
 		shot.velocity = ship.velocity + nose * cannon.muzzle_velocity_mps
-		shot.lifetime_s = cannon.round_lifetime_s
 		spawned.append(shot)
-		# Recoil conserves momentum: m_ship·Δv = m_round·v_muzzle.
+		# Recoil conserves momentum and angular momentum: the ship gets −p at
+		# the muzzle, so a muzzle off the centre of mass also kicks its spin.
+		var p_body := Vector3(0, 0, -cannon.muzzle_velocity_mps * cannon.round_mass_kg)
 		ship.velocity -= nose * (cannon.muzzle_velocity_mps * cannon.round_mass_kg / ship.mass_kg())
+		ship.angular_velocity -= muzzles[k].cross(p_body) / ship.inertia_kgm2()
+		ship.recoil_impulse += cannon.muzzle_velocity_mps * cannon.round_mass_kg
 		ship.cannon_rounds -= 1
 		ship.rounds_fired += 1
 		ship.cannon_cooldowns[k] += cannon.fire_interval_s()
 
 
+## Rounds never expire. Near the engagement they are integrated like ships;
+## far away they coast analytically (see _step_far_rounds).
 func _step_rounds() -> void:
 	var half_dt := fixed_dt * 0.5
 	var entry_r2 := 0.0
@@ -212,9 +255,7 @@ func _step_rounds() -> void:
 			shot.position += shot.velocity * fixed_dt
 		shot.age_s += fixed_dt
 		if _resolve_round_hits(shot):
-			continue
-		if shot.age_s >= shot.lifetime_s:
-			continue
+			continue  # consumed (an overpenetrating round re-spawns beyond the ship)
 		if frame != null:
 			var p := frame.origin_position
 			var rx := p.x + shot.position.x
@@ -222,17 +263,69 @@ func _step_rounds() -> void:
 			var rz := p.z + shot.position.z
 			if rx * rx + ry * ry + rz * rz < entry_r2:
 				continue  # entered the atmosphere
+			if shot.position.length() > FAR_RADIUS_M:
+				_to_far(shot)
+				continue
+		elif shot.position.length() > INERTIAL_MAX_RANGE_M:
+			continue  # no orbit to come back on: gone for good
 		survivors.append(shot)
 	_rounds = survivors
+	_rounds.append_array(_continuing)
+	_continuing.clear()
 
 
-## Finds the earliest ship this shot touched during the tick; records the hit.
+## Far rounds: each is re-checked once per simulated second (spread over the
+## ticks), propagated exactly, and brought back near when its orbit returns
+## it to the engagement. Re-entry happens at the predicted time.
+func _step_far_rounds() -> void:
+	if _far_rounds.is_empty():
+		return
+	var per_tick := maxi(1, ceili(_far_rounds.size() * fixed_dt / FAR_CHECK_INTERVAL_S))
+	var removed := {}
+	for i in mini(per_tick, _far_rounds.size()):
+		_far_cursor = (_far_cursor + 1) % _far_rounds.size()
+		var shot := _far_rounds[_far_cursor]
+		if sim_time >= shot.reentry_time:
+			removed[shot] = true
+			continue
+		var state := OrbitElements.propagate(body.mu_m3_s2, shot.far_position, shot.far_velocity, sim_time - shot.far_epoch)
+		var rel := state[0].minus(frame.origin_position)
+		if rel.length() < NEAR_RADIUS_M:
+			shot.far = false
+			shot.position = rel.to_vector3()
+			shot.prev_position = shot.position
+			shot.velocity = state[1].minus(frame.origin_velocity).to_vector3()
+			_rounds.append(shot)
+			removed[shot] = true
+		elif state[0].length() > body.radius_m * ESCAPE_RADII and state[0].dot(state[1]) > 0.0:
+			removed[shot] = true  # left on an escape trajectory
+	if not removed.is_empty():
+		_far_rounds = _far_rounds.filter(func(s: ProjectileState) -> bool: return not removed.has(s))
+		_far_cursor = 0
+	while _far_rounds.size() > MAX_FAR_ROUNDS:
+		_far_rounds.pop_front()  # oldest first; documented cap
+
+
+func _to_far(shot: ProjectileState) -> void:
+	shot.far = true
+	shot.far_position = frame.pci_position(shot.position)
+	shot.far_velocity = frame.pci_velocity(shot.velocity)
+	shot.far_epoch = sim_time
+	var orbit := OrbitElements.from_state(body.mu_m3_s2, shot.far_position, shot.far_velocity)
+	var t := orbit.time_to_radius_descending(body.entry_radius_m())
+	shot.reentry_time = sim_time + t if not is_nan(t) else INF
+	_far_rounds.append(shot)
+
+
+## Finds the earliest ship this shot touched during the tick and resolves the
+## hit: damage, momentum transfer, and — if it went right through — a slower
+## round continuing beyond the ship. Returns true if the shot was consumed.
 func _resolve_round_hits(shot: ProjectileState) -> bool:
 	var best_t := INF
 	var best_ship: ShipState = null
 	for id in _ship_order:
-		if id == shot.shooter_id:
-			continue
+		if id == shot.shooter_id and shot.age_s < ARM_TIME_S:
+			continue  # leaving its own muzzle
 		var ship: ShipState = _ships[id]
 		if not ship.is_active():
 			continue
@@ -252,21 +345,46 @@ func _resolve_round_hits(shot: ProjectileState) -> bool:
 	ev.round_id = shot.id
 	ev.shooter_id = shot.shooter_id
 	ev.target_id = best_ship.id
+	var inv_q := best_ship.orientation.inverse()
 	var rel_start := shot.prev_position - best_ship.prev_position
 	var rel_end := shot.position - best_ship.position
-	ev.point_body = best_ship.orientation.inverse() * rel_start.lerp(rel_end, best_t)
-	ev.relative_speed = (shot.velocity - best_ship.velocity).length()
-	var shooter := get_ship(shot.shooter_id)
-	var cannon: KineticCannonConfig = shooter.config.cannon if shooter != null else null
-	var mass := cannon.round_mass_kg if cannon != null else 0.0
-	ev.energy_j = 0.5 * mass * ev.relative_speed * ev.relative_speed
-	if best_ship.systems != null and cannon != null:
-		var dir_body := best_ship.orientation.inverse() * (shot.velocity - best_ship.velocity)
-		ev.report = Penetration.apply(best_ship.systems, ev.point_body, dir_body, cannon.penetration_at(ev.relative_speed))
+	ev.point_body = inv_q * rel_start.lerp(rel_end, best_t)
+	var rel_v := shot.velocity - best_ship.velocity
+	ev.relative_speed = rel_v.length()
+	ev.energy_j = 0.5 * shot.mass_kg() * ev.relative_speed * ev.relative_speed
+	var absorbed := 1.0
+	if best_ship.systems != null and shot.weapon != null:
+		var dir_body := inv_q * rel_v
+		ev.report = Penetration.apply(best_ship.systems, ev.point_body, dir_body, shot.weapon.penetration_at(ev.relative_speed))
 		_apply_damage(best_ship, ev.report)
+		if ev.report.exit_pen_mm > 0.0 and ev.report.entry_pen_mm > 0.0:
+			# Through and out: it keeps the speed its leftover penetration implies.
+			var keep := pow(ev.report.exit_pen_mm / ev.report.entry_pen_mm, 1.0 / KineticCannonConfig.PENETRATION_SPEED_EXPONENT)
+			absorbed = 1.0 - keep
+			var out := ProjectileState.new()
+			out.id = _next_round_id
+			_next_round_id += 1
+			out.shooter_id = shot.shooter_id
+			out.weapon = shot.weapon
+			out.age_s = shot.age_s
+			out.position = best_ship.position + best_ship.orientation * ev.report.exit_point_body + rel_v.normalized() * 1.0
+			out.prev_position = out.position
+			out.velocity = best_ship.velocity + rel_v * keep
+			_continuing.append(out)
+	# Momentum the ship absorbed, applied at the impact point: it is pushed and spun.
+	_apply_impulse(best_ship, ev.point_body, rel_v * (shot.mass_kg() * absorbed))
 	_hit_events.append(ev)
 	best_ship.hits_taken += 1
 	return true
+
+
+## Linear and angular impulse (world-frame J, applied at a body-frame point).
+func _apply_impulse(ship: ShipState, point_body: Vector3, impulse_world: Vector3) -> void:
+	if impulse_world == Vector3.ZERO:
+		return
+	ship.velocity += impulse_world / ship.mass_kg()
+	var j_body := ship.orientation.inverse() * impulse_world
+	ship.angular_velocity += point_body.cross(j_body) / ship.inertia_kgm2()
 
 
 ## Consequences of a damage report that live outside ShipSystems.

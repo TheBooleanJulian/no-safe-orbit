@@ -49,6 +49,8 @@ var systems: ShipSystems
 var cannon_rounds: int = 0
 var cannon_cooldowns: PackedFloat32Array = PackedFloat32Array()
 var rounds_fired: int = 0
+## Total recoil impulse from firing (N·s), for the HUD.
+var recoil_impulse: float = 0.0
 var hits_taken: int = 0
 
 

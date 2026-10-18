@@ -20,20 +20,43 @@ const NEAR_PATH_SAMPLES := 80
 @onready var target_label: Label = $Root/TargetPanel/Margin/TargetLabel
 @onready var warning_label: Label = $Root/WarningLabel
 @onready var controls: ControlsPanel = $Root/Controls
+@onready var hit_cam: HitCam = $Root/HitCam
 
 ## Real-sky frame, for the sunlight / eclipse readout (set by Main).
 var celestial: CelestialFrame
 
 ## Main sets this when the target is shooting back (T).
 var target_hostile: bool = false
+## Persistent player state, for spare parts (set by Main).
+var profile: PlayerProfile
+## Salvage results panel (created in _ready).
+var loot: LootPanel
 
 var _last_hit_time := -INF
 var _hits_scored := 0
+var _rounds_near := 0
+var _rounds_far := 0
 ## Latest damage report on the target (our hits) and on us (incoming).
 var _outgoing: DamageReport
 var _incoming: DamageReport
 var _incoming_time := -INF
 var _hits_taken := 0
+var _notice := ""
+var _notice_time := -INF
+const NOTICE_S := 6.0
+
+
+func _ready() -> void:
+	loot = LootPanel.new()
+	loot.name = "Loot"
+	$Root.add_child(loot)
+	loot.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 70)
+
+
+## A one-line message on the flight panel for a few seconds.
+func notice(text: String, sim_time: float) -> void:
+	_notice = text
+	_notice_time = sim_time
 
 
 func reset() -> void:
@@ -68,6 +91,8 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	_update_flight_panel(player, input, world.sim_time, has_target)
 	_update_orbit_panel(world, player, orbit)
 	_update_target_panel(world, player, target)
+	_rounds_near = world.projectiles().size()
+	_rounds_far = world.far_projectiles().size()
 	_update_warning(world, player, orbit)
 
 	overlay.camera = camera
@@ -110,6 +135,8 @@ func _update_flight_panel(player: ShipState, input: PlayerInput, sim_time: float
 		"Δv SPENT   %.1f m/s" % player.delta_v_expended,
 		"PROPELLANT %s" % _propellant_text(player),
 		"CANNON     %s" % gun,
+		"ROUNDS UP  %d near · %d far orbit   recoil %.1f kN·s" % [
+			_rounds_near, _rounds_far, player.recoil_impulse / 1000.0],
 	] + _systems_lines(player, sim_time) + [
 		"T+         %s" % HudFormat.clock(sim_time),
 	])
@@ -125,12 +152,28 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 			"  SHORT %.0f" % sys.power_unmet_kw if sys.power_unmet_kw > 0.0 else ""],
 		"HEAT       %.0f K  %s" % [sys.temperature_k, ["reactor normal", "REACTOR THROTTLED", "REACTOR SCRAM"][sys.reactor_state]],
 		"SYSTEMS    %s" % sys.status_line(),
+		"DMG CTRL   %s" % _repair_text(sys),
 	]
+	if profile != null:
+		lines.append("SPARES     %d parts" % profile.spare_parts)
+	if _notice != "" and sim_time - _notice_time < NOTICE_S:
+		lines.append("» " + _notice.left(60))
 	if _incoming != null and sim_time - _incoming_time < 8.0:
 		lines.append("HIT TAKEN  %s  (+%.0f s)" % [_incoming.headline(), sim_time - _incoming_time])
 		for line in _incoming.lines.slice(maxi(_incoming.lines.size() - 2, 1)):
 			lines.append("  " + line.left(58))
 	return lines
+
+
+func _repair_text(sys: ShipSystems) -> String:
+	if sys.repair_task != null:
+		var t := sys.repair_task
+		return "patching %s  %d%%  (%.0f s)" % [t.equipment_id, roundi(t.progress() * 100.0), t.remaining_s]
+	var why := sys.field_repair_block_reason()
+	if why == "":
+		var e := sys.field_repair_target()
+		return "[C] patch %s %s (%d%%)" % [e.def.display_name, e.id, roundi(100.0 * e.hp / e.max_hp)]
+	return why
 
 
 func _propellant_text(ship: ShipState) -> String:
@@ -204,8 +247,6 @@ func _update_target_panel(world: WorldSimulation, player: ShipState, target: Shi
 	var tof := "NO FIRING SOLUTION"
 	if not lead.is_empty():
 		tof = "%.2f s  (lead ◇)" % lead.time
-		if lead.time > player.config.cannon.round_lifetime_s:
-			tof = "%.1f s  BEYOND ROUND LIFE" % lead.time
 	var hit_age := world.sim_time - _last_hit_time
 	var hits := "%d" % _hits_scored
 	if hit_age < 3.0:
@@ -222,6 +263,10 @@ func _update_target_panel(world: WorldSimulation, player: ShipState, target: Shi
 	if target.systems != null:
 		lines.append("SYSTEMS    %s" % target.systems.status_line())
 		lines.append("REACTOR    %s  %.0f K" % [["normal", "THROTTLED", "SCRAM"][target.systems.reactor_state], target.systems.temperature_k])
+		if target.systems.is_disabled():
+			var why := Salvage.block_reason(player, target)
+			lines.append("DISABLED   %s  —  %d%% intact" % [target.systems.disabled_reason().to_upper(), roundi(target.systems.intact_fraction() * 100.0)])
+			lines.append("SALVAGE    %s" % ("READY — press [G]" if why == "" else why))
 	if _outgoing != null:
 		lines.append("LAST HIT   %s" % _outgoing.headline())
 		for line in _outgoing.lines.slice(maxi(_outgoing.lines.size() - 3, 1)):
@@ -237,6 +282,12 @@ func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElem
 		return
 	if not player.config.unlimited_propellant and player.propellant_kg <= 0.0:
 		warning_label.text = "PROPELLANT EXHAUSTED — NO THRUST, NO RCS"
+		warning_label.add_theme_color_override("font_color", COLOR_DANGER)
+		warning_label.visible = true
+		return
+	var incoming := incoming_round_time(world, player)
+	if incoming >= 0.0:
+		warning_label.text = "INCOMING ROUND — IMPACT IN %.1f s" % incoming
 		warning_label.add_theme_color_override("font_color", COLOR_DANGER)
 		warning_label.visible = true
 		return
@@ -260,6 +311,26 @@ func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElem
 			warning_label.visible = true
 			return
 	warning_label.visible = false
+
+
+## Seconds until the nearest round on a collision course reaches `ship`
+## (straight-line closest approach within the hull's radius, next 10 s;
+## includes the ship's own rounds once armed), or -1.
+static func incoming_round_time(world: WorldSimulation, ship: ShipState) -> float:
+	var radius := ship.config.hit_box_half_extents.length()
+	var best := INF
+	for shot in world.projectiles():
+		if shot.shooter_id == ship.id and shot.age_s < WorldSimulation.ARM_TIME_S:
+			continue
+		var p := shot.position - ship.position
+		var v := shot.velocity - ship.velocity
+		var vv := v.length_squared()
+		if vv < 1e-6:
+			continue
+		var t := -p.dot(v) / vv
+		if t > 0.0 and t < 10.0 and (p + v * t).length() < radius and t < best:
+			best = t
+	return best if best < INF else -1.0
 
 
 ## {time, direction} for the player's cannon against the target, or {}.

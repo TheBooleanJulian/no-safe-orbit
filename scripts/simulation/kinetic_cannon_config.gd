@@ -2,7 +2,8 @@ class_name KineticCannonConfig
 extends Resource
 ## Immutable definition of a kinetic cannon. Data lives in data/weapons/*.tres.
 ## Rounds are unguided: they inherit the firing ship's velocity plus muzzle
-## velocity along the nose, then follow the same gravity as everything else.
+## velocity along the nose, then follow the same gravity as everything else —
+## forever, until they hit something or re-enter.
 
 @export var display_name: String = "Kinetic cannon"
 ## Round speed relative to the firing ship (m/s).
@@ -11,8 +12,6 @@ extends Resource
 @export var magazine_rounds: int = 400
 ## Projectile mass (kg). Also sets recoil: Δv_ship = m_round · v_muzzle / m_ship.
 @export var round_mass_kg: float = 4.0
-## Rounds are removed after this long in flight (s). Max range ≈ v_muzzle × lifetime.
-@export var round_lifetime_s: float = 30.0
 ## Armour penetration (mm of hull armour) at an impact speed equal to the
 ## muzzle velocity. Scales with impact speed^1.4 (de Marre-style).
 @export var penetration_mm: float = 60.0
@@ -39,6 +38,4 @@ func validate() -> PackedStringArray:
 		problems.append("magazine_rounds must not be negative")
 	if round_mass_kg <= 0.0:
 		problems.append("round_mass_kg must be positive")
-	if round_lifetime_s <= 0.0:
-		problems.append("round_lifetime_s must be positive")
 	return problems

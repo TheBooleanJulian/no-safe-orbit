@@ -17,12 +17,19 @@ extends Resource
 @export var rounds_per_cell: int = 0
 @export var cargo_m3_per_cell: float = 0.0
 @export var color: Color = Color(0.4, 0.5, 0.6)
+@export_group("Progression")
+## COMMON parts are always available; rarer ones must be found as loot.
+@export var rarity: Rarity.Tier = Rarity.Tier.COMMON
+## Relative chance of this part among loot drops of the same rarity.
+@export var drop_weight: float = 10.0
 
 
 func validate() -> PackedStringArray:
 	var problems := PackedStringArray()
 	if id == &"":
 		problems.append("id must be set")
+	if drop_weight < 0.0:
+		problems.append("%s: drop_weight must not be negative" % id)
 	if mass_per_cell_kg < 0.0:
 		problems.append("%s: mass_per_cell_kg must not be negative" % id)
 	return problems

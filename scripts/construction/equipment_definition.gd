@@ -67,6 +67,11 @@ func shielding_mm() -> float:
 ## CANNON only.
 @export var cannon: KineticCannonConfig
 @export var color: Color = Color(0.8, 0.8, 0.8)
+@export_group("Progression")
+## COMMON parts are always available; rarer ones must be found as loot.
+@export var rarity: Rarity.Tier = Rarity.Tier.COMMON
+## Relative chance of this part among loot drops of the same rarity.
+@export var drop_weight: float = 10.0
 
 
 func is_external() -> bool:
@@ -77,6 +82,8 @@ func validate() -> PackedStringArray:
 	var problems := PackedStringArray()
 	if id == &"":
 		problems.append("id must be set")
+	if drop_weight < 0.0:
+		problems.append("%s: drop_weight must not be negative" % id)
 	if mass_kg <= 0.0:
 		problems.append("%s: mass_kg must be positive" % id)
 	if mount == Mount.INTERNAL and (footprint_cells.x <= 0 or footprint_cells.y <= 0):

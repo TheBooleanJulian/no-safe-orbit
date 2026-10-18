@@ -64,6 +64,59 @@ static func from_state(p_mu: float, r: Vec3d, v: Vec3d) -> OrbitElements:
 	return el
 
 
+## Exact two-body propagation of a PCI state by `dt` seconds (universal
+## variables; elliptic, parabolic and hyperbolic alike). Returns
+## [position, velocity]. Used for rounds far from the engagement, which
+## coast on their own orbits until they come back or re-enter.
+static func propagate(p_mu: float, r0: Vec3d, v0: Vec3d, dt: float) -> Array[Vec3d]:
+	var r0n := r0.length()
+	var v0n := v0.length()
+	var sqrt_mu := sqrt(p_mu)
+	var vr0 := r0.dot(v0) / r0n
+	var alpha := 2.0 / r0n - v0n * v0n / p_mu  # 1/a
+	if alpha > 1e-12:
+		dt = fmod(dt, TAU / sqrt(p_mu * alpha * alpha * alpha))  # whole orbits change nothing
+	var chi := sqrt_mu * absf(alpha) * dt
+	for i in 60:
+		var z := alpha * chi * chi
+		var c := _stumpff_c(z)
+		var s := _stumpff_s(z)
+		var f := r0n * vr0 / sqrt_mu * chi * chi * c + (1.0 - alpha * r0n) * chi * chi * chi * s + r0n * chi - sqrt_mu * dt
+		var df := r0n * vr0 / sqrt_mu * chi * (1.0 - alpha * chi * chi * s) + (1.0 - alpha * r0n) * chi * chi * c + r0n
+		var step := f / df
+		chi -= step
+		if absf(step) < 1e-10 * maxf(absf(chi), 1.0):
+			break
+	var z := alpha * chi * chi
+	var c := _stumpff_c(z)
+	var s := _stumpff_s(z)
+	var fl := 1.0 - chi * chi / r0n * c
+	var gl := dt - chi * chi * chi / sqrt_mu * s
+	var r := r0.times(fl).plus(v0.times(gl))
+	var rn := r.length()
+	var fdot := sqrt_mu / (rn * r0n) * (alpha * chi * chi * chi * s - chi)
+	var gdot := 1.0 - chi * chi / rn * c
+	return [r, r0.times(fdot).plus(v0.times(gdot))]
+
+
+static func _stumpff_c(z: float) -> float:
+	if z > 1e-8:
+		return (1.0 - cos(sqrt(z))) / z
+	if z < -1e-8:
+		return (cosh(sqrt(-z)) - 1.0) / -z
+	return 0.5 - z / 24.0
+
+
+static func _stumpff_s(z: float) -> float:
+	if z > 1e-8:
+		var sz := sqrt(z)
+		return (sz - sin(sz)) / (sz * sz * sz)
+	if z < -1e-8:
+		var sz := sqrt(-z)
+		return (sinh(sz) - sz) / (sz * sz * sz)
+	return 1.0 / 6.0 - z / 120.0
+
+
 func is_bound() -> bool:
 	return eccentricity < 1.0 and specific_energy < 0.0
 

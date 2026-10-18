@@ -35,6 +35,10 @@ func _run_until_sim_time(main: Main, seconds: float) -> void:
 
 func _run() -> void:
 	print("== smoke_main")
+	# A throwaway profile: never touch the player's real save.
+	PlayerProfile.path = "user://smoke_profile.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
+	Main.profile = null
 	var main: Main = (load("res://scenes/main/main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -108,6 +112,24 @@ func _run() -> void:
 	_check(main.hud.flight_label.text.contains("POWER") and main.hud.target_label.text.contains("SYSTEMS"),
 		"HUD shows own power/heat and the target's systems")
 
+	# Aim at the lead (scripted) and fire through the real action: our hit
+	# opens the hit cam replay.
+	var tgt := main.world.get_ship(&"target_01")
+	var hits_before := tgt.hits_taken
+	var t_aim := main.world.sim_time
+	Input.action_press("fire")
+	while tgt.hits_taken == hits_before and main.world.sim_time - t_aim < 8.0:
+		var aim := tgt.position + tgt.orientation * tgt.config.hit_box_center - (player.position + player.orientation * player.config.primary_muzzle())
+		var tof := FireControl.intercept_time(aim, tgt.velocity - player.velocity, player.config.cannon.muzzle_velocity_mps)
+		if tof > 0.0:
+			player.orientation = Quaternion(Vector3.FORWARD, FireControl.lead_point(aim, tgt.velocity - player.velocity, tof).normalized())
+			player.angular_velocity = Vector3.ZERO
+		await process_frame
+	Input.action_release("fire")
+	await process_frame
+	_check(tgt.hits_taken > hits_before and main.hud.hit_cam.visible and main.hud.hit_cam._title.text.begins_with("HIT CAM"),
+		"our hit on the target opens the hit cam replay (%d hits)" % (tgt.hits_taken - hits_before))
+
 	# T: the target shoots back. Within 40 s the player takes a hit, and the
 	# HUD reports what it did.
 	_press_action("toggle_target_ai")
@@ -120,6 +142,7 @@ func _run() -> void:
 		"hostile target hits the player and the HUD reports it (after %.1f s)" % (main.world.sim_time - t0))
 
 	print("smoke: %d failure(s)" % _failures.size())
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
 	quit(1 if not _failures.is_empty() else 0)
 
 

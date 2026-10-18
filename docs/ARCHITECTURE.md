@@ -29,7 +29,7 @@ Input (InputMap) ──► PlayerInput ──► ShipControlInput ─┐
 | Type | Role |
 |---|---|
 | `ShipConfig` | Flight tuning: mass, inertia, per-direction thrust, torque, assist rates, hit box, cannon + muzzle position. Compiled from a blueprint by `ShipStats.to_ship_config()`; `data/ships/placeholder_frigate.tres` remains as a fixed fixture for flight unit tests. |
-| `KineticCannonConfig` (Resource, `data/weapons/*.tres`) | Muzzle velocity, rate of fire, magazine, round mass, round lifetime. |
+| `KineticCannonConfig` (Resource, `data/weapons/*.tres`) | Muzzle velocity, rate of fire, magazine, round mass, penetration (scales with impact speed^1.4). Rounds never expire. |
 | `OrbitalBody` (Resource, `data/bodies/*.tres`) | μ, radius, entry-interface altitude (Earth: 100 km). |
 | `ShipState` | Physical vessel: stable `id`, local position/velocity, orientation, body-frame angular velocity, last thrust/torque, Δv spent, status (active / entered atmosphere), cannon ammo and cooldown. |
 | `ShipControlInput` | One tick's command: body-axis translation/rotation in [-1, 1], assist flag, translation hold (velocity or target id), trigger. |
@@ -47,6 +47,12 @@ Input (InputMap) ──► PlayerInput ──► ShipControlInput ─┐
 | `Penetration`, `DamageReport` | Round-through-hull damage walk and its plain-words report. |
 | `GunneryAI` | Enemy gunner: aim at the lead point, fire when aligned. |
 | `InputBindings` | Player rebinding, saved to `user://input_bindings.cfg`. |
+| `HitCam` (UI) | X-ray replay of the player's latest most-severe hit from the `DamageReport` path and events. |
+| `Rarity`, `LootRoller` | Rarity tiers; cascading weighted loot with cascade-down and hard pity. |
+| `PlayerProfile` | Persistent player state: spare parts, owned units, unlocked blueprints, pity, loot RNG, hangar vessel. Versioned JSON at `user://profile.json`. |
+| `ShipInstance` | The physical hangar vessel: its blueprint copy, condition (from `ShipSystems.condition()`), sorties and service history. |
+| `ServiceYard` | Repair and refit jobs, costs, priorities, write-offs. |
+| `Salvage` | Salvage rules (disabled, < 500 m, < 5 m/s) and yield. |
 
 ## Construction (Milestone 2)
 
@@ -110,7 +116,7 @@ Scene flow: flight (`main.tscn`) ⇄ shipyard (`shipyard.tscn`) via
   `dropped_time` (prevents the spiral of death after a hitch).
 - Input is sampled once per rendered frame and held across that frame's ticks.
 - Tick order: frame origin → ships (in id order; firing spawns rounds) →
-  existing rounds (move, swept hits, lifetime, entry) → new rounds join →
+  existing rounds (move, swept hits, near↔far hand-over, entry) → new rounds join →
   entry-interface check → rebase.
 
 ## Orbital precision: the free-falling local frame
@@ -208,6 +214,64 @@ bounding-box hit test.
   feed-forward plus proportional correction) and fires inside 0.35°. Same
   physics and limits as the player.
 
+## Persistent rounds and impact physics
+
+- **Rounds never expire.** Within 80 km of the frame origin a round is
+  integrated like a ship (leapfrog with the tidal term, swept hit tests).
+  Beyond that it goes *far*: its exact PCI state is kept in doubles and
+  propagated analytically (`OrbitElements.propagate`, universal variables —
+  elliptic, parabolic and hyperbolic), checked round-robin once per simulated
+  second, and brought back to local integration inside 60 km. Far rounds
+  re-enter at their predicted entry-interface time; escaping rounds beyond
+  30 planet radii are dropped; at most 5,000 far rounds are kept (oldest
+  first). A round cannot hit its own ship for its first 1 s.
+- **Recoil:** each shot gives the ship `−m·v_muzzle` of momentum along the
+  barrel and `−r_muzzle × p / I` of spin.
+- **Impacts:** a hit transfers `m·Δv` at the hit point, scaled by the fraction
+  of the round's penetration the ship absorbed, so the target is pushed and
+  spun. A round that leaves the hull with penetration to spare flies on at
+  `v × (pen_exit / pen_entry)^(1/1.4)`.
+
+## Progression (Milestone 4)
+
+- **Blueprint vs vessel.** `ShipBlueprint` is the design; `ShipInstance` is
+  the hangar vessel — a copy of the design plus its *condition*:
+  `ShipSystems.condition()` lists only what differs from new, keyed by stable
+  part ids, as fractions (equipment hit points, module armour and structure,
+  breached rooms, destroyed hatches). `apply_condition()` restores it on
+  launch, so damage persists between sorties. The condition is captured when
+  the sortie ends: dock (B), restart (Backspace), quit, or vessel loss.
+- **Ownership.** Common parts are unlimited (fabricated). Rarer equipment is
+  counted in units owned in total (installed or not); a design may use at
+  most that many. Rarer hull modules and rooms are blueprints, unlocked once
+  found. `PlayerProfile.check_design` adds `blueprint_locked` /
+  `part_not_owned` errors to the validator report in the shipyard.
+- **Write-offs.** A rarer unit that went from working to destroyed during a
+  sortie is written off at docking (once). Losing the vessel writes off every
+  rarer unit still aboard; the blueprint survives and a fresh hull is issued.
+- **Loot** (`LootRoller`): the tier climbs from Common with
+  `Rarity.UPGRADE_CHANCE` (30/30/25/20 %), then pity (Rare+ by the 10th pull,
+  Legendary by the 80th), then a weighted pick by `drop_weight` within the
+  tier, falling to lower tiers if a tier is empty. The Common tier pays spare
+  parts crates. The RNG seed and state are saved (as strings — 64-bit values
+  don't survive JSON numbers), so reloading never re-rolls a pull.
+- **Service costs** (spare parts): new equipment 1 per tonne (rarer: ¼, it
+  comes from owned units), hull modules 1 per 4 t, rooms 1 per 2 t. Repair =
+  new cost × damage fraction, so swapping a damaged part for a new one never
+  beats repairing it. Refits (parts the vessel doesn't have) must be paid in
+  full at launch; repairs are optional and chosen by priority when parts are
+  short.
+- **Salvage**: needs a disabled target (no power, no reachable command room,
+  or every gun out), < 500 m and < 5 m/s. Yield: `10 + 50·f` spare parts and
+  `1 + ⌊4f⌋` crates, `f` = surviving fraction of the wreck's system hit points.
+- **Field repair**: a powered, pressurised, reachable workshop room lets the
+  crew patch one damaged (not destroyed) reachable system at a time, to 75 %,
+  taking 10 s + 1 s per hit point; it stops if access or the workshop is
+  lost.
+- **Saving**: `PlayerProfile.save()` writes a temporary file, then swaps it
+  in. An unreadable profile is kept aside as `.unreadable`, never
+  overwritten. Newer schema versions are refused.
+
 ## Propellant
 
 Main engines and RCS have their own specific impulse (Frigate Mk I: 900 s /
@@ -226,9 +290,14 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Diagonal inertia (principal axes = body axes) | Designs with skewed mass don't tumble off-axis | If asymmetric hull modules arrive |
 | RCS blocks thrust equally in all six directions; torque = thrust × perpendicular lever arm | Block orientation doesn't matter | When RCS needs real quads |
 | Centre of mass fixed at the full-tanks position | Burning propellant doesn't shift the CoM | If tank placement should matter in flight |
-| Ammunition mass not counted | A full magazine weighs nothing | M4 (inventory) |
+| Ammunition mass not counted | A full magazine weighs nothing | Logistics |
 | Penetration is a millimetre budget, not ballistics: no spall cone, ricochet or fragmentation; armour per module, not per face | Damage is predictable and explainable, never surprising | M7 (fragmentation, nukes) |
-| Overpenetrating rounds vanish after leaving the hull | A round can't go on to hit a second ship | If close formations matter |
+| Overpenetrating rounds fly on slower but in a straight continuation; no deflection | Exit direction is always the entry direction | M7 (fragmentation) |
+| Docking is abstract: B docks from anywhere; no station or transfer orbit | Returning costs nothing | When stations / logistics arrive |
+| Propellant and ammunition are refilled free at every launch | Only damage and parts carry over | Logistics |
+| Field repairs need no crew role and no travel time | Any workshop fixes any reachable system | M5 (crew) |
+| All gun mounts on a ship must be one type (one fire-control solution) | No mixed batteries | Turrets / per-mount fire control |
+| Every enemy is the common-parts Kestrel; loot comes from crates, not the wreck's own parts | Salvage never returns a specific fitted part | When enemy loadouts vary |
 | Wrecked modules stay attached; no debris | Ships never break apart | Later (structural detachment) |
 | One power junction per module; no batteries, breakers or cabling; fixed shedding order | Redundancy comes from reactors and module layout only | M4/M5 (repairs, rerouting) |
 | One thermal mass per ship; radiators can't retract | An idle ship settles at ~258 K; heat can't be stored locally | When heat sinks / radiator control arrive |
@@ -244,12 +313,16 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 - `tests/smoke/smoke_shipyard.gd` — shipyard end to end: real mouse click on
   the deck editor, undo/redo by key, validation, save/reload, launch into
   flight, B back.
-- Both smoke tests have a 120 s watchdog so a script error fails the run
-  instead of hanging it.
+- `tests/smoke/smoke_campaign.gd` — the Milestone 4 exit test: fight, salvage
+  with G, dock damaged with B, repair and refit in the shipyard, relaunch;
+  then checks the profile on disk.
+- Smoke tests have a watchdog (120–180 s) so a script error fails the run
+  instead of hanging it, and use a throwaway profile path.
 - `tools/run_checks.sh` — runs everything, exports a `.pck` with the Windows
   preset and boots the game from it, and fails on engine errors in any log.
 - `tools/capture_screens.gd` — renders scripted moments to PNG for visual review.
 - Mutation checks: each core rule (tidal gravity, recoil, connector matching,
   parallel axis, exterior faces, armour obliquity, junction isolation, hatch
-  destruction, AI feed-forward) was deliberately broken once; each time the
-  matching test failed.
+  destruction, AI feed-forward, self-hit arming, loot pity, loot RNG
+  persistence, rare-replacement availability) was deliberately broken once;
+  each time the matching test failed.

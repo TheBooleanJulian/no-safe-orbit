@@ -33,6 +33,8 @@ const COLOR_WARNING := Color(0.96, 0.78, 0.26)
 @onready var issue_text: RichTextLabel = %IssueText
 
 var editor: ShipEditor
+## Spare parts, found parts and the hangar vessel (Main.get_profile()).
+var profile: PlayerProfile
 var tool: Tool = Tool.SELECT
 ## PLACE tool: which catalog table ("hull", "room", "equipment") and id.
 var place_kind: String = ""
@@ -41,14 +43,22 @@ var place_rotation: int = 0
 var selected_id: String = ""
 var _hover_cell := Vector3i.ZERO
 var _hover_face: StringName = &""
+var _hangar_label: RichTextLabel
+var _priority: OptionButton
+var _repair_button: Button
 
 
 func _ready() -> void:
 	InputBindings.apply_saved()
 	var catalog := ConstructionCatalog.default_catalog()
-	var start: ShipBlueprint = Main.launch_blueprint.duplicate_blueprint() if Main.launch_blueprint != null else _load_or_null(BlueprintIO.DEFAULT_TEMPLATE)
+	profile = Main.get_profile()
+	profile.ensure_vessel(_load_or_null(BlueprintIO.DEFAULT_TEMPLATE))
+	var start: ShipBlueprint = (Main.launch_blueprint if Main.launch_blueprint != null else profile.vessel.blueprint).duplicate_blueprint()
 	editor = ShipEditor.new(start, catalog)
+	editor.profile = profile
+	editor.revalidate()
 	editor.changed.connect(_refresh)
+	_build_hangar_panel()
 	for v in [deck_editor, side_view, front_view]:
 		v.editor = editor
 	_fill_palette(hull_list, catalog.hull)
@@ -243,15 +253,42 @@ func load_design(path: String) -> bool:
 	return true
 
 
-## Fly the current design. Refused while the design has errors.
+## Fly the current design. Refused while the design has errors or the refit
+## (parts the hangar vessel does not have yet) cannot be paid for.
 func launch() -> bool:
 	var errors := editor.report.errors()
 	if not errors.is_empty():
 		_set_status("Fix %d error%s before launch" % [errors.size(), "" if errors.size() == 1 else "s"], true)
 		return false
+	var why := ServiceYard.refit(profile.vessel, editor.blueprint, profile, editor.catalog)
+	if why != "":
+		_set_status(why + " — remove new parts or salvage more", true)
+		return false
+	_save_profile()
 	Main.launch_blueprint = editor.blueprint.duplicate_blueprint()
 	get_tree().change_scene_to_file(FLIGHT_SCENE)
 	return true
+
+
+## Repair the hangar vessel by `priority` (default: the chosen one) with the
+## spare parts available. Returns parts spent.
+func repair(priority: int = -1) -> int:
+	var pr: int = _priority.selected if priority < 0 else priority
+	var jobs := ServiceYard.plan(ServiceYard.repair_jobs(profile.vessel, editor.catalog), pr, profile.spare_parts, profile.vessel, profile)
+	var spent := ServiceYard.perform(jobs, profile.vessel, profile)
+	_save_profile()
+	if jobs.is_empty():
+		_set_status("Nothing repairable with %d spare parts" % profile.spare_parts, true)
+	else:
+		_set_status("%s: %d repair%s for %d spare parts" % [ServiceYard.PRIORITY_NAMES[pr], jobs.size(), "" if jobs.size() == 1 else "s", spent])
+	_refresh_hangar()
+	return spent
+
+
+func _save_profile() -> void:
+	var err := profile.save()
+	if err != OK:
+		_set_status("Could not save the profile (%s)" % error_string(err), true)
 
 
 func _on_load_design_pressed() -> void:
@@ -266,6 +303,7 @@ func _refresh() -> void:
 		name_edit.text = editor.blueprint.name
 	_refresh_stats()
 	_refresh_issues()
+	_refresh_hangar()
 	preview.show_design(editor)
 	_update_ghost()
 	_refresh_views()
@@ -320,6 +358,91 @@ func _refresh_issues() -> void:
 	launch_button.disabled = n_err > 0
 	launch_button.tooltip_text = "Fix %d error(s) first" % n_err if n_err > 0 else "Fly this design"
 	deck_editor.issue_cells = []
+
+
+# --- Hangar and service --------------------------------------------------------
+
+func _build_hangar_panel() -> void:
+	var right := stats_label.get_parent().get_parent()
+	var title := Label.new()
+	title.text = "HANGAR & SERVICE"
+	var panel := PanelContainer.new()
+	var box := VBoxContainer.new()
+	_hangar_label = RichTextLabel.new()
+	_hangar_label.bbcode_enabled = true
+	_hangar_label.fit_content = true
+	_hangar_label.scroll_active = false
+	_hangar_label.add_theme_font_size_override("normal_font_size", 12)
+	_hangar_label.add_theme_font_size_override("bold_font_size", 12)
+	var row := HBoxContainer.new()
+	_priority = OptionButton.new()
+	for n in ServiceYard.PRIORITY_NAMES:
+		_priority.add_item(n)
+	_priority.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_priority.tooltip_text = "What to fix first when spare parts are short"
+	_priority.item_selected.connect(func(_i: int) -> void: _refresh_hangar())
+	_repair_button = Button.new()
+	_repair_button.pressed.connect(func() -> void: repair())
+	row.add_child(_priority)
+	row.add_child(_repair_button)
+	box.add_child(_hangar_label)
+	box.add_child(row)
+	panel.add_child(box)
+	right.add_child(title)
+	right.move_child(title, 1)
+	right.add_child(panel)
+	right.move_child(panel, 2)
+
+
+func _refresh_hangar() -> void:
+	if _hangar_label == null:
+		return
+	var v := profile.vessel
+	var catalog := editor.catalog
+	var jobs := ServiceYard.repair_jobs(v, catalog)
+	var refit := ServiceYard.refit_jobs(v, editor.blueprint, catalog)
+	var gold := Rarity.color_of(Rarity.Tier.LEGENDARY).to_html(false)
+	var lines := PackedStringArray([
+		"[b]%s[/b]  ·  %d sorties  ·  %d salvaged  ·  %d lost" % [v.name, v.sorties, v.salvaged, profile.vessels_lost],
+		"SPARE PARTS [color=#%s]%d[/color]" % [gold, profile.spare_parts],
+	])
+	if jobs.is_empty():
+		lines.append("[color=#80ff99]Vessel in full repair[/color]")
+	else:
+		lines.append("DAMAGE  %d jobs · %d parts for everything" % [jobs.size(), ServiceYard.total_cost(jobs)])
+		for j in jobs.slice(0, 5):
+			var blocked := "" if ServiceYard.available(j, v, profile) else "  [color=#ff7766](no unit)[/color]"
+			lines.append("  • %s — %d%s" % [j.label, j.cost, blocked])
+		if jobs.size() > 5:
+			lines.append("  … %d more" % (jobs.size() - 5))
+	if not refit.is_empty():
+		var cost := ServiceYard.total_cost(refit)
+		lines.append("REFIT   %d new part%s · %d spare parts at launch%s" % [refit.size(), "" if refit.size() == 1 else "s", cost,
+			"  [color=#ff7766]short by %d[/color]" % (cost - profile.spare_parts) if cost > profile.spare_parts else ""])
+	lines.append("FOUND   %s" % _found_text())
+	var pity := profile.pity_countdown()
+	lines.append("LOOT    %d crates opened · Rare+ in %d · Legendary in %d" % [profile.total_pulls, pity.x, pity.y])
+	_hangar_label.text = "\n".join(lines)
+	var plan := ServiceYard.plan(jobs, _priority.selected, profile.spare_parts, v, profile)
+	_repair_button.disabled = plan.is_empty()
+	_repair_button.text = "Repair (%d)" % ServiceYard.total_cost(plan) if not plan.is_empty() else "Repair"
+
+
+func _found_text() -> String:
+	var parts := PackedStringArray()
+	var catalog := editor.catalog
+	for id in ConstructionCatalog.sorted_ids(catalog.equipment):
+		if profile.owned(id) > 0:
+			parts.append(_rarity_bb(catalog.equipment[id], "%s ×%d" % [catalog.equipment[id].display_name, profile.owned(id)]))
+	for table in [catalog.hull, catalog.rooms]:
+		for id in ConstructionCatalog.sorted_ids(table):
+			if table[id].rarity != Rarity.Tier.COMMON and profile.is_unlocked(table[id]):
+				parts.append(_rarity_bb(table[id], table[id].display_name))
+	return ", ".join(parts) if not parts.is_empty() else "nothing yet — disable ships in flight and salvage them [G]"
+
+
+static func _rarity_bb(def: Resource, text: String) -> String:
+	return "[color=#%s]%s[/color]" % [Rarity.color_of(def.rarity).to_html(false), text]
 
 
 ## Clicking an issue highlights the part it names and jumps to its deck.
@@ -398,9 +521,20 @@ func _on_palette_selected(index: int, list: ItemList) -> void:
 func _fill_palette(list: ItemList, table: Dictionary) -> void:
 	list.clear()
 	for id in ConstructionCatalog.sorted_ids(table):
-		var i := list.add_item(table[id].display_name)
+		var def: Resource = table[id]
+		var text: String = def.display_name
+		var color := (def.color as Color).lightened(0.2)
+		if def.rarity != Rarity.Tier.COMMON:
+			color = Rarity.color_of(def.rarity)
+			if def is EquipmentDefinition:
+				text += "  ×%d" % profile.owned(id)
+			elif not profile.is_unlocked(def):
+				text += "  (locked)"
+				color = color.darkened(0.45)
+		var i := list.add_item(text)
 		list.set_item_metadata(i, id)
-		list.set_item_custom_fg_color(i, (table[id].color as Color).lightened(0.2))
+		list.set_item_custom_fg_color(i, color)
+		list.set_item_tooltip(i, "%s — %s" % [def.display_name, Rarity.name_of(def.rarity)])
 
 
 func _fill_file_list(button: OptionButton, paths: PackedStringArray) -> void:
@@ -412,6 +546,18 @@ func _fill_file_list(button: OptionButton, paths: PackedStringArray) -> void:
 
 
 func _describe(kind: String, def_id: StringName) -> String:
+	var table: Dictionary = {"hull": editor.catalog.hull, "room": editor.catalog.rooms}.get(kind, editor.catalog.equipment)
+	var def: Resource = table[def_id]
+	var rarity := ""
+	if def.rarity != Rarity.Tier.COMMON:
+		if def is EquipmentDefinition:
+			rarity = "\n%s — you own %d" % [Rarity.name_of(def.rarity), profile.owned(def_id)]
+		else:
+			rarity = "\n%s blueprint — %s" % [Rarity.name_of(def.rarity), "unlocked" if profile.is_unlocked(def) else "LOCKED: find it in salvage"]
+	return _describe_def(kind, def_id) + rarity
+
+
+func _describe_def(kind: String, def_id: StringName) -> String:
 	match kind:
 		"hull":
 			var d: HullModuleDefinition = editor.catalog.hull[def_id]

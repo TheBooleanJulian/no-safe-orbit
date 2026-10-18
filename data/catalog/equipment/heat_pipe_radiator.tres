@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"heat_pipe_radiator"
+display_name = "Heat-pipe radiator"
+kind = 4
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"port", &"starboard", &"dorsal", &"ventral"])
+mass_kg = 3500.0
+power_kw = 0.0
+heat_kw = 0.0
+heat_rejection_kw = 1400.0
+thrust_n = 0.0
+color = Color(1.0, 0.95, 0.85, 1)
+rarity = 2
+drop_weight = 10.0

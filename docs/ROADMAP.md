@@ -113,12 +113,41 @@ Mutation-checked: removing armour obliquity, letting wrecked junctions conduct,
 never destroying hatches, or removing the AI's line-of-sight feed-forward each
 fails exactly the matching test.
 
-## Milestone 4 — Persistence and recovery ⏭ next
+### Between M3 and M4 — persistent rounds, impact physics, hit cam (2026-10-19)
 
-Not started. See GAME_DESIGN.md §17 (ship instance separate from blueprint,
-persistent damage, salvage, spare parts, repair tasks, workshop). Acceptance
-criteria will be stated here before implementation begins. `ShipSystems`
-already is the per-instance damage state that needs saving.
+| Acceptance criterion | Verified by | Result |
+|---|---|---|
+| Two-body propagation is exact (circular, elliptic, hyperbolic) | `test_rounds.gd` (propagation vs geometry and vs leapfrog) | pass |
+| Rounds never expire; far rounds coast analytically and come back | `test_rounds_never_expire`, `test_round_coasts_far_and_reenters_on_time` | pass |
+| A miss returns half an orbit later and can hit its own ship | `test_round_returns_on_its_orbit_and_hits_half_an_orbit_later` | pass; fails if self-hit arming is removed |
+| Recoil pushes and spins the firing ship; impacts push and spin the target; overpenetration continues slower | `test_rounds.gd` | pass |
+| Incoming-round warning | `test_rounds.gd`, HUD | pass |
+| Hit cam replays our hits and the modules damaged | `test_hit_cam_replay_policy`, `smoke_main`, render review | pass |
+
+## Milestone 4 — Persistence and recovery ✅ (2026-10-19)
+
+Spec exit criteria: complete a combat mission, return damaged,
+repair/reconfigure and relaunch. Plus the requested gacha loot: equipment and
+hull/room blueprints with cascading weighted rarity.
+
+| # | Acceptance criterion | Verified by | Result |
+|---|---|---|---|
+| 1 | Ship instance separate from blueprint; damage persists (all kinds) | `test_damage_round_trips_through_the_condition` | hit points, armour, structure, breaches, hatches, thrust, power identical after round trip |
+| 2 | Blueprint and damaged vessel survive save/load; unsupported/corrupt saves handled safely | `test_profile_and_damaged_vessel_survive_save_and_load`, `test_unsupported_or_corrupt_profiles_are_rejected_safely` | identical JSON; newer schema / no version / bad JSON refused; unreadable file kept aside |
+| 3 | Loot: cascading rarity at the stated odds; weighted pick; cascade down past empty tiers | `test_tier_probabilities_follow_the_cascade`, `test_cascade_roll_matches_the_stated_odds` (200,000 rolls, 4σ), `test_weighted_pick_within_a_tier`, `test_empty_tier_cascades_down` | 70 / 21 / 6.75 / 1.8 / 0.45 % |
+| 4 | Hard pity; no re-rolls by reloading | `test_hard_pity_caps_the_dry_streaks` (8,000 pulls), `test_pulls_are_deterministic_and_survive_save_and_load` | streaks ≤ 9 / ≤ 79; same sequence across save/load |
+| 5 | Found parts gate the design; duplicates scrap for parts | `test_locked_blueprints_and_unowned_parts_are_errors`, `test_duplicate_blueprints_scrap_for_spare_parts`, `test_mixed_gun_types_are_an_error`, `test_rare_parts_change_the_numbers` | pass |
+| 6 | Salvage needs a disabled wreck, proximity and matched velocity; yield follows wreck condition | `test_disabled_means_it_cannot_fight`, `test_salvage_needs_a_disabled_wreck_close_and_slow`, `test_salvage_pays_more_for_a_cleaner_kill` | pass |
+| 7 | Spare parts and repair costs; priorities; destroyed parts need replacement; no repair exploit by swapping parts | `test_repair_costs_scale_with_damage_and_never_beat_a_rebuild`, `test_priorities_choose_what_gets_fixed_with_few_parts`, `test_repairs_restore_the_vessel_and_charge_parts`, `test_refit_is_paid_up_front_and_keeps_wear_on_kept_parts` | pass |
+| 8 | Rarer losses: written off once on docking, on vessel loss; blueprint survives | `test_destroyed_rare_unit_is_written_off_and_needs_a_replacement`, `test_losing_the_vessel_writes_off_rare_units_but_keeps_the_design` | pass |
+| 9 | Workshop field repair: needs a powered, pressurised, reachable workshop; takes time; interrupted by lost access | `test_field_repair_needs_a_working_workshop_and_patches_over_time`, `test_field_repair_is_interrupted_when_the_workshop_vents` | 25 s for 15 hp; reactor to 75 % |
+| — | **Exit:** fight → disable → salvage → return damaged → repair/refit → relaunch | `smoke_campaign.gd` (20 checks, real scenes and input actions) | pass; profile on disk matches |
+
+Mutation-checked: removing pity, not restoring the loot RNG state on load, or
+allowing a rare replacement without a spare unit each fails exactly the
+matching test. Loot panel, HUD salvage lines and the hangar panel reviewed in
+renders. Scaffolding in the exit test: after a real exchange of fire, the
+target's gun is destroyed directly and it is placed alongside.
 
 ## Milestones 5–8
 

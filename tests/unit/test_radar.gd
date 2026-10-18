@@ -35,3 +35,16 @@ func test_duration_and_altitude_format() -> void:
 	assert_true(HudFormat.duration(NAN) == "—", "unknown duration → '—'")
 	assert_true(HudFormat.altitude(412_345.0) == "412.3 km", "altitude → '%s'" % HudFormat.altitude(412_345.0))
 	assert_true(HudFormat.altitude(INF) == "—", "unbounded altitude → '—'")
+
+
+func test_hit_cam_replay_policy() -> void:
+	assert_true(HitCam.should_replace(false, 0.0, -1, 0), "nothing showing: any hit replays")
+	assert_true(HitCam.should_replace(true, 0.3, 2, 4), "a more severe hit replaces the current replay at once")
+	assert_true(not HitCam.should_replace(true, 0.3, 4, 1), "a lesser hit does not interrupt a fresh replay")
+	assert_true(HitCam.should_replace(true, HitCam.MIN_SHOW_S + HitCam.REPLAY_S + 0.1, 4, 3),
+		"once the replay has played out, a nearly-as-severe hit takes over")
+	var r := DamageReport.new()
+	r.destroyed_ids.append("e1")
+	var s := DamageReport.new()
+	s.stopped_by_armor = true
+	assert_true(r.severity() > s.severity(), "destroyed outranks stopped-by-armour")

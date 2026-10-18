@@ -40,6 +40,9 @@ class Report:
 				out.append(i)
 		return out
 
+	func add(severity: Severity, code: StringName, message: String, subject: String) -> void:
+		ShipValidator._add(self, severity, code, message, subject)
+
 	func has_code(code: StringName) -> bool:
 		return issues.any(func(i: Issue) -> bool: return i.code == code)
 
@@ -283,11 +286,18 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 				"Main engines are off the centre of mass: full thrust needs %.0f%% of RCS %s authority to fly straight. Centre the engines or move mass." % [
 					100.0 * need / maxf(have, 1.0), ["pitch", "yaw", "roll"][axis]], "")
 			break
+	var gun_type: EquipmentDefinition
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
 		if def == null or def.kind != EquipmentDefinition.Kind.CANNON:
 			continue
 		var e := bp.equipment[i]
+		if gun_type == null:
+			gun_type = def
+		elif def.cannon != gun_type.cannon:
+			_add(report, Severity.ERROR, &"mixed_cannon_types",
+				"%s %s differs from the %s already fitted: one fire-control solution serves every gun mount, so all guns must be the same type." % [
+					def.display_name, e.id, gun_type.display_name], e.id)
 		if _arc_obstructed(grid, e):
 			_add(report, Severity.WARNING, &"weapon_arc_obstructed",
 				"%s %s fires forward into its own hull. Mount it where nothing is ahead of it." % [def.display_name, e.id], e.id)
