@@ -6,7 +6,7 @@ extends WorldEnvironment
 ## cue for orbital motion; the stars (Starfield) are the cue for rotation.
 
 const SKY_SHADER: Shader = preload("res://shaders/planet_sky.gdshader")
-const EARTH_MAP: Texture2D = preload("res://data/earth/blue_marble_2048.jpg")
+const EARTH_MAP: Texture2D = preload("res://data/earth/blue_marble_oct_5400.jpg")
 
 var _material: ShaderMaterial
 

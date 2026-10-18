@@ -26,8 +26,9 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   the bridge are reported, but nothing stops working because of them yet (M5).
 - **Ship geometry is placeholder boxes.** Wrecked modules turn dark and
   destroyed external systems disappear, but nothing breaks off.
-- **Earth's texture is 2048 × 1024 (~20 km per pixel)** with procedural detail
-  on top; looking straight down, the ground is soft. Clouds are procedural, not
+- **Earth's texture is 5400 × 2700 (~7.4 km per pixel)**, the October Blue
+  Marble composite, with procedural detail on top; from 400 km straight down
+  the ground is still a little soft. Clouds are procedural, not
   real weather. The Compatibility (OpenGL) renderer shows Earth slightly more
   saturated than Forward+.
 - **Full Windows .exe export is unverified**: export templates aren't installed
