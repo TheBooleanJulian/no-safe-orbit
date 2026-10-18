@@ -61,6 +61,30 @@ func _run() -> void:
 	await _hold(main, [], 1.0)
 	await _shot("05_target_offscreen")
 
+	# Point the nose at the lead (scripted) and fire a 3 s burst: the target
+	# panel shows what the rounds did.
+	var me := main.world.get_ship(Main.PLAYER_ID)
+	var tgt := main.world.get_ship(Main.TARGET_ID)
+	for i in 4:
+		var aim := tgt.position + tgt.orientation * tgt.config.hit_box_center - (me.position + me.orientation * me.config.primary_muzzle())
+		var t := FireControl.intercept_time(aim, tgt.velocity - me.velocity, me.config.cannon.muzzle_velocity_mps)
+		me.orientation = Quaternion(Vector3.FORWARD, FireControl.lead_point(aim, tgt.velocity - me.velocity, t).normalized())
+		me.angular_velocity = Vector3.ZERO
+		await _hold(main, ["fire"], 0.75)
+	await _hold(main, [], 2.0)
+	await _shot("05b_target_damage")
+	# Hostile target: wait for the first incoming hit.
+	main.target_hostile = true
+	main.hud.target_hostile = true
+	var t0 := main.world.sim_time
+	while me.hits_taken == 0 and main.world.sim_time - t0 < 40.0:
+		await process_frame
+	await _hold(main, [], 0.5)
+	await _shot("05c_incoming_fire")
+	main.target_hostile = false
+	main.hud.target_hostile = false
+	main.world.set_input(Main.TARGET_ID, ShipControlInput.neutral())
+
 	# Kill 130 m/s of orbital speed (scripted, not flown): periapsis drops
 	# below the 100 km entry interface → warning and path entry marker.
 	var player := main.world.get_ship(Main.PLAYER_ID)

@@ -38,7 +38,7 @@ func test_round_inherits_ship_velocity_plus_muzzle_velocity() -> void:
 	assert_true(rounds.size() == 1, "one round after first tick (got %d)" % rounds.size())
 	var expected := Vector3(12, -3, 40) + ship.forward() * CONFIG.cannon.muzzle_velocity_mps
 	assert_vec_near(rounds[0].velocity, expected, 1e-3, "round velocity = ship velocity + muzzle·nose (m/s)")
-	assert_vec_near(rounds[0].position, ship.position + ship.orientation * CONFIG.cannon_muzzle_body, 1e-3, "round starts at the muzzle (m)")
+	assert_vec_near(rounds[0].position, ship.position + ship.orientation * CONFIG.primary_muzzle(), 1e-3, "round starts at the muzzle (m)")
 
 
 func test_recoil_conserves_momentum() -> void:
@@ -197,7 +197,7 @@ func test_lead_solution_produces_a_hit_in_orbit() -> void:
 	var target := ShipState.create(&"b_target", "B", CONFIG, Vector3(0, 0, -2000), Vector3(40, 0, 0))
 	world.add_ship(shooter)
 	world.add_ship(target)
-	var muzzle := shooter.position + shooter.orientation * CONFIG.cannon_muzzle_body
+	var muzzle := shooter.position + shooter.orientation * CONFIG.primary_muzzle()
 	var aim_target := target.position + target.orientation * CONFIG.hit_box_center
 	var tof := FireControl.intercept_time(aim_target - muzzle, target.velocity - shooter.velocity, CONFIG.cannon.muzzle_velocity_mps)
 	var aim := FireControl.lead_point(aim_target - muzzle, target.velocity - shooter.velocity, tof).normalized()
@@ -218,3 +218,16 @@ func test_lead_solution_produces_a_hit_in_orbit() -> void:
 		# The aim point is the box centre; the hit lands on its surface, so the
 		# recorded tick is at or slightly before the predicted time.
 		assert_near((hit.tick - 1) * DT, tof, 0.05, "actual vs predicted time of flight (s)")
+
+
+func test_every_mount_fires() -> void:
+	var cfg: ShipConfig = CONFIG.duplicate()
+	cfg.cannon_muzzles_body = PackedVector3Array([Vector3(-5, 0, -30), Vector3(5, 0, -30)])
+	var world := WorldSimulation.new()
+	var ship := ShipState.create(&"s", "S", cfg)
+	world.add_ship(ship)
+	world.set_input(&"s", _fire_input())
+	world.step()
+	assert_true(world.projectiles().size() == 2 and ship.cannon_rounds == cfg.cannon.magazine_rounds - 2,
+		"both mounts fired one round each (%d in flight)" % world.projectiles().size())
+	assert_true(world.projectiles()[0].position.x < 0.0 and world.projectiles()[1].position.x > 0.0, "rounds leave from their own muzzles")

@@ -42,6 +42,8 @@ class PlacedEquipment:
 	var cell: Vector3i
 	## External only: the face of `cell` it is mounted on; "" when internal.
 	var face: StringName = &""
+	## Internal only: quarter turns of the footprint about +Y (0–3).
+	var rotation: int = 0
 
 
 var name: String = "Unnamed design"
@@ -82,12 +84,13 @@ func add_hatch(a: Vector3i, b: Vector3i) -> Hatch:
 	return h
 
 
-func add_equipment(def_id: StringName, cell: Vector3i, face: StringName = &"") -> PlacedEquipment:
+func add_equipment(def_id: StringName, cell: Vector3i, face: StringName = &"", rotation: int = 0) -> PlacedEquipment:
 	var e := PlacedEquipment.new()
 	e.id = _new_id("e")
 	e.def_id = def_id
 	e.cell = cell
 	e.face = face
+	e.rotation = posmod(rotation, 4)
 	equipment.append(e)
 	return e
 
@@ -136,6 +139,8 @@ func to_dict() -> Dictionary:
 		var ed := {"id": e.id, "def": String(e.def_id), "cell": _v3(e.cell)}
 		if e.face != &"":
 			ed["face"] = String(e.face)
+		if e.rotation != 0:
+			ed["rot"] = e.rotation
 		d.equipment.append(ed)
 	return d
 
@@ -184,6 +189,7 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipBlueprint
 		e.def_id = StringName(str(edd.get("def", "")))
 		e.cell = _to_v3(edd.get("cell"), errors, "equipment %s cell" % e.id)
 		e.face = StringName(str(edd.get("face", "")))
+		e.rotation = posmod(int(edd.get("rot", 0)), 4)
 		bp.equipment.append(e)
 	bp._reset_next_id()
 	return bp

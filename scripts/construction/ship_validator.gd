@@ -99,27 +99,13 @@ static func _check_structure(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 
 	# Attachment graph: modules that touch with matching connectors.
 	var n := bp.modules.size()
-	var attached: Array[Array] = []
-	var mismatched := {}  # module index -> "touches X but connectors don't match (a vs b)"
-	for i in n:
-		attached.append([])
-	for i in n:
-		if grid.module_def(i) == null:
-			continue
-		for cell in grid.module_cells(i):
-			for face: StringName in ShipGrid.FACE_NORMALS:
-				var other: int = grid.module_at.get(cell + ShipGrid.FACE_NORMALS[face], -1)
-				if other < 0 or other == i:
-					continue
-				var opposite := ShipGrid.face_of(-ShipGrid.FACE_NORMALS[face])
-				var mine := grid.module_connector(i, face)
-				var theirs := grid.module_connector(other, opposite)
-				if mine != &"" and mine == theirs:
-					if not attached[i].has(other):
-						attached[i].append(other)
-				else:
-					mismatched[i] = "touches %s but the connectors there don't match (%s vs %s)" % [
-						bp.modules[other].id, _connector_text(mine), _connector_text(theirs)]
+	var contacts := {}  # module index -> [other, mine, theirs] for a mismatched contact
+	var attached := grid.attachments(contacts)
+	var mismatched := {}
+	for i in contacts:
+		var c: Array = contacts[i]
+		mismatched[i] = "touches %s but the connectors there don't match (%s vs %s)" % [
+			bp.modules[c[0]].id, _connector_text(c[1]), _connector_text(c[2])]
 	# Everything must be attached, directly or indirectly, to the first module.
 	var seen := {0: true}
 	var queue := [0]
@@ -283,6 +269,9 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 	if stats.thrust_forward_n <= 0.0:
 		_add(report, Severity.WARNING, &"no_main_engine",
 			"No main engine on an aft face: only RCS thrust is available.", "")
+	if stats.propellant_capacity_kg <= 0.0 and (stats.thrust_forward_n > 0.0 or stats.rcs_count > 0):
+		_add(report, Severity.WARNING, &"no_propellant",
+			"No propellant tanks: engines and RCS have nothing to burn. Add a propellant tank in a cargo hold or engineering room.", "")
 	if stats.rcs_count == 0:
 		_add(report, Severity.WARNING, &"no_rcs",
 			"No RCS blocks: the ship cannot rotate or thrust sideways.", "")

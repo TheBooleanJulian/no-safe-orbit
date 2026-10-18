@@ -104,6 +104,8 @@ func step() -> void:
 		_resolve_hold(input)
 		ShipDynamics.step(ship, input, fixed_dt, frame)
 		_update_cannon(ship, input, spawned)
+		if ship.systems != null and ship.systems.tick(ship, fixed_dt):
+			ship.config = ship.systems.effective_config()
 	tick += 1
 	sim_time = tick * fixed_dt
 	_step_rounds()
@@ -170,24 +172,28 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 	var cannon := ship.config.cannon
 	if cannon == null:
 		return
-	ship.cannon_cooldown_s = maxf(ship.cannon_cooldown_s - fixed_dt, 0.0)
-	if not input.fire or ship.cannon_cooldown_s > 1e-9 or ship.cannon_rounds <= 0:
-		return
-	var nose := ship.forward()
-	var shot := ProjectileState.new()
-	shot.id = _next_round_id
-	_next_round_id += 1
-	shot.shooter_id = ship.id
-	shot.position = ship.position + ship.orientation * ship.config.cannon_muzzle_body
-	shot.prev_position = shot.position
-	shot.velocity = ship.velocity + nose * cannon.muzzle_velocity_mps
-	shot.lifetime_s = cannon.round_lifetime_s
-	spawned.append(shot)
-	# Recoil conserves momentum: m_ship·Δv = m_round·v_muzzle.
-	ship.velocity -= nose * (cannon.muzzle_velocity_mps * cannon.round_mass_kg / ship.config.mass_kg)
-	ship.cannon_rounds -= 1
-	ship.rounds_fired += 1
-	ship.cannon_cooldown_s += cannon.fire_interval_s()
+	var muzzles := ship.config.cannon_muzzles_body
+	for k in muzzles.size():
+		ship.cannon_cooldowns[k] = maxf(ship.cannon_cooldowns[k] - fixed_dt, 0.0)
+		if not input.fire or ship.cannon_cooldowns[k] > 1e-9 or ship.cannon_rounds <= 0:
+			continue
+		if ship.systems != null and not ship.systems.mount_working(k):
+			continue  # destroyed or unpowered mount
+		var nose := ship.forward()
+		var shot := ProjectileState.new()
+		shot.id = _next_round_id
+		_next_round_id += 1
+		shot.shooter_id = ship.id
+		shot.position = ship.position + ship.orientation * muzzles[k]
+		shot.prev_position = shot.position
+		shot.velocity = ship.velocity + nose * cannon.muzzle_velocity_mps
+		shot.lifetime_s = cannon.round_lifetime_s
+		spawned.append(shot)
+		# Recoil conserves momentum: m_ship·Δv = m_round·v_muzzle.
+		ship.velocity -= nose * (cannon.muzzle_velocity_mps * cannon.round_mass_kg / ship.mass_kg())
+		ship.cannon_rounds -= 1
+		ship.rounds_fired += 1
+		ship.cannon_cooldowns[k] += cannon.fire_interval_s()
 
 
 func _step_rounds() -> void:
@@ -231,6 +237,11 @@ func _resolve_round_hits(shot: ProjectileState) -> bool:
 		if not ship.is_active():
 			continue
 		var t := HitTest.round_vs_ship(shot.prev_position, shot.position, ship)
+		if t >= 0.0 and ship.systems != null:
+			# Narrow phase: the real hull cells, not just the bounding box.
+			var inv := ship.orientation.inverse()
+			t = Penetration.first_hull_entry(ship.systems,
+				inv * (shot.prev_position - ship.prev_position), inv * (shot.position - ship.position))
 		if t >= 0.0 and t < best_t:
 			best_t = t
 			best_ship = ship
@@ -249,9 +260,24 @@ func _resolve_round_hits(shot: ProjectileState) -> bool:
 	var cannon: KineticCannonConfig = shooter.config.cannon if shooter != null else null
 	var mass := cannon.round_mass_kg if cannon != null else 0.0
 	ev.energy_j = 0.5 * mass * ev.relative_speed * ev.relative_speed
+	if best_ship.systems != null and cannon != null:
+		var dir_body := best_ship.orientation.inverse() * (shot.velocity - best_ship.velocity)
+		ev.report = Penetration.apply(best_ship.systems, ev.point_body, dir_body, cannon.penetration_at(ev.relative_speed))
+		_apply_damage(best_ship, ev.report)
 	_hit_events.append(ev)
 	best_ship.hits_taken += 1
 	return true
+
+
+## Consequences of a damage report that live outside ShipSystems.
+func _apply_damage(ship: ShipState, report: DamageReport) -> void:
+	if report.propellant_lost_kg > 0.0 and ship.config.propellant_capacity_kg > 0.0:
+		# Tanks drain evenly: a lost tank takes its share of what is left.
+		var share := minf(report.propellant_lost_kg / ship.config.propellant_capacity_kg, 1.0)
+		var lost := ship.propellant_kg * share
+		ship.propellant_kg -= lost
+		report.add("%.1f t of propellant lost" % (lost / 1000.0))
+	ship.config = ship.systems.effective_config()
 
 
 func _check_entry_interface() -> void:

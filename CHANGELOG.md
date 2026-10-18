@@ -4,6 +4,36 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-19 — Real sky, known-issue fixes, Milestone 3
+
+### Added
+- Real sky for the scenario date: the 9,096 stars of the Yale Bright Star
+  Catalogue (J2000), the Sun's true direction, Earth's pole and sidereal
+  rotation (`CelestialFrame`, tested against Meeus); NASA Blue Marble
+  geography; eclipse darkens ships in Earth's shadow; HUD sunset/sunrise.
+- Milestone 3 — damage and ship systems: hull-cell hit detection, armour
+  penetration with obliquity, damage along the round's path, room breaches
+  and hatch sealing, crew access cut-offs, power networks through module
+  junctions with load shedding, ship heat with reactor throttle/scram and
+  over-temperature damage, damage-reduced flight config, readable damage
+  reports, destroyed parts shown on the model.
+- Enemy gunner (T): aims at the lead point with line-of-sight feed-forward.
+- Propellant and Δv: tanks, engine/RCS Isp, falling mass, empty = no thrust.
+- Shipyard undo/redo; modules carry their contents and turn in place.
+- Gamepad defaults; in-game rebinding (F1), saved per user.
+- Windows export preset; checks export a .pck and boot from it.
+
+### Changed
+- Sandbox orbit is prograde equatorial (it was retrograde relative to Earth's
+  spin once the sky was made real).
+- Off-axis engine thrust now torques the ship; rotation includes the
+  gyroscopic term (RK4); every cannon mount fires.
+- Two dust layers so the field no longer visibly repeats.
+
+### Fixed
+- Enemy aim lagged crossing targets by rate/gain (~0.6°) and stopped firing;
+  feed-forward removes the lag.
+
 ## [0.3.0] — 2026-10-19 — Milestone 2: ship blueprint and builder
 
 ### Added

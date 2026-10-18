@@ -4,6 +4,8 @@ extends MultiMeshInstance3D
 ## only cue for translation, so it is a gameplay aid rather than decoration.
 ## A cube of motes is tiled 3×3×3 and wrapped around the render origin, so it
 ## stays seamless however far the ship travels (no float precision growth).
+## Main runs two layers with different tile sizes (1.5 km and 1.9 km), so the
+## combined pattern only repeats every ~28 km.
 
 @export var tile_size_m: float = 1500.0
 @export var motes_per_tile: int = 140

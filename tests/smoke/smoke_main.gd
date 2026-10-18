@@ -55,7 +55,7 @@ func _run() -> void:
 	await _run_until_sim_time(main, 1.0)
 	Input.action_release("thrust_forward")
 	var fwd := -player.body_velocity().z
-	var expected := player.config.thrust_forward_n / player.config.mass_kg * 1.0
+	var expected := player.config.thrust_forward_n / player.mass_kg() * 1.0
 	_check(fwd > expected * 0.8 and fwd < expected * 1.3,
 		"forward speed after ~1 s of W: expected ≈%.1f m/s, actual %.2f m/s" % [expected, fwd])
 
@@ -84,7 +84,7 @@ func _run() -> void:
 	# Each axis nulls at the RCS limit, so 3 s removes at least ~0.8 × a·t.
 	await _run_until_sim_time(main, 3.0)
 	var rel_after := (player.velocity - target.velocity).length()
-	var a_rcs := player.config.thrust_lateral_n / player.config.mass_kg
+	var a_rcs := player.config.thrust_lateral_n / player.mass_kg()
 	_check(rel_before - rel_after > 0.8 * a_rcs * 3.0,
 		"match-target assist reduces relative speed at the RCS limit (%.1f → %.1f m/s in 3 s, a_rcs %.2f m/s²)" % [rel_before, rel_after, a_rcs])
 
@@ -105,6 +105,19 @@ func _run() -> void:
 	var target_text: String = main.hud.target_label.text
 	_check(target_text.contains("RANGE") and target_text.contains("km"), "HUD target panel shows range in km")
 	_check(main.camera.current, "chase camera is the active camera")
+	_check(main.hud.flight_label.text.contains("POWER") and main.hud.target_label.text.contains("SYSTEMS"),
+		"HUD shows own power/heat and the target's systems")
+
+	# T: the target shoots back. Within 40 s the player takes a hit, and the
+	# HUD reports what it did.
+	_press_action("toggle_target_ai")
+	await process_frame
+	var t0 := main.world.sim_time
+	while player.hits_taken == 0 and main.world.sim_time - t0 < 40.0:
+		await process_frame
+	await process_frame
+	_check(player.hits_taken > 0 and main.hud.flight_label.text.contains("HIT TAKEN"),
+		"hostile target hits the player and the HUD reports it (after %.1f s)" % (main.world.sim_time - t0))
 
 	print("smoke: %d failure(s)" % _failures.size())
 	quit(1 if not _failures.is_empty() else 0)

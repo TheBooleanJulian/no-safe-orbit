@@ -75,7 +75,7 @@ func test_blueprint_round_trip_has_no_data_loss() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	# New ids continue after loaded ones (no id reuse).
 	var added := loaded.add_room(&"corridor", 2, Rect2i(3, 4, 1, 1))
-	assert_true(added.id == "r46", "next id after a loaded design continues numbering (got %s)" % added.id)
+	assert_true(added.id == "r50", "next id after a loaded design continues numbering (got %s)" % added.id)
 
 
 func test_unsupported_or_malformed_files_are_rejected_safely() -> void:
@@ -207,15 +207,37 @@ func test_power_deficit_and_missing_magazine_reported() -> void:
 
 
 func test_off_axis_thrust_reported() -> void:
-	# Keep only the two tail RCS blocks: little pitch authority against the
-	# engines' small vertical offset from the CoM.
+	# Only the two lower engines (thrust line ~2 m below the CoM) and only the
+	# two tail RCS blocks: too little pitch authority to fly straight.
 	var bp := _template()
-	for id in ["e33", "e34", "e35", "e36", "e39", "e40"]:
+	for id in ["e31", "e32", "e33", "e34", "e35", "e36", "e39", "e40"]:
 		bp.remove(id)
 	_expect(bp, &"thrust_misaligned", ShipValidator.Severity.WARNING, "weak RCS vs engine offset")
 
 
 # --- Derived physics --------------------------------------------------------
+
+func test_propellant_tanks_set_delta_v() -> void:
+	var s := _stats(_template())
+	var tank: EquipmentDefinition = _catalog().equipment[&"propellant_tank"]
+	assert_near(s.propellant_capacity_kg, 4.0 * tank.propellant_capacity_kg, 1e-6, "four tanks of propellant (kg)")
+	assert_near(s.delta_v_m_s(), s.main_isp_s * ShipDynamics.G0 * log(s.wet_mass_kg() / s.mass_kg), 1e-6, "Δv by the rocket equation (m/s)")
+	assert_true(s.delta_v_m_s() > 1200.0 and s.delta_v_m_s() < 2200.0, "frigate main-engine Δv %.0f m/s in 1.2–2.2 km/s" % s.delta_v_m_s())
+	var cfg := s.to_ship_config("x")
+	assert_true(not cfg.unlimited_propellant and cfg.propellant_capacity_kg == s.propellant_capacity_kg, "compiled config models propellant")
+	var dry := _template()
+	for id in ["e46", "e47", "e48", "e49"]:
+		dry.remove(id)
+	_expect(dry, &"no_propellant", ShipValidator.Severity.WARNING, "all tanks removed")
+
+
+func test_every_cannon_mount_compiles() -> void:
+	var bp := _template()
+	bp.add_equipment(&"kinetic_cannon", Vector3i(4, 2, 4), &"dorsal")
+	var cfg := _stats(bp).to_ship_config("x")
+	assert_true(cfg.cannon_muzzles_body.size() == 2 and cfg.cannon_mount_ids.size() == 2 and cfg.cannon_mount_ids[0] == "e41",
+		"two cannon mounts compiled (%s)" % cfg.cannon_mount_ids)
+
 
 func test_mass_and_center_of_mass_hand_computed() -> void:
 	# Fuselage 12×9×12 m (52 t, centre 6, 4.5, 6), a 1-cell corridor (400 kg,
@@ -270,5 +292,9 @@ func test_compiled_design_flies_with_its_own_numbers() -> void:
 	world.set_input(&"s", ShipControlInput.create(Vector3(0, 0, -1), Vector3.ZERO, false))
 	for i in 60:
 		world.step()
-	assert_near(-ship.velocity.z, s.thrust_forward_n / s.mass_kg, 1e-3, "speed after 1 s = F/m of the design (m/s)")
+	# Rocket equation over 1 s of full main thrust, starting with full tanks.
+	var flow := s.thrust_forward_n / (s.main_isp_s * ShipDynamics.G0)
+	var expected := s.main_isp_s * ShipDynamics.G0 * log(s.wet_mass_kg() / (s.wet_mass_kg() - flow))
+	assert_near(-ship.velocity.z, expected, 1e-3, "speed after 1 s of the design's own thrust (m/s)")
+	assert_near(ship.propellant_kg, s.propellant_capacity_kg - flow, 1.0, "propellant burned in 1 s (kg)")
 	assert_true(ship.cannon_rounds == s.rounds_capacity, "ship starts with the magazine's rounds")

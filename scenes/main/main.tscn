@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/app/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/presentation/chase_camera.gd" id="2_cam"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
 [ext_resource type="Script" path="res://scripts/presentation/projectile_view.gd" id="6_rounds"]
 [ext_resource type="Script" path="res://scripts/presentation/hit_flashes.gd" id="7_flash"]
+[ext_resource type="Script" path="res://scripts/presentation/starfield.gd" id="8_stars"]
 
 [sub_resource type="Environment" id="Environment_space"]
 background_mode = 1
@@ -35,8 +36,17 @@ far = 120000.0
 current = true
 script = ExtResource("2_cam")
 
+[node name="Starfield" type="MultiMeshInstance3D" parent="."]
+script = ExtResource("8_stars")
+
 [node name="DustField" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("3_dust")
+
+[node name="DustFieldFar" type="MultiMeshInstance3D" parent="."]
+script = ExtResource("3_dust")
+tile_size_m = 1900.0
+motes_per_tile = 90
+seed_value = 4242
 
 [node name="ProjectileView" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("6_rounds")

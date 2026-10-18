@@ -111,6 +111,18 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Load"
 
+[node name="Undo" type="Button" parent="Margin/VBox/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Undo [Ctrl+Z]"
+text = "Undo"
+
+[node name="Redo" type="Button" parent="Margin/VBox/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Redo [Ctrl+Y]"
+text = "Redo"
+
 [node name="Save" type="Button" parent="Margin/VBox/TopBar"]
 unique_name_in_owner = true
 layout_mode = 2

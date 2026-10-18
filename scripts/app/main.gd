@@ -9,17 +9,21 @@ const TARGET_ID := &"target_01"
 const EARTH: OrbitalBody = preload("res://data/bodies/earth.tres")
 const SHIPYARD_SCENE := "res://scenes/shipyard/shipyard.tscn"
 const SHIP_VIEW_SCENE: PackedScene = preload("res://scenes/ships/ship_view.tscn")
-## Scenario: circular equatorial orbit at ISS-like altitude, on the day side.
+## Scenario: prograde equatorial orbit at ISS-like altitude, on the day side.
 const START_ALTITUDE_M := 400_000.0
-## Direction towards the sun (PCI axes). Planet is −Y from the start point,
-## prograde is −Z, so this puts the start ~20 minutes before sunset.
-const SUN_DIRECTION := Vector3(-0.5, 0.75, 0.2)
+## Real sky date (UTC): sets the Sun, the stars' orientation and Earth's spin.
+const SCENARIO_EPOCH_UTC := "2026-10-19T12:00:00"
+## Sun's in-plane angle behind the start zenith: ~24 minutes before sunset.
+const SUN_ANGLE_FROM_UP_DEG := 15.0
+const SUN_ENERGY := 1.4
 
 @onready var camera: ChaseCamera = $ChaseCamera
 @onready var hud: Hud = $Hud
 @onready var dust: DustField = $DustField
+@onready var dust_far: DustField = $DustFieldFar
 @onready var sky: PlanetSky = $WorldEnvironment
 @onready var sun: DirectionalLight3D = $Sun
+@onready var stars: Starfield = $Starfield
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 
@@ -28,6 +32,9 @@ const SUN_DIRECTION := Vector3(-0.5, 0.75, 0.2)
 static var launch_blueprint: ShipBlueprint
 
 var world: WorldSimulation
+var celestial: CelestialFrame
+## The target shoots back (toggle with T).
+var target_hostile: bool = false
 var player_input := PlayerInput.new()
 var _views: Dictionary = {}  # StringName -> ShipView
 ## Compiled designs: {blueprint, grid, stats, config} per ship id.
@@ -35,7 +42,10 @@ var _designs: Dictionary = {}
 
 
 func _ready() -> void:
-	sun.look_at(-SUN_DIRECTION.normalized(), Vector3.UP)
+	InputBindings.apply_saved()
+	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
+	stars.build(celestial)
+	hud.celestial = celestial
 	sky.configure(EARTH)
 	_start_scenario()
 
@@ -55,13 +65,16 @@ func _start_scenario() -> void:
 	var r0 := EARTH.radius_m + START_ALTITUDE_M
 	world.set_central_body(EARTH, Vec3d.new(0, r0, 0), Vec3d.new(0, 0, -EARTH.circular_speed(r0)))
 	world.anchor_id = PLAYER_ID
-	world.add_ship(ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config))
+	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
+	player.attach_systems(_new_systems(PLAYER_ID))
+	world.add_ship(player)
 	# Target: 2.5 km ahead and off-axis on a slightly different orbit, crossing
 	# the bow at ~25 m/s so range, lead and radar all have something to show.
 	var target := ShipState.create(
 		TARGET_ID, "TGT-01 KESTREL", _designs[TARGET_ID].config,
 		Vector3(400, 120, -2500), Vector3(-25, 1.5, 6.0), Quaternion(Vector3.UP, 0.9))
 	target.angular_velocity = Vector3(0.0, 0.03, 0.01)
+	target.attach_systems(_new_systems(TARGET_ID))
 	world.add_ship(target)
 	world.set_input(TARGET_ID, ShipControlInput.neutral())
 
@@ -94,6 +107,11 @@ func _compile(bp: ShipBlueprint, fallback: ShipBlueprint) -> Dictionary:
 	return {"blueprint": bp, "grid": grid, "stats": stats, "config": stats.to_ship_config(bp.name)}
 
 
+func _new_systems(id: StringName) -> ShipSystems:
+	var d: Dictionary = _designs[id]
+	return ShipSystems.create(d.blueprint, d.grid, d.stats, d.config)
+
+
 func _spawn_view(id: StringName, tint: Color) -> void:
 	var view: ShipView = SHIP_VIEW_SCENE.instantiate()
 	view.ship_id = id
@@ -120,6 +138,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("open_shipyard"):
 		open_shipyard()
 		return
+	elif event.is_action_pressed("toggle_target_ai"):
+		target_hostile = not target_hostile
+		hud.target_hostile = target_hostile
+		GameLog.info("main", "Target %s" % ("HOSTILE — guns free" if target_hostile else "passive"))
+		if not target_hostile:
+			world.set_input(TARGET_ID, ShipControlInput.neutral())
+		return
+	elif event.is_action_pressed("toggle_controls"):
+		hud.controls.toggle()
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		return
 	player_input.handle_event(event)
 
 
@@ -135,8 +164,12 @@ func _process(delta: float) -> void:
 	var target := world.get_ship(TARGET_ID)
 	var target_id := TARGET_ID if target.is_active() else &""
 	world.set_input(PLAYER_ID, player_input.build_input(delta, target_id))
-	# Freeze the moment the player is lost; Backspace restarts.
-	var alpha := world.advance(delta) if player.is_active() else 1.0
+	if target_hostile and target.is_active():
+		world.set_input(TARGET_ID, GunneryAI.command(target, player))
+	# Freeze the moment the player is lost (Backspace restarts) and while the
+	# controls panel is open.
+	var running := player.is_active() and not hud.controls.visible
+	var alpha := world.advance(delta) if running else 1.0
 	var hits := world.take_hit_events()
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
 	for ev in hits:
@@ -150,9 +183,21 @@ func _process(delta: float) -> void:
 		view.sync_from(ship, alpha, render_origin)
 
 	camera.follow(_views[PLAYER_ID], delta)
-	dust.update_origin(world.continuous_position(render_origin))
-	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin))
-	sky.update_view(planet_center.to_vector3(), camera)
+	var continuous := world.continuous_position(render_origin)
+	dust.update_origin(continuous)
+	dust_far.update_origin(continuous)
+	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin)).to_vector3()
+	_update_sun(player)
+	sky.update_view(planet_center, camera, celestial, world.sim_time)
+	stars.update_view(camera, planet_center, EARTH)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	hud.update_display(world, PLAYER_ID, TARGET_ID, alpha, render_origin, camera, player_input)
+
+
+## Real Sun direction for the scenario date; dark while the player is in
+## Earth's shadow (ships and the planet's night side agree).
+func _update_sun(player: ShipState) -> void:
+	var dir := celestial.sun_direction_pci(world.sim_time)
+	sun.look_at(-dir, Vector3.RIGHT if absf(dir.y) > 0.99 else Vector3.UP)
+	sun.light_energy = SUN_ENERGY * CelestialFrame.sunlight_fraction(world.pci_position(player.position), dir, EARTH.radius_m)

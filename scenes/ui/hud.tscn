@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/hud_overlay.gd" id="2_ovl"]
 [ext_resource type="Script" path="res://scripts/ui/radar_display.gd" id="3_radar"]
+[ext_resource type="Script" path="res://scripts/ui/controls_panel.gd" id="4_controls"]
 
 [sub_resource type="SystemFont" id="SystemFont_mono"]
 font_names = PackedStringArray("DejaVu Sans Mono", "Consolas", "Menlo", "Monospace")
@@ -145,7 +146,7 @@ theme_override_constants/shadow_offset_y = 1
 theme_override_colors/font_color = Color(0.82, 0.9, 1, 0.6)
 theme_override_font_sizes/font_size = 13
 text = "W/S main / reverse   A/D strafe   SPACE·R / CTRL·F up / down   ARROWS pitch & yaw   Q/E roll
-MOUSE virtual stick (click to capture, ESC to release)   LMB·ENTER fire   BACKSPACE restart   B shipyard
+MOUSE virtual stick (click to capture, ESC to release)   LMB·ENTER fire   BACKSPACE restart   B shipyard   T hostile target   F1 controls
 Z assist on/off   X hold: orbit ↔ match target   ·   green ring = orbital prograde   ·   ◇ = lead (aim here)"
 
 [node name="Overlay" type="Control" parent="Root"]
@@ -157,3 +158,15 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2_ovl")
+
+[node name="Controls" type="PanelContainer" parent="Root"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("4_controls")

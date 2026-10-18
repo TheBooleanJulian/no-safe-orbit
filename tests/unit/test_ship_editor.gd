@@ -41,6 +41,62 @@ func test_move_and_rotate() -> void:
 		"rotated pod no longer fits:\n%s" % ed.report.summary())
 
 
+func test_undo_and_redo() -> void:
+	var ed := _editor()
+	var original := BlueprintIO.to_json(ed.blueprint)
+	assert_true(not ed.can_undo(), "nothing to undo after loading")
+	ed.remove("e28")
+	ed.place_equipment(&"radiator", Vector3i(3, 2, 6), &"dorsal")
+	var edited := BlueprintIO.to_json(ed.blueprint)
+	assert_true(ed.undo() and ed.undo(), "two undos")
+	assert_true(BlueprintIO.to_json(ed.blueprint) == original and not ed.report.has_code(&"power_deficit"),
+		"undo restores the original design and its validation")
+	assert_true(ed.redo() and ed.redo() and BlueprintIO.to_json(ed.blueprint) == edited, "redo replays both edits")
+	ed.undo()
+	ed.move("e41", Vector3i(0, 0, 1))
+	assert_true(not ed.can_redo(), "a new edit clears the redo history")
+
+
+func test_moving_a_module_carries_its_contents() -> void:
+	# The nose holds the bridge, four RCS blocks and the bridge hatch.
+	var ed := _editor()
+	var original := BlueprintIO.to_json(ed.blueprint)
+	ed.move("m1", Vector3i(0, 0, -2))
+	var bridge := ed.blueprint.find("r7") as ShipBlueprint.PlacedRoom
+	var rcs := ed.blueprint.find("e33") as ShipBlueprint.PlacedEquipment
+	assert_true(bridge.rect.position == Vector2i(2, -2) and rcs.cell == Vector3i(2, 1, -1), "bridge and RCS moved with the nose")
+	assert_true((ed.blueprint.find("r8") as ShipBlueprint.PlacedRoom).rect.position == Vector2i(3, 3),
+		"the corridor spanning nose and fuselage stays put")
+	ed.move("m1", Vector3i(0, 0, 2))
+	assert_true(BlueprintIO.to_json(ed.blueprint) == original, "moving back restores the design exactly")
+
+
+func test_rotating_a_module_turns_it_in_place_with_contents() -> void:
+	# A free-standing pod (2×2×6) with a cargo hold, a tank and an RCS block.
+	var bp := ShipBlueprint.new()
+	bp.add_module(&"side_pod", Vector3i(0, 0, 0))
+	bp.add_room(&"cargo_hold", 0, Rect2i(0, 0, 2, 6))
+	bp.add_equipment(&"propellant_tank", Vector3i(0, 0, 1))
+	bp.add_equipment(&"rcs_block", Vector3i(0, 1, 2), &"port")
+	var ed := ShipEditor.new(bp, ConstructionCatalog.default_catalog())
+	var original := BlueprintIO.to_json(ed.blueprint)
+	var center := func(cells: Array[Vector3i]) -> Vector3:
+		var sum := Vector3.ZERO
+		for c in cells:
+			sum += Vector3(c)
+		return sum / cells.size()
+	var before: Vector3 = center.call(ed.cells_of("m1"))
+	ed.rotate_module("m1")
+	assert_vec_near(center.call(ed.cells_of("m1")), before, 0.51, "pod turns about its own centre (cells)")
+	var placement_codes := [&"room_outside_hull", &"equipment_outside_room", &"equipment_not_exterior", &"equipment_bad_face"]
+	assert_true(not ed.report.issues.any(func(i: ShipValidator.Issue) -> bool: return placement_codes.has(i.code)),
+		"hold, tank and RCS turned with the pod and still fit:\n%s" % ed.report.summary())
+	assert_true((ed.blueprint.find("e4") as ShipBlueprint.PlacedEquipment).face == &"aft", "port-facing RCS faces aft after a CCW quarter turn")
+	for i in 3:
+		ed.rotate_module("m1")
+	assert_true(BlueprintIO.to_json(ed.blueprint) == original, "four quarter turns restore the design exactly")
+
+
 func test_toggle_hatch() -> void:
 	var ed := _editor()
 	assert_true(not ed.toggle_hatch(Vector3i(6, 0, 6), Vector3i(5, 0, 6)), "toggling existing hatch (reversed order) removes it")

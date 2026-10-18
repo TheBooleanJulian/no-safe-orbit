@@ -36,9 +36,18 @@ var status: Status = Status.ACTIVE
 ## Simulation time at which status last changed away from ACTIVE (s).
 var status_time: float = 0.0
 
-## Cannon state (unused when config.cannon is null).
+## Propellant on board (kg); unused when config.unlimited_propellant.
+var propellant_kg: float = 0.0
+
+## Runtime condition of a ship built from a blueprint (damage, power, heat,
+## pressure); null for fixed test configs. When set, `config` is its
+## effective (damage-reduced) config.
+var systems: ShipSystems
+
+## Cannon state (unused when config.cannon is null). Rounds are shared by
+## every mount; each mount has its own cooldown.
 var cannon_rounds: int = 0
-var cannon_cooldown_s: float = 0.0
+var cannon_cooldowns: PackedFloat32Array = PackedFloat32Array()
 var rounds_fired: int = 0
 var hits_taken: int = 0
 
@@ -59,12 +68,40 @@ static func create(
 	state.orientation = p_orientation.normalized()
 	if p_config.cannon != null:
 		state.cannon_rounds = p_config.cannon.magazine_rounds
+		state.cannon_cooldowns.resize(p_config.cannon_muzzles_body.size())
+		state.cannon_cooldowns.fill(0.0)
+	if not p_config.unlimited_propellant:
+		state.propellant_kg = p_config.propellant_capacity_kg
 	state.snapshot_previous()
 	return state
 
 
+## Current mass: dry structure plus propellant on board.
+func mass_kg() -> float:
+	return config.mass_kg + (0.0 if config.unlimited_propellant else propellant_kg)
+
+
+## Inertia scaled from full tanks to the current mass (propellant is assumed
+## to sit where the tanks are, so the shape of the mass distribution holds).
+func inertia_kgm2() -> Vector3:
+	return config.inertia_kgm2 * (mass_kg() / config.wet_mass_kg())
+
+
+## Δv left on the main engines (rocket equation), m/s; INF when unlimited.
+func delta_v_remaining() -> float:
+	if config.unlimited_propellant:
+		return INF
+	return config.main_isp_s * ShipDynamics.G0 * log(mass_kg() / config.mass_kg)
+
+
 func is_active() -> bool:
 	return status == Status.ACTIVE
+
+
+## Attach the runtime systems of the ship's blueprint and fly their config.
+func attach_systems(p_systems: ShipSystems) -> void:
+	systems = p_systems
+	config = p_systems.effective_config()
 
 
 func snapshot_previous() -> void:

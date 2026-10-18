@@ -44,6 +44,7 @@ var _hover_face: StringName = &""
 
 
 func _ready() -> void:
+	InputBindings.apply_saved()
 	var catalog := ConstructionCatalog.default_catalog()
 	var start: ShipBlueprint = Main.launch_blueprint.duplicate_blueprint() if Main.launch_blueprint != null else _load_or_null(BlueprintIO.DEFAULT_TEMPLATE)
 	editor = ShipEditor.new(start, catalog)
@@ -62,6 +63,8 @@ func _ready() -> void:
 	%LoadTemplate.pressed.connect(func() -> void: load_design(template_list.get_item_metadata(template_list.selected)))
 	%LoadDesign.pressed.connect(_on_load_design_pressed)
 	%Save.pressed.connect(save_design)
+	%Undo.pressed.connect(undo)
+	%Redo.pressed.connect(redo)
 	launch_button.pressed.connect(launch)
 	name_edit.text_changed.connect(func(t: String) -> void: editor.blueprint.name = t)
 	deck_editor.cell_pressed.connect(apply_at)
@@ -79,7 +82,20 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
 		return
-	var key := (event as InputEventKey).keycode
+	var k := event as InputEventKey
+	var key := k.keycode
+	if k.ctrl_pressed or k.meta_pressed:
+		match key:
+			KEY_Z:
+				redo() if k.shift_pressed else undo()
+			KEY_Y:
+				redo()
+			KEY_S:
+				save_design()
+			_:
+				return
+		get_viewport().set_input_as_handled()
+		return
 	match key:
 		KEY_PAGEUP:
 			change_deck(1)
@@ -120,7 +136,7 @@ func set_tool(t: Tool) -> void:
 		place_kind = ""
 		place_def = &""
 		info_label.text = {
-			Tool.SELECT: "SELECT — click a part to select it. Arrow keys move it, R rotates a module, Delete removes. Right-click removes anything.",
+			Tool.SELECT: "SELECT — click a part to select it. Arrow keys move it (a module carries its rooms and equipment), R turns a module in place, Delete removes. Right-click removes anything. Ctrl+Z / Ctrl+Y undo / redo.",
 			Tool.HATCH: "HATCH — click near an edge between two rooms to add/remove a door; click a cell's centre for a ladder to the deck above.",
 		}[t]
 	deck_editor.drag_rooms = t == Tool.PLACE and place_kind == "room"
@@ -146,11 +162,25 @@ func change_deck(delta: int) -> void:
 
 
 func rotate_current() -> void:
-	if tool == Tool.PLACE and place_kind == "hull":
+	if tool == Tool.PLACE and (place_kind == "hull" or place_kind == "equipment"):
 		place_rotation = (place_rotation + 1) % 4
 		_update_ghost()
 	elif selected_id != "":
 		editor.rotate_module(selected_id)
+
+
+func undo() -> void:
+	if editor.undo():
+		_set_status("Undone")
+	else:
+		_set_status("Nothing to undo")
+
+
+func redo() -> void:
+	if editor.redo():
+		_set_status("Redone")
+	else:
+		_set_status("Nothing to redo")
 
 
 ## Apply the current tool at a cell (deck editor click, or tests).
@@ -178,7 +208,7 @@ func apply_at(cell: Vector3i, face: StringName, button: MouseButton = MOUSE_BUTT
 				"room":
 					selected_id = editor.place_room(place_def, cell.y, Rect2i(cell.x, cell.z, 1, 1))
 				"equipment":
-					selected_id = editor.place_equipment(place_def, cell, face)
+					selected_id = editor.place_equipment(place_def, cell, face, place_rotation)
 			_set_status("Placed %s" % selected_id)
 
 
@@ -257,10 +287,11 @@ func _refresh_stats() -> void:
 	var cfg := s.to_ship_config(editor.blueprint.name)
 	var g := 9.80665
 	stats_label.text = "\n".join([
-		"MASS       %.1f t" % (s.mass_kg / 1000.0),
+		"MASS       %.1f t dry · %.1f t wet" % [s.mass_kg / 1000.0, s.wet_mass_kg() / 1000.0],
 		"CoM        x %.1f  y %.1f  z %.1f m" % [s.center_of_mass_m.x, s.center_of_mass_m.y, s.center_of_mass_m.z],
-		"MAIN       %.2f MN  %.2f m/s² (%.2f g)" % [s.thrust_forward_n / 1e6, s.thrust_forward_n / s.mass_kg, s.thrust_forward_n / s.mass_kg / g],
-		"RCS        %.0f kN  %.2f m/s²  (%d blocks)" % [s.thrust_rcs_n / 1000.0, s.thrust_rcs_n / s.mass_kg, s.rcs_count],
+		"MAIN       %.2f MN  %.2f m/s² (%.2f g) wet" % [s.thrust_forward_n / 1e6, s.thrust_forward_n / s.wet_mass_kg(), s.thrust_forward_n / s.wet_mass_kg() / g],
+		"RCS        %.0f kN  %.2f m/s²  (%d blocks)" % [s.thrust_rcs_n / 1000.0, s.thrust_rcs_n / s.wet_mass_kg(), s.rcs_count],
+		"PROPELLANT %.0f t  Δv %.0f m/s  (Isp %.0f / %.0f s)" % [s.propellant_capacity_kg / 1000.0, s.delta_v_m_s(), s.main_isp_s, s.rcs_isp_s],
 		"TURN RATE  P %.0f  Y %.0f  R %.0f °/s" % [rad_to_deg(cfg.assist_max_rate_rad_s.x), rad_to_deg(cfg.assist_max_rate_rad_s.y), rad_to_deg(cfg.assist_max_rate_rad_s.z)],
 		"POWER      %.0f / %.0f kW" % [s.power_draw_kw, s.power_generation_kw],
 		"HEAT       %.0f / %.0f kW rejected" % [s.heat_generation_kw, s.heat_rejection_kw],
@@ -334,12 +365,16 @@ func _update_ghost() -> void:
 					deck_editor.ghost_face = _hover_face
 					hint = "%s — %s face (edges: fore/aft/port/starboard, centre: dorsal, Shift: ventral)" % [def.display_name, _hover_face]
 				else:
-					for x in def.footprint_cells.x:
-						for z in def.footprint_cells.y:
+					var fp := def.footprint_cells
+					if place_rotation % 2 == 1:
+						fp = Vector2i(fp.y, fp.x)
+					for x in fp.x:
+						for z in fp.y:
 							deck_editor.ghost_cells.append(cell + Vector3i(x, 0, z))
-					hint = "%s — %d×%d" % [def.display_name, def.footprint_cells.x, def.footprint_cells.y]
+					hint = "%s — %d×%d [R rotates]" % [def.display_name, fp.x, fp.y]
 				var face := _hover_face if def.is_external() else &""
-				edit = func(bp: ShipBlueprint) -> void: bp.add_equipment(place_def, cell, face)
+				var rot := 0 if def.is_external() else place_rotation
+				edit = func(bp: ShipBlueprint) -> void: bp.add_equipment(place_def, cell, face, rot)
 		var new_errors := editor.preview_new_errors(edit)
 		deck_editor.ghost_ok = new_errors.is_empty()
 		if not new_errors.is_empty():

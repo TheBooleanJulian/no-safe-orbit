@@ -10,6 +10,8 @@ const COLOR_APSIS := Color(0.35, 1.0, 0.55, 0.9)
 ## Below this eccentricity, apsis positions and times are meaningless.
 const CIRCULAR_ECCENTRICITY := 1e-4
 const PATH_SAMPLES := 180
+const NEAR_PATH_DEG := 20.0
+const NEAR_PATH_SAMPLES := 80
 
 @onready var overlay: HudOverlay = $Root/Overlay
 @onready var radar: RadarDisplay = $Root/Radar
@@ -17,22 +19,43 @@ const PATH_SAMPLES := 180
 @onready var orbit_label: Label = $Root/LeftColumn/OrbitPanel/Margin/OrbitLabel
 @onready var target_label: Label = $Root/TargetPanel/Margin/TargetLabel
 @onready var warning_label: Label = $Root/WarningLabel
+@onready var controls: ControlsPanel = $Root/Controls
+
+## Real-sky frame, for the sunlight / eclipse readout (set by Main).
+var celestial: CelestialFrame
+
+## Main sets this when the target is shooting back (T).
+var target_hostile: bool = false
 
 var _last_hit_time := -INF
 var _hits_scored := 0
+## Latest damage report on the target (our hits) and on us (incoming).
+var _outgoing: DamageReport
+var _incoming: DamageReport
+var _incoming_time := -INF
+var _hits_taken := 0
 
 
 func reset() -> void:
 	_last_hit_time = -INF
 	_hits_scored = 0
+	_outgoing = null
+	_incoming = null
+	_incoming_time = -INF
+	_hits_taken = 0
 
 
 ## Call with each frame's hit events (from WorldSimulation.take_hit_events).
-func note_hits(events: Array[HitEvent], shooter_id: StringName, sim_time: float) -> void:
+func note_hits(events: Array[HitEvent], player_id: StringName, sim_time: float) -> void:
 	for ev in events:
-		if ev.shooter_id == shooter_id:
+		if ev.shooter_id == player_id:
 			_hits_scored += 1
 			_last_hit_time = sim_time
+			_outgoing = ev.report
+		elif ev.target_id == player_id:
+			_hits_taken += 1
+			_incoming = ev.report
+			_incoming_time = sim_time
 
 
 func update_display(world: WorldSimulation, player_id: StringName, target_id: StringName,
@@ -85,9 +108,37 @@ func _update_flight_panel(player: ShipState, input: PlayerInput, sim_time: float
 		"  up       %s" % HudFormat.signed_speed(v_body.y),
 		"RATE °/s   P %+5.1f  Y %+5.1f  R %+5.1f" % [rad_to_deg(w.x), rad_to_deg(w.y), rad_to_deg(w.z)],
 		"Δv SPENT   %.1f m/s" % player.delta_v_expended,
+		"PROPELLANT %s" % _propellant_text(player),
 		"CANNON     %s" % gun,
+	] + _systems_lines(player, sim_time) + [
 		"T+         %s" % HudFormat.clock(sim_time),
 	])
+
+
+## Own-ship power, heat and damage; the latest incoming hit.
+func _systems_lines(ship: ShipState, sim_time: float) -> Array:
+	var sys := ship.systems
+	if sys == null:
+		return []
+	var lines := [
+		"POWER      %.0f / %.0f kW%s" % [sys.power_demand_kw - sys.power_unmet_kw, sys.power_supply_kw,
+			"  SHORT %.0f" % sys.power_unmet_kw if sys.power_unmet_kw > 0.0 else ""],
+		"HEAT       %.0f K  %s" % [sys.temperature_k, ["reactor normal", "REACTOR THROTTLED", "REACTOR SCRAM"][sys.reactor_state]],
+		"SYSTEMS    %s" % sys.status_line(),
+	]
+	if _incoming != null and sim_time - _incoming_time < 8.0:
+		lines.append("HIT TAKEN  %s  (+%.0f s)" % [_incoming.headline(), sim_time - _incoming_time])
+		for line in _incoming.lines.slice(maxi(_incoming.lines.size() - 2, 1)):
+			lines.append("  " + line.left(58))
+	return lines
+
+
+func _propellant_text(ship: ShipState) -> String:
+	if ship.config.unlimited_propellant:
+		return "unlimited"
+	if ship.propellant_kg <= 0.0:
+		return "EMPTY — engines dead"
+	return "%.1f t  Δv left %.0f m/s" % [ship.propellant_kg / 1000.0, ship.delta_v_remaining()]
 
 
 func _assist_text(input: PlayerInput, has_target: bool) -> String:
@@ -124,6 +175,13 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 		lines.append("ENTRY IF   %.0f km · CLEAR" % entry_alt_km)
 	else:
 		lines.append("ENTRY IF   %.0f km · IN %s" % [entry_alt_km, HudFormat.duration(t_entry)])
+	if celestial != null:
+		var sun_dir := celestial.sun_direction_pci(world.sim_time)
+		var lit := CelestialFrame.sunlight_fraction(orbit.position, sun_dir, body.radius_m) >= 0.5
+		var change := CelestialFrame.next_light_change(orbit, sun_dir, body.radius_m)
+		var when := "" if change.is_empty() else "  %s in %s" % [
+			"sunrise" if change.sunlit_after else "sunset", HudFormat.duration(change.time)]
+		lines.append("SUN        %s%s" % ["LIT" if lit else "ECLIPSE", when])
 	orbit_label.text = "\n".join(lines)
 
 
@@ -152,21 +210,45 @@ func _update_target_panel(world: WorldSimulation, player: ShipState, target: Shi
 	var hits := "%d" % _hits_scored
 	if hit_age < 3.0:
 		hits += "   HIT +%.1f s" % hit_age
-	target_label.text = "\n".join([
-		"TARGET     %s" % target.display_name,
+	var lines := [
+		"TARGET     %s%s" % [target.display_name, "   HOSTILE [T]" if target_hostile else ""],
 		"           %s" % target.config.display_name,
 		"RANGE      %s" % HudFormat.distance(rng),
 		"RANGE RATE %s  %s" % [HudFormat.signed_speed(rr), HudFormat.closure(rr)],
 		"REL SPEED  %.1f m/s" % rel_v.length(),
 		"ROUND TOF  %s" % tof,
 		"HITS       %s" % hits,
-	])
+	]
+	if target.systems != null:
+		lines.append("SYSTEMS    %s" % target.systems.status_line())
+		lines.append("REACTOR    %s  %.0f K" % [["normal", "THROTTLED", "SCRAM"][target.systems.reactor_state], target.systems.temperature_k])
+	if _outgoing != null:
+		lines.append("LAST HIT   %s" % _outgoing.headline())
+		for line in _outgoing.lines.slice(maxi(_outgoing.lines.size() - 3, 1)):
+			lines.append("  " + line.left(58))
+	target_label.text = "\n".join(lines)
 
 
 func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElements) -> void:
 	if not player.is_active():
 		warning_label.text = "ATMOSPHERIC ENTRY — VESSEL LOST AT T+%s\n[BACKSPACE] restart" % HudFormat.clock(player.status_time)
 		warning_label.add_theme_color_override("font_color", COLOR_DANGER)
+		warning_label.visible = true
+		return
+	if not player.config.unlimited_propellant and player.propellant_kg <= 0.0:
+		warning_label.text = "PROPELLANT EXHAUSTED — NO THRUST, NO RCS"
+		warning_label.add_theme_color_override("font_color", COLOR_DANGER)
+		warning_label.visible = true
+		return
+	var sys := player.systems
+	if sys != null and (sys.reactor_state != ShipSystems.Reactor.NORMAL or sys.power_unmet_kw > 0.0):
+		if sys.reactor_state == ShipSystems.Reactor.SCRAM:
+			warning_label.text = "REACTOR SCRAM — %.0f K — NO POWER UNTIL IT COOLS BELOW %.0f K" % [sys.temperature_k, ShipSystems.RESTART_TEMP_K]
+		elif sys.reactor_state == ShipSystems.Reactor.THROTTLED:
+			warning_label.text = "REACTOR THROTTLED — OVERHEATING (%.0f K) — EASE OFF THE ENGINES" % sys.temperature_k
+		else:
+			warning_label.text = "POWER SHORT BY %.0f kW — LOW-PRIORITY SYSTEMS SHED" % sys.power_unmet_kw
+		warning_label.add_theme_color_override("font_color", COLOR_DANGER if sys.reactor_state == ShipSystems.Reactor.SCRAM else COLOR_WARN)
 		warning_label.visible = true
 		return
 	if orbit != null:
@@ -185,7 +267,7 @@ func _lead_solution(player: ShipState, target: ShipState) -> Dictionary:
 	var cannon := player.config.cannon
 	if cannon == null:
 		return {}
-	var muzzle := player.position + player.orientation * player.config.cannon_muzzle_body
+	var muzzle := player.position + player.orientation * player.config.primary_muzzle()
 	var aim := target.position + target.orientation * target.config.hit_box_center
 	var rel_pos := aim - muzzle
 	var rel_vel := target.velocity - player.velocity
@@ -208,10 +290,18 @@ func _update_orbit_path(world: WorldSimulation, orbit: OrbitElements, alpha: flo
 	overlay.planet_radius = body.radius_m
 	var entry_r := body.entry_radius_m()
 	var path := PackedVector3Array()
-	# Start one sample ahead: the ship itself is drawn by the 3D view, and the
-	# state the orbit came from is up to one tick ahead of the rendered ship.
+	# Dense for the first 20° (the stretch seen near the prograde marker),
+	# then every 2°. Start a little ahead: the ship itself is drawn by the 3D
+	# view, and the orbit's state is up to one tick ahead of the rendered ship.
+	var angles := PackedFloat32Array()
+	for i in range(1, NEAR_PATH_SAMPLES + 1):
+		angles.append(deg_to_rad(NEAR_PATH_DEG) * i / NEAR_PATH_SAMPLES)
 	for i in range(1, PATH_SAMPLES + 1):
-		var p := orbit.point_at_angle(TAU * i / PATH_SAMPLES)
+		var a := TAU * i / PATH_SAMPLES
+		if a > deg_to_rad(NEAR_PATH_DEG):
+			angles.append(a)
+	for angle in angles:
+		var p := orbit.point_at_angle(angle)
 		if p == null or p.length() > body.radius_m * 12.0:
 			break
 		path.append(p.minus(origin_pci).to_vector3())
