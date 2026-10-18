@@ -3,8 +3,10 @@
 [ext_resource type="Script" path="res://scripts/app/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/presentation/chase_camera.gd" id="2_cam"]
 [ext_resource type="Script" path="res://scripts/presentation/dust_field.gd" id="3_dust"]
-[ext_resource type="Script" path="res://scripts/presentation/starfield.gd" id="4_stars"]
+[ext_resource type="Script" path="res://scripts/presentation/planet_sky.gd" id="4_sky"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5_hud"]
+[ext_resource type="Script" path="res://scripts/presentation/projectile_view.gd" id="6_rounds"]
+[ext_resource type="Script" path="res://scripts/presentation/hit_flashes.gd" id="7_flash"]
 
 [sub_resource type="Environment" id="Environment_space"]
 background_mode = 1
@@ -20,9 +22,9 @@ script = ExtResource("1_main")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_space")
+script = ExtResource("4_sky")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 0, 0)
 light_color = Color(1, 0.96, 0.9, 1)
 light_energy = 1.4
 
@@ -36,7 +38,10 @@ script = ExtResource("2_cam")
 [node name="DustField" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("3_dust")
 
-[node name="Starfield" type="MultiMeshInstance3D" parent="."]
-script = ExtResource("4_stars")
+[node name="ProjectileView" type="MultiMeshInstance3D" parent="."]
+script = ExtResource("6_rounds")
+
+[node name="HitFlashes" type="Node3D" parent="."]
+script = ExtResource("7_flash")
 
 [node name="Hud" parent="." instance=ExtResource("5_hud")]

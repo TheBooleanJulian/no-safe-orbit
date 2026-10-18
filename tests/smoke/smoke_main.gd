@@ -36,6 +36,10 @@ func _run() -> void:
 	_check(main.world != null and main.world.has_ship(&"player") and main.world.has_ship(&"target_01"),
 		"world spawned player and target")
 	var player := main.world.get_ship(&"player")
+	var alt_km := main.world.altitude_of(player) / 1000.0
+	_check(absf(alt_km - 400.0) < 1.0, "player starts in Earth orbit at 400 km (actual %.2f km)" % alt_km)
+	_check(main.hud.orbit_label.text.contains("PERIAPSIS") and main.hud.orbit_label.text.contains("ENTRY IF   100 km"),
+		"HUD orbit panel shows apsides and the 100 km entry interface")
 
 	# Hold W for 1 s of simulation time.
 	Input.action_press("thrust_forward")
@@ -46,11 +50,36 @@ func _run() -> void:
 	_check(fwd > expected * 0.8 and fwd < expected * 1.3,
 		"forward speed after ~1 s of W: expected ≈%.1f m/s, actual %.2f m/s" % [expected, fwd])
 
+	# Assist on + HOLD ORBIT: releasing the keys coasts, spending no Δv.
+	var dv_before := player.delta_v_expended
+	await _run_until_sim_time(main, 0.5)
+	_check(absf(player.delta_v_expended - dv_before) < 1e-6,
+		"hold-orbit assist spends no Δv while coasting (spent %.4f m/s)" % (player.delta_v_expended - dv_before))
+
+	# Fire for ~0.6 s through the fire action: at 240 rpm that is 3 rounds.
+	Input.action_press("fire")
+	await _run_until_sim_time(main, 0.6)
+	Input.action_release("fire")
+	_check(player.rounds_fired >= 2 and not main.world.projectiles().is_empty(),
+		"fire action launches rounds (fired %d, in flight %d)" % [player.rounds_fired, main.world.projectiles().size()])
+	_check(main.hud.target_label.text.contains("ROUND TOF"), "HUD target panel shows round time of flight")
+
+	# X switches the hold to target velocity matching.
+	var target := main.world.get_ship(&"target_01")
+	var rel_before := (player.velocity - target.velocity).length()
+	_press_action("toggle_velocity_hold")
+	await process_frame
+	await process_frame
+	_check(main.player_input.velocity_hold == PlayerInput.VelocityHold.TARGET and main.hud.flight_label.text.contains("MATCH TARGET"),
+		"X switches velocity hold to MATCH TARGET")
+	# RCS is 2 m/s² per axis, so 3 s removes ≥ ~6 m/s of relative velocity.
+	await _run_until_sim_time(main, 3.0)
+	var rel_after := (player.velocity - target.velocity).length()
+	_check(rel_before - rel_after > 5.0,
+		"match-target assist reduces relative speed at the RCS limit (%.1f → %.1f m/s in 3 s)" % [rel_before, rel_after])
+
 	# Toggle assist off through the real input path.
-	var ev := InputEventAction.new()
-	ev.action = "toggle_flight_assist"
-	ev.pressed = true
-	Input.parse_input_event(ev)
+	_press_action("toggle_flight_assist")
 	await process_frame
 	await process_frame
 	_check(not main.player_input.flight_assist, "Z toggles flight assist off")
@@ -69,6 +98,13 @@ func _run() -> void:
 
 	print("smoke: %d failure(s)" % _failures.size())
 	quit(1 if not _failures.is_empty() else 0)
+
+
+func _press_action(action: String) -> void:
+	var ev := InputEventAction.new()
+	ev.action = action
+	ev.pressed = true
+	Input.parse_input_event(ev)
 
 
 const FRIGATE_ACCEL := 2.5e6 / 250_000.0  # placeholder frigate main-engine m/s²
