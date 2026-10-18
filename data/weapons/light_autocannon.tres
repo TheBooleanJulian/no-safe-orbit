@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="KineticCannonConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/kinetic_cannon_config.gd" id="1_gun"]
+
+[resource]
+script = ExtResource("1_gun")
+display_name = "Light autocannon"
+muzzle_velocity_mps = 1200.0
+rate_of_fire_rpm = 600.0
+magazine_rounds = 400
+round_mass_kg = 1.0
+penetration_mm = 30.0

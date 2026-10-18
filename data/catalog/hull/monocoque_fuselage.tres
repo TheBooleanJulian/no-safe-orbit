@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="HullModuleDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/hull_module_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"monocoque_fuselage"
+display_name = "Monocoque fuselage"
+size_cells = Vector3i(4, 3, 4)
+structure_mass_kg = 48000.0
+connectors = {
+"fore": "spine",
+"aft": "spine",
+"port": "pod",
+"starboard": "pod"
+}
+interior = true
+armor_mm = 55.0
+color = Color(0.62, 0.66, 0.74, 1)
+rarity = 4
+drop_weight = 10.0

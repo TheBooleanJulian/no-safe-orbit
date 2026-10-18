@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"torch_drive"
+display_name = "Torch drive"
+kind = 1
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"aft"])
+mass_kg = 30000.0
+power_kw = -600.0
+heat_kw = 1500.0
+heat_rejection_kw = 0.0
+thrust_n = 2400000.0
+isp_s = 3000.0
+hit_points = 70.0
+shield_mm = 30.0
+color = Color(0.75, 0.6, 1.0, 1)
+rarity = 4
+drop_weight = 10.0

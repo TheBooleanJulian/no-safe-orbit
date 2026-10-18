@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+[ext_resource type="Resource" path="res://data/weapons/light_autocannon.tres" id="2_gun"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"autocannon"
+display_name = "Light autocannon"
+kind = 3
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"fore", &"port", &"starboard", &"dorsal", &"ventral"])
+mass_kg = 3500.0
+power_kw = -60.0
+heat_kw = 40.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+cannon = ExtResource("2_gun")
+color = Color(1.0, 0.6, 0.4, 1)
+rarity = 1
+drop_weight = 10.0

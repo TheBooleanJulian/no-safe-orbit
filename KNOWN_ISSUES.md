@@ -12,9 +12,16 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **The enemy is only a gunner.** With T it turns and shoots; it doesn't
   manoeuvre, evade, manage heat or retreat. It is passive by default.
   (Directives and tactics: Milestone 6.)
-- **Damage has no repairs yet.** Destroyed systems, breaches and wrecked
-  modules stay that way until restart. (Repair, salvage: Milestone 4; crew and
-  damage control: Milestone 5.)
+- **Docking is abstract.** B docks from anywhere; there is no station to fly
+  back to, and propellant and ammunition are refilled free at every launch.
+- **Loot balance is untested by play.** Rates, pity, costs and salvage yields
+  are tested for correctness, not for fun; expect tuning.
+- **Every enemy is the same Common-parts Kestrel**, and loot comes from crates
+  rather than the wreck's own fitted parts.
+- **Field repairs ignore crew.** Any workshop patches any reachable system,
+  instantly staffed (crew roles and travel: Milestone 5).
+- **One gun type per ship.** Mixed batteries (e.g. railgun + autocannon) are
+  refused because one fire-control solution serves every mount.
 - **Crew consequences are not modelled.** Breached rooms and rooms cut off from
   the bridge are reported, but nothing stops working because of them yet (M5).
 - **Ship geometry is placeholder boxes.** Wrecked modules turn dark and

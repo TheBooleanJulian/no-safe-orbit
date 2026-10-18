@@ -29,6 +29,8 @@ const ACTIONS := [
 	[&"restart_scenario", "Restart scenario"],
 	[&"open_shipyard", "Open shipyard"],
 	[&"toggle_target_ai", "Target hostile on/off"],
+	[&"salvage", "Salvage disabled target"],
+	[&"field_repair", "Damage control (workshop repair)"],
 	[&"release_mouse", "Release mouse"],
 	[&"toggle_controls", "Controls panel"],
 ]

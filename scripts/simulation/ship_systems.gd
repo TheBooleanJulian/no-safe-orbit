@@ -16,6 +16,10 @@ extends RefCounted
 ## - Pressure: a penetrated room vents; its intact hatches seal, destroyed
 ##   hatches let neighbours vent too. Crew can only pass between pressurised
 ##   rooms.
+## - Condition: everything that persists between sorties (damage, armour,
+##   breaches, hatches) round-trips through condition() / apply_condition().
+## - Field repair: a powered, pressurised workshop the crew can reach patches
+##   one damaged system at a time, up to FIELD_REPAIR_LIMIT of its condition.
 
 enum Reactor { NORMAL, THROTTLED, SCRAM }
 
@@ -39,6 +43,20 @@ const PRIORITY := {
 	EquipmentDefinition.Kind.CANNON: 3,
 }
 const ROOM_PRIORITY := 0
+## Field repairs restore a damaged system to this fraction of its hit points.
+const FIELD_REPAIR_LIMIT := 0.75
+## Field repair time: fixed setup plus seconds per hit point restored.
+const FIELD_REPAIR_SETUP_S := 10.0
+const FIELD_REPAIR_S_PER_HP := 1.0
+## Which damaged system the crew patch first (lower = sooner).
+const FIELD_REPAIR_ORDER := {
+	EquipmentDefinition.Kind.REACTOR: 0,
+	EquipmentDefinition.Kind.MAIN_ENGINE: 1,
+	EquipmentDefinition.Kind.RCS: 2,
+	EquipmentDefinition.Kind.CANNON: 3,
+	EquipmentDefinition.Kind.RADIATOR: 4,
+	EquipmentDefinition.Kind.PROPELLANT_TANK: 5,
+}
 
 
 class EquipmentState:
@@ -70,6 +88,19 @@ class ModuleState:
 class RoomState:
 	var pressurized: bool = true
 	var breached: bool = false
+	## Its module's power network is alive and covers the room's draw.
+	var powered: bool = true
+
+
+## A field repair in progress: crew patching one system.
+class RepairTask:
+	var equipment_id: String
+	var total_s: float
+	var remaining_s: float
+	var target_hp: float
+
+	func progress() -> float:
+		return 1.0 - remaining_s / maxf(total_s, 1e-6)
 
 
 var blueprint: ShipBlueprint
@@ -89,6 +120,8 @@ var heat_generation_kw: float = 0.0
 var heat_rejection_kw: float = 0.0
 ## Recent events for the HUD, newest last.
 var event_log: PackedStringArray = PackedStringArray()
+## Field repair under way, or null.
+var repair_task: RepairTask
 
 var _attachments: Array[Array] = []
 var _config: ShipConfig
@@ -320,13 +353,14 @@ func solve_power() -> void:
 		loads.append([net, PRIORITY.get(e.def.kind, 4), -e.def.power_kw, e])
 	for i in blueprint.rooms.size():
 		var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
-		if def == null or def.power_kw_per_cell >= 0.0:
-			continue
 		var cells := ShipGrid.room_cells(blueprint.rooms[i])
 		var mi: int = grid.module_at.get(cells[0], -1)
 		var net: int = component[mi] if mi >= 0 else -1
+		rooms[i].powered = net >= 0
+		if def == null or def.power_kw_per_cell >= 0.0:
+			continue
 		if net >= 0:
-			loads.append([net, ROOM_PRIORITY, -def.power_kw_per_cell * cells.size(), null])
+			loads.append([net, ROOM_PRIORITY, -def.power_kw_per_cell * cells.size(), null, i])
 	loads.sort_custom(func(a: Array, b: Array) -> bool: return a[1] < b[1])
 	var remaining: Array = supply.duplicate()
 	power_supply_kw = 0.0
@@ -345,6 +379,8 @@ func solve_power() -> void:
 			power_unmet_kw += kw
 		if load[3] != null:
 			(load[3] as EquipmentState).powered = ok
+		else:
+			rooms[load[4]].powered = ok
 	_config = null
 
 
@@ -409,6 +445,8 @@ func tick(ship: ShipState, dt: float) -> bool:
 		for e in equipment:
 			if not e.def.is_external() and damage_equipment(e, OVERHEAT_DAMAGE_PER_S * dt):
 				changed = true
+	if repair_task != null and _advance_repair(dt):
+		changed = true
 	return changed or _config == null
 
 
@@ -485,3 +523,184 @@ func _note(text: String) -> void:
 	event_log.append(text)
 	if event_log.size() > 20:
 		event_log.remove_at(0)
+
+
+# --- Mission state -------------------------------------------------------------
+
+## Why the ship can no longer fight ("" while it still can): every gun is
+## out, the power is gone, or nobody can reach a pressurised command room.
+func disabled_reason() -> String:
+	if power_supply_kw <= 0.0:
+		return "no power"
+	if reachable_rooms().is_empty():
+		return "command room lost"
+	if count(EquipmentDefinition.Kind.CANNON, false) > 0 and count(EquipmentDefinition.Kind.CANNON, true) == 0:
+		return "all guns out"
+	return ""
+
+
+func is_disabled() -> bool:
+	return disabled_reason() != ""
+
+
+## Fraction of the installed systems' hit points that survive (salvage value).
+func intact_fraction() -> float:
+	var hp := 0.0
+	var max_hp := 0.0
+	for e in equipment:
+		hp += e.hp
+		max_hp += e.max_hp
+	return hp / max_hp if max_hp > 0.0 else 0.0
+
+
+# --- Persistent condition -----------------------------------------------------
+
+## Everything that persists between sorties, keyed by stable blueprint ids.
+## Only parts that differ from new are listed. Fractions, not absolutes, so a
+## rebalanced definition keeps the same relative wear.
+func condition() -> Dictionary:
+	var eq := {}
+	for e in equipment:
+		if e.hp < e.max_hp:
+			eq[e.id] = e.hp / e.max_hp
+	var mods := {}
+	for i in modules.size():
+		var m := modules[i]
+		var def := grid.module_def(i)
+		var armor := m.armor_mm / def.armor_mm if def != null and def.armor_mm > 0.0 else 1.0
+		var structure := m.structure / m.max_structure
+		if armor < 1.0 or structure < 1.0:
+			mods[blueprint.modules[i].id] = {"armor": armor, "structure": structure}
+	var breached := []
+	for i in rooms.size():
+		if rooms[i].breached:
+			breached.append(blueprint.rooms[i].id)
+	var hatches := destroyed_hatches.keys()
+	hatches.sort()
+	return {"equipment": eq, "modules": mods, "breached": breached, "hatches": hatches}
+
+
+## Restore a saved condition. Ids the blueprint no longer has are ignored;
+## parts the condition does not list are new.
+func apply_condition(c: Dictionary) -> void:
+	var eq: Dictionary = c.get("equipment", {})
+	for e in equipment:
+		e.hp = clampf(float(eq[e.id]), 0.0, 1.0) * e.max_hp if eq.has(e.id) else e.max_hp
+	var mods: Dictionary = c.get("modules", {})
+	for i in modules.size():
+		var def := grid.module_def(i)
+		var entry: Dictionary = mods.get(blueprint.modules[i].id, {})
+		if def != null:
+			modules[i].armor_mm = clampf(float(entry.get("armor", 1.0)), 0.0, 1.0) * def.armor_mm
+		modules[i].structure = clampf(float(entry.get("structure", 1.0)), 0.0, 1.0) * modules[i].max_structure
+	var breached: Array = c.get("breached", [])
+	for i in rooms.size():
+		rooms[i].breached = breached.has(blueprint.rooms[i].id)
+	destroyed_hatches.clear()
+	for h in c.get("hatches", []):
+		if blueprint.find(str(h)) != null:
+			destroyed_hatches[str(h)] = true
+	update_pressure()
+	solve_power()
+
+
+# --- Field repair --------------------------------------------------------------
+
+## Index of a workshop room that is powered, pressurised and reachable, or -1.
+func working_workshop() -> int:
+	var reach := reachable_rooms()
+	for i in blueprint.rooms.size():
+		var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
+		if def != null and def.role == &"workshop" and reach.has(i) and rooms[i].powered:
+			return i
+	return -1
+
+
+## The crew can get to this system: an internal one through its room, an
+## external one on EVA from a reachable room in the module it is mounted on.
+func can_reach(e: EquipmentState) -> bool:
+	var reach := reachable_rooms()
+	var cell: Vector3i = blueprint.equipment[e.index].cell
+	if not e.def.is_external():
+		return reach.has(grid.room_at.get(cell, -1))
+	for r in reach:
+		var cells := ShipGrid.room_cells(blueprint.rooms[r])
+		if grid.module_at.get(cells[0], -2) == e.module_index:
+			return true
+	return false
+
+
+## What blocks a field repair right now ("" = one can start).
+func field_repair_block_reason() -> String:
+	if repair_task != null:
+		return "a repair is already under way"
+	var has_workshop := false
+	for r in blueprint.rooms:
+		var def: RoomDefinition = grid.catalog.rooms.get(r.def_id)
+		has_workshop = has_workshop or (def != null and def.role == &"workshop")
+	if not has_workshop:
+		return "no workshop aboard"
+	if working_workshop() < 0:
+		return "workshop unpowered, depressurised or cut off"
+	if field_repair_target() == null:
+		return "nothing the crew can patch (destroyed parts need the yard)"
+	return ""
+
+
+## Next damaged (not destroyed) system the crew can reach and patch: by
+## FIELD_REPAIR_ORDER, then the most damaged.
+func field_repair_target() -> EquipmentState:
+	var best: EquipmentState
+	for e in equipment:
+		if e.destroyed() or e.hp >= FIELD_REPAIR_LIMIT * e.max_hp - 1e-6 or not can_reach(e):
+			continue
+		if best == null or _repair_rank(e) < _repair_rank(best):
+			best = e
+	return best
+
+
+func _repair_rank(e: EquipmentState) -> float:
+	return FIELD_REPAIR_ORDER.get(e.def.kind, 9) + e.hp / e.max_hp
+
+
+## Hit points a field repair of `e` restores.
+func field_repair_hp(e: EquipmentState) -> float:
+	return maxf(FIELD_REPAIR_LIMIT * e.max_hp - e.hp, 0.0)
+
+
+## Start patching the next system; returns it (null if blocked).
+func start_field_repair() -> EquipmentState:
+	if field_repair_block_reason() != "":
+		return null
+	var e := field_repair_target()
+	repair_task = RepairTask.new()
+	repair_task.equipment_id = e.id
+	repair_task.target_hp = FIELD_REPAIR_LIMIT * e.max_hp
+	repair_task.total_s = FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)
+	repair_task.remaining_s = repair_task.total_s
+	_note("Damage control: patching %s %s (%.0f s)" % [e.def.display_name, e.id, repair_task.total_s])
+	return e
+
+
+## Returns true when the task finished (the flight config changes).
+func _advance_repair(dt: float) -> bool:
+	var e := equipment_by_id(repair_task.equipment_id)
+	var why := ""
+	if e == null or e.destroyed():
+		why = "the part was destroyed"
+	elif working_workshop() < 0:
+		why = "the workshop is down"
+	elif not can_reach(e):
+		why = "the crew lost access"
+	if why != "":
+		_note("Repair of %s interrupted: %s" % [repair_task.equipment_id, why])
+		repair_task = null
+		return false
+	repair_task.remaining_s -= dt
+	if repair_task.remaining_s > 0.0:
+		return false
+	e.hp = maxf(e.hp, repair_task.target_hp)
+	_note("%s %s patched to %.0f%%" % [e.def.display_name, e.id, 100.0 * e.hp / e.max_hp])
+	repair_task = null
+	solve_power()
+	return true

@@ -1,0 +1,489 @@
+extends TestCase
+## Measures: Milestone 4 — salvage loot (cascading weighted rarity, cascade
+## down past empty tiers, hard pity, determinism across save/load,
+## duplicates), ownership gating in the validator, persistence of the profile
+## and of a damaged vessel, service costs / priorities / anti-exploit rules,
+## write-offs and vessel loss, salvage rules and yield, workshop field repair.
+
+const TEST_PROFILE := "user://test_profile_unit.json"
+
+
+func _catalog() -> ConstructionCatalog:
+	return ConstructionCatalog.default_catalog()
+
+
+func _template() -> ShipBlueprint:
+	var errors := PackedStringArray()
+	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+
+
+func _ship(bp: ShipBlueprint, id: StringName = &"s", condition: Dictionary = {}) -> ShipState:
+	var grid := ShipGrid.build(bp, _catalog())
+	var stats := ShipStats.compute(bp, grid)
+	var cfg := stats.to_ship_config(bp.name)
+	var systems := ShipSystems.create(bp, grid, stats, cfg)
+	if not condition.is_empty():
+		systems.apply_condition(condition)
+	var ship := ShipState.create(id, String(id), cfg)
+	ship.attach_systems(systems)
+	return ship
+
+
+func _report(bp: ShipBlueprint, profile: PlayerProfile) -> ShipValidator.Report:
+	var report := ShipValidator.validate(bp, _catalog())
+	profile.check_design(bp, _catalog(), report)
+	return report
+
+
+## Template with the dorsal kinetic cannon e41 swapped for `def_id`.
+func _with_gun(def_id: StringName) -> ShipBlueprint:
+	var bp := _template()
+	(bp.find("e41") as ShipBlueprint.PlacedEquipment).def_id = def_id
+	return bp
+
+
+## Template with crew quarters r9 refitted as a workshop.
+func _with_workshop() -> ShipBlueprint:
+	var bp := _template()
+	(bp.find("r9") as ShipBlueprint.PlacedRoom).def_id = &"workshop"
+	return bp
+
+
+func _spares_pool() -> Array[LootRoller.Drop]:
+	var pool: Array[LootRoller.Drop] = []
+	var d := LootRoller.Drop.new()
+	d.kind = &"spares"
+	d.rarity = Rarity.Tier.COMMON
+	d.amount = 5
+	pool.append(d)
+	return pool
+
+
+func _entry(id: StringName, rarity: int, weight: float) -> LootRoller.Drop:
+	var d := LootRoller.Drop.new()
+	d.kind = &"equipment"
+	d.def_id = id
+	d.rarity = rarity
+	d.weight = weight
+	return d
+
+
+# --- Loot ------------------------------------------------------------------------
+
+func test_tier_probabilities_follow_the_cascade() -> void:
+	var p := Rarity.tier_probabilities()
+	var expected := [0.70, 0.21, 0.0675, 0.018, 0.0045]
+	var total := 0.0
+	for t in p.size():
+		assert_near(p[t], expected[t], 1e-12, "P(%s)" % Rarity.name_of(t))
+		total += p[t]
+	assert_near(total, 1.0, 1e-12, "tier probabilities sum")
+
+
+func test_cascade_roll_matches_the_stated_odds() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 12345
+	var n := 200_000
+	var counts := [0, 0, 0, 0, 0]
+	for i in n:
+		counts[LootRoller.roll_tier(rng)] += 1
+	var p := Rarity.tier_probabilities()
+	for t in p.size():
+		var sigma := sqrt(n * p[t] * (1.0 - p[t]))
+		assert_near(counts[t], n * p[t], 4.0 * sigma, "%s count in %d rolls (4σ)" % [Rarity.name_of(t), n])
+
+
+func test_weighted_pick_within_a_tier() -> void:
+	var pool := _spares_pool()
+	pool.append(_entry(&"light", Rarity.Tier.RARE, 1.0))
+	pool.append(_entry(&"heavy", Rarity.Tier.RARE, 3.0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 99
+	var heavy := 0
+	var n := 40_000
+	for i in n:
+		if LootRoller.pick(rng, pool, Rarity.Tier.RARE).def_id == &"heavy":
+			heavy += 1
+	assert_near(float(heavy) / n, 0.75, 0.01, "weight 3 vs 1 → share of the heavier entry")
+
+
+func test_empty_tier_cascades_down() -> void:
+	var pool := _spares_pool()
+	pool.append(_entry(&"only_uncommon", Rarity.Tier.UNCOMMON, 1.0))
+	var rng := RandomNumberGenerator.new()
+	assert_true(LootRoller.pick(rng, pool, Rarity.Tier.LEGENDARY).def_id == &"only_uncommon",
+		"a LEGENDARY roll with no legendary, epic or rare entries falls to the uncommon one")
+	assert_true(LootRoller.pick(rng, _spares_pool(), Rarity.Tier.EPIC).kind == &"spares",
+		"with only spares in the pool every tier falls to COMMON spares")
+	var empty: Array[LootRoller.Drop] = []
+	assert_true(LootRoller.pick(rng, empty, Rarity.Tier.RARE) == null, "an empty pool yields nothing")
+
+
+func test_catalog_pool_covers_every_tier_and_never_drops_common_parts() -> void:
+	var pool := LootRoller.build_pool(_catalog())
+	for t in Rarity.Tier.size():
+		assert_true(pool.any(func(d: LootRoller.Drop) -> bool: return d.rarity == t), "pool has a %s entry" % Rarity.name_of(t))
+	for d in pool:
+		if d.rarity == Rarity.Tier.COMMON:
+			assert_true(d.kind == &"spares", "COMMON tier pays spare parts, not common parts (%s)" % d.def_id)
+
+
+func test_hard_pity_caps_the_dry_streaks() -> void:
+	var pool := LootRoller.build_pool(_catalog())
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
+	var pity := {}
+	var since_rare := 0
+	var since_legendary := 0
+	var worst_rare := 0
+	var worst_legendary := 0
+	var legendaries := 0
+	for i in 8000:
+		var d := LootRoller.pull(rng, pool, pity)
+		since_rare = 0 if d.rarity >= Rarity.Tier.RARE else since_rare + 1
+		since_legendary = 0 if d.rarity == Rarity.Tier.LEGENDARY else since_legendary + 1
+		legendaries += 1 if d.rarity == Rarity.Tier.LEGENDARY else 0
+		worst_rare = maxi(worst_rare, since_rare)
+		worst_legendary = maxi(worst_legendary, since_legendary)
+	assert_true(worst_rare <= LootRoller.RARE_PITY - 1, "never %d pulls in a row below Rare (worst streak %d)" % [LootRoller.RARE_PITY, worst_rare])
+	assert_true(worst_legendary <= LootRoller.LEGENDARY_PITY - 1, "never %d pulls without a Legendary (worst streak %d)" % [LootRoller.LEGENDARY_PITY, worst_legendary])
+	assert_true(legendaries >= 8000 / LootRoller.LEGENDARY_PITY, "pity guarantees ≥ %d legendaries in 8000 pulls (got %d)" % [8000 / LootRoller.LEGENDARY_PITY, legendaries])
+	assert_true(int(pity.since_rare) == since_rare and int(pity.since_legendary) == since_legendary, "pity counters track the streaks")
+
+
+func test_pulls_are_deterministic_and_survive_save_and_load() -> void:
+	var a := PlayerProfile.new(777)
+	a.pull(5, _catalog())
+	var json := JSON.stringify(a.to_dict())
+	var errors := PackedStringArray()
+	var b := PlayerProfile.from_dict(JSON.parse_string(json), errors)
+	assert_true(errors.is_empty(), "profile reloads without errors: %s" % ", ".join(errors))
+	var seq_a := a.pull(20, _catalog()).map(func(d: LootRoller.Drop) -> String: return "%s/%s" % [d.kind, d.def_id])
+	var seq_b := b.pull(20, _catalog()).map(func(d: LootRoller.Drop) -> String: return "%s/%s" % [d.kind, d.def_id])
+	assert_true(seq_a == seq_b, "the reloaded profile continues the same loot sequence (no re-rolls by reloading)")
+	var c := PlayerProfile.new(777)
+	var seq_c := c.pull(25, _catalog()).map(func(d: LootRoller.Drop) -> String: return "%s/%s" % [d.kind, d.def_id])
+	assert_true(seq_c.slice(5) == seq_a, "a save/load in between does not change the sequence")
+
+
+func test_duplicate_blueprints_scrap_for_spare_parts() -> void:
+	var p := PlayerProfile.new(1)
+	var room := _entry(&"workshop", Rarity.Tier.UNCOMMON, 1.0)
+	room.kind = &"room"
+	p.grant(room)
+	var spares := p.spare_parts
+	var again := _entry(&"workshop", Rarity.Tier.UNCOMMON, 1.0)
+	again.kind = &"room"
+	p.grant(again)
+	assert_true(p.unlocks.has("workshop") and again.duplicate, "second workshop blueprint is a duplicate")
+	assert_near(p.spare_parts - spares, PlayerProfile.DUPLICATE_SPARES[Rarity.Tier.UNCOMMON], 0.0, "duplicate scrapped for spare parts")
+	p.grant(_entry(&"railgun", Rarity.Tier.EPIC, 1.0))
+	p.grant(_entry(&"railgun", Rarity.Tier.EPIC, 1.0))
+	assert_true(p.owned(&"railgun") == 2, "equipment drops stack as units (own %d)" % p.owned(&"railgun"))
+
+
+# --- Ownership gating ------------------------------------------------------------
+
+func test_locked_blueprints_and_unowned_parts_are_errors() -> void:
+	var p := PlayerProfile.new(1)
+	assert_true(not _report(_template(), p).has_errors(), "the all-common template needs nothing found")
+	var bp := _template()
+	(bp.find("m2") as ShipBlueprint.PlacedModule).def_id = &"armored_fuselage_section"
+	for id in ["e29", "e30", "e31", "e32"]:
+		(bp.find(id) as ShipBlueprint.PlacedEquipment).def_id = &"main_engine_high_isp"
+	var r := _report(bp, p)
+	assert_true(r.has_code(&"blueprint_locked") and r.has_code(&"part_not_owned"), "locked module and unowned engines are errors:\n%s" % r.summary())
+	p.unlocks["armored_fuselage_section"] = true
+	p.inventory["main_engine_high_isp"] = 2
+	r = _report(bp, p)
+	assert_true(not r.has_code(&"blueprint_locked"), "unlocking the blueprint clears its error")
+	var msg := r.errors().filter(func(i: ShipValidator.Issue) -> bool: return i.code == &"part_not_owned")
+	assert_true(msg.size() == 1 and msg[0].message.contains("uses 4 but you own 2"), "message counts units: %s" % r.summary())
+	p.inventory["main_engine_high_isp"] = 4
+	assert_true(not _report(bp, p).has_errors(), "owning four clears it")
+
+
+func test_mixed_gun_types_are_an_error() -> void:
+	var bp := _template()
+	bp.add_equipment(&"autocannon", Vector3i(4, 2, 4), &"dorsal")
+	var r := ShipValidator.validate(bp, _catalog())
+	assert_true(r.has_code(&"mixed_cannon_types"), "kinetic cannon + autocannon is an error:\n%s" % r.summary())
+
+
+func test_rare_parts_change_the_numbers() -> void:
+	var base := ShipStats.compute(_template(), ShipGrid.build(_template(), _catalog()))
+	var bp := _template()
+	(bp.find("r12") as ShipBlueprint.PlacedRoom).def_id = &"dense_magazine"
+	var rail := _with_gun(&"railgun")
+	var dense := ShipStats.compute(bp, ShipGrid.build(bp, _catalog()))
+	var rail_cfg := ShipStats.compute(rail, ShipGrid.build(rail, _catalog())).to_ship_config("r")
+	assert_near(dense.rounds_capacity, base.rounds_capacity * 1.8, 0.5, "dense magazine holds 1.8× the rounds")
+	assert_near(rail_cfg.cannon.muzzle_velocity_mps, 4000.0, 1e-6, "railgun design fires 4 km/s rounds")
+
+
+# --- Persistence ------------------------------------------------------------------
+
+## A template ship with a spread of damage of every kind.
+func _damaged_ship() -> ShipState:
+	var ship := _ship(_template())
+	var s := ship.systems
+	s.damage_equipment(s.equipment_by_id("e29"), 25.0)  # engine to 37.5 %
+	s.damage_equipment(s.equipment_by_id("e33"), 100.0)  # RCS destroyed
+	s.damage_equipment(s.equipment_by_id("e28"), 15.0)  # reactor to 75 %
+	s.modules[1].armor_mm -= 7.0
+	s.damage_module(1, 3.0)
+	s.breach_room(1)
+	s.destroy_hatch("h21")
+	ship.attach_systems(s)
+	return ship
+
+
+func test_damage_round_trips_through_the_condition() -> void:
+	var a := _damaged_ship()
+	var c := a.systems.condition()
+	var b := _ship(_template(), &"b", JSON.parse_string(JSON.stringify(c)))
+	for i in a.systems.equipment.size():
+		assert_near(b.systems.equipment[i].hp, a.systems.equipment[i].hp, 1e-4, "hp of %s" % a.systems.equipment[i].id)
+	for i in a.systems.modules.size():
+		assert_near(b.systems.modules[i].armor_mm, a.systems.modules[i].armor_mm, 1e-4, "armour of module %d" % i)
+		assert_near(b.systems.modules[i].structure, a.systems.modules[i].structure, 1e-4, "structure of module %d" % i)
+	for i in a.systems.rooms.size():
+		assert_true(b.systems.rooms[i].pressurized == a.systems.rooms[i].pressurized, "room %d pressure" % i)
+	assert_true(b.systems.destroyed_hatches.has("h21"), "destroyed hatch persists")
+	assert_near(b.config.thrust_forward_n, a.config.thrust_forward_n, 1e-3, "flies with the same damaged thrust (N)")
+	assert_near(b.systems.power_supply_kw, a.systems.power_supply_kw, 1e-3, "same power (kW)")
+	assert_true(_ship(_template(), &"c", {}).systems.condition() == {"equipment": {}, "modules": {}, "breached": [], "hatches": []},
+		"a new ship has an empty condition")
+
+
+func test_profile_and_damaged_vessel_survive_save_and_load() -> void:
+	var p := PlayerProfile.new(5)
+	p.spare_parts = 123
+	p.inventory["railgun"] = 2
+	p.unlocks["workshop"] = true
+	p.pity = {"since_rare": 4, "since_legendary": 33}
+	p.missions_completed = 3
+	p.ensure_vessel(_template())
+	p.dock(_damaged_ship().systems.condition(), _catalog())
+	assert_true(p.save(TEST_PROFILE) == OK, "profile saved")
+	var errors := PackedStringArray()
+	var q := PlayerProfile.load_file(TEST_PROFILE, errors)
+	assert_true(q != null and errors.is_empty(), "profile loads: %s" % ", ".join(errors))
+	if q == null:
+		return
+	assert_true(JSON.stringify(q.to_dict()) == JSON.stringify(p.to_dict()), "reloaded profile is identical")
+	var flown := _ship(q.vessel.blueprint, &"q", q.vessel.condition)
+	assert_near(flown.systems.equipment_by_id("e29").hp, 15.0, 1e-3, "reloaded vessel's engine e29 keeps its damage (hp)")
+	assert_true(flown.systems.equipment_by_id("e33").destroyed(), "destroyed RCS e33 is still destroyed")
+	assert_true(q.vessel.sorties == 1 and q.vessel.history.size() >= 2, "service history persists")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PROFILE))
+
+
+func test_unsupported_or_corrupt_profiles_are_rejected_safely() -> void:
+	var errors := PackedStringArray()
+	assert_true(PlayerProfile.from_dict({"schema_version": PlayerProfile.SCHEMA_VERSION + 1}, errors) == null and not errors.is_empty(),
+		"a newer schema is refused")
+	errors.clear()
+	assert_true(PlayerProfile.from_dict({"spare_parts": 5}, errors) == null, "a profile without a version is refused")
+	var f := FileAccess.open(TEST_PROFILE, FileAccess.WRITE)
+	f.store_string("{ not json")
+	f.close()
+	errors.clear()
+	assert_true(PlayerProfile.load_file(TEST_PROFILE, errors) == null and not errors.is_empty(), "corrupt JSON is refused")
+	var saved_path := PlayerProfile.path
+	PlayerProfile.path = TEST_PROFILE
+	var fresh := PlayerProfile.load_or_new()
+	PlayerProfile.path = saved_path
+	assert_true(fresh != null and fresh.spare_parts == PlayerProfile.STARTING_SPARE_PARTS, "load_or_new starts a new profile")
+	assert_true(FileAccess.file_exists(TEST_PROFILE + ".unreadable") and not FileAccess.file_exists(TEST_PROFILE),
+		"the unreadable file is kept aside, not overwritten")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PROFILE + ".unreadable"))
+
+
+# --- Service -------------------------------------------------------------------------
+
+func _vessel(condition: Dictionary) -> ShipInstance:
+	var v := ShipInstance.fresh(_template())
+	v.condition = condition
+	return v
+
+
+func _job(jobs: Array[ServiceYard.Job], subject: String) -> ServiceYard.Job:
+	for j in jobs:
+		if j.subject == subject:
+			return j
+	return null
+
+
+func test_repair_costs_scale_with_damage_and_never_beat_a_rebuild() -> void:
+	var v := _vessel({"equipment": {"e29": 0.4, "e30": 0.0}})
+	var jobs := ServiceYard.repair_jobs(v, _catalog())
+	var engine_new := ServiceYard.equipment_cost(_catalog().equipment[&"main_engine"])
+	assert_near(engine_new, 9, 0, "main engine (9 t) costs 9 parts new")
+	assert_near(_job(jobs, "e29").cost, 6, 0, "engine at 40 % costs ⌈9 × 0.6⌉ to repair")
+	assert_true(_job(jobs, "e30").kind == &"replace" and _job(jobs, "e30").cost == engine_new, "destroyed engine is rebuilt at full cost")
+	# Removing the damaged engine and fitting a new one is a refit build.
+	var bp := v.blueprint.duplicate_blueprint()
+	bp.remove("e29")
+	bp.add_equipment(&"main_engine", Vector3i(3, 0, 14), &"aft")
+	var refit := ServiceYard.refit_jobs(v, bp, _catalog())
+	assert_true(refit.size() == 1 and refit[0].cost >= _job(jobs, "e29").cost, "swapping the part costs %d ≥ repairing it (%d)" % [refit[0].cost, _job(jobs, "e29").cost])
+	for d in [0.0, 0.01, 0.3, 0.5, 0.99, 1.0]:
+		assert_true(ServiceYard.damaged_cost(engine_new, d) <= engine_new, "repair at %.0f %% damage ≤ new cost" % (d * 100.0))
+
+
+func test_priorities_choose_what_gets_fixed_with_few_parts() -> void:
+	var v := _vessel({"equipment": {"e28": 0.5, "e29": 0.2}, "modules": {"m3": {"armor": 1.0, "structure": 0.5}}})
+	var jobs := ServiceYard.repair_jobs(v, _catalog())
+	var reactor := _job(jobs, "e28").cost
+	var engine := _job(jobs, "e29").cost
+	var budget := maxi(reactor, engine)
+	var mobility := ServiceYard.plan(jobs, ServiceYard.Priority.MOBILITY, budget)
+	var combat := ServiceYard.plan(jobs, ServiceYard.Priority.COMBAT, budget)
+	assert_true(mobility[0].subject == "e29", "mobility fixes the engine first (got %s)" % mobility[0].subject)
+	assert_true(combat[0].subject == "e28", "combat readiness fixes the reactor first (got %s)" % combat[0].subject)
+	assert_true(ServiceYard.total_cost(mobility) <= budget and ServiceYard.total_cost(combat) <= budget, "plans stay within budget")
+	assert_true(ServiceYard.plan(jobs, ServiceYard.Priority.FULL, 0).is_empty(), "no parts, no repairs")
+
+
+func test_repairs_restore_the_vessel_and_charge_parts() -> void:
+	var p := PlayerProfile.new(1)
+	p.spare_parts = 500
+	p.ensure_vessel(_template())
+	p.vessel.condition = _damaged_ship().systems.condition()
+	var jobs := ServiceYard.repair_jobs(p.vessel, _catalog())
+	var cost := ServiceYard.total_cost(jobs)
+	var spent := ServiceYard.perform(ServiceYard.plan(jobs, ServiceYard.Priority.FULL, p.spare_parts, p.vessel, p), p.vessel, p)
+	assert_true(spent == cost and p.spare_parts == 500 - cost, "full repair charged %d parts (spent %d)" % [cost, spent])
+	assert_true(not p.vessel.is_damaged(), "vessel like new after a full repair: %s" % p.vessel.condition)
+	var flown := _ship(p.vessel.blueprint, &"r", p.vessel.condition)
+	assert_near(flown.config.thrust_forward_n, _ship(_template()).config.thrust_forward_n, 1e-3, "repaired ship has full thrust (N)")
+
+
+func test_refit_is_paid_up_front_and_keeps_wear_on_kept_parts() -> void:
+	var p := PlayerProfile.new(1)
+	p.ensure_vessel(_template())
+	p.vessel.condition = {"equipment": {"e28": 0.5, "e29": 0.3}}
+	var bp := p.vessel.blueprint.duplicate_blueprint()
+	bp.remove("e29")
+	p.spare_parts = 0
+	assert_true(ServiceYard.refit(p.vessel, bp, p, _catalog()) == "", "removing a part is free")
+	assert_true(not p.vessel.condition.equipment.has("e29") and is_equal_approx(p.vessel.equipment_fraction("e28"), 0.5),
+		"removed part leaves the record; the reactor keeps its wear")
+	var bp2 := p.vessel.blueprint.duplicate_blueprint()
+	bp2.add_equipment(&"radiator", Vector3i(3, 2, 6), &"dorsal")
+	var why := ServiceYard.refit(p.vessel, bp2, p, _catalog())
+	assert_true(why.contains("needs 3 spare parts"), "unaffordable refit refused: '%s'" % why)
+	assert_true(p.vessel.blueprint.equipment.size() == bp.equipment.size(), "refused refit leaves the vessel unchanged")
+	p.spare_parts = 10
+	assert_true(ServiceYard.refit(p.vessel, bp2, p, _catalog()) == "" and p.spare_parts == 7, "paid refit: 10 → %d parts" % p.spare_parts)
+
+
+func test_destroyed_rare_unit_is_written_off_and_needs_a_replacement() -> void:
+	var p := PlayerProfile.new(1)
+	p.spare_parts = 100
+	p.inventory["railgun"] = 1
+	p.ensure_vessel(_with_gun(&"railgun"))
+	var lost := p.dock({"equipment": {"e41": 0.0}}, _catalog())
+	assert_true(lost.size() == 1 and p.owned(&"railgun") == 0, "railgun destroyed in flight is written off on docking")
+	assert_true(_report(p.vessel.blueprint, p).has_code(&"part_not_owned"), "the design now needs a railgun you do not have")
+	var job := _job(ServiceYard.repair_jobs(p.vessel, _catalog()), "e41")
+	assert_true(job.kind == &"replace" and job.needs_unit == &"railgun", "replacing it needs a railgun unit")
+	assert_true(not ServiceYard.available(job, p.vessel, p), "no unit, no replacement")
+	p.dock({"equipment": {"e41": 0.0}}, _catalog())
+	assert_true(p.owned(&"railgun") == 0, "a part already destroyed is not written off twice")
+	p.inventory["railgun"] = 1
+	assert_true(ServiceYard.available(job, p.vessel, p), "a newly found railgun can replace it")
+	var one: Array[ServiceYard.Job] = [job]
+	ServiceYard.perform(one, p.vessel, p)
+	assert_true(not p.vessel.is_damaged() and not _report(p.vessel.blueprint, p).has_errors(), "replaced: vessel whole and design valid")
+
+
+func test_losing_the_vessel_writes_off_rare_units_but_keeps_the_design() -> void:
+	var p := PlayerProfile.new(1)
+	p.inventory["railgun"] = 2
+	p.ensure_vessel(_with_gun(&"railgun"))
+	p.vessel.condition = {"equipment": {"e29": 0.5}}
+	var design := JSON.stringify(p.vessel.blueprint.to_dict())
+	var lost := p.lose_vessel(_catalog())
+	assert_true(lost.size() == 1 and p.owned(&"railgun") == 1, "the railgun aboard is lost (own %d)" % p.owned(&"railgun"))
+	assert_true(JSON.stringify(p.vessel.blueprint.to_dict()) == design and not p.vessel.is_damaged(), "a new hull of the same design is issued")
+	assert_true(p.vessels_lost == 1 and p.vessel.history[-1].contains("lost"), "the loss is on record")
+
+
+# --- Salvage -------------------------------------------------------------------------
+
+func test_disabled_means_it_cannot_fight() -> void:
+	var ship := _ship(_template())
+	assert_true(not ship.systems.is_disabled(), "an intact ship is not disabled")
+	ship.systems.damage_equipment(ship.systems.equipment_by_id("e41"), 1000.0)
+	assert_true(ship.systems.disabled_reason() == "all guns out", "losing every gun disables it")
+	var dark := _ship(_template())
+	dark.systems.damage_equipment(dark.systems.equipment_by_id("e28"), 1000.0)
+	assert_true(dark.systems.disabled_reason() == "no power", "losing the only reactor disables it")
+
+
+func test_salvage_needs_a_disabled_wreck_close_and_slow() -> void:
+	var me := _ship(_template(), &"me")
+	var wreck := _ship(_template(), &"wreck")
+	wreck.position = Vector3(0, 0, -300)
+	wreck.velocity = Vector3(1, 0, 0)
+	assert_true(Salvage.block_reason(me, wreck).contains("disable"), "a fighting ship cannot be salvaged")
+	wreck.systems.damage_equipment(wreck.systems.equipment_by_id("e41"), 1000.0)
+	assert_true(Salvage.block_reason(me, wreck) == "", "disabled, 300 m, 1 m/s: salvageable")
+	wreck.position = Vector3(0, 0, -2000)
+	assert_true(Salvage.block_reason(me, wreck).contains("close to"), "2 km is too far")
+	wreck.position = Vector3(0, 0, -300)
+	wreck.velocity = Vector3(10, 0, 0)
+	assert_true(Salvage.block_reason(me, wreck).contains("match velocity"), "10 m/s is too fast")
+
+
+func test_salvage_pays_more_for_a_cleaner_kill() -> void:
+	var clean := _ship(_template())
+	clean.systems.damage_equipment(clean.systems.equipment_by_id("e41"), 1000.0)
+	var shredded := _ship(_template())
+	for e in shredded.systems.equipment:
+		shredded.systems.damage_equipment(e, e.max_hp * 0.8)
+	shredded.systems.damage_equipment(shredded.systems.equipment_by_id("e41"), 1000.0)
+	assert_true(Salvage.pulls_for(clean.systems) > Salvage.pulls_for(shredded.systems), "clean kill: %d pulls vs shredded %d" % [Salvage.pulls_for(clean.systems), Salvage.pulls_for(shredded.systems)])
+	assert_true(Salvage.spare_parts_for(clean.systems) > Salvage.spare_parts_for(shredded.systems), "clean kill: %d parts vs shredded %d" % [Salvage.spare_parts_for(clean.systems), Salvage.spare_parts_for(shredded.systems)])
+	assert_true(Salvage.pulls_for(shredded.systems) >= 1, "even a wreck yields one pull")
+
+
+# --- Field repair ----------------------------------------------------------------------
+
+func test_field_repair_needs_a_working_workshop_and_patches_over_time() -> void:
+	var plain := _ship(_template())
+	plain.systems.damage_equipment(plain.systems.equipment_by_id("e28"), 30.0)
+	assert_true(plain.systems.field_repair_block_reason() == "no workshop aboard", "no workshop, no field repairs")
+	var ship := _ship(_with_workshop())
+	var s := ship.systems
+	s.damage_equipment(s.equipment_by_id("e29"), 100.0)  # destroyed: needs the yard
+	s.damage_equipment(s.equipment_by_id("e28"), 30.0)   # reactor at 50 %
+	var e := s.start_field_repair()
+	assert_true(e != null and e.id == "e28", "crew patch the damaged reactor, not the destroyed engine")
+	assert_near(s.repair_task.total_s, ShipSystems.FIELD_REPAIR_SETUP_S + 15.0, 1e-6, "repair time = setup + 1 s per hp (s)")
+	var t := 0.0
+	while s.repair_task != null and t < 60.0:
+		s.tick(ship, 0.5)
+		t += 0.5
+	assert_near(t, 25.0, 0.5, "repair finished after (s)")
+	assert_near(s.equipment_by_id("e28").hp, 45.0, 1e-4, "reactor patched to 75 % (hp)")
+	assert_true(s.field_repair_target() == null, "nothing left to patch: the engine is destroyed")
+
+
+func test_field_repair_is_interrupted_when_the_workshop_vents() -> void:
+	var ship := _ship(_with_workshop())
+	var s := ship.systems
+	s.damage_equipment(s.equipment_by_id("e28"), 30.0)
+	s.start_field_repair()
+	s.tick(ship, 1.0)
+	var workshop := -1
+	for i in s.blueprint.rooms.size():
+		if s.blueprint.rooms[i].id == "r9":
+			workshop = i
+	s.breach_room(workshop)
+	s.tick(ship, 1.0)
+	assert_true(s.repair_task == null and s.event_log[-1].contains("interrupted"), "breaching the workshop stops the repair: %s" % s.event_log[-1])
+	assert_near(s.equipment_by_id("e28").hp, 30.0, 1e-6, "no hit points restored (hp)")
+	assert_true(s.field_repair_block_reason().contains("workshop"), "and no new repair can start: %s" % s.field_repair_block_reason())
