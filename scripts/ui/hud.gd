@@ -10,6 +10,8 @@ const COLOR_APSIS := Color(0.35, 1.0, 0.55, 0.9)
 ## Below this eccentricity, apsis positions and times are meaningless.
 const CIRCULAR_ECCENTRICITY := 1e-4
 const PATH_SAMPLES := 180
+const NEAR_PATH_DEG := 20.0
+const NEAR_PATH_SAMPLES := 80
 
 @onready var overlay: HudOverlay = $Root/Overlay
 @onready var radar: RadarDisplay = $Root/Radar
@@ -17,6 +19,9 @@ const PATH_SAMPLES := 180
 @onready var orbit_label: Label = $Root/LeftColumn/OrbitPanel/Margin/OrbitLabel
 @onready var target_label: Label = $Root/TargetPanel/Margin/TargetLabel
 @onready var warning_label: Label = $Root/WarningLabel
+
+## Real-sky frame, for the sunlight / eclipse readout (set by Main).
+var celestial: CelestialFrame
 
 var _last_hit_time := -INF
 var _hits_scored := 0
@@ -124,6 +129,13 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 		lines.append("ENTRY IF   %.0f km · CLEAR" % entry_alt_km)
 	else:
 		lines.append("ENTRY IF   %.0f km · IN %s" % [entry_alt_km, HudFormat.duration(t_entry)])
+	if celestial != null:
+		var sun_dir := celestial.sun_direction_pci(world.sim_time)
+		var lit := CelestialFrame.sunlight_fraction(orbit.position, sun_dir, body.radius_m) >= 0.5
+		var change := CelestialFrame.next_light_change(orbit, sun_dir, body.radius_m)
+		var when := "" if change.is_empty() else "  %s in %s" % [
+			"sunrise" if change.sunlit_after else "sunset", HudFormat.duration(change.time)]
+		lines.append("SUN        %s%s" % ["LIT" if lit else "ECLIPSE", when])
 	orbit_label.text = "\n".join(lines)
 
 
@@ -208,10 +220,18 @@ func _update_orbit_path(world: WorldSimulation, orbit: OrbitElements, alpha: flo
 	overlay.planet_radius = body.radius_m
 	var entry_r := body.entry_radius_m()
 	var path := PackedVector3Array()
-	# Start one sample ahead: the ship itself is drawn by the 3D view, and the
-	# state the orbit came from is up to one tick ahead of the rendered ship.
+	# Dense for the first 20° (the stretch seen near the prograde marker),
+	# then every 2°. Start a little ahead: the ship itself is drawn by the 3D
+	# view, and the orbit's state is up to one tick ahead of the rendered ship.
+	var angles := PackedFloat32Array()
+	for i in range(1, NEAR_PATH_SAMPLES + 1):
+		angles.append(deg_to_rad(NEAR_PATH_DEG) * i / NEAR_PATH_SAMPLES)
 	for i in range(1, PATH_SAMPLES + 1):
-		var p := orbit.point_at_angle(TAU * i / PATH_SAMPLES)
+		var a := TAU * i / PATH_SAMPLES
+		if a > deg_to_rad(NEAR_PATH_DEG):
+			angles.append(a)
+	for angle in angles:
+		var p := orbit.point_at_angle(angle)
 		if p == null or p.length() > body.radius_m * 12.0:
 			break
 		path.append(p.minus(origin_pci).to_vector3())

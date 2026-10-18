@@ -88,6 +88,11 @@ func time_to_true_anomaly(nu: float) -> float:
 	return dm / n
 
 
+## Seconds until the orbit reaches the point `angle` radians ahead (bound only).
+func time_to_angle(angle: float) -> float:
+	return time_to_true_anomaly(fposmod(true_anomaly + angle, TAU))
+
+
 func time_to_periapsis() -> float:
 	return time_to_true_anomaly(0.0)
 

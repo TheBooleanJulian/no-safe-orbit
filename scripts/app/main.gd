@@ -9,17 +9,20 @@ const TARGET_ID := &"target_01"
 const EARTH: OrbitalBody = preload("res://data/bodies/earth.tres")
 const SHIPYARD_SCENE := "res://scenes/shipyard/shipyard.tscn"
 const SHIP_VIEW_SCENE: PackedScene = preload("res://scenes/ships/ship_view.tscn")
-## Scenario: circular equatorial orbit at ISS-like altitude, on the day side.
+## Scenario: prograde equatorial orbit at ISS-like altitude, on the day side.
 const START_ALTITUDE_M := 400_000.0
-## Direction towards the sun (PCI axes). Planet is −Y from the start point,
-## prograde is −Z, so this puts the start ~20 minutes before sunset.
-const SUN_DIRECTION := Vector3(-0.5, 0.75, 0.2)
+## Real sky date (UTC): sets the Sun, the stars' orientation and Earth's spin.
+const SCENARIO_EPOCH_UTC := "2026-10-19T12:00:00"
+## Sun's in-plane angle behind the start zenith: ~24 minutes before sunset.
+const SUN_ANGLE_FROM_UP_DEG := 15.0
+const SUN_ENERGY := 1.4
 
 @onready var camera: ChaseCamera = $ChaseCamera
 @onready var hud: Hud = $Hud
 @onready var dust: DustField = $DustField
 @onready var sky: PlanetSky = $WorldEnvironment
 @onready var sun: DirectionalLight3D = $Sun
+@onready var stars: Starfield = $Starfield
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 
@@ -28,6 +31,7 @@ const SUN_DIRECTION := Vector3(-0.5, 0.75, 0.2)
 static var launch_blueprint: ShipBlueprint
 
 var world: WorldSimulation
+var celestial: CelestialFrame
 var player_input := PlayerInput.new()
 var _views: Dictionary = {}  # StringName -> ShipView
 ## Compiled designs: {blueprint, grid, stats, config} per ship id.
@@ -35,7 +39,9 @@ var _designs: Dictionary = {}
 
 
 func _ready() -> void:
-	sun.look_at(-SUN_DIRECTION.normalized(), Vector3.UP)
+	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
+	stars.build(celestial)
+	hud.celestial = celestial
 	sky.configure(EARTH)
 	_start_scenario()
 
@@ -151,8 +157,18 @@ func _process(delta: float) -> void:
 
 	camera.follow(_views[PLAYER_ID], delta)
 	dust.update_origin(world.continuous_position(render_origin))
-	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin))
-	sky.update_view(planet_center.to_vector3(), camera)
+	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin)).to_vector3()
+	_update_sun(player)
+	sky.update_view(planet_center, camera, celestial, world.sim_time)
+	stars.update_view(camera, planet_center, EARTH)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	hud.update_display(world, PLAYER_ID, TARGET_ID, alpha, render_origin, camera, player_input)
+
+
+## Real Sun direction for the scenario date; dark while the player is in
+## Earth's shadow (ships and the planet's night side agree).
+func _update_sun(player: ShipState) -> void:
+	var dir := celestial.sun_direction_pci(world.sim_time)
+	sun.look_at(-dir, Vector3.RIGHT if absf(dir.y) > 0.99 else Vector3.UP)
+	sun.light_energy = SUN_ENERGY * CelestialFrame.sunlight_fraction(world.pci_position(player.position), dir, EARTH.radius_m)
