@@ -60,6 +60,10 @@ func _key(keycode: Key, ctrl: bool = false) -> void:
 
 func _run() -> void:
 	print("== smoke_shipyard")
+	# A throwaway profile: never touch the player's real save.
+	PlayerProfile.path = "user://smoke_profile.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
+	Main.profile = null
 	root.size = Vector2i(1600, 900)
 	Main.launch_blueprint = null
 	var yard: Shipyard = (load("res://scenes/shipyard/shipyard.tscn") as PackedScene).instantiate()
@@ -137,4 +141,5 @@ func _run() -> void:
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	print("smoke_shipyard: %d failure(s)" % _failures.size())
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
 	quit(1 if not _failures.is_empty() else 0)

@@ -4,6 +4,35 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-19 — Persistent rounds, hit cam, Milestone 4 + loot
+
+### Added
+- Rounds never expire: far from the fight they coast on exact two-body
+  orbits (`OrbitElements.propagate`) and come back; HUD counts rounds near /
+  in far orbit and warns of incoming rounds; a ship can be hit by its own
+  returning rounds.
+- Recoil and impact physics: firing pushes and spins the firing ship; hits
+  push and spin the target; overpenetrating rounds fly on, slower.
+- Hit cam: X-ray replay of your latest most-severe hit and the modules it
+  damaged.
+- Milestone 4 — persistence and recovery: player profile and hangar vessel
+  saved as versioned JSON; damage persists between sorties; salvage of
+  disabled enemies (G); spare parts; shipyard HANGAR & SERVICE panel with
+  priority repairs; paid refits at launch; write-offs for rarer parts lost in
+  flight or with the ship; workshop field repairs (C).
+- Loot with cascading weighted rarity (Common → Legendary, 30/30/25/20 %
+  climb), cascade-down past empty tiers, hard pity (Rare+ / 10, Legendary /
+  80), published rates; 14 rarer parts: equipment (railgun, light autocannon,
+  torch drive, high-Isp engine, heavy RCS, compact and Mk II reactors,
+  heat-pipe radiator, armoured tank), hull blueprints (armoured fuselage and
+  nose, monocoque fuselage) and room blueprints (workshop, dense magazine).
+- Validator: `blueprint_locked`, `part_not_owned`, `mixed_cannon_types`.
+- `smoke_campaign.gd` (M4 exit test); `test_rounds.gd`, `test_progression.gd`.
+
+### Changed
+- B docks the ship (its damage is kept); Backspace and quitting dock first.
+- Rarity colours in the shipyard palette; owned counts and locked blueprints.
+
 ## [0.4.0] — 2026-10-19 — Real sky, known-issue fixes, Milestone 3
 
 ### Added

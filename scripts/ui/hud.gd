@@ -27,6 +27,10 @@ var celestial: CelestialFrame
 
 ## Main sets this when the target is shooting back (T).
 var target_hostile: bool = false
+## Persistent player state, for spare parts (set by Main).
+var profile: PlayerProfile
+## Salvage results panel (created in _ready).
+var loot: LootPanel
 
 var _last_hit_time := -INF
 var _hits_scored := 0
@@ -37,6 +41,22 @@ var _outgoing: DamageReport
 var _incoming: DamageReport
 var _incoming_time := -INF
 var _hits_taken := 0
+var _notice := ""
+var _notice_time := -INF
+const NOTICE_S := 6.0
+
+
+func _ready() -> void:
+	loot = LootPanel.new()
+	loot.name = "Loot"
+	$Root.add_child(loot)
+	loot.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 70)
+
+
+## A one-line message on the flight panel for a few seconds.
+func notice(text: String, sim_time: float) -> void:
+	_notice = text
+	_notice_time = sim_time
 
 
 func reset() -> void:
@@ -132,12 +152,28 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 			"  SHORT %.0f" % sys.power_unmet_kw if sys.power_unmet_kw > 0.0 else ""],
 		"HEAT       %.0f K  %s" % [sys.temperature_k, ["reactor normal", "REACTOR THROTTLED", "REACTOR SCRAM"][sys.reactor_state]],
 		"SYSTEMS    %s" % sys.status_line(),
+		"DMG CTRL   %s" % _repair_text(sys),
 	]
+	if profile != null:
+		lines.append("SPARES     %d parts" % profile.spare_parts)
+	if _notice != "" and sim_time - _notice_time < NOTICE_S:
+		lines.append("» " + _notice.left(60))
 	if _incoming != null and sim_time - _incoming_time < 8.0:
 		lines.append("HIT TAKEN  %s  (+%.0f s)" % [_incoming.headline(), sim_time - _incoming_time])
 		for line in _incoming.lines.slice(maxi(_incoming.lines.size() - 2, 1)):
 			lines.append("  " + line.left(58))
 	return lines
+
+
+func _repair_text(sys: ShipSystems) -> String:
+	if sys.repair_task != null:
+		var t := sys.repair_task
+		return "patching %s  %d%%  (%.0f s)" % [t.equipment_id, roundi(t.progress() * 100.0), t.remaining_s]
+	var why := sys.field_repair_block_reason()
+	if why == "":
+		var e := sys.field_repair_target()
+		return "[C] patch %s %s (%d%%)" % [e.def.display_name, e.id, roundi(100.0 * e.hp / e.max_hp)]
+	return why
 
 
 func _propellant_text(ship: ShipState) -> String:
@@ -227,6 +263,10 @@ func _update_target_panel(world: WorldSimulation, player: ShipState, target: Shi
 	if target.systems != null:
 		lines.append("SYSTEMS    %s" % target.systems.status_line())
 		lines.append("REACTOR    %s  %.0f K" % [["normal", "THROTTLED", "SCRAM"][target.systems.reactor_state], target.systems.temperature_k])
+		if target.systems.is_disabled():
+			var why := Salvage.block_reason(player, target)
+			lines.append("DISABLED   %s  —  %d%% intact" % [target.systems.disabled_reason().to_upper(), roundi(target.systems.intact_fraction() * 100.0)])
+			lines.append("SALVAGE    %s" % ("READY — press [G]" if why == "" else why))
 	if _outgoing != null:
 		lines.append("LAST HIT   %s" % _outgoing.headline())
 		for line in _outgoing.lines.slice(maxi(_outgoing.lines.size() - 3, 1)):

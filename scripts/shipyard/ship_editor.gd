@@ -15,6 +15,8 @@ var grid: ShipGrid
 var stats: ShipStats
 var report: ShipValidator.Report
 var revision: int = 0
+## When set, validation also checks the parts are owned / unlocked.
+var profile: PlayerProfile
 
 var _undo: Array[Dictionary] = []
 var _redo: Array[Dictionary] = []
@@ -223,7 +225,7 @@ func preview_new_errors(edit: Callable) -> Array[ShipValidator.Issue]:
 	for issue in report.errors():
 		before[issue.message] = true
 	var out: Array[ShipValidator.Issue] = []
-	for issue in ShipValidator.validate(scratch, catalog).errors():
+	for issue in _validate(scratch).errors():
 		if not before.has(issue.message):
 			out.append(issue)
 	return out
@@ -278,6 +280,18 @@ func _restore(d: Dictionary) -> void:
 func _refresh() -> void:
 	grid = ShipGrid.build(blueprint, catalog)
 	stats = ShipStats.compute(blueprint, grid)
-	report = ShipValidator.validate(blueprint, catalog, grid, stats)
+	report = _validate(blueprint, grid, stats)
 	revision += 1
 	changed.emit()
+
+
+func _validate(bp: ShipBlueprint, p_grid: ShipGrid = null, p_stats: ShipStats = null) -> ShipValidator.Report:
+	var r := ShipValidator.validate(bp, catalog, p_grid, p_stats)
+	if profile != null:
+		profile.check_design(bp, catalog, r)
+	return r
+
+
+## Re-validate after the profile changed (parts found, units written off).
+func revalidate() -> void:
+	_refresh()

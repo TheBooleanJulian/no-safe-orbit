@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"fusion_reactor_mk2"
+display_name = "Fusion reactor Mk II"
+kind = 0
+mount = 0
+footprint_cells = Vector2i(2, 2)
+allowed_room_roles = Array[StringName]([&"engineering"])
+allowed_faces = Array[StringName]([])
+mass_kg = 26000.0
+power_kw = 4500.0
+heat_kw = 1150.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+hit_points = 80.0
+shield_mm = 45.0
+color = Color(1.0, 0.55, 0.15, 1)
+rarity = 2
+drop_weight = 8.0

@@ -35,6 +35,10 @@ func _run_until_sim_time(main: Main, seconds: float) -> void:
 
 func _run() -> void:
 	print("== smoke_main")
+	# A throwaway profile: never touch the player's real save.
+	PlayerProfile.path = "user://smoke_profile.json"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
+	Main.profile = null
 	var main: Main = (load("res://scenes/main/main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -138,6 +142,7 @@ func _run() -> void:
 		"hostile target hits the player and the HUD reports it (after %.1f s)" % (main.world.sim_time - t0))
 
 	print("smoke: %d failure(s)" % _failures.size())
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
 	quit(1 if not _failures.is_empty() else 0)
 
 

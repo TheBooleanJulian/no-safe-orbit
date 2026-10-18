@@ -81,6 +81,13 @@ func add_ship(state: ShipState) -> void:
 	_ship_order.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 
 
+## Take a ship out of the simulation (salvaged wrecks). Its rounds fly on.
+func remove_ship(id: StringName) -> void:
+	_ships.erase(id)
+	_inputs.erase(id)
+	_ship_order.erase(id)
+
+
 func has_ship(id: StringName) -> bool:
 	return _ships.has(id)
 
