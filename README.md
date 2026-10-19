@@ -33,16 +33,17 @@ godot --path .
 | Action | Keyboard / mouse | Gamepad |
 |---|---|---|
 | Main engine / reverse thrusters | W / S | left stick up / down |
-| Strafe left / right | A / D | left stick left / right |
-| Thrust up / down | Space or R / Ctrl or F | RT / LT |
+| Turn left / right (yaw; strafe while the docking camera is up) | A / D | left stick left / right |
+| Thrust up / down | R / F | RT / LT |
 | Pitch up / down | ↑ / ↓ | right stick down / up |
 | Yaw left / right | ← / → | right stick left / right |
 | Roll left / right | Q / E | LB / RB |
-| Mouse virtual stick | click to capture, Esc to release | — |
+| Aim the turrets (aim cursor) | mouse — click to capture, Esc to release | screen centre |
+| Orbit the camera around the ship / put it back behind | hold right mouse and move / right click | — |
 | Toggle flight assist | Z | Y |
 | Velocity hold: orbit ↔ match target | X | X |
-| Fire cannon | Left mouse (once captured) or Enter | A |
-| Zoom for gunnery (hold) | Shift | right stick click |
+| Fire (each gun fires once it is on the aim) | Left mouse (once captured) or Enter | A |
+| Zoom for gunnery (toggle; centres on the aim, the mouse turns the view) | Shift | right stick click |
 | Orbit details / details & combat log / help panels | O / J / H | — (use Tab) |
 | Target hostile on/off | T | B |
 | Salvage a disabled target / close the loot panel | G | D-pad up |

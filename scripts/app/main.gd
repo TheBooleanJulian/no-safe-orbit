@@ -64,6 +64,8 @@ const ARRIVAL_SPEED_MPS := 150.0
 const ENGAGE_STANDOFF_M := 2500.0
 ## A hostile contact holds fire this long after the player first detects it.
 const ENGAGE_GRACE_S := 5.0
+## Aim point distance without a contact (m).
+const DEFAULT_AIM_RANGE_M := 2000.0
 ## What the player's sensors know about the target, and the target's about the player.
 var track := SensorTrack.new()
 var enemy_track := SensorTrack.new()
@@ -275,11 +277,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.WEP)
 		return
 	elif event.is_action_pressed("toggle_target_ai"):
-		target_hostile = not target_hostile
-		hud.target_hostile = target_hostile
-		GameLog.info("main", "Target %s" % ("HOSTILE — guns free" if target_hostile else "passive"))
-		if not target_hostile:
-			world.set_input(TARGET_ID, ShipControlInput.neutral())
+		set_target_hostile(not target_hostile)
 		return
 	elif event.is_action_pressed("tactical_overview"):
 		hud.overview.toggle()
@@ -303,6 +301,70 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		return
 	player_input.handle_event(event)
+
+
+func set_target_hostile(on: bool, why: String = "") -> void:
+	target_hostile = on
+	hud.target_hostile = on
+	GameLog.info("main", "Target %s%s" % ["HOSTILE — guns free" if on else "passive", " (%s)" % why if why != "" else ""])
+	if why != "":
+		hud.notice("%s turns HOSTILE — %s" % [world.get_ship(TARGET_ID).display_name, why], world.sim_time)
+		combat_log.record(world.sim_time, "contact", "%s turned hostile: %s" % [world.get_ship(TARGET_ID).display_name, why])
+	if not on:
+		world.set_input(TARGET_ID, ShipControlInput.neutral())
+
+
+## Turrets train on the point under the aim cursor, at the target's range
+## (render space is centred on the player, so it is already an offset).
+func _aim(input: ShipControlInput, player: ShipState, target: ShipState) -> void:
+	var screen := get_viewport().get_visible_rect().size * 0.5 + player_input.aim_offset
+	var origin := camera.project_ray_origin(screen)
+	var dir := camera.project_ray_normal(screen)
+	var range_m := DEFAULT_AIM_RANGE_M
+	if target.is_active() and track.detected:
+		var pos := target.position if track.in_contact else track.estimated_position(player, world.sim_time)
+		range_m = clampf((pos - player.position - origin).length(), 200.0, 30_000.0)
+	player_input.aim_range_m = range_m
+	input.has_aim = true
+	input.aim_offset = origin + dir * range_m
+
+
+## Zooming in: swing the camera to look at the aim point and put the cursor
+## in the middle, so the zoomed view is centred on what was being aimed at.
+func _center_view_on_aim(player: ShipState) -> void:
+	var screen := get_viewport().get_visible_rect().size * 0.5 + player_input.aim_offset
+	var aim := camera.project_ray_origin(screen) + camera.project_ray_normal(screen) * player_input.aim_range_m
+	var d := (player.orientation.inverse() * aim).normalized()
+	player_input.camera_orbit = Vector2(atan2(-d.x, -d.z), clampf(asin(clampf(d.y, -1.0, 1.0)), -PlayerInput.ORBIT_PITCH_LIMIT, PlayerInput.ORBIT_PITCH_LIMIT))
+	player_input.aim_offset = Vector2.ZERO
+
+
+## Put the aim cursor over a point (offset from the player, world axes).
+func aim_cursor_at(offset: Vector3) -> void:
+	if player_input.zoomed:
+		# Zoomed the view itself turns: aim the camera's centre at it.
+		var d := (world.get_ship(PLAYER_ID).orientation.inverse() * offset).normalized()
+		player_input.camera_orbit = Vector2(atan2(-d.x, -d.z), asin(clampf(d.y, -1.0, 1.0)))
+		player_input.aim_offset = Vector2.ZERO
+		return
+	if camera.is_position_behind(offset):
+		return
+	player_input.aim_offset = camera.unproject_position(offset) - get_viewport().get_visible_rect().size * 0.5
+
+
+## Cursor on the fire-control lead point for the target (scripted aim for
+## the smoke tests and screen captures).
+func aim_cursor_at_lead() -> void:
+	var player := world.get_ship(PLAYER_ID)
+	var target := world.get_ship(TARGET_ID)
+	if player.config.cannon == null or not target.is_active():
+		return
+	var muzzle := player.position + player.orientation * player.config.primary_muzzle()
+	var rel := target.position + target.orientation * target.config.hit_box_center - muzzle
+	var rel_v := target.velocity - player.velocity
+	var t := FireControl.intercept_time(rel, rel_v, player.config.cannon.muzzle_velocity_mps)
+	if t > 0.0:
+		aim_cursor_at(muzzle - player.position + FireControl.lead_point(rel, rel_v, t))
 
 
 ## Leave flight for the shipyard (dock), taking the design being flown.
@@ -467,6 +529,12 @@ func _update_tracks(player: ShipState, target: ShipState, delta: float) -> void:
 		var line := "CONTACT — %s detected at %.1f km" % [target.display_name, player.position.distance_to(target.position) / 1000.0]
 		hud.notice(line, world.sim_time)
 		combat_log.record(world.sim_time, "sensors", line)
+	if track.just_scanned and target.systems != null:
+		var est := Salvage.scan_estimate(target.systems)
+		var line := "SCAN COMPLETE — %s: ~%d spare parts, ~%d crates aboard · bounty ~%d cr" % [target.display_name,
+			roundi(est.parts * track.scan_error), roundi(est.crates * track.scan_error), roundi(est.bounty * track.scan_error)]
+		hud.notice(line, world.sim_time)
+		combat_log.record(world.sim_time, "sensors", line)
 	enemy_track.update(target, player, world.sim_time, dt)
 
 
@@ -574,7 +642,10 @@ func _process(delta: float) -> void:
 	var player := world.get_ship(PLAYER_ID)
 	var target := world.get_ship(TARGET_ID)
 	var target_id := TARGET_ID if target.is_active() else &""
-	world.set_input(PLAYER_ID, player_input.build_input(delta, target_id))
+	player_input.aim_limit = get_viewport().get_visible_rect().size * 0.5 - Vector2(24, 24)
+	var command := player_input.build_input(delta, target_id, hud.docking_cam.visible)
+	_aim(command, player, target)
+	world.set_input(PLAYER_ID, command)
 	_update_tracks(player, target, delta)
 	var engaging := target_hostile and target.is_active() and track.detected \
 		and world.sim_time - track.detected_time >= ENGAGE_GRACE_S and enemy_track.in_contact
@@ -615,6 +686,9 @@ func _process(delta: float) -> void:
 	var hits := world.take_hit_events()
 	for ev in hits:
 		combat_log.note_hit(ev, PLAYER_ID, world.sim_time, world)
+		# A passive contact fired upon by us (or our craft) fights back.
+		if ev.target_id == TARGET_ID and not target_hostile and (ev.shooter_id == PLAYER_ID or player_wing.by_id(ev.shooter_id) != null):
+			set_target_hostile(true, "fired upon")
 	for id in world.ship_ids():
 		var s := world.get_ship(id).systems
 		if s == null:
@@ -655,7 +729,12 @@ func _process(delta: float) -> void:
 		view.visible = ship.is_active()
 		view.sync_from(ship, alpha, render_origin)
 
-	camera.zoomed = Input.is_action_pressed("zoom_aim") and not hud.overview.visible
+	if player_input.zoom_changed:
+		player_input.zoom_changed = false
+		if player_input.zoomed:
+			_center_view_on_aim(player)
+	camera.zoomed = player_input.zoomed and not hud.overview.visible
+	camera.orbit = player_input.camera_orbit
 	camera.follow(_views[PLAYER_ID], delta)
 	_update_docking_cam(player, target, alpha, render_origin)
 	var link := world.link_for(PLAYER_ID)

@@ -24,8 +24,9 @@ extends RefCounted
 ## - Crew (CrewRoster): people in a room that vents are killed or wounded.
 ##   No fit command crew on a pressurised bridge: the ship AI flies it, with
 ##   limited mobility (thrust and turn rates × SHIP_AI_FACTOR, assist always
-##   on). No fit weapons crew able to reach a magazine halves the guns' rate
-##   of fire (autoloaders only).
+##   on); it keeps the guns working at half the rate of fire and with extra
+##   spread. No fit weapons crew able to reach a magazine halves the guns'
+##   rate of fire (autoloaders only).
 ## - Power distribution (pips, 6 in total, 0–4 per channel, 2 each to start):
 ##   SYS = attitude control (RCS torque, turn rates) and repair speed,
 ##   ENG = translation thrust, WEP = rate of fire. A channel's factor is
@@ -81,6 +82,10 @@ const ROLE_STATIONS := {
 const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
 const SHIP_AI_FACTOR := 0.5
+## The ship AI still lays the guns, at this fraction of the rate of fire and
+## with this much extra spread (degrees, standard deviation).
+const SHIP_AI_GUN_RATE_FACTOR := 0.5
+const SHIP_AI_DISPERSION_DEG := 0.4
 const REACTOR_BLAST_RADIUS_M := 15.0
 ## Structure points / system hit points destroyed at the blast centre.
 const REACTOR_BLAST_STRUCTURE := 150.0
@@ -629,6 +634,11 @@ func effective_config() -> ShipConfig:
 		cfg.thrust_lateral_n *= SHIP_AI_FACTOR
 		cfg.thrust_vertical_n *= SHIP_AI_FACTOR
 		cfg.thrust_torque_body *= SHIP_AI_FACTOR
+		if cfg.cannon != null:
+			var laid: KineticCannonConfig = cfg.cannon.duplicate()
+			laid.rate_of_fire_rpm *= SHIP_AI_GUN_RATE_FACTOR
+			cfg.cannon = laid
+			cfg.cannon_extra_dispersion_rad += deg_to_rad(SHIP_AI_DISPERSION_DEG)
 	if cfg.cannon != null and not has_gun_crew():
 		var gun: KineticCannonConfig = cfg.cannon.duplicate()
 		gun.rate_of_fire_rpm *= NO_GUN_CREW_RATE_FACTOR

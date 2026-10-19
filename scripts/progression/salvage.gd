@@ -42,5 +42,11 @@ static func bounty_for(wreck: ShipSystems) -> int:
 	return roundi(BOUNTY_BASE + BOUNTY_INTACT * wreck.intact_fraction()) * (2 if wreck.captured else 1)
 
 
+## What a completed scan reports (before its error): spare parts and crates
+## the wreck would yield now, and the bounty on it.
+static func scan_estimate(wreck: ShipSystems) -> Dictionary:
+	return {"parts": spare_parts_for(wreck), "crates": pulls_for(wreck), "bounty": bounty_for(wreck)}
+
+
 static func pulls_for(wreck: ShipSystems) -> int:
 	return clampi(1 + floori(4.0 * wreck.intact_fraction()), 1, 5) + (CAPTURE_BONUS_PULLS if wreck.captured else 0)

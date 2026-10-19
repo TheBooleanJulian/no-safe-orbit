@@ -655,7 +655,9 @@ func _refresh_hangar() -> void:
 		lines.append(CyberTheme.tint("✔ Vessel in full repair", CyberTheme.CYAN))
 	else:
 		lines.append("DAMAGE  %d jobs · %d parts for everything" % [jobs.size(), ServiceYard.total_cost(jobs)])
-		for j in jobs.slice(0, 5):
+		# Lost craft first: they ground the wing until replaced.
+		var listed: Array = jobs.filter(func(j: ServiceYard.Job) -> bool: return j.label.begins_with("Replace lost")) 			+ jobs.filter(func(j: ServiceYard.Job) -> bool: return not j.label.begins_with("Replace lost"))
+		for j in listed.slice(0, 5):
 			var blocked := "" if ServiceYard.available(j, v, profile) else "  [color=#ff7766](no unit)[/color]"
 			lines.append("  • %s — %d%s" % [j.label, j.cost, blocked])
 		if jobs.size() > 5:

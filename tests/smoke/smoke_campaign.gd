@@ -69,6 +69,7 @@ func _run() -> void:
 		if tof > 0.0:
 			player.orientation = Quaternion(Vector3.FORWARD, FireControl.lead_point(aim, target.velocity - player.velocity, tof).normalized())
 			player.angular_velocity = Vector3.ZERO
+		main.aim_cursor_at_lead()
 		await process_frame
 	Input.action_release("fire")
 	_check(target.hits_taken > 0, "we hit the target (%d hits)" % target.hits_taken)

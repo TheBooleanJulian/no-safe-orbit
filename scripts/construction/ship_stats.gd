@@ -52,6 +52,7 @@ var hull_bounds_m: AABB = AABB()
 ## Every cannon mount: equipment ids and grid-metre positions (same order).
 var cannon_ids: PackedStringArray = PackedStringArray()
 var cannon_positions_m: PackedVector3Array = PackedVector3Array()
+var cannon_normals: PackedVector3Array = PackedVector3Array()
 var cannon_config: KineticCannonConfig
 
 
@@ -113,6 +114,7 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 			EquipmentDefinition.Kind.CANNON:
 				s.cannon_ids.append(bp.equipment[i].id)
 				s.cannon_positions_m.append(pos)
+				s.cannon_normals.append(Vector3(ShipGrid.FACE_NORMALS.get(bp.equipment[i].face, Vector3i(0, 0, -1))))
 				s.cannon_config = def.cannon
 			EquipmentDefinition.Kind.PROPELLANT_TANK:
 				s.propellant_capacity_kg += def.propellant_capacity_kg
@@ -201,6 +203,7 @@ func to_ship_config(display_name: String) -> ShipConfig:
 			muzzles.append(p - center_of_mass_m)
 		cfg.cannon_muzzles_body = muzzles
 		cfg.cannon_mount_ids = cannon_ids
+		cfg.cannon_mount_normals_body = cannon_normals
 	else:
 		cfg.cannon_muzzles_body = PackedVector3Array()
 	return cfg
