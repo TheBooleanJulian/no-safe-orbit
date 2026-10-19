@@ -11,6 +11,8 @@ extends RefCounted
 
 const MAX_RANGE_M := 500.0
 const MAX_RELATIVE_SPEED_MPS := 5.0
+## A ship taken by boarders hands over its stores: extra crates.
+const CAPTURE_BONUS_PULLS := 2
 
 
 ## Why `wreck` cannot be salvaged by `ship` right now ("" = it can).
@@ -33,4 +35,4 @@ static func spare_parts_for(wreck: ShipSystems) -> int:
 
 
 static func pulls_for(wreck: ShipSystems) -> int:
-	return clampi(1 + floori(4.0 * wreck.intact_fraction()), 1, 5)
+	return clampi(1 + floori(4.0 * wreck.intact_fraction()), 1, 5) + (CAPTURE_BONUS_PULLS if wreck.captured else 0)

@@ -1,0 +1,59 @@
+class_name GangwayView
+extends Node3D
+## Draws each active gangway as a tube from our collar towards the target
+## port: growing while it extends, full length once sealed. Reads simulation
+## state only.
+
+const RADIUS_M := 1.2
+const COLOR_EXTENDING := Color(0.96, 0.78, 0.26)
+const COLOR_SEALED := Color(0.75, 0.8, 0.86)
+
+var _tubes: Dictionary = {}  # DockingLink -> MeshInstance3D
+
+
+func sync(world: WorldSimulation, alpha: float, render_origin: Vector3) -> void:
+	var seen := {}
+	for link in world.links:
+		if not link.active():
+			continue
+		var a := world.get_ship(link.attacker_id)
+		var b := world.get_ship(link.target_id)
+		if a == null or b == null:
+			continue
+		seen[link] = true
+		var tube: MeshInstance3D = _tubes.get(link)
+		if tube == null:
+			tube = _make_tube()
+			add_child(tube)
+			_tubes[link] = tube
+		var pa := a.interpolated_position(alpha) + a.interpolated_orientation(alpha) * link.a_port.position_body - render_origin
+		var pb := b.interpolated_position(alpha) + b.interpolated_orientation(alpha) * link.b_port.position_body - render_origin
+		var reach := 1.0 if link.sealed() else clampf(link.progress_s / link.required_s, 0.05, 1.0)
+		var end := pa.lerp(pb, reach)
+		var length := maxf(pa.distance_to(end), 0.01)
+		var dir := (end - pa) / length
+		var up := Vector3.RIGHT if absf(dir.dot(Vector3.UP)) > 0.95 else Vector3.UP
+		# CylinderMesh runs along +Y: point Y along the gangway.
+		var x := up.cross(dir).normalized()
+		# Columns: X and Z across the tube, Y along it, stretched to length.
+		tube.transform = Transform3D(Basis(x, dir * length, x.cross(dir)), (pa + end) * 0.5)
+		(tube.material_override as StandardMaterial3D).albedo_color = COLOR_SEALED if link.sealed() else COLOR_EXTENDING
+	for link in _tubes.keys():
+		if not seen.has(link):
+			(_tubes[link] as Node).queue_free()
+			_tubes.erase(link)
+
+
+func _make_tube() -> MeshInstance3D:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = RADIUS_M
+	mesh.bottom_radius = RADIUS_M
+	mesh.height = 1.0
+	mesh.radial_segments = 12
+	var tube := MeshInstance3D.new()
+	tube.mesh = mesh
+	var mat := StandardMaterial3D.new()
+	mat.roughness = 0.6
+	mat.metallic = 0.3
+	tube.material_override = mat
+	return tube

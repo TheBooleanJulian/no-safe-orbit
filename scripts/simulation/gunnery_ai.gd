@@ -41,3 +41,22 @@ static func command(shooter: ShipState, target: ShipState) -> ShipControlInput:
 	var error_deg := rad_to_deg(acos(clampf(-d.z, -1.0, 1.0)))
 	input.fire = error_deg < FIRE_CONE_DEG and rel_pos.length() < MAX_RANGE_M
 	return input
+
+
+## A ship grappled by a gangway it didn't ask for thrusts straight away from
+## the other ship to tear free (it can if it has the thrust and a crew in
+## command; see DockingLink.MAX_HOLD_FORCE_N).
+static func break_contact(ship: ShipState, other: ShipState) -> ShipControlInput:
+	var away := ship.orientation.inverse() * (ship.position - other.position).normalized()
+	var input := ShipControlInput.create(away / maxf(absf(away.x), maxf(absf(away.y), absf(away.z))), Vector3.ZERO, true)
+	input.hold_translation = false
+	return input
+
+
+## Whether `ship` can still try to break contact.
+static func can_break_contact(ship: ShipState) -> bool:
+	var sys := ship.systems
+	if sys == null:
+		return true
+	return not sys.captured and sys.power_supply_kw > 0.0 and sys.has_command() \
+		and maxf(ship.config.thrust_lateral_n, ship.config.thrust_forward_n) > 0.0

@@ -4,6 +4,25 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-19 — Milestone 5: crew and boarding; real-season Earth
+
+### Added
+- Abstract crew: roles and stations per berth, routes through the access
+  graph (5 s per room, suits for vacuum), casualties when rooms vent,
+  command and gun-crew effects, crewed field repairs with travel time,
+  casualties saved with the vessel, recruits at the yard.
+- Docking collar (Frigate Mk I has one); docking tolerances; gangways that
+  mate to collars or cut into the hull; grapples that hold, and tear when a
+  target thrusts away; the target AI tries to break contact.
+- Boarding: muster, cross, fight room by room (Lanchester attrition, locked
+  doors to cut, defenders falling back to the bridge), capture, withdraw,
+  stranding; capture bonus on salvage. V / N, HUD lines, gangway tube.
+- `test_boarding.gd` (12), `smoke_boarding.gd`.
+
+### Changed
+- Earth texture: NASA Blue Marble NG October composite, 5400 × 2700.
+- Docking heals the wounded; the stored condition can include crew losses.
+
 ## [0.5.0] — 2026-10-19 — Persistent rounds, hit cam, Milestone 4 + loot
 
 ### Added

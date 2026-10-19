@@ -18,12 +18,15 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   are tested for correctness, not for fun; expect tuning.
 - **Every enemy is the same Common-parts Kestrel**, and loot comes from crates
   rather than the wreck's own fitted parts.
-- **Field repairs ignore crew.** Any workshop patches any reachable system,
-  instantly staffed (crew roles and travel: Milestone 5).
+- **Crew are abstract.** Roles, stations, routes and casualties are
+  modelled; skills, morale, medical treatment in flight and individual
+  equipment are not. The wounded only recover at the yard.
+- **Only the player boards.** Enemies never board you yet, and the defender
+  policy is fixed (security falls back to the bridge, doors ahead are locked).
+- **Boarding balance is untested by play.** A full crew repels a full party;
+  whether that is fun needs a person to try it.
 - **One gun type per ship.** Mixed batteries (e.g. railgun + autocannon) are
   refused because one fire-control solution serves every mount.
-- **Crew consequences are not modelled.** Breached rooms and rooms cut off from
-  the bridge are reported, but nothing stops working because of them yet (M5).
 - **Ship geometry is placeholder boxes.** Wrecked modules turn dark and
   destroyed external systems disappear, but nothing breaks off.
 - **Earth's texture is 5400 × 2700 (~7.4 km per pixel)**, the October Blue

@@ -56,6 +56,10 @@ var _far_cursor: int = 0
 var _continuing: Array[ProjectileState] = []
 var _next_round_id: int = 1
 var _hit_events: Array[HitEvent] = []
+## Gangways and boardings (spec §9), in creation order.
+var links: Array[DockingLink] = []
+var boardings: Array[BoardingAction] = []
+var _link_events: PackedStringArray = PackedStringArray()
 
 
 func _init(p_fixed_dt: float = DEFAULT_FIXED_DT) -> void:
@@ -81,11 +85,70 @@ func add_ship(state: ShipState) -> void:
 	_ship_order.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 
 
-## Take a ship out of the simulation (salvaged wrecks). Its rounds fly on.
+## Take a ship out of the simulation (salvaged wrecks). Its rounds fly on;
+## its gangways are released.
 func remove_ship(id: StringName) -> void:
+	for link in links:
+		if link.attacker_id == id or link.target_id == id:
+			link.release()
+	boardings = boardings.filter(func(b: BoardingAction) -> bool: return b.link.attacker_id != id and b.link.target_id != id)
 	_ships.erase(id)
 	_inputs.erase(id)
 	_ship_order.erase(id)
+
+
+## The extending or sealed gangway involving ship `id`, or null.
+func link_for(id: StringName) -> DockingLink:
+	for link in links:
+		if link.active() and (link.attacker_id == id or link.target_id == id):
+			return link
+	return null
+
+
+## The boarding over `link`, or null.
+func boarding_for(link: DockingLink) -> BoardingAction:
+	for b in boardings:
+		if b.link == link:
+			return b
+	return null
+
+
+## Try to extend a gangway from `attacker_id` to `target_id`. Returns
+## Docking.best()'s result plus "link" when it started; check
+## result.assessment.problems otherwise ({} = no docking collar).
+func dock(attacker_id: StringName, target_id: StringName) -> Dictionary:
+	var a := get_ship(attacker_id)
+	var b := get_ship(target_id)
+	if a == null or b == null or link_for(attacker_id) != null:
+		return {}
+	var found := Docking.best(a, b)
+	if found.is_empty() or not found.assessment.ok:
+		return found
+	var link := DockingLink.create(a, found.a_port, b, found.b_port)
+	links.append(link)
+	found["link"] = link
+	_link_events.append("Gangway extending to %s (%s, %.0f s)" % [b.display_name,
+		"collar %s" % found.b_port.equipment_id if found.b_port.kind == &"collar" else "cutting the hull", link.required_s])
+	return found
+
+
+## Send a boarding party over a sealed gangway (null if it can't go).
+func start_boarding(link: DockingLink) -> BoardingAction:
+	if link == null or not link.sealed() or boarding_for(link) != null:
+		return null
+	var a := get_ship(link.attacker_id)
+	var b := get_ship(link.target_id)
+	var action := BoardingAction.start(link, a.systems, b.systems)
+	if action != null:
+		boardings.append(action)
+	return action
+
+
+## Gangway and boarding messages since the last call.
+func take_link_events() -> PackedStringArray:
+	var out := _link_events
+	_link_events = PackedStringArray()
+	return out
 
 
 func has_ship(id: StringName) -> bool:
@@ -141,6 +204,7 @@ func step() -> void:
 		_update_cannon(ship, input, spawned)
 		if ship.systems != null and ship.systems.tick(ship, fixed_dt):
 			ship.config = ship.systems.effective_config()
+	_step_links()
 	tick += 1
 	sim_time = tick * fixed_dt
 	_step_rounds()
@@ -385,6 +449,25 @@ func _apply_impulse(ship: ShipState, point_body: Vector3, impulse_world: Vector3
 	ship.velocity += impulse_world / ship.mass_kg()
 	var j_body := ship.orientation.inverse() * impulse_world
 	ship.angular_velocity += point_body.cross(j_body) / ship.inertia_kgm2()
+
+
+func _step_links() -> void:
+	for link in links:
+		var msg := link.step(get_ship(link.attacker_id), get_ship(link.target_id), fixed_dt)
+		if msg != "":
+			_link_events.append(msg)
+	for b in boardings:
+		if b.finished():
+			continue
+		var before := b.log_count
+		b.step(fixed_dt)
+		var fresh := mini(b.log_count - before, b.log.size())
+		if fresh > 0:
+			_link_events.append_array(b.log.slice(b.log.size() - fresh))
+		for id in [b.link.attacker_id, b.link.target_id]:
+			var ship := get_ship(id)
+			if ship != null and ship.systems != null:
+				ship.config = ship.systems.effective_config()
 
 
 ## Consequences of a damage report that live outside ShipSystems.
