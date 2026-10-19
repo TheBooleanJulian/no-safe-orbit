@@ -203,11 +203,14 @@ func test_locked_blueprints_and_unowned_parts_are_errors() -> void:
 	assert_true(not _report(bp, p).has_errors(), "owning four clears it")
 
 
-func test_mixed_gun_types_are_an_error() -> void:
+func test_mixed_gun_batteries_compile_per_mount() -> void:
 	var bp := _template()
 	bp.add_equipment(&"autocannon", Vector3i(4, 2, 4), &"dorsal")
 	var r := ShipValidator.validate(bp, _catalog())
-	assert_true(r.has_code(&"mixed_cannon_types"), "kinetic cannon + autocannon is an error:\n%s" % r.summary())
+	assert_true(not r.has_errors(), "a kinetic cannon and an autocannon can share a ship:\n%s" % r.summary())
+	var cfg := ShipStats.compute(bp, ShipGrid.build(bp, _catalog())).to_ship_config("mixed")
+	assert_true(cfg.mount_cannon(0).display_name != cfg.mount_cannon(1).display_name and cfg.mount_cannon(1).magazine_rounds == cfg.cannon.magazine_rounds,
+		"each mount keeps its own gun, fed from one magazine")
 
 
 func test_rare_parts_change_the_numbers() -> void:

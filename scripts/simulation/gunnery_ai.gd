@@ -41,11 +41,70 @@ static func command(shooter: ShipState, target: ShipState) -> ShipControlInput:
 		0.0)
 	input.has_aim = true
 	input.aim_offset = muzzle - shooter.position + FireControl.lead_point(rel_pos, rel_vel, t)
+	input.lead_target_id = target.id
 	if cfg.is_turret(0):
 		input.fire = rel_pos.length() < MAX_RANGE_M  # each turret fires when it is on
 		return input
 	var error_deg := rad_to_deg(acos(clampf(-d.z, -1.0, 1.0)))
 	input.fire = error_deg < FIRE_CONE_DEG and rel_pos.length() < MAX_RANGE_M
+	return input
+
+
+## Fighting range the enemy tries to keep (m), and when it gives up.
+const KEEP_MIN_M := 1200.0
+const KEEP_MAX_M := 3500.0
+const FLEE_INTACT_FRACTION := 0.35
+## Holds fire this close to the reactor's throttle temperature (K).
+const HOLD_FIRE_MARGIN_K := 15.0
+
+
+## A fighting ship's whole command: the gun laying above, plus keeping to a
+## fighting range, jinking across the line of fire so rounds aimed at where
+## it was miss, holding fire to cool down before the reactor throttles,
+## and running when beaten (`fleeing`).
+static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipControlInput:
+	if should_flee(shooter):
+		return flee(shooter, target)
+	var input := command(shooter, target)
+	if target == null or not target.is_active():
+		return input
+	var inv := shooter.orientation.inverse()
+	var rel := target.position - shooter.position
+	var r := rel.length()
+	var los := inv * (rel / maxf(r, 1.0))
+	var t := Vector3.ZERO
+	if r < KEEP_MIN_M:
+		t -= los * 0.7
+	elif r > KEEP_MAX_M:
+		t += los * 0.7
+	# Jink: a slow weave across the line of sight (phase from its name, so
+	# two enemies don't weave in step).
+	var side := los.cross(Vector3.UP)
+	side = side.normalized() if side.length() > 0.1 else Vector3.RIGHT
+	var up := side.cross(los).normalized()
+	var phase := float(hash(String(shooter.id)) % 100) * 0.1
+	t += side * sin(now * 0.7 + phase) * 0.8 + up * sin(now * 0.45 + phase * 2.0) * 0.5
+	input.translation = t.clamp(-Vector3.ONE, Vector3.ONE)
+	input.hold_translation = false
+	var sys := shooter.systems
+	if sys != null and sys.temperature_k >= ShipSystems.THROTTLE_TEMP_K - HOLD_FIRE_MARGIN_K:
+		input.fire = false
+	return input
+
+
+## Beaten but still able to run: most of its systems are gone.
+static func should_flee(ship: ShipState) -> bool:
+	var sys := ship.systems
+	return sys != null and not sys.is_disabled() and sys.intact_fraction() < FLEE_INTACT_FRACTION \
+		and ship.config.thrust_forward_n > 0.0 and ship.propellant_kg > 0.0
+
+
+## Nose away from the threat and burn.
+static func flee(ship: ShipState, threat: ShipState) -> ShipControlInput:
+	var input := ShipControlInput.create(Vector3(0, 0, -1), Vector3.ZERO, true)
+	input.hold_translation = false
+	if threat != null:
+		CraftAI.point(ship, ship.position - threat.position, input)
 	return input
 
 

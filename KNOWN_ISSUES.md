@@ -9,13 +9,13 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   automated tests, end-to-end smoke tests and reviewed renders — not by a person
   playing. Mouse and gamepad feel, readability of the orbit path and damage
   reports, and whether real-scale orbital drift matters in a fight are untested.
-- **The enemy ship is only a gunner.** With T it turns and shoots and (from
-  mission 3) launches a fighter; the ship itself doesn't manoeuvre, evade,
-  manage heat or retreat. It is passive by default.
-- **Craft are simple.** No formations, no landing-bay geometry or
-  collisions; a recovered craft is serviced for free (its ammunition and
-  propellant don't come from the carrier's stores). EW jamming exists only
-  as a hook (Milestone 7).
+- **The enemy is a simple fighter.** Once hostile it keeps 1.2–3.5 km,
+  jinks across your line of fire, holds fire when running hot, launches a
+  fighter (from mission 3) and runs when beaten (escaping beyond 40 km).
+  It does not use cover, flank, manage power pips or board you. It is
+  passive until you fire on it or press T.
+- **Craft are simple.** No formations; they collide with ships other than
+  their own carrier. EW jamming exists only as a hook (Milestone 7).
 - **The station is abstract.** The jump drive takes you there from anywhere
   out of combat; there is no station to fly to.
 - **Loot balance is untested by play.** Rates, pity, costs and salvage yields
@@ -27,8 +27,9 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   policy is fixed (security falls back to the bridge, doors ahead are locked).
 - **Boarding balance is untested by play.** A full crew repels a full party;
   whether that is fun needs a person to try it.
-- **One gun type per ship.** Mixed batteries (e.g. railgun + autocannon) are
-  refused because one fire-control solution serves every mount.
+- **Mixed batteries share one magazine** (rounds are counted, not
+  calibres). Without a lock, only the primary gun's lead is shown; with a
+  lock each other gun corrects its own lead.
 - **Ship geometry is boxes with procedural plating.** Wrecked modules turn
   dark and destroyed external systems disappear, but nothing breaks off.
 - **No point defence exists yet**; the weapon strip shows "PD none fitted"
@@ -58,6 +59,14 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   distribution; convert them by rebuilding from blocks (the template shows
   how).
 - **No audio.** (Milestone 8.)
+
+## Fixed (2026-10-20)
+
+Propellant and rounds are no longer refilled for free: they carry over and
+are bought back at launch · craft refuel and rearm from the carrier · the
+enemy manoeuvres, cools and runs · mixed gun batteries · cargo capacity ·
+B no longer docks from anywhere (jump drive, out of combat) · underside
+equipment placement · connector mismatches.
 
 ## Fixed (2026-10-19, third pass)
 
