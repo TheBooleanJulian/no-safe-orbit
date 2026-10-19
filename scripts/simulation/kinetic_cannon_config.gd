@@ -15,6 +15,11 @@ extends Resource
 ## Armour penetration (mm of hull armour) at an impact speed equal to the
 ## muzzle velocity. Scales with impact speed^1.4 (de Marre-style).
 @export var penetration_mm: float = 60.0
+## Turret training speed (°/s); 0 = a fixed gun firing along the nose.
+## Turrets only exist on ships built from a blueprint (mount faces known).
+@export var traverse_deg_s: float = 0.0
+## Round-to-round spread (standard deviation, degrees) of a turret.
+@export var dispersion_deg: float = 0.0
 
 const PENETRATION_SPEED_EXPONENT := 1.4
 

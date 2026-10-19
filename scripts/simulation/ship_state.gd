@@ -3,6 +3,22 @@ extends RefCounted
 ## Authoritative runtime state of one physical vessel. Rendering reads this;
 ## it never writes it. Positions are in the local engagement frame (metres).
 
+## What a gun mount is doing this tick (HUD reticles).
+enum Turret {
+	## On its aim and clear to fire.
+	READY,
+	## Training towards the aim point.
+	SLEWING,
+	## Its own hull is in the line of fire: it holds fire.
+	BLOCKED,
+	## The aim is outside its arc (below its face): it holds at the limit.
+	OUT_OF_ARC,
+	## Destroyed or unpowered.
+	OFFLINE,
+	## A gangway is attached: primary weapons are locked.
+	LOCKED,
+}
+
 enum Status {
 	ACTIVE,
 	## Crossed the body's entry interface; no longer simulated.
@@ -50,6 +66,12 @@ var systems: ShipSystems
 ## every mount; each mount has its own cooldown.
 var cannon_rounds: int = 0
 var cannon_cooldowns: PackedFloat32Array = PackedFloat32Array()
+## Each mount's barrel direction (body frame) and what it is doing.
+var turret_dirs: PackedVector3Array = PackedVector3Array()
+var turret_status: PackedInt32Array = PackedInt32Array()
+## Last blocked-by-own-hull check per mount: [direction checked, result].
+var _block_checked: PackedVector3Array = PackedVector3Array()
+var turret_blocked: PackedByteArray = PackedByteArray()
 var rounds_fired: int = 0
 ## Total recoil impulse from firing (N·s), for the HUD.
 var recoil_impulse: float = 0.0
@@ -79,8 +101,17 @@ static func create(
 	state.orientation = p_orientation.normalized()
 	if p_config.cannon != null:
 		state.cannon_rounds = p_config.cannon.magazine_rounds
-		state.cannon_cooldowns.resize(p_config.cannon_muzzles_body.size())
+		var n := p_config.cannon_muzzles_body.size()
+		state.cannon_cooldowns.resize(n)
 		state.cannon_cooldowns.fill(0.0)
+		state.turret_dirs.resize(n)
+		state.turret_dirs.fill(Vector3.FORWARD)
+		state.turret_status.resize(n)
+		state.turret_status.fill(Turret.READY)
+		state._block_checked.resize(n)
+		state._block_checked.fill(Vector3.ZERO)
+		state.turret_blocked.resize(n)
+		state.turret_blocked.fill(0)
 	if not p_config.unlimited_propellant:
 		state.propellant_kg = p_config.propellant_capacity_kg
 	state.snapshot_previous()
@@ -140,3 +171,12 @@ func interpolated_position(alpha: float) -> Vector3:
 
 func interpolated_orientation(alpha: float) -> Quaternion:
 	return prev_orientation.slerp(orientation, clampf(alpha, 0.0, 1.0))
+
+
+## Cached own-hull blocking for mount k: recomputed by `check` only when the
+## barrel has moved more than ~0.3° since the last check.
+func blocked_cached(k: int, dir: Vector3, check: Callable) -> bool:
+	if _block_checked[k] == Vector3.ZERO or _block_checked[k].dot(dir) < 0.99998:
+		_block_checked[k] = dir
+		turret_blocked[k] = 1 if check.call() else 0
+	return turret_blocked[k] == 1

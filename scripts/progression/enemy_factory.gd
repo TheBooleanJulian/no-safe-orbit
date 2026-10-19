@@ -7,7 +7,8 @@ extends RefCounted
 ##
 ## Chances per swap rise with the mission number m:
 ##   gun        autocannon from m ≥ 2, railgun from m ≥ 4   (p = 0.15·m, ≤ 0.6)
-##   hull       armoured fuselage sections from m ≥ 2        (p = 0.12·m, ≤ 0.5)
+##   armour     plates on exposed faces from m ≥ 2           (p = 0.06·m, ≤ 0.4 per face;
+##              80 mm instead of 40 from m ≥ 4, 1 in 3)
 ##   RCS        heavy RCS blocks from m ≥ 2                  (p = 0.1·m,  ≤ 0.5)
 ##   reactor    Mk II fusion reactor from m ≥ 3              (p = 0.08·m, ≤ 0.4)
 ## Mission 1 is always the plain template.
@@ -36,9 +37,14 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 				if mission >= 3 and rng.randf() < minf(0.08 * m, 0.4):
 					e.def_id = &"fusion_reactor_mk2"
 	if mission >= 2:
-		for mod in bp.modules:
-			if mod.def_id == &"fuselage_section" and rng.randf() < minf(0.12 * m, 0.5):
-				mod.def_id = &"armored_fuselage_section"
+		var grid := ShipGrid.build(bp, catalog)
+		var cells: Array = grid.module_at.keys()
+		cells.sort()
+		for cell: Vector3i in cells:
+			for face in grid.plateable_faces(cell):
+				if rng.randf() < minf(0.06 * m, 0.4):
+					var thick := mission >= 4 and rng.randf() < 1.0 / 3.0
+					bp.armor[ShipBlueprint.plate_key(cell, face)] = ShipBlueprint.PLATE_THICK_MM if thick else ShipBlueprint.PLATE_THIN_MM
 	if ShipValidator.validate(bp, catalog).has_errors():
 		var plain := template.duplicate_blueprint()
 		plain.name = bp.name

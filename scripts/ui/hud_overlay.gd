@@ -3,7 +3,7 @@ extends Control
 ## World-space markers drawn in screen space: heading reticle, orbital
 ## prograde / retrograde (velocity is NOT heading in space), projected orbit
 ## path with apsis and entry markers, target bracket with an edge arrow when
-## off-screen, the lead (fire-control) pip, and the mouse virtual stick.
+## off-screen, the lead (fire-control) pip, and the mouse aim cursor.
 
 const COLOR_HEADING := Color(0.0, 0.94, 1.0, 0.9)
 const COLOR_PROGRADE := Color(0.35, 1.0, 0.55, 0.95)
@@ -12,7 +12,7 @@ const COLOR_TARGET_RELATIVE := Color(1.0, 0.86, 0.2, 0.95)
 const COLOR_PATH := Color(0.35, 1.0, 0.55, 0.45)
 const COLOR_TARGET := Color(1.0, 0.17, 0.84, 0.95)
 const COLOR_LEAD := Color(1.0, 0.8, 0.35, 0.95)
-const COLOR_STICK := Color(0.0, 0.94, 1.0, 0.5)
+const COLOR_AIM := Color(0.0, 0.94, 1.0, 0.75)
 const MARKER_DISTANCE_M := 5000.0
 const EDGE_MARGIN := 48.0
 const MIN_PROGRADE_SPEED := 0.5
@@ -33,7 +33,10 @@ var target_estimated := false
 var has_lead := false
 var lead_render_pos := Vector3.ZERO
 var lead_label := ""
-var mouse_stick := Vector2.ZERO
+## Where the mouse aims (screen px); the turrets train on it.
+var aim_point := Vector2.ZERO
+## One per gun: {pos: Vector3 (render space), status: ShipState.Turret, label}.
+var gun_reticles: Array[Dictionary] = []
 ## Projected orbit, render space; occluded where the planet is in the way.
 var orbit_path := PackedVector3Array()
 ## Labelled points on the path: [{pos: Vector3, text: String, color: Color}].
@@ -50,12 +53,11 @@ func _draw() -> void:
 
 	_draw_orbit_path(font)
 
-	# Mouse virtual stick around screen centre.
-	draw_arc(center, 60.0, 0.0, TAU, 48, COLOR_STICK, 1.0)
-	if mouse_stick.length() > 0.01:
-		var tip := center + Vector2(mouse_stick.x, -mouse_stick.y) * 60.0
-		draw_line(center, tip, COLOR_STICK, 1.5)
-		draw_circle(tip, 3.0, COLOR_STICK)
+	# Aim cursor: an open ring with four ticks.
+	draw_arc(aim_point, 11.0, 0.0, TAU, 32, COLOR_AIM, 1.5)
+	for d in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		draw_line(aim_point + d * 15.0, aim_point + d * 22.0, COLOR_AIM, 1.5)
+	_draw_gun_reticles(font)
 
 	# Heading: where the nose points.
 	var heading_pt := ship_render_pos + ship_forward * MARKER_DISTANCE_M
@@ -118,6 +120,34 @@ func _draw() -> void:
 			# Below-left, clear of the target bracket and its range label.
 			var text_w := font.get_string_size(lead_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 			draw_string(font, lp + Vector2(-text_w - 12, 24), lead_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COLOR_LEAD)
+
+
+## Each gun's own reticle: a small ring where its barrel points. On target:
+## solid cyan; training: dim; blocked by the hull, out of arc, locked or
+## offline: grey with a slash (that gun holds fire).
+func _draw_gun_reticles(font: Font) -> void:
+	for r in gun_reticles:
+		var pos: Vector3 = r.pos
+		if camera.is_position_behind(pos):
+			continue
+		var p := camera.unproject_position(pos)
+		var status: int = r.status
+		var col := COLOR_AIM
+		var holding := false
+		match status:
+			ShipState.Turret.READY:
+				col = CyberTheme.CYAN
+			ShipState.Turret.SLEWING:
+				col = CyberTheme.CYAN * Color(1, 1, 1, 0.45)
+			_:
+				col = CyberTheme.TEXT_FAINT
+				holding = true
+		draw_arc(p, 6.0, 0.0, TAU, 20, col, 1.5)
+		if holding:
+			draw_line(p + Vector2(-5, 5), p + Vector2(5, -5), col, 1.5)
+		else:
+			draw_circle(p, 1.5, col)
+		draw_string(font, p + Vector2(7, -6), str(r.label), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
 
 
 func _draw_orbit_path(font: Font) -> void:

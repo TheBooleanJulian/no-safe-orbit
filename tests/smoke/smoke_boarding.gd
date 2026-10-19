@@ -104,17 +104,28 @@ func _run() -> void:
 	_check(boarding != null, "N sends the boarding party")
 	if boarding == null:
 		return _finish()
-	await _wait(main, 400.0, func() -> bool: return boarding.finished())
-	_check(boarding.phase == BoardingAction.Phase.CAPTURED and target.systems.captured,
-		"the boarders take the bridge (%s after %.0f s)" % [BoardingAction.PHASE_NAMES[boarding.phase], boarding.elapsed])
+	var profile := Main.get_profile()
+	var credits_before := profile.credits
+	var scrap := Salvage.scrap_value(target.systems)
+	await _wait(main, 400.0, func() -> bool: return target.systems.captured)
+	await process_frame
+	_check(target.systems.captured and boarding.prize, "the boarders take the bridge (after %.0f s)" % boarding.elapsed)
 	_check(main.hud.target_label.text.contains("CAPTURED"), "HUD reports the capture")
 
-	# The prize: salvage pays the capture bonus; the team comes home.
-	await _press("salvage")
-	var profile := Main.get_profile()
-	_check(main.hud.loot.visible and profile.missions_completed == 1, "G salvages the captured ship")
-	_check(boarding.team.all(func(m: CrewRoster.Member) -> bool: return m.state == CrewRoster.State.DEAD or (m.location >= 0 and not m.busy)),
-		"the boarding party is back aboard")
+	# The prize pays out at once: 80 % scrap and double bounty, its stores
+	# and crates into our hold, on the carousel; the team withdraws itself.
+	_check(main.hud.loot.visible and profile.missions_completed == 1, "the takeover opens the loot carousel and completes the mission")
+	_check(profile.credits >= credits_before + roundi(scrap * Salvage.TAKEOVER_SCRAP_RATE) * 0.9,
+		"80%% of the scrap value credited (%d → %d, scrap %d)" % [credits_before, profile.credits, scrap])
+	_check(int(profile.vessel.cargo.get("spare_parts", 0)) > 0, "its stores are in our hold (%s)" % profile.vessel.cargo_summary())
+	await _wait(main, 300.0, func() -> bool: return boarding.finished())
+	_check(boarding.phase == BoardingAction.Phase.RETURNED
+		and boarding.team.all(func(m: CrewRoster.Member) -> bool: return m.state == CrewRoster.State.DEAD or (m.location >= 0 and not m.busy)),
+		"the boarding party withdraws on its own and is back aboard (%s)" % BoardingAction.PHASE_NAMES[boarding.phase])
+	await process_frame
+	await process_frame
+	_check(main.world.get_ship(Main.TARGET_ID) != target and main.world.link_for(Main.PLAYER_ID) == null,
+		"the prize leaves and the next contact is on its way")
 	_finish()
 
 

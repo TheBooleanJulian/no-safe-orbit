@@ -46,7 +46,11 @@ var profile: PlayerProfile
 ## The player's sensor track of the target (set by Main every frame).
 var track: SensorTrack
 ## Salvage results panel (created in _ready).
-var loot: LootPanel
+var loot: LootCarousel
+## Jump drive while [B] is held (Main): {progress, left_s, waiting} or
+## {blocked}; {} when not charging.
+var jump_state: Dictionary = {}
+var _jump_flash: ColorRect
 ## Post-combat debrief, shown when the ship is lost (created in _ready).
 var debrief: DebriefPanel
 ## Always-visible module and damage map of your ship.
@@ -90,10 +94,16 @@ var _strip_w := 600.0
 func _ready() -> void:
 	$Root.theme = CyberTheme.build_theme()
 	_build_cards()
-	loot = LootPanel.new()
+	_jump_flash = ColorRect.new()
+	_jump_flash.name = "JumpFlash"
+	_jump_flash.color = Color(0.85, 0.97, 1.0, 0.0)
+	_jump_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$Root.add_child(_jump_flash)
+	_jump_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	loot = LootCarousel.new()
 	loot.name = "Loot"
 	$Root.add_child(loot)
-	loot.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 70)
+	loot.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 	debrief = DebriefPanel.new()
 	debrief.name = "Debrief"
 	$Root.add_child(debrief)
@@ -110,7 +120,8 @@ func _ready() -> void:
 	overview.name = "Overview"
 	$Root.add_child(overview)
 	hit_cam.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, CyberTheme.SPACE_XS + 2))
-	loot.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, CyberTheme.SPACE_M))
+	# The loot window is the one thing drawn over everything else.
+	$Root.move_child(loot, -1)
 	get_viewport().size_changed.connect(_layout)
 	_layout()
 
@@ -162,7 +173,7 @@ func _build_cards() -> void:
 	warning_label.add_theme_font_size_override("font_size", CyberTheme.SIZE_TITLE)
 	warning_label.remove_theme_color_override("font_shadow_color")
 	# Help: one line always, the full card with H.
-	help_label.text = "[H] help · [F1] keys · [Tab] ship · [O] orbit · [J] log · [Shift] zoom"
+	help_label.text = "[H] help · [F1] keys · [Tab] ship · [O] orbit · [J] log · [Shift] zoom · [RMB] look"
 	help_label.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
 	help_label.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
 	help_panel = PanelContainer.new()
@@ -181,15 +192,16 @@ func _build_cards() -> void:
 	$Root.add_child(help_panel)
 
 
-const HELP_TEXT := """FLIGHT     W/S main/reverse · A/D strafe · Space/R up · Ctrl/F down
-           arrows pitch & yaw · Q/E roll · mouse virtual stick (click; Esc releases)
+const HELP_TEXT := """FLIGHT     W/S main/reverse · A/D turn (strafe on the docking cam) · R/F up/down
+           arrows pitch & yaw · Q/E roll · right-drag orbits the camera (right click resets)
 ASSIST     Z on/off · X hold orbit ↔ match target (yellow markers = relative to target)
-GUNNERY    LMB / Enter fire · hold Shift to zoom · ◇ lead marker (needs a lock)
+GUNNERY    mouse aims the turrets (click captures; Esc releases) · LMB / Enter fire
+           Shift zoom on/off · ◇ lead marker (needs a lock)
 POWER      1 SYS · 2 ENG · 3 WEP · 4 balance
 SHIP       Tab damage control, crew, power, wing · C patch damage
-CONTACTS   T target hostile · G salvage · V gangway · N board · L / K launch / recall craft
+CONTACTS   T target hostile · G salvage beacon · V gangway · N board / withdraw · L / K launch / recall craft
 PANELS     O orbit · J details & combat log · H this help · F1 rebind
-MISSION    B dock at the station · Backspace restart / respawn"""
+MISSION    hold B 5 s: jump drive to Earth Shipyard (out of combat) · Backspace restart / respawn"""
 
 
 ## Puts a sans heading above `label` inside its parent container.
@@ -260,8 +272,8 @@ func _layout() -> void:
 	_center_bottom(ticker_label, strip_w, gutter + 64.0)
 	warning_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	warning_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	docking_cam.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, gutter + 96)
 	docking_cam.set_compact(compact)
+	docking_cam.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, gutter)
 	help_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 	overview.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	overview.offset_left = -minf(view.x * 0.42, 620.0)
@@ -295,6 +307,10 @@ func _reflow_for_drawer() -> void:
 	for c: Control in [_weapon_panel, ticker_label]:
 		c.offset_left = -w * 0.5 + shift
 		c.offset_right = w * 0.5 + shift
+	# The ticker sits just above the strip, however tall the strip is.
+	var above := _weapon_panel.size.y + CyberTheme.SPACE_L + CyberTheme.SPACE_S
+	ticker_label.offset_bottom = -above
+	ticker_label.offset_top = -above - 20.0
 
 
 ## The banner sits in the gap between the two cards; if that gap is too
@@ -402,7 +418,7 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 		overlay.ship_velocity = player.velocity - target.velocity
 	else:
 		overlay.ship_velocity = orbit.velocity.to_vector3() if orbit != null else player.velocity
-	overlay.mouse_stick = input.mouse_stick
+	overlay.aim_point = overlay.size * 0.5 + input.aim_offset
 	overlay.has_target = contact
 	overlay.has_lead = false
 	overlay.target_estimated = false
@@ -416,20 +432,28 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 		var lead := _lead_solution(player, target)
 		if not lead.is_empty() and (track == null or track.locked):
 			overlay.has_lead = true
-			overlay.lead_render_pos = overlay.ship_render_pos + (lead.direction as Vector3) * HudOverlay.MARKER_DISTANCE_M
+			overlay.lead_render_pos = overlay.ship_render_pos + (lead.offset as Vector3)
 			overlay.lead_label = "~%.2f s" % lead.time
+	_update_gun_reticles(player, alpha, render_origin, input)
+	# The jump: the view whitens over the last second and a half of the charge.
+	var flash := 0.0
+	if jump_state.has("progress") and (jump_state.waiting as PackedStringArray).is_empty():
+		flash = clampf((float(jump_state.progress) - 0.7) / 0.3, 0.0, 1.0)
+	_jump_flash.color.a = flash * flash * 0.9
 	_update_orbit_path(world, orbit, alpha, render_origin)
 	overlay.queue_redraw()
 
 	_update_radar(world, player, target if contact else null)
 	damage_map.systems = player.systems
-	damage_map.visible = not overview.visible
-	help_label.visible = not overview.visible
+	# The docking camera takes the damage map's corner while it is up.
+	damage_map.visible = not overview.visible and not docking_cam.visible
+	help_label.visible = not overview.visible and not docking_cam.visible
 	($Root/TargetPanel as Control).visible = not overview.visible
 	if overview.visible and not hit_cam.showing_boarding():
 		hit_cam.visible = false
 	_reflow_for_drawer()
 	if overview.visible:
+		overview.vessel = profile.vessel if profile != null else null
 		var link := world.link_for(player.id)
 		overview.update_view(player, target, world.boarding_for(link) if link != null else null, boarding_party_size, t,
 			player_wing, contact and (player_wing == null or player_wing.has_close_look(world, target)))
@@ -569,7 +593,27 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		out.append(_alert("danger", "PROPELLANT EXHAUSTED", "PROPELLANT EXHAUSTED — NO THRUST, NO RCS", "[B] dock to refuel"))
 	var incoming := incoming_round_time(world, player)
 	if incoming >= 0.0:
-		out.append(_alert("danger", "INCOMING %.1f s" % incoming, "INCOMING ROUND — IMPACT IN %.1f s" % incoming, "evade: [W][A][S][D]"))
+		out.append(_alert("danger", "INCOMING %.1f s" % incoming, "INCOMING ROUND — IMPACT IN %.1f s" % incoming, "evade: [W][S][A][D][R][F]"))
+	if jump_state.has("blocked"):
+		out.append(_alert("caution", "JUMP BLOCKED", "JUMP DRIVE BLOCKED — %s" % str(jump_state.blocked).to_upper(), "release [B]"))
+	elif jump_state.has("progress"):
+		var waiting: PackedStringArray = jump_state.waiting
+		var bars := roundi(float(jump_state.progress) * 10.0)
+		if waiting.is_empty():
+			out.append(_alert("caution", "JUMP %.1f s" % jump_state.left_s, "DIMENSIONAL JUMP DRIVE %s %.1f s TO EARTH SHIPYARD" % [
+				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s], "keep holding [B]"))
+		else:
+			out.append(_alert("caution", "JUMP HOLDING", "JUMP DRIVE %s HOLDING — %s BEFORE THE JUMP" % [
+				"▮".repeat(bars) + "▯".repeat(10 - bars), " · ".join(waiting).to_upper()], "keep holding [B]"))
+	var link := world.link_for(player.id)
+	var b := world.boarding_for(link) if link != null else null
+	if b != null and not b.finished() and not b.prize and b.phase == BoardingAction.Phase.ABOARD:
+		out.append(_alert("caution", "BOARDERS ACROSS", "BOARDING PARTY ON %s — %d/%d FIT" % [
+			world.get_ship(link.target_id).display_name.to_upper(), b.fit_team().size(), b.team.size()], "[N] withdraw"))
+	if profile != null and profile.vessel != null and player.systems != null:
+		var over := profile.vessel.cargo_volume_m3(ConstructionCatalog.default_catalog()) - player.systems.stats.cargo_m3
+		if over > 0.0:
+			out.append(_alert("caution", "HOLD +%.0f m³" % over, "CARGO HOLD OVER CAPACITY BY %.1f m³" % over, "[Tab] CARGO › vent excess"))
 	var sys := player.systems
 	if sys != null:
 		var reactor := ""
@@ -584,8 +628,10 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 			out.append(_alert("caution", "REACTOR THROTTLED", "REACTOR THROTTLED — OVERHEATING (%.0f K)" % sys.temperature_k, "ease off the engines · [Tab]", reactor))
 		elif sys.power_unmet_kw > 0.0:
 			out.append(_alert("caution", "POWER SHORT %.0f kW" % sys.power_unmet_kw, "POWER SHORT BY %.0f kW — LOW-PRIORITY SYSTEMS SHED" % sys.power_unmet_kw, "[Tab] power"))
+		if world.weapons_locked(player.id) and player.config.cannon != null:
+			out.append(_alert("caution", "GUNS LOCKED", "GANGWAY ATTACHED — PRIMARY WEAPONS LOCKED (CRAFT STILL FIGHT)", "[V] release gangway"))
 		if not sys.has_command():
-			out.append(_alert("caution", "SHIP AI IN CONTROL", "BRIDGE CREW LOST — SHIP AI FLYING: %d %% THRUST AND TURN RATE" % roundi(ShipSystems.SHIP_AI_FACTOR * 100.0),
+			out.append(_alert("caution", "SHIP AI IN CONTROL", "BRIDGE CREW LOST — SHIP AI FLYING: %d %% THRUST AND TURN RATE, GUNS AT HALF RATE" % roundi(ShipSystems.SHIP_AI_FACTOR * 100.0),
 				"[Tab] crew → cover command", sys.blueprint.rooms[sys.command_room()].id if sys.command_room() >= 0 else ""))
 		if not sys.has_gun_crew():
 			out.append(_alert("caution", "NO GUN CREW", "NO GUN CREW — AUTOLOADERS ONLY, HALF RATE OF FIRE", "[Tab] crew → cover weapons"))
@@ -680,15 +726,34 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 		elif target.systems.is_disabled():
 			var why := Salvage.block_reason(player, target)
 			lines.append("STATUS  %s DISABLED — %s · %d%% intact" % [CyberTheme.GLYPH_DESTROYED, target.systems.disabled_reason().to_upper(), roundi(target.systems.intact_fraction() * 100.0)])
-			lines.append("SALVAGE %s" % ("READY — press [G]" if why == "" else why))
+			if not target.systems.captured:
+				lines.append("BEACON  %s" % ("READY — press [G] · %d%% of scrap · or board it for %d%%" % [
+					roundi(Salvage.BEACON_SCRAP_RATE * 100.0), roundi(Salvage.TAKEOVER_SCRAP_RATE * 100.0)] if why == "" else why))
 		else:
 			lines.append("STATUS  %s combat-capable · %s" % [CyberTheme.GLYPH_OK, target.systems.status_line()])
+		if track != null:
+			lines.append(_scan_line(player, target))
 		if close_look:
 			lines.append_array(_boarding_lines(world, player, target))
 	var hit_age := t - _last_hit_time
 	if hit_age < 3.0 and _outgoing != null:
 		lines.append("HIT     %s  (+%.1f s)  [J] log" % [_outgoing.headline(), hit_age])
 	target_label.text = "\n".join(lines)
+
+
+## Scan: hold the lock with an active sensor mast, then the estimated cargo
+## and bounty (± SensorTrack.SCAN_ERROR).
+func _scan_line(player: ShipState, target: ShipState) -> String:
+	if track.scanned:
+		var est := Salvage.scan_estimate(target.systems)
+		return "SCAN    %s ~%d spare parts · ~%d crates · bounty ~%d cr" % [CyberTheme.GLYPH_OK,
+			roundi(est.parts * track.scan_error), roundi(est.crates * track.scan_error), roundi(est.bounty * track.scan_error)]
+	if not SensorTrack.has_active_sensors(player):
+		return "SCAN    %s needs a working sensor mast" % CyberTheme.GLYPH_OFFLINE
+	if not track.locked:
+		return "SCAN    %s lock on (< %.0f km) to scan cargo and bounty" % [CyberTheme.GLYPH_OFFLINE, SensorTrack.LOCK_RANGE_M / 1000.0]
+	var bars := roundi(track.scan_progress * 10.0)
+	return "SCAN    %s %s %d%% — hold the lock" % [CyberTheme.GLYPH_DEGRADED, "▮".repeat(bars) + "▯".repeat(10 - bars), roundi(track.scan_progress * 100.0)]
 
 
 ## Docking tolerances when close, gangway state, and the boarding action.
@@ -718,6 +783,10 @@ func _boarding_lines(world: WorldSimulation, player: ShipState, target: ShipStat
 	var doing: String = {&"cut": "cutting a hatch", &"move": "moving", &"cross": "crossing", &"muster": "mustering"}.get(b.action, "")
 	if b.room >= 0 and not b.defenders_in(b.room).is_empty():
 		doing = "FIGHTING %d defenders" % b.defenders_in(b.room).size()
+	if b.prize:
+		lines.append("BOARDING   CAPTURED — prize taken · boarders %s (%d/%d fit)" % [
+			"home" if b.finished() else "withdrawing", b.fit_team().size(), b.team.size()])
+		return lines
 	lines.append("BOARDING   %s  %s %s  team %d/%d fit%s" % [BoardingAction.PHASE_NAMES[b.phase].to_upper(), where, doing,
 		b.fit_team().size(), b.team.size(), "  [N] withdraw" if not b.finished() else ""])
 	return lines
@@ -733,13 +802,35 @@ func _update_weapon_strip(player: ShipState) -> void:
 	else:
 		var frac := float(player.cannon_rounds) / maxf(cannon.magazine_rounds, 1.0)
 		var bars := roundi(frac * 10.0)
-		parts.append("GUN ▸ %s  %s %d/%d  %.0f rpm%s" % [cannon.display_name, "▮".repeat(bars) + "▯".repeat(10 - bars),
+		parts.append("GUN ▸ %s ×%d  %s %d/%d  %.0f rpm%s" % [cannon.display_name, player.turret_status.size(), "▮".repeat(bars) + "▯".repeat(10 - bars),
 			player.cannon_rounds, cannon.magazine_rounds, cannon.rate_of_fire_rpm, "  EMPTY" if player.cannon_rounds == 0 else ""])
 	parts.append("PD  %s none fitted" % CyberTheme.GLYPH_OFFLINE)
-	var line2 := ""
+	var lines := PackedStringArray(["   ·   ".join(parts)])
+	if cannon != null:
+		lines.append("GUNS  %s" % turret_summary(player.turret_status))
 	if player_wing != null and not player_wing.crafts.is_empty():
-		line2 = "WING  %s   [L] launch [K] recall" % wing_text(player_wing)
-	weapon_label.text = "   ·   ".join(parts) + ("\n" + line2 if line2 != "" else "")
+		lines.append("WING  %s   [L] launch [K] recall" % wing_text(player_wing))
+	weapon_label.text = "\n".join(lines)
+
+
+## "● 2 on · ▲ 1 training · ✕ 1 blocked" — what the guns are doing.
+static func turret_summary(status: PackedInt32Array) -> String:
+	var counts := {}
+	for s in status:
+		counts[s] = int(counts.get(s, 0)) + 1
+	var words := {
+		ShipState.Turret.READY: [CyberTheme.GLYPH_CREW, "on target"],
+		ShipState.Turret.SLEWING: [CyberTheme.GLYPH_DEGRADED, "training"],
+		ShipState.Turret.BLOCKED: [CyberTheme.GLYPH_DESTROYED, "blocked by hull"],
+		ShipState.Turret.OUT_OF_ARC: [CyberTheme.GLYPH_DESTROYED, "out of arc"],
+		ShipState.Turret.OFFLINE: [CyberTheme.GLYPH_OFFLINE, "offline"],
+		ShipState.Turret.LOCKED: [CyberTheme.GLYPH_OFFLINE, "LOCKED (gangway)"],
+	}
+	var parts := PackedStringArray()
+	for s in words:
+		if counts.has(s):
+			parts.append("%s %d %s" % [words[s][0], counts[s], words[s][1]])
+	return " · ".join(parts)
 
 
 func _update_ticker(t: float) -> void:
@@ -852,7 +943,24 @@ func _lead_solution(player: ShipState, target: ShipState) -> Dictionary:
 	var t := FireControl.intercept_time(rel_pos, rel_vel, cannon.muzzle_velocity_mps)
 	if t < 0.0:
 		return {}
-	return {"time": t, "direction": FireControl.lead_point(rel_pos, rel_vel, t).normalized()}
+	var lead := FireControl.lead_point(rel_pos, rel_vel, t)
+	return {"time": t, "direction": lead.normalized(), "offset": muzzle - player.position + lead}
+
+
+## One reticle per gun: where its barrel points, at the aim range.
+func _update_gun_reticles(player: ShipState, alpha: float, render_origin: Vector3, input: PlayerInput) -> void:
+	overlay.gun_reticles = []
+	var cfg := player.config
+	if cfg.cannon == null or not player.is_active():
+		return
+	var q := player.interpolated_orientation(alpha)
+	var base := player.interpolated_position(alpha) - render_origin
+	for k in cfg.cannon_muzzles_body.size():
+		var muzzle := cfg.cannon_muzzles_body[k]
+		if cfg.is_turret(k):
+			muzzle += cfg.cannon_mount_normals_body[k] * WorldSimulation.TURRET_HEIGHT_M
+		var p := base + q * muzzle + q * player.turret_dirs[k] * input.aim_range_m
+		overlay.gun_reticles.append({"pos": p, "status": player.turret_status[k], "label": str(k + 1)})
 
 
 func _update_orbit_path(world: WorldSimulation, orbit: OrbitElements, alpha: float, render_origin: Vector3) -> void:

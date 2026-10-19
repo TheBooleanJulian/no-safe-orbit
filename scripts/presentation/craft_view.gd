@@ -14,30 +14,8 @@ var _plume_mat: StandardMaterial3D
 
 
 func _ready() -> void:
-	var hull := StandardMaterial3D.new()
-	hull.albedo_color = Color(0.7, 0.74, 0.76) * (Color(1.0, 0.75, 0.72) if hostile else Color.WHITE)
-	hull.metallic = 0.5
-	hull.roughness = 0.5
-	var accent := StandardMaterial3D.new()
-	accent.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	accent.albedo_color = CyberTheme.MAGENTA if hostile else CyberTheme.CYAN
 	var e := config.hit_box_half_extents
-	if config.cannon != null:
-		# Fighter: fuselage, swept wings, canopy, gun.
-		_box(Vector3(e.x * 0.3, e.y * 0.8, e.z * 2.0), Vector3.ZERO, hull)
-		_box(Vector3(e.x * 2.0, e.y * 0.15, e.z * 0.7), Vector3(0, 0, e.z * 0.35), hull)
-		_box(Vector3(e.x * 0.25, e.y * 0.35, e.z * 0.5), Vector3(0, e.y * 0.5, -e.z * 0.4), accent)
-		_box(Vector3(0.15, 0.15, 2.0), Vector3(0, -e.y * 0.2, -e.z - 0.8), hull)
-	else:
-		# Drone: a body with sensor dish and solar wings.
-		var body := SphereMesh.new()
-		body.radius = e.x * 0.7
-		body.height = e.x * 1.4
-		var mi := MeshInstance3D.new()
-		mi.mesh = body
-		mi.material_override = hull
-		add_child(mi)
-		_box(Vector3(e.x * 3.0, 0.05, e.z * 0.8), Vector3.ZERO, accent)
+	CraftView.build_model(self, config, config.cannon != null, hostile)
 	_plume_mat = StandardMaterial3D.new()
 	_plume_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_plume_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -75,11 +53,79 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 	_plume.scale = Vector3(1, 1, lerpf(0.3, 1.0, fwd))
 
 
-func _box(size: Vector3, pos: Vector3, mat: Material) -> void:
-	var mesh := BoxMesh.new()
-	mesh.size = size
+## The craft's 3D model under `parent` (also used for craft sitting docked
+## on a carrier). Fighter: a lifting-body fuselage with canopy, swept wings
+## with wingtip lights, twin fins, a nose gun and an engine bell. Drone: a
+## sensor body on four arms with thruster pods, a dish and solar panels.
+static func build_model(parent: Node3D, cfg: ShipConfig, fighter: bool, is_hostile: bool) -> void:
+	var e := cfg.hit_box_half_extents
+	var hull := StandardMaterial3D.new()
+	hull.albedo_color = Color(0.7, 0.74, 0.76) * (Color(1.0, 0.75, 0.72) if is_hostile else Color.WHITE)
+	hull.metallic = 0.5
+	hull.roughness = 0.5
+	var dark := StandardMaterial3D.new()
+	dark.albedo_color = Color(0.18, 0.2, 0.22)
+	dark.metallic = 0.4
+	dark.roughness = 0.6
+	var accent := StandardMaterial3D.new()
+	accent.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	accent.albedo_color = CyberTheme.MAGENTA if is_hostile else CyberTheme.CYAN
+	if fighter:
+		var body := _mesh(parent, CapsuleMesh.new(), Vector3.ZERO, hull)
+		(body.mesh as CapsuleMesh).radius = e.y * 0.45
+		(body.mesh as CapsuleMesh).height = e.z * 2.0
+		body.rotation_degrees = Vector3(90, 0, 0)
+		var canopy := _mesh(parent, SphereMesh.new(), Vector3(0, e.y * 0.35, -e.z * 0.45), accent)
+		(canopy.mesh as SphereMesh).radius = e.y * 0.28
+		(canopy.mesh as SphereMesh).height = e.y * 0.4
+		for side in [-1.0, 1.0]:
+			var wing := _box_in(parent, Vector3(e.x * 0.95, e.y * 0.08, e.z * 0.75), Vector3(side * e.x * 0.5, -e.y * 0.05, e.z * 0.2), hull)
+			wing.rotation_degrees = Vector3(0, side * -18.0, 0)
+			_box_in(parent, Vector3(0.2, 0.2, 0.2), Vector3(side * e.x * 0.95, -e.y * 0.05, e.z * 0.45), accent)
+			var fin := _box_in(parent, Vector3(e.x * 0.05, e.y * 0.6, e.z * 0.4), Vector3(side * e.x * 0.18, e.y * 0.45, e.z * 0.7), dark)
+			fin.rotation_degrees = Vector3(0, 0, side * -12.0)
+		var gun := _mesh(parent, CylinderMesh.new(), Vector3(0, -e.y * 0.2, -e.z - 0.5), dark)
+		(gun.mesh as CylinderMesh).top_radius = 0.08
+		(gun.mesh as CylinderMesh).bottom_radius = 0.1
+		(gun.mesh as CylinderMesh).height = 1.6
+		gun.rotation_degrees = Vector3(90, 0, 0)
+		var bell := _mesh(parent, CylinderMesh.new(), Vector3(0, 0, e.z * 1.05), dark)
+		(bell.mesh as CylinderMesh).top_radius = e.y * 0.35
+		(bell.mesh as CylinderMesh).bottom_radius = e.y * 0.22
+		(bell.mesh as CylinderMesh).height = e.z * 0.3
+		bell.rotation_degrees = Vector3(90, 0, 0)
+		return
+	var core := _mesh(parent, SphereMesh.new(), Vector3.ZERO, hull)
+	(core.mesh as SphereMesh).radius = e.x * 0.45
+	(core.mesh as SphereMesh).height = e.x * 0.8
+	for k in 4:
+		var a := TAU * (k + 0.5) / 4.0
+		var dir := Vector3(cos(a), 0, sin(a))
+		var arm := _box_in(parent, Vector3(e.x * 0.9, 0.12, 0.12), dir * e.x * 0.55, dark)
+		arm.rotation = Vector3(0, -a, 0)
+		var pod := _mesh(parent, CylinderMesh.new(), dir * e.x, hull)
+		(pod.mesh as CylinderMesh).top_radius = e.x * 0.14
+		(pod.mesh as CylinderMesh).bottom_radius = e.x * 0.18
+		(pod.mesh as CylinderMesh).height = e.y * 0.6
+		_box_in(parent, Vector3(0.12, 0.12, 0.12), dir * e.x + Vector3(0, e.y * 0.35, 0), accent)
+	var dish := _mesh(parent, CylinderMesh.new(), Vector3(0, e.y * 0.55, 0), hull)
+	(dish.mesh as CylinderMesh).top_radius = e.x * 0.4
+	(dish.mesh as CylinderMesh).bottom_radius = e.x * 0.1
+	(dish.mesh as CylinderMesh).height = e.y * 0.25
+	for side in [-1.0, 1.0]:
+		_box_in(parent, Vector3(e.x * 1.1, 0.04, e.z * 0.5), Vector3(side * e.x * 1.25, 0, 0), accent)
+
+
+static func _mesh(parent: Node3D, mesh: PrimitiveMesh, pos: Vector3, mat: Material) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = mat
 	mi.position = pos
-	add_child(mi)
+	parent.add_child(mi)
+	return mi
+
+
+static func _box_in(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	return _mesh(parent, mesh, pos, mat)

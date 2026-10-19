@@ -79,6 +79,13 @@ static func rotate_dir(v: Vector3i, quarter_turns: int) -> Vector3i:
 	return v
 
 
+## Float version of rotate_dir.
+static func rotate_vec(v: Vector3, quarter_turns: int) -> Vector3:
+	for i in posmod(quarter_turns, 4):
+		v = Vector3(v.z, v.y, -v.x)
+	return v
+
+
 static func face_of(normal: Vector3i) -> StringName:
 	for face in FACE_NORMALS:
 		if FACE_NORMALS[face] == normal:
@@ -124,6 +131,81 @@ func module_cells(index: int) -> Array[Vector3i]:
 	return cells
 
 
+func is_wedge(index: int) -> bool:
+	var def := module_def(index)
+	return def != null and def.is_wedge()
+
+
+## Whether a cell belongs to a sloped (wedge) module.
+func is_wedge_cell(cell: Vector3i) -> bool:
+	return module_at.has(cell) and is_wedge(module_at[cell])
+
+
+## Outward unit normal of a wedge's slope, grid frame.
+func wedge_normal(index: int) -> Vector3:
+	var m := blueprint.modules[index]
+	var s := module_def(index).size_cells
+	var n := Vector3(0, -s.z if m.flip else s.z, -s.y).normalized()
+	return rotate_vec(n, m.rotation)
+
+
+## Whether a point (grid cell units, i.e. metres / CELL_SIZE_M) lies in the
+## solid part of wedge `index` (it must be inside the module's box).
+func wedge_contains(index: int, p: Vector3) -> bool:
+	var m := blueprint.modules[index]
+	var s := Vector3(module_def(index).size_cells)
+	var rs := Vector3(module_size(index))
+	# Into the module's own frame: centre, undo the turn, back to its corner.
+	var local := rotate_vec(p - (Vector3(m.position) + rs * 0.5), -m.rotation) + s * 0.5
+	var height := local.y / s.y
+	if m.flip:
+		height = 1.0 - height
+	return height <= local.z / s.z + 1e-6
+
+
+## The two grid faces of a wedge cell that its slope replaces (its own fore
+## face and its top — bottom when flipped). Systems cannot mount there.
+func slope_faces(cell: Vector3i) -> Array[StringName]:
+	var out: Array[StringName] = []
+	if not is_wedge_cell(cell):
+		return out
+	var m := blueprint.modules[module_at[cell]]
+	out.append(face_of(rotate_dir(Vector3i(0, 0, -1), m.rotation)))
+	out.append(&"ventral" if m.flip else &"dorsal")
+	return out
+
+
+## The face key a wedge cell's slope plate is stored under (its top, or
+## bottom when flipped); a box cell's plates use their own faces.
+func plate_face(cell: Vector3i, face: StringName) -> StringName:
+	var slopes := slope_faces(cell)
+	return slopes[1] if slopes.has(face) else face
+
+
+## Faces of `cell` that can carry an armour plate: exterior faces, with a
+## wedge's slope counted once (under plate_face).
+func plateable_faces(cell: Vector3i) -> Array[StringName]:
+	var out: Array[StringName] = []
+	if not is_hull(cell):
+		return out
+	for face: StringName in FACE_NORMALS:
+		if not is_exterior_face(cell, face):
+			continue
+		var f := plate_face(cell, face)
+		if not out.has(f):
+			out.append(f)
+	return out
+
+
+## Plate area factor: a slope plate is larger than the cell face it stands
+## for (hypotenuse over run).
+func plate_area_factor(cell: Vector3i, face: StringName) -> float:
+	if not is_wedge_cell(cell) or not slope_faces(cell).has(face):
+		return 1.0
+	var s := module_def(module_at[cell]).size_cells
+	return sqrt(float(s.z * s.z + s.y * s.y)) / float(s.z)
+
+
 ## Connector type of a module on a face given in grid (ship) orientation.
 func module_connector(index: int, grid_face: StringName) -> StringName:
 	var m := blueprint.modules[index]
@@ -158,13 +240,40 @@ func equipment_cells(index: int) -> Array[Vector3i]:
 	return cells
 
 
+## Step from one cell of a long external system to the next: aft, or
+## (turned) across the ship; never along the face normal (then sideways or up).
+static func external_step(face: StringName, rotation: int) -> Vector3i:
+	var n: Vector3i = FACE_NORMALS.get(face, Vector3i.ZERO)
+	if posmod(rotation, 2) == 0:
+		return Vector3i(1, 0, 0) if n.z != 0 else Vector3i(0, 0, 1)
+	return Vector3i(0, 1, 0) if n.x != 0 else Vector3i(1, 0, 0)
+
+
+## Hull cells an external system's face spans (one for most systems).
+func external_cells(index: int) -> Array[Vector3i]:
+	var e := blueprint.equipment[index]
+	var def := equipment_def(index)
+	var out: Array[Vector3i] = [e.cell]
+	if def == null:
+		return out
+	var step := external_step(e.face, e.rotation)
+	for k in range(1, maxi(def.length_cells, 1)):
+		out.append(e.cell + step * k)
+	return out
+
+
 ## Where equipment sits, in grid metres: footprint centre (internal) or the
-## centre of the hull face it is mounted on (external).
+## centre of the hull face it is mounted on (external; the middle of the
+## span for a long one).
 func equipment_position_m(index: int) -> Vector3:
 	var e := blueprint.equipment[index]
 	var def := equipment_def(index)
 	if def != null and def.is_external():
-		return cell_center_m(e.cell) + Vector3(FACE_NORMALS.get(e.face, Vector3i.ZERO)) * CELL_SIZE_M * 0.5
+		var cells := external_cells(index)
+		var mid := Vector3.ZERO
+		for c in cells:
+			mid += cell_center_m(c)
+		return mid / cells.size() + Vector3(FACE_NORMALS.get(e.face, Vector3i.ZERO)) * CELL_SIZE_M * 0.5
 	var fp := equipment_footprint(index)
 	return (Vector3(e.cell) + Vector3(fp.x, 1, fp.y) * 0.5) * CELL_SIZE_M
 
@@ -193,10 +302,10 @@ func hull_bounds_m() -> AABB:
 	return box
 
 
-## Structural attachments: for each module index, the modules it touches
-## through matching connectors. `mismatches` (optional) receives, per module,
-## a description of a contact whose connectors don't match.
-func attachments(mismatches: Dictionary = {}) -> Array[Array]:
+## Structural attachments: for each module index, the modules it shares at
+## least one face with (any common face welds them together; connector
+## types are descriptive only).
+func attachments() -> Array[Array]:
 	var n := blueprint.modules.size()
 	var attached: Array[Array] = []
 	for i in n:
@@ -207,15 +316,8 @@ func attachments(mismatches: Dictionary = {}) -> Array[Array]:
 		for cell in module_cells(i):
 			for face: StringName in FACE_NORMALS:
 				var other: int = module_at.get(cell + FACE_NORMALS[face], -1)
-				if other < 0 or other == i:
-					continue
-				var mine := module_connector(i, face)
-				var theirs := module_connector(other, face_of(-FACE_NORMALS[face]))
-				if mine != &"" and mine == theirs:
-					if not attached[i].has(other):
-						attached[i].append(other)
-				else:
-					mismatches[i] = [other, mine, theirs]
+				if other >= 0 and other != i and not attached[i].has(other):
+					attached[i].append(other)
 	return attached
 
 
@@ -259,6 +361,16 @@ static func traverse(start: Vector3, dir: Vector3, max_cells: float) -> Array[Di
 		t_next[axis] += t_delta[axis]
 		out.append({"cell": cell, "t": t, "normal": normal})
 	return out
+
+
+## Faces of a module's cells open to space (its radiating surface).
+func exterior_face_count(index: int) -> int:
+	var n := 0
+	for cell in module_cells(index):
+		for face: StringName in FACE_NORMALS:
+			if not is_hull(cell + FACE_NORMALS[face]):
+				n += 1
+	return n
 
 
 ## Range of occupied decks / x / z across the hull (for editor views).

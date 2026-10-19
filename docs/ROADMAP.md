@@ -231,6 +231,38 @@ status. Renders reviewed (craft in flight, overview air-wing controls).
 | Ricochet trajectories; black entry / exit holes | `test_steep_hits_ricochet_and_head_on_ones_shatter`, `test_hole_normals_point_out_of_the_hull` | pass |
 | Yellow target-relative prograde/retrograde in match mode | HUD overlay | relative velocity and speed label |
 
+## Operations pass (2026-10-20)
+
+| Request | Verified by | Result |
+|---|---|---|
+| Hold B 5 s out of combat: "dimensional jump drive" to "Earth Shipyard"; amber alerts to recall craft / withdraw boarders first | `smoke_campaign`, `smoke_wing`, `smoke_shipyard` (hold B), render | waits at full charge for craft, boarders and cargo |
+| G drops a salvage beacon: 50 % scrap credit, lower-odds crates | `test_takeover_pays_more_than_a_beacon`, `smoke_campaign` (credits exact) | 40 % loot per crate, banked |
+| Boarding takeover: 80 % scrap, better crates into the hold; auto-withdraw | `test_boarding` (prize, RETURNED), `smoke_boarding` | 85 % loot per crate, +2 crates |
+| Loot tables in the shipyard | `smoke_campaign` | HANGAR → LOOT TABLES |
+| Cargo capacity, vent excess | `test_cargo_hold_capacity_and_venting_the_excess`, render | drawer CARGO tab |
+| Amber alert to withdraw boarders with N | HUD alert | while a party is across |
+| Primary weapons locked during boarding | `test_a_gangway_locks_the_primary_weapons` | both ships; craft still fight |
+| Shift zoom toggles; right-drag orbits the camera; R/F up/down only; A/D yaw (strafe on the docking cam); docking cam in a corner | `test_input_bindings`, renders | zoom centres on the aim |
+| Reactor failure explosion graphics | `test_a_reactor_explosion_plays_out_and_its_debris_flies_free`, renders | flash, fireball, rings, debris, glow, camera shake |
+| Angled hull / armour plates; hull consolidated into four blocks | `test_hull_blocks.gd` (wedge geometry, √2 at 45°, ricochet off the long slope) | template rebuilt from blocks |
+| Build new ship | `test_a_new_hull_is_commissioned_into_the_hangar`, render | hangar of vessels |
+| Ship AI gunnery at 50 % rate, reduced accuracy | `test_ship_ai_lays_the_guns_at_half_rate_with_extra_spread` | +0.4° spread |
+| Kinetic cannon nerfed | data | 50 rpm, 48 mm |
+| Top-down / isometric shipyard views | `smoke_shipyard` (iso pick and drag edit), render | iso edits too |
+| Underside RCS placement / removal bug | `test_middle_of_a_bottom_cell_picks_the_underside` | fixed |
+| Richer part details; no connector text | `test_every_part_has_an_engineering_card` | engineering cards |
+| "Not structurally attached" connector mismatch | `test_any_common_face_attaches` | any common face |
+| Dev +100 credits | `smoke_campaign` | CARGO & BANK |
+| Turrets aimed at the mouse, one reticle per gun, greyed when blocked | `test_turret_trains_at_its_traverse_rate_then_fires_on_the_aim`, `test_a_gun_holds_fire_when_its_own_hull_is_in_the_way`, renders | per-gun traverse |
+| Radiators 2 cells long | `test_radiators_span_two_cells_and_fighters_launch_from_a_hangar` | ×2 rejection and mass |
+| Player-drawn armour, 40 / 80 mm | `test_painted_plates_add_mass_cost_and_persist`, `test_worn_plates_are_remembered_and_replated_at_the_yard` | face filters |
+| 3D models for external equipment; fighters from an internal hangar | renders | sensor mast, docked drone, hangar door, craft |
+| Power distribution and player-routed bus | `test_power_bus.gd` | auto-route, cuts, yard re-run |
+| Gacha carousel before the post-combat log, which lists the loot | `smoke_campaign`, renders | debrief LOOT GAINED |
+| Scans show approximate cargo and bounty | `test_scans_need_a_held_lock_and_an_active_sensor_mast`, render | ±15 % |
+| Enemy turns hostile when hit | `smoke_wing` (fighter hits) | |
+| Ship-to-ship collisions and ramming damage | `test_ramming_pushes_apart_and_hurts_the_lighter_side_more` | |
+
 ## Milestones 7–8
 
 Not started. See GAME_DESIGN.md §17.

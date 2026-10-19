@@ -6,6 +6,10 @@ extends RefCounted
 ## it is refitted at the yard.
 
 const HISTORY_LIMIT := 50
+## Cargo volumes (m³): a spare part, a blueprint data core; equipment by
+## mass (see equipment_m3).
+const SPARE_PART_M3 := 0.25
+const BLUEPRINT_M3 := 0.1
 
 var name: String = ""
 var blueprint: ShipBlueprint
@@ -37,7 +41,7 @@ func record(line: String) -> void:
 
 
 func is_damaged() -> bool:
-	for key in ["equipment", "modules", "breached", "hatches", "crew"]:
+	for key in ["equipment", "modules", "breached", "hatches", "crew", "plates"]:
 		var part: Variant = condition.get(key, [])
 		if not part.is_empty():
 			return true
@@ -47,6 +51,97 @@ func is_damaged() -> bool:
 func cargo_is_empty() -> bool:
 	return int(cargo.get("spare_parts", 0)) == 0 and (cargo.get("equipment", {}) as Dictionary).is_empty() \
 		and (cargo.get("blueprints", {}) as Dictionary).is_empty()
+
+
+## Crated volume of one unit of equipment (m³).
+static func equipment_m3(def: EquipmentDefinition) -> float:
+	return maxf(1.0, def.mass_kg / 2000.0) if def != null else 1.0
+
+
+## Volume the hold's contents take up (m³).
+func cargo_volume_m3(catalog: ConstructionCatalog) -> float:
+	var v := int(cargo.get("spare_parts", 0)) * SPARE_PART_M3
+	for id in cargo.get("equipment", {}):
+		v += equipment_m3(catalog.equipment.get(StringName(id))) * int(cargo.equipment[id])
+	for id in cargo.get("blueprints", {}):
+		v += BLUEPRINT_M3 * int((cargo.blueprints[id] as Array)[2])
+	return v
+
+
+## Each line of the hold: {kind, id, units, m3}, cheapest to lose first
+## (spare parts, then equipment by rarity, then blueprints).
+func cargo_lines(catalog: ConstructionCatalog) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var parts := int(cargo.get("spare_parts", 0))
+	if parts > 0:
+		out.append({"kind": "spare_parts", "id": "spare_parts", "name": "Spare parts", "units": parts, "m3": parts * SPARE_PART_M3, "rarity": -1})
+	var eq: Array[Dictionary] = []
+	for id in cargo.get("equipment", {}):
+		var def: EquipmentDefinition = catalog.equipment.get(StringName(id))
+		var units := int(cargo.equipment[id])
+		eq.append({"kind": "equipment", "id": str(id), "name": def.display_name if def != null else str(id), "units": units,
+			"m3": equipment_m3(def) * units, "rarity": def.rarity if def != null else 0})
+	eq.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.rarity < b.rarity)
+	out.append_array(eq)
+	for id in cargo.get("blueprints", {}):
+		var entry: Array = cargo.blueprints[id]
+		out.append({"kind": "blueprints", "id": str(id), "name": "%s blueprint" % id, "units": int(entry[2]), "m3": BLUEPRINT_M3 * int(entry[2]), "rarity": int(entry[1])})
+	return out
+
+
+## Jettison one whole line of the hold. Returns what went.
+func vent(kind: String, id: String) -> String:
+	match kind:
+		"spare_parts":
+			var n := int(cargo.get("spare_parts", 0))
+			cargo.erase("spare_parts")
+			return "%d spare parts" % n if n > 0 else ""
+		"equipment", "blueprints":
+			var table: Dictionary = cargo.get(kind, {})
+			if not table.has(id):
+				return ""
+			table.erase(id)
+			if table.is_empty():
+				cargo.erase(kind)
+			return "%s %s" % [id, "blueprint" if kind == "blueprints" else "(all units)"]
+	return ""
+
+
+## Jettison the cheapest cargo until it fits in `capacity_m3`: spare parts
+## first (only as many as needed), then equipment one unit at a time by
+## rarity, then blueprints. Returns what went.
+func vent_excess(capacity_m3: float, catalog: ConstructionCatalog) -> PackedStringArray:
+	var out := PackedStringArray()
+	var over := cargo_volume_m3(catalog) - capacity_m3
+	if over <= 1e-6:
+		return out
+	var parts := int(cargo.get("spare_parts", 0))
+	if parts > 0:
+		var n := mini(parts, ceili(over / SPARE_PART_M3 - 1e-6))
+		cargo["spare_parts"] = parts - n
+		if parts - n == 0:
+			cargo.erase("spare_parts")
+		out.append("%d spare parts" % n)
+		over -= n * SPARE_PART_M3
+	for line in cargo_lines(catalog):
+		if over <= 1e-6:
+			break
+		if line.kind != "equipment":
+			continue
+		var eq: Dictionary = cargo.equipment
+		while over > 1e-6 and int(eq.get(line.id, 0)) > 0:
+			eq[line.id] = int(eq[line.id]) - 1
+			over -= line.m3 / line.units
+			out.append("%s ×1" % line.name)
+		if int(eq.get(line.id, 0)) <= 0:
+			eq.erase(line.id)
+	if cargo.has("equipment") and (cargo.equipment as Dictionary).is_empty():
+		cargo.erase("equipment")
+	while over > 1e-6 and cargo.has("blueprints") and not (cargo.blueprints as Dictionary).is_empty():
+		var id: String = (cargo.blueprints as Dictionary).keys()[0]
+		over -= BLUEPRINT_M3 * int((cargo.blueprints[id] as Array)[2])
+		out.append(vent("blueprints", id))
+	return out
 
 
 ## One line: what is in the hold.
@@ -98,6 +193,13 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipInstance:
 	v.name = str(d.get("name", bp.name))
 	var c: Variant = d.get("condition", {})
 	v.condition = (c as Dictionary).duplicate(true) if c is Dictionary else {}
+	# JSON reads every number back as a float: crew counts are whole people.
+	var crew: Variant = v.condition.get("crew", {})
+	if crew is Dictionary:
+		for kind in crew:
+			if crew[kind] is Dictionary:
+				for role in crew[kind]:
+					crew[kind][role] = int(crew[kind][role])
 	var wg: Variant = d.get("wing", {})
 	v.wing = (wg as Dictionary).duplicate(true) if wg is Dictionary else {}
 	var cg: Variant = d.get("cargo", {})

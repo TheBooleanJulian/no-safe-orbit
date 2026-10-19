@@ -14,3 +14,4 @@ connectors = {
 interior = true
 armor_mm = 15.0
 color = Color(0.52, 0.56, 0.62, 1)
+legacy = true

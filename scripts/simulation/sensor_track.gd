@@ -16,6 +16,11 @@ extends RefCounted
 const STALE_AFTER_S := 2.0
 const LOCK_RANGE_M := 10_000.0
 const CONFIDENCE_HALF_LIFE_S := 15.0
+## A SCAN (cargo and bounty estimate) needs the lock held this long with an
+## active sensor mast; progress drains back if the lock drops first.
+const SCAN_TIME_S := 4.0
+## The estimate is off by up to this fraction either way.
+const SCAN_ERROR := 0.15
 
 ## Ever seen (since this track began).
 var detected: bool = false
@@ -30,6 +35,12 @@ var detected_time: float = -INF
 ## target velocity (local frame).
 var last_relative: Vector3 = Vector3.ZERO
 var last_velocity: Vector3 = Vector3.ZERO
+## Scan: 0..1 progress, done, and its fixed error factor (1 ± SCAN_ERROR).
+var scan_progress: float = 0.0
+var scanned: bool = false
+var scan_error: float = 1.0
+## Set by the update that completed the scan.
+var just_scanned: bool = false
 
 
 static func range_of(observer: ShipState) -> float:
@@ -59,7 +70,29 @@ func update(observer: ShipState, target: ShipState, now: float, dt: float) -> bo
 	else:
 		locked = false
 		confidence *= pow(0.5, dt / CONFIDENCE_HALF_LIFE_S)
+	_update_scan(observer, target, dt)
 	return newly
+
+
+func _update_scan(observer: ShipState, target: ShipState, dt: float) -> void:
+	just_scanned = false
+	if scanned:
+		return
+	if locked and has_active_sensors(observer):
+		scan_progress = minf(scan_progress + dt / SCAN_TIME_S, 1.0)
+		if scan_progress >= 1.0:
+			scanned = true
+			just_scanned = true
+			# Deterministic per contact: the same scan always reads the same.
+			var h := absi(hash(String(target.id) + target.display_name))
+			scan_error = 1.0 - SCAN_ERROR + 2.0 * SCAN_ERROR * float(h % 1000) / 999.0
+	else:
+		scan_progress = maxf(scan_progress - dt / SCAN_TIME_S, 0.0)
+
+
+## A working sensor mast (not just eyeballs): needed to scan.
+static func has_active_sensors(observer: ShipState) -> bool:
+	return observer.systems != null and observer.systems.sensor_range_m() > ShipSystems.VISUAL_RANGE_M
 
 
 func age(now: float) -> float:

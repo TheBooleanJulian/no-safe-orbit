@@ -31,6 +31,17 @@ const INERTIAL_MAX_RANGE_M := 200_000.0
 const ARM_TIME_S := 1.0
 ## A ricochet keeps this fraction of its speed relative to the ship it hit.
 const RICOCHET_KEEP := 0.55
+## Turrets: a gun fires once its barrel is this close to the aim (degrees);
+## it can depress this far below its face plane (sine).
+const TURRET_READY_DEG := 0.3
+const TURRET_ARC_MIN_DOT := -0.1
+## The barrel sits this far off its hull face (m).
+const TURRET_HEIGHT_M := 1.0
+## Collisions: restitution, the closing speed below which nothing breaks
+## (m/s), and structure points of damage per joule of impact energy.
+const COLLISION_RESTITUTION := 0.2
+const COLLISION_DAMAGE_MIN_MPS := 1.0
+const COLLISION_POINTS_PER_J := 1.0 / 100_000.0
 
 var fixed_dt: float = DEFAULT_FIXED_DT
 var tick: int = 0
@@ -64,11 +75,16 @@ var boardings: Array[BoardingAction] = []
 ## Air wings (autonomous craft): updated at the start of every tick.
 var wings: Array[AirWing] = []
 var _link_events: PackedStringArray = PackedStringArray()
+## Deterministic spread for turret dispersion.
+var _rng := RandomNumberGenerator.new()
+## Collision pairs in contact last tick ("a|b"), so one impact reports once.
+var _contacts := {}
 
 
 func _init(p_fixed_dt: float = DEFAULT_FIXED_DT) -> void:
 	assert(p_fixed_dt > 0.0)
 	fixed_dt = p_fixed_dt
+	_rng.seed = 20261019
 
 
 ## Puts the engagement in orbit: the local frame origin starts at this PCI
@@ -214,6 +230,7 @@ func step() -> void:
 		_update_cannon(ship, input, spawned)
 		if ship.systems != null and ship.systems.tick(ship, fixed_dt):
 			ship.config = ship.systems.effective_config()
+	_step_collisions()
 	_step_links()
 	tick += 1
 	sim_time = tick * fixed_dt
@@ -279,36 +296,287 @@ func _resolve_hold(input: ShipControlInput) -> void:
 		input.hold_translation = false  # reference gone: coast
 
 
+## Primary weapons are locked while a gangway is attached (firing at point
+## blank would tear it away). Craft and automatic defences are not.
+func weapons_locked(id: StringName) -> bool:
+	return link_for(id) != null
+
+
 func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[ProjectileState]) -> void:
 	var cannon := ship.config.cannon
 	if cannon == null:
 		return
-	var muzzles := ship.config.cannon_muzzles_body
+	var cfg := ship.config
+	var muzzles := cfg.cannon_muzzles_body
+	var locked := weapons_locked(ship.id)
+	var inv := ship.orientation.inverse()
 	for k in muzzles.size():
 		ship.cannon_cooldowns[k] = maxf(ship.cannon_cooldowns[k] - fixed_dt, 0.0)
-		if not input.fire or ship.cannon_cooldowns[k] > 1e-9 or ship.cannon_rounds <= 0:
-			continue
+		var status := _train_turret(ship, input, k, inv)
 		if ship.systems != null and not ship.systems.mount_working(k):
-			continue  # destroyed or unpowered mount
-		var nose := ship.forward()
+			status = ShipState.Turret.OFFLINE  # destroyed or unpowered mount
+		elif locked:
+			status = ShipState.Turret.LOCKED
+		ship.turret_status[k] = status
+		if status != ShipState.Turret.READY or not input.fire or ship.cannon_cooldowns[k] > 1e-9 or ship.cannon_rounds <= 0:
+			continue
+		var dir_body := ship.turret_dirs[k]
+		var muzzle_body := muzzles[k]
+		if cfg.is_turret(k):
+			muzzle_body += cfg.cannon_mount_normals_body[k] * TURRET_HEIGHT_M
+			var spread := deg_to_rad(cannon.dispersion_deg) + cfg.cannon_extra_dispersion_rad
+			if spread > 0.0:
+				dir_body = _scatter(dir_body, spread)
+		var dir := ship.orientation * dir_body
 		var shot := ProjectileState.new()
 		shot.id = _next_round_id
 		_next_round_id += 1
 		shot.shooter_id = ship.id
 		shot.weapon = cannon
-		shot.position = ship.position + ship.orientation * muzzles[k]
+		shot.position = ship.position + ship.orientation * muzzle_body
 		shot.prev_position = shot.position
-		shot.velocity = ship.velocity + nose * cannon.muzzle_velocity_mps
+		shot.velocity = ship.velocity + dir * cannon.muzzle_velocity_mps
 		spawned.append(shot)
 		# Recoil conserves momentum and angular momentum: the ship gets −p at
 		# the muzzle, so a muzzle off the centre of mass also kicks its spin.
-		var p_body := Vector3(0, 0, -cannon.muzzle_velocity_mps * cannon.round_mass_kg)
-		ship.velocity -= nose * (cannon.muzzle_velocity_mps * cannon.round_mass_kg / ship.mass_kg())
-		ship.angular_velocity -= muzzles[k].cross(p_body) / ship.inertia_kgm2()
+		var p_body := dir_body * (cannon.muzzle_velocity_mps * cannon.round_mass_kg)
+		ship.velocity -= dir * (cannon.muzzle_velocity_mps * cannon.round_mass_kg / ship.mass_kg())
+		ship.angular_velocity -= muzzle_body.cross(p_body) / ship.inertia_kgm2()
 		ship.recoil_impulse += cannon.muzzle_velocity_mps * cannon.round_mass_kg
 		ship.cannon_rounds -= 1
 		ship.rounds_fired += 1
 		ship.cannon_cooldowns[k] += cannon.fire_interval_s()
+
+
+## Trains mount k towards the aim point (turrets) and says whether it can
+## fire. Fixed guns always point along the nose.
+func _train_turret(ship: ShipState, input: ShipControlInput, k: int, inv: Quaternion) -> int:
+	var cfg := ship.config
+	if not cfg.is_turret(k):
+		ship.turret_dirs[k] = Vector3.FORWARD
+		return ShipState.Turret.READY
+	var n := cfg.cannon_mount_normals_body[k]
+	var muzzle := cfg.cannon_muzzles_body[k] + n * TURRET_HEIGHT_M
+	var want := Vector3.FORWARD
+	if input.has_aim:
+		var rel := inv * input.aim_offset - muzzle
+		if rel.length() > 1.0:
+			want = rel.normalized()
+	var status := ShipState.Turret.READY
+	if want.dot(n) < TURRET_ARC_MIN_DOT:
+		want = _clamp_to_arc(want, n)
+		status = ShipState.Turret.OUT_OF_ARC
+	var dir := _rotate_toward(ship.turret_dirs[k], want, deg_to_rad(cfg.cannon.traverse_deg_s) * fixed_dt)
+	ship.turret_dirs[k] = dir
+	if ship.systems != null and ship.blocked_cached(k, dir, func() -> bool: return _hull_in_the_way(ship, muzzle, dir)):
+		return ShipState.Turret.BLOCKED
+	if status == ShipState.Turret.READY and rad_to_deg(dir.angle_to(want)) > TURRET_READY_DEG:
+		status = ShipState.Turret.SLEWING
+	return status
+
+
+## Whether a round leaving `muzzle` (body) along `dir` would enter its own hull.
+static func _hull_in_the_way(ship: ShipState, muzzle: Vector3, dir: Vector3) -> bool:
+	var reach := ship.systems.grid.cell_bounds().size.length() * ShipGrid.CELL_SIZE_M + 6.0
+	var start := muzzle + dir * 0.5
+	return Penetration.first_hull_entry(ship.systems, start, start + dir * reach) >= 0.0
+
+
+static func _clamp_to_arc(want: Vector3, n: Vector3) -> Vector3:
+	var flat := want - n * want.dot(n)
+	if flat.length() < 1e-6:
+		flat = n.cross(Vector3.UP if absf(n.y) < 0.9 else Vector3.RIGHT)
+	return (flat.normalized() * sqrt(1.0 - TURRET_ARC_MIN_DOT * TURRET_ARC_MIN_DOT) + n * TURRET_ARC_MIN_DOT).normalized()
+
+
+## `from` turned towards `to` by at most `max_angle` radians.
+static func _rotate_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3:
+	var angle := from.angle_to(to)
+	if angle <= max_angle or angle < 1e-6:
+		return to
+	var axis := from.cross(to)
+	if axis.length() < 1e-6:
+		axis = from.cross(Vector3.UP if absf(from.y) < 0.9 else Vector3.RIGHT)
+	return from.rotated(axis.normalized(), max_angle).normalized()
+
+
+## A direction scattered by a normally distributed angle (σ = `sigma` rad).
+func _scatter(dir: Vector3, sigma: float) -> Vector3:
+	var perp := dir.cross(Vector3.UP if absf(dir.y) < 0.9 else Vector3.RIGHT).normalized()
+	perp = perp.rotated(dir, _rng.randf() * TAU)
+	return dir.rotated(perp, _rng.randfn(0.0, sigma)).normalized()
+
+
+# --- Collisions --------------------------------------------------------------
+
+## Ships (and craft) that touch push apart and are damaged by the impact:
+## the impact energy ½·μ·v² (μ the reduced mass, v the closing speed) is
+## shared so the lighter, less armoured side takes more of it. Ships joined
+## by a gangway and craft near their own carrier don't collide.
+func _step_collisions() -> void:
+	var now := {}
+	for i in _ship_order.size():
+		var a: ShipState = _ships[_ship_order[i]]
+		if not a.is_active():
+			continue
+		for j in range(i + 1, _ship_order.size()):
+			var b: ShipState = _ships[_ship_order[j]]
+			if not b.is_active() or a.systems == null and b.systems == null:
+				continue
+			if _is_craft_of(a.id, b.id) or _is_craft_of(b.id, a.id) or _linked(a.id, b.id):
+				continue
+			var ra := a.config.hit_box_half_extents.length()
+			var rb := b.config.hit_box_half_extents.length()
+			var ca := a.position + a.orientation * a.config.hit_box_center
+			var cb := b.position + b.orientation * b.config.hit_box_center
+			if ca.distance_squared_to(cb) > (ra + rb) * (ra + rb):
+				continue
+			var contact := _contact_point(a, b)
+			if contact.is_empty():
+				continue
+			var key := "%s|%s" % [a.id, b.id]
+			now[key] = true
+			_resolve_collision(a, b, contact.point, not _contacts.has(key))
+	_contacts = now
+
+
+## Craft ids are "<carrier id>_<rack id>" (AirWing).
+static func _is_craft_of(craft_id: StringName, carrier_id: StringName) -> bool:
+	return String(craft_id).begins_with(String(carrier_id) + "_")
+
+
+func _linked(a: StringName, b: StringName) -> bool:
+	for link in links:
+		if link.active() and ((link.attacker_id == a and link.target_id == b) or (link.attacker_id == b and link.target_id == a)):
+			return true
+	return false
+
+
+## World point where the two hulls overlap, or {} if they don't. Ships with
+## a blueprint test real hull cells; craft are their hit box.
+func _contact_point(a: ShipState, b: ShipState) -> Dictionary:
+	# Test the points of the smaller (or cell-less) one against the other.
+	var probe := a
+	var solid := b
+	if b.systems == null or (a.systems != null and a.config.hit_box_half_extents.length() < b.config.hit_box_half_extents.length()):
+		probe = b
+		solid = a
+	if solid.systems == null:
+		var swap := probe
+		probe = solid
+		solid = swap
+	var points := _probe_points(probe)
+	var inv := solid.orientation.inverse()
+	var com := solid.systems.stats.center_of_mass_m
+	var sum := Vector3.ZERO
+	var count := 0
+	for p in points:
+		var body := inv * (p - solid.position)
+		var cell := Vector3i(((body + com) / ShipGrid.CELL_SIZE_M).floor())
+		if solid.systems.grid.is_hull(cell):
+			sum += p
+			count += 1
+	if count == 0:
+		return {}
+	return {"point": sum / count}
+
+
+## World points standing for a ship's volume: hull cell centres, or the
+## centre and box corners of a craft.
+static func _probe_points(ship: ShipState) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	if ship.systems != null:
+		var com := ship.systems.stats.center_of_mass_m
+		for cell: Vector3i in ship.systems.grid.module_at:
+			out.append(ship.position + ship.orientation * (ShipGrid.cell_center_m(cell) - com))
+		return out
+	var c := ship.config.hit_box_center
+	var h := ship.config.hit_box_half_extents
+	out.append(ship.position + ship.orientation * c)
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				out.append(ship.position + ship.orientation * (c + Vector3(sx * h.x, sy * h.y, sz * h.z)))
+	return out
+
+
+func _resolve_collision(a: ShipState, b: ShipState, point: Vector3, first: bool) -> void:
+	var n := a.position - b.position
+	n = n.normalized() if n.length() > 1e-6 else Vector3.UP
+	var closing := -(a.velocity - b.velocity).dot(n)
+	var ma := a.mass_kg()
+	var mb := b.mass_kg()
+	# Push apart a little every tick they overlap, by inverse mass.
+	var push := 0.05
+	a.position += n * push * mb / (ma + mb)
+	b.position -= n * push * ma / (ma + mb)
+	if closing <= 0.0:
+		return  # already separating
+	var j := (1.0 + COLLISION_RESTITUTION) * closing / (1.0 / ma + 1.0 / mb)
+	_apply_impulse(a, a.orientation.inverse() * (point - a.position), n * j)
+	_apply_impulse(b, b.orientation.inverse() * (point - b.position), -n * j)
+	if closing < COLLISION_DAMAGE_MIN_MPS:
+		return
+	var energy := 0.5 * (ma * mb / (ma + mb)) * closing * closing
+	# Toughness = mass × local armour: the weaker side takes the larger share.
+	var ta := ma * (_armor_at(a, point) + 10.0)
+	var tb := mb * (_armor_at(b, point) + 10.0)
+	var lines := PackedStringArray()
+	lines.append_array(_collision_damage(a, point, energy * tb / (ta + tb)))
+	lines.append_array(_collision_damage(b, point, energy * ta / (ta + tb)))
+	if first:
+		_link_events.append("COLLISION — %s and %s at %.1f m/s%s" % [a.display_name, b.display_name, closing,
+			(": " + "; ".join(lines)) if not lines.is_empty() else ""])
+
+
+## Outer armour (mm) of the hull module nearest a world point (0 for craft).
+static func _armor_at(ship: ShipState, point: Vector3) -> float:
+	if ship.systems == null:
+		return 0.0
+	var m := _module_near(ship, point)
+	return ship.systems.modules[m].armor_mm if m >= 0 else 0.0
+
+
+static func _module_near(ship: ShipState, point: Vector3) -> int:
+	var com := ship.systems.stats.center_of_mass_m
+	var body := ship.orientation.inverse() * (point - ship.position) + com
+	var best := -1
+	var best_d := INF
+	for cell: Vector3i in ship.systems.grid.module_at:
+		var d := ShipGrid.cell_center_m(cell).distance_squared_to(body)
+		if d < best_d:
+			best_d = d
+			best = ship.systems.grid.module_at[cell]
+	return best
+
+
+## Impact energy (J) taken by one ship: structure of the module there, and
+## the external systems mounted within a cell of it; a craft's hull.
+func _collision_damage(ship: ShipState, point: Vector3, energy_j: float) -> PackedStringArray:
+	var lines := PackedStringArray()
+	var points := energy_j * COLLISION_POINTS_PER_J
+	if points <= 0.0:
+		return lines
+	if ship.systems == null:
+		if ship.config.hull_hp > 0.0:
+			ship.hull_damage += points
+			if ship.hull_damage >= ship.config.hull_hp:
+				ship.status = ShipState.Status.DESTROYED
+				ship.status_time = sim_time
+				lines.append("%s destroyed" % ship.display_name)
+		return lines
+	var sys := ship.systems
+	var m := _module_near(ship, point)
+	if m >= 0 and sys.damage_module(m, points):
+		lines.append("%s: module %s wrecked" % [ship.display_name, sys.blueprint.modules[m].id])
+	var body := ship.orientation.inverse() * (point - ship.position)
+	for e in sys.equipment:
+		if e.def.is_external() and not e.destroyed() and e.body_position.distance_to(body) < ShipGrid.CELL_SIZE_M * 1.5:
+			if sys.damage_equipment(e, points * 0.5):
+				lines.append("%s: %s %s destroyed" % [ship.display_name, e.def.display_name, e.id])
+	sys.invalidate()
+	ship.config = sys.effective_config()
+	return lines
 
 
 ## Rounds never expire. Near the engagement they are integrated like ships;

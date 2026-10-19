@@ -19,7 +19,7 @@ extends PanelContainer
 signal command(name: StringName, arg: Variant)
 
 const COVERABLE := [CrewRoster.Role.COMMAND, CrewRoster.Role.WEAPONS, CrewRoster.Role.ENGINEERING, CrewRoster.Role.DAMAGE_CONTROL]
-const TAB_NAMES := ["DAMAGE", "CREW", "POWER", "WING", "TARGET"]
+const TAB_NAMES := ["DAMAGE", "CREW", "POWER", "WING", "TARGET", "CARGO"]
 const CHANNEL_FOR_KIND := {
 	EquipmentDefinition.Kind.MAIN_ENGINE: ShipSystems.Channel.ENG,
 	EquipmentDefinition.Kind.CANNON: ShipSystems.Channel.WEP,
@@ -45,6 +45,11 @@ var _wing_ref: AirWing
 var _target_map: ShipSchematic
 var _target_label: RichTextLabel
 var _sys: ShipSystems
+## The vessel whose hold the CARGO tab shows (set by the HUD).
+var vessel: ShipInstance
+var _cargo_label: RichTextLabel
+var _cargo_box: VBoxContainer
+var _cargo_key := ""
 
 
 func _ready() -> void:
@@ -74,6 +79,7 @@ func _ready() -> void:
 	_build_power_tab()
 	_build_wing_tab()
 	_build_target_tab()
+	_build_cargo_tab()
 	for i in TAB_NAMES.size():
 		_tabs.set_tab_title(i, TAB_NAMES[i])
 
@@ -188,6 +194,49 @@ func _build_target_tab() -> void:
 	_target_label = _rich(box, 160)
 
 
+func _build_cargo_tab() -> void:
+	var box := _tab_box()
+	_cargo_label = _rich(box, 60)
+	box.add_child(_button("Vent excess (cheapest first)", func() -> void: command.emit(&"vent_excess", null), CyberTheme.AMBER))
+	box.add_child(_heading("HOLD — at risk until banked at Earth Shipyard", CyberTheme.CYAN))
+	_cargo_box = VBoxContainer.new()
+	box.add_child(_cargo_box)
+
+
+func _refresh_cargo(sys: ShipSystems) -> void:
+	if vessel == null:
+		return
+	var catalog := ConstructionCatalog.default_catalog()
+	var used := vessel.cargo_volume_m3(catalog)
+	var cap := sys.stats.cargo_m3
+	var frac := used / maxf(cap, 1e-6)
+	var bars := clampi(roundi(frac * 20.0), 0, 20)
+	var col := CyberTheme.RED if used > cap else (CyberTheme.AMBER if frac > 0.85 else CyberTheme.CYAN)
+	_cargo_label.text = "CAPACITY  %s  %.1f / %.0f m³%s" % [CyberTheme.tint("▮".repeat(bars) + "▯".repeat(20 - bars), col), used, cap,
+		CyberTheme.tint("  ▲ OVER BY %.1f m³ — vent before the jump" % (used - cap), CyberTheme.RED) if used > cap else ""]
+	var lines := vessel.cargo_lines(catalog)
+	var key := JSON.stringify(lines)
+	if key == _cargo_key:
+		return
+	_cargo_key = key
+	for c in _cargo_box.get_children():
+		c.queue_free()
+	if lines.is_empty():
+		_cargo_box.add_child(_caption_label("Empty."))
+	for line in lines:
+		var row := HBoxContainer.new()
+		var l := Label.new()
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.text = "%s ×%d   %.1f m³" % [line.name, line.units, line.m3]
+		if int(line.rarity) >= 0:
+			l.add_theme_color_override("font_color", Rarity.color_of(int(line.rarity)))
+		row.add_child(l)
+		var kind: String = line.kind
+		var id: String = line.id
+		row.add_child(_button("Vent", func() -> void: command.emit(&"vent", [kind, id]), CyberTheme.AMBER))
+		_cargo_box.add_child(row)
+
+
 # --- Refresh -----------------------------------------------------------------------
 
 ## Refresh from the simulation (called every frame while open).
@@ -210,6 +259,8 @@ func update_view(player: ShipState, target: ShipState, boarding: BoardingAction,
 			_update_wing(wing)
 		4:
 			_refresh_target(target, boarding, sim_time, close_look)
+		5:
+			_refresh_cargo(sys)
 
 
 static func power_summary(sys: ShipSystems) -> String:

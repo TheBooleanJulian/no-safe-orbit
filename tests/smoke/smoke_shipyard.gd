@@ -101,6 +101,24 @@ func _run() -> void:
 	yard.expand_view("")
 	await _frames(2)
 	_check(yard.deck_editor.visible and yard.side_view.visible, "restore brings the deck editor back")
+	# Isometric main view: edits the same deck with the same tools.
+	var deck_was := yard.deck_editor.deck
+	yard.set_main_view("iso")
+	await _frames(3)
+	_check(yard.iso_view.visible and not yard.deck_editor.visible, "the main view swaps to isometric")
+	yard.change_deck(2 - yard.deck_editor.deck)
+	var hit := yard.iso_view.pick(yard.iso_view.size * 0.5)
+	_check(not hit.is_empty() and hit.cell.y == 2, "a point in the iso view picks a cell on the edited deck (%s)" % str(hit))
+	yard.select_palette("bus", &"bus_remove")
+	var conduit_before := ed.blueprint.bus.size()
+	yard.iso_view.room_dragged.emit(2, Rect2i(0, 0, 20, 20))
+	_check(ed.blueprint.bus.size() < conduit_before, "a drag in the iso view edits like the deck editor (conduit %d → %d)" % [conduit_before, ed.blueprint.bus.size()])
+	ed.undo()
+	yard.set_tool(Shipyard.Tool.SELECT)
+	yard.set_main_view("top")
+	await _frames(2)
+	_check(yard.deck_editor.visible and not yard.iso_view.visible, "and back to top-down")
+	yard.change_deck(deck_was - yard.deck_editor.deck)
 
 	# Place a radiator on top of the fuselage with a real mouse click.
 	var mass_before := ed.stats.mass_kg
@@ -113,15 +131,16 @@ func _run() -> void:
 	await _click(yard.deck_editor, center)
 	var placed := ed.item_at(target_cell, &"dorsal")
 	_check(placed != "", "mouse click placed a radiator on the dorsal face of %s" % target_cell)
-	_check(absf(ed.stats.mass_kg - mass_before - 2500.0) < 1.0 and absf(ed.stats.heat_rejection_kw - rejection_before - 600.0) < 1e-6,
-		"stats follow the edit: +2.5 t, +600 kW rejection (got %+.0f kg, %+.0f kW)" % [ed.stats.mass_kg - mass_before, ed.stats.heat_rejection_kw - rejection_before])
+	_check(absf(ed.stats.mass_kg - mass_before - 5000.0) < 1.0 and absf(ed.stats.heat_rejection_kw - rejection_before - 1200.0) < 1e-6,
+		"stats follow the edit: +5 t, +1200 kW rejection (2-cell panel) (got %+.0f kg, %+.0f kW)" % [ed.stats.mass_kg - mass_before, ed.stats.heat_rejection_kw - rejection_before])
 
 	# Right-click the reactor away: a warning, but launch is still allowed.
 	yard.apply_at(Vector3i(3, 0, 8), &"dorsal", MOUSE_BUTTON_RIGHT)
 	await _frames(1)
 	_check(ed.report.has_code(&"power_deficit") and yard.issue_text.get_parsed_text().contains("Power deficit"),
 		"removing the reactor shows a power-deficit warning")
-	_check(not yard.launch_button.disabled, "warnings do not block launch")
+	_check(not yard.launch_button.disabled, "warnings do not block launch:
+%s" % ed.report.summary())
 
 	# An overlapping module is an error: launch blocked.
 	yard.select_palette("hull", &"nose_section")
@@ -157,10 +176,15 @@ func _run() -> void:
 		_check(player.config.display_name == "Smoke Test Frigate" and absf(player.config.mass_kg - expected_mass) < 1e-3,
 			"player flies the launched design (%s, %.1f t)" % [player.config.display_name, player.config.mass_kg / 1000.0])
 		# B returns to the shipyard with the same design.
-		var ev := InputEventAction.new()
-		ev.action = "open_shipyard"
-		ev.pressed = true
-		Input.parse_input_event(ev)
+		# Hold B: the jump drive charges for 5 s (sped up here).
+		Engine.time_scale = 8.0
+		Input.action_press("open_shipyard")
+		for i in 900:
+			if current_scene is Shipyard:
+				break
+			await process_frame
+		Input.action_release("open_shipyard")
+		Engine.time_scale = 1.0
 		await _frames(4)
 		var back := current_scene as Shipyard
 		_check(back != null and back.editor.blueprint.name == "Smoke Test Frigate", "B in flight reopens the shipyard with the flown design")

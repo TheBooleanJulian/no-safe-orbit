@@ -37,6 +37,23 @@ func _press(action: String) -> void:
 	await process_frame
 
 
+## Call off the fight, recall the craft and hold B: the jump drive waits
+## for the craft to come home, then takes us to the shipyard.
+func _jump(main: Main) -> void:
+	main.set_target_hostile(false)
+	main.player_wing.recall_all()
+	Input.action_press("open_shipyard")
+	Engine.time_scale = TIME_SCALE
+	for i in 20000:
+		if current_scene is Shipyard:
+			break
+		await process_frame
+	Input.action_release("open_shipyard")
+	Engine.time_scale = 1.0
+	for i in 4:
+		await process_frame
+
+
 func _wait(main: Main, sim_seconds: float, until: Callable) -> void:
 	Engine.time_scale = TIME_SCALE
 	var stop := main.world.sim_time + sim_seconds
@@ -80,15 +97,16 @@ func _run() -> void:
 	_check(fighter.status == AirWing.Status.DOCKED and not main.world.has_ship(fighter.id), "K recalls it and it is recovered")
 
 	# Dock: the recovered fighter's state persists.
-	await _press("open_shipyard")
-	for i in 4:
-		await process_frame
+	await _jump(main)
 	var yard := current_scene as Shipyard
-	_check(yard != null, "docked at the station")
+	_check(yard != null, "holding B jumps to Earth Shipyard once the craft are home")
 	if yard == null:
 		return _finish()
 	var profile := Main.get_profile()
 	_check(not (profile.vessel.wing.get(fighter.rack_id, {}) as Dictionary).get("lost", false), "the recovered fighter is not lost")
+	# Patch up whatever the fight cut (a severed conduit would ground the rack).
+	profile.spare_parts = 200
+	yard.repair(ServiceYard.Priority.FULL)
 	_check(yard.launch(), "relaunch")
 	for i in 4:
 		await process_frame
@@ -104,9 +122,7 @@ func _run() -> void:
 	main.world.get_ship(fighter.id).status = ShipState.Status.DESTROYED
 	await _wait(main, 1.0, func() -> bool: return fighter.status == AirWing.Status.LOST)
 	_check(fighter.status == AirWing.Status.LOST and main.hud.weapon_label.text.contains("LOST"), "shot down: LOST, and the HUD says so")
-	await _press("open_shipyard")
-	for i in 4:
-		await process_frame
+	await _jump(main)
 	yard = current_scene as Shipyard
 	_check(yard != null and (profile.vessel.wing.get(fighter.rack_id, {}) as Dictionary).get("lost", false), "the loss is saved with the vessel")
 	_check(yard._hangar_label.get_parsed_text().contains("Replace lost Wasp fighter"), "the station lists the replacement")
@@ -119,9 +135,7 @@ func _run() -> void:
 			fighter = c
 	_check(fighter.status == AirWing.Status.LOST and main.player_wing.launch(main.world, fighter).contains("lost"),
 		"still lost next sortie: it cannot launch")
-	await _press("open_shipyard")
-	for i in 4:
-		await process_frame
+	await _jump(main)
 	yard = current_scene as Shipyard
 	profile.spare_parts = 200
 	yard.repair(ServiceYard.Priority.FULL)

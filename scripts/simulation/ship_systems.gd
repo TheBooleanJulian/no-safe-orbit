@@ -24,8 +24,9 @@ extends RefCounted
 ## - Crew (CrewRoster): people in a room that vents are killed or wounded.
 ##   No fit command crew on a pressurised bridge: the ship AI flies it, with
 ##   limited mobility (thrust and turn rates × SHIP_AI_FACTOR, assist always
-##   on). No fit weapons crew able to reach a magazine halves the guns' rate
-##   of fire (autoloaders only).
+##   on); it keeps the guns working at half the rate of fire and with extra
+##   spread. No fit weapons crew able to reach a magazine halves the guns'
+##   rate of fire (autoloaders only).
 ## - Power distribution (pips, 6 in total, 0–4 per channel, 2 each to start):
 ##   SYS = attitude control (RCS torque, turn rates) and repair speed,
 ##   ENG = translation thrust, WEP = rate of fire. A channel's factor is
@@ -77,13 +78,20 @@ const ROLE_STATIONS := {
 	CrewRoster.Role.DAMAGE_CONTROL: [&"workshop", &"access"],
 	CrewRoster.Role.WEAPONS: [&"magazine", &"command"],
 }
+## Crew reach external systems on EVA from rooms this close (cells).
+const EVA_REACH_CELLS := 2
 ## Without a working sensor mast: eyeballs and backup optics (m).
 const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
 const SHIP_AI_FACTOR := 0.5
+## The ship AI still lays the guns, at this fraction of the rate of fire and
+## with this much extra spread (degrees, standard deviation).
+const SHIP_AI_GUN_RATE_FACTOR := 0.5
+const SHIP_AI_DISPERSION_DEG := 0.4
 const REACTOR_BLAST_RADIUS_M := 15.0
-## Structure points / system hit points destroyed at the blast centre.
-const REACTOR_BLAST_STRUCTURE := 150.0
+## Structure destroyed at the blast centre, as a multiple of each module's
+## own structure (falling off with distance), and system hit points.
+const REACTOR_BLAST_STRUCTURE_FRACTION := 1.2
 const REACTOR_BLAST_HP := 90.0
 ## Rooms whose centre is within this fraction of the radius are breached.
 const REACTOR_BLAST_BREACH_FRACTION := 0.6
@@ -180,8 +188,19 @@ var switched_off: Dictionary = {}
 ## Compartments sealed off by order (room index -> true): nobody passes
 ## through them; whoever is inside stays.
 var isolated_rooms: Dictionary = {}
+## Armour plates as they are now (worn by hits): plate key -> mm.
+var plates: Dictionary = {}
+## Power conduit cells cut by hits (cell key -> true).
+var bus_cut: Dictionary = {}
+## Seeded per design: chance-based damage (conduit cuts) repeats exactly.
+var damage_rng := RandomNumberGenerator.new()
+## Bus networks by cell (cell key -> network), from the last power solve;
+## empty when the design has no routed bus.
+var bus_network: Dictionary = {}
 
 var _attachments: Array[Array] = []
+## Exposed faces per module (passive cooling).
+var _module_faces: PackedInt32Array = PackedInt32Array()
 var _config: ShipConfig
 var _rounds_seen: int = 0
 
@@ -192,7 +211,10 @@ static func create(bp: ShipBlueprint, p_grid: ShipGrid, p_stats: ShipStats, conf
 	s.grid = p_grid
 	s.stats = p_stats
 	s.base_config = config
+	s.damage_rng.seed = hash(bp.name) + bp.modules.size()
 	s._attachments = p_grid.attachments()
+	for i in bp.modules.size():
+		s._module_faces.append(p_grid.exterior_face_count(i) if p_grid.module_def(i) != null else 0)
 	for i in bp.modules.size():
 		var m := ModuleState.new()
 		var def := p_grid.module_def(i)
@@ -202,6 +224,8 @@ static func create(bp: ShipBlueprint, p_grid: ShipGrid, p_stats: ShipStats, conf
 		s.modules.append(m)
 	for r in bp.rooms:
 		s.rooms.append(RoomState.new())
+	for key in bp.armor:
+		s.plates[key] = float(bp.armor[key])
 	for i in bp.equipment.size():
 		var def := p_grid.equipment_def(i)
 		if def == null:
@@ -236,9 +260,31 @@ func equipment_at_cell(cell: Vector3i) -> EquipmentState:
 
 func external_at(cell: Vector3i, face: StringName) -> EquipmentState:
 	for e in equipment:
-		if e.def.is_external() and blueprint.equipment[e.index].cell == cell and blueprint.equipment[e.index].face == face:
+		if e.def.is_external() and blueprint.equipment[e.index].face == face and grid.external_cells(e.index).has(cell):
 			return e
 	return null
+
+
+## Where an internal craft bay's craft leave and come back: the outside of
+## the nearest open face of its room (the underside first), as [position,
+## outward normal] in the body frame. External racks use their own face.
+func launch_door(e: EquipmentState) -> Array:
+	var pe := blueprint.equipment[e.index]
+	if e.def.is_external():
+		return [e.body_position, Vector3(ShipGrid.FACE_NORMALS[pe.face])]
+	var cells: Array = grid.equipment_cells(e.index)
+	var r: int = grid.room_at.get(pe.cell, -1)
+	if r >= 0:
+		for c in ShipGrid.room_cells(blueprint.rooms[r]):
+			if not cells.has(c):
+				cells.append(c)
+	var com := stats.center_of_mass_m
+	for face: StringName in [&"ventral", &"port", &"starboard", &"dorsal", &"aft", &"fore"]:
+		for c: Vector3i in cells:
+			if grid.is_exterior_face(c, face) and not grid.slope_faces(c).has(face):
+				var n := Vector3(ShipGrid.FACE_NORMALS[face])
+				return [ShipGrid.cell_center_m(c) + n * ShipGrid.CELL_SIZE_M * 0.5 - com, n]
+	return [e.body_position, Vector3.DOWN]
 
 
 func equipment_by_index(index: int) -> EquipmentState:
@@ -332,7 +378,7 @@ func _explode(src: EquipmentState) -> void:
 	for i in modules.size():
 		var center := Vector3(blueprint.modules[i].position) * c + Vector3(grid.module_size(i)) * c * 0.5 - com
 		var k := _blast_falloff(center, src.body_position)
-		if k > 0.0 and damage_module(i, REACTOR_BLAST_STRUCTURE * k):
+		if k > 0.0 and damage_module(i, modules[i].max_structure * REACTOR_BLAST_STRUCTURE_FRACTION * k):
 			blast.lines.append("Module %s wrecked by the blast" % blueprint.modules[i].id)
 	for i in rooms.size():
 		var cells := ShipGrid.room_cells(blueprint.rooms[i])
@@ -424,6 +470,9 @@ func update_pressure() -> void:
 
 ## Recompute which loads are powered on each junction network.
 func solve_power() -> void:
+	if not blueprint.bus.is_empty():
+		_solve_bus_power()
+		return
 	var n := modules.size()
 	var component := []
 	component.resize(n)
@@ -489,6 +538,119 @@ func solve_power() -> void:
 	_config = null
 
 
+## Power over a player-routed bus: conduit cells joined face to face (also
+## between decks) form networks; a cut conduit or a wrecked module's cells
+## carry nothing. A system or room is on a network when one of its cells
+## is. A network's reactors feed its loads only through a working power
+## distribution unit on it; short networks shed loads by priority.
+func _solve_bus_power() -> void:
+	bus_network.clear()
+	var networks := 0
+	for key: String in blueprint.bus:
+		if bus_network.has(key) or not _bus_alive(key):
+			continue
+		bus_network[key] = networks
+		var queue := [key]
+		while not queue.is_empty():
+			var cell := ShipBlueprint.parse_cell_key(queue.pop_front())
+			for face: StringName in ShipGrid.FACE_NORMALS:
+				var nk := ShipBlueprint.cell_key(cell + ShipGrid.FACE_NORMALS[face])
+				if blueprint.bus.has(nk) and not bus_network.has(nk) and _bus_alive(nk):
+					bus_network[nk] = networks
+					queue.append(nk)
+		networks += 1
+	var distributing := []
+	distributing.resize(networks)
+	distributing.fill(false)
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.POWER_DISTRIBUTION and not e.destroyed() and not switched_off.has(e.id):
+			var net := _network_of_equipment(e)
+			if net >= 0:
+				distributing[net] = true
+	var supply := []
+	supply.resize(networks)
+	supply.fill(0.0)
+	var loads := []
+	for e in equipment:
+		var net := _network_of_equipment(e)
+		if e.def.power_kw == 0.0:
+			e.powered = not e.destroyed()  # passive: needs no conduit
+			continue
+		if e.def.power_kw > 0.0:
+			e.powered = net >= 0 and not e.destroyed()
+			if e.def.kind == EquipmentDefinition.Kind.REACTOR and e.powered and distributing[net]:
+				supply[net] += e.def.power_kw * reactor_output()
+			continue
+		if net < 0 or e.destroyed() or switched_off.has(e.id):
+			e.powered = false
+			continue
+		loads.append([net, PRIORITY.get(e.def.kind, 4), -e.def.power_kw, e])
+	for i in blueprint.rooms.size():
+		var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
+		var cells := ShipGrid.room_cells(blueprint.rooms[i])
+		var net := _network_of_cells(cells)
+		if def == null or def.power_kw_per_cell >= 0.0:
+			rooms[i].powered = true  # draws nothing
+			continue
+		rooms[i].powered = net >= 0 and distributing[net]
+		if net >= 0:
+			loads.append([net, ROOM_PRIORITY, -def.power_kw_per_cell * cells.size(), null, i])
+		else:
+			rooms[i].powered = false
+	loads.sort_custom(func(a: Array, b: Array) -> bool: return a[1] < b[1])
+	var remaining: Array = supply.duplicate()
+	power_supply_kw = 0.0
+	for s in supply:
+		power_supply_kw += s
+	power_demand_kw = 0.0
+	power_unmet_kw = 0.0
+	for load in loads:
+		var net: int = load[0]
+		var kw: float = load[2]
+		power_demand_kw += kw
+		var ok: bool = remaining[net] >= kw - 1e-6
+		if ok:
+			remaining[net] -= kw
+		else:
+			power_unmet_kw += kw
+		if load[3] != null:
+			(load[3] as EquipmentState).powered = ok
+		else:
+			rooms[load[4]].powered = ok
+	_config = null
+
+
+func _bus_alive(key: String) -> bool:
+	if bus_cut.has(key):
+		return false
+	var mi: int = grid.module_at.get(ShipBlueprint.parse_cell_key(key), -1)
+	return mi >= 0 and not modules[mi].wrecked()
+
+
+func _network_of_cells(cells: Array) -> int:
+	for c in cells:
+		var net: int = bus_network.get(ShipBlueprint.cell_key(c), -1)
+		if net >= 0:
+			return net
+	return -1
+
+
+func _network_of_equipment(e: EquipmentState) -> int:
+	if e.def.is_external():
+		return bus_network.get(ShipBlueprint.cell_key(blueprint.equipment[e.index].cell), -1)
+	return _network_of_cells(grid.equipment_cells(e.index))
+
+
+## A round severed the conduit in `cell`. True if it was intact.
+func cut_bus(cell: Vector3i) -> bool:
+	var key := ShipBlueprint.cell_key(cell)
+	if not blueprint.bus.has(key) or bus_cut.has(key):
+		return false
+	bus_cut[key] = true
+	solve_power()
+	return true
+
+
 func reactor_output() -> float:
 	match reactor_state:
 		Reactor.THROTTLED:
@@ -518,9 +680,9 @@ func tick(ship: ShipState, dt: float) -> bool:
 		if def != null:
 			gen += def.heat_kw_per_cell * blueprint.rooms[i].rect.size.x * blueprint.rooms[i].rect.size.y
 	var rejection := 0.0
-	for m in modules:
-		if not m.wrecked():
-			rejection += ShipStats.PASSIVE_REJECTION_KW_PER_MODULE
+	for i in modules.size():
+		if not modules[i].wrecked():
+			rejection += ShipStats.PASSIVE_REJECTION_KW_PER_FACE * _module_faces[i]
 	for e in equipment:
 		if e.destroyed():
 			continue
@@ -629,6 +791,11 @@ func effective_config() -> ShipConfig:
 		cfg.thrust_lateral_n *= SHIP_AI_FACTOR
 		cfg.thrust_vertical_n *= SHIP_AI_FACTOR
 		cfg.thrust_torque_body *= SHIP_AI_FACTOR
+		if cfg.cannon != null:
+			var laid: KineticCannonConfig = cfg.cannon.duplicate()
+			laid.rate_of_fire_rpm *= SHIP_AI_GUN_RATE_FACTOR
+			cfg.cannon = laid
+			cfg.cannon_extra_dispersion_rad += deg_to_rad(SHIP_AI_DISPERSION_DEG)
 	if cfg.cannon != null and not has_gun_crew():
 		var gun: KineticCannonConfig = cfg.cannon.duplicate()
 		gun.rate_of_fire_rpm *= NO_GUN_CREW_RATE_FACTOR
@@ -926,6 +1093,17 @@ func condition() -> Dictionary:
 	var hatches := destroyed_hatches.keys()
 	hatches.sort()
 	var out := {"equipment": eq, "modules": mods, "breached": breached, "hatches": hatches}
+	if not bus_cut.is_empty():
+		var cut := bus_cut.keys()
+		cut.sort()
+		out["bus_cut"] = cut
+	var worn := {}
+	for key in plates:
+		var full := float(blueprint.armor.get(key, 0.0))
+		if full > 0.0 and plates[key] < full:
+			worn[key] = plates[key] / full
+	if not worn.is_empty():
+		out["plates"] = worn
 	var hurt: Dictionary = crew.casualties() if crew != null else {}
 	if not hurt.is_empty():
 		out["crew"] = hurt
@@ -945,6 +1123,13 @@ func apply_condition(c: Dictionary) -> void:
 		if def != null:
 			modules[i].armor_mm = clampf(float(entry.get("armor", 1.0)), 0.0, 1.0) * def.armor_mm
 		modules[i].structure = clampf(float(entry.get("structure", 1.0)), 0.0, 1.0) * modules[i].max_structure
+	bus_cut.clear()
+	for key in c.get("bus_cut", []):
+		if blueprint.bus.has(str(key)):
+			bus_cut[str(key)] = true
+	var worn: Dictionary = c.get("plates", {})
+	for key in blueprint.armor:
+		plates[key] = float(blueprint.armor[key]) * clampf(float(worn.get(key, 1.0)), 0.0, 1.0)
 	var breached: Array = c.get("breached", [])
 	for i in rooms.size():
 		rooms[i].breached = breached.has(blueprint.rooms[i].id)
@@ -977,15 +1162,11 @@ func working_workshop() -> int:
 
 
 ## The crew can get to this system: an internal one through its room, an
-## external one on EVA from a reachable room in the module it is mounted on.
+## external one on EVA from a reachable room within EVA_REACH_CELLS of its mount.
 func can_reach(e: EquipmentState) -> bool:
 	var reach := reachable_rooms()
-	var cell: Vector3i = blueprint.equipment[e.index].cell
-	if not e.def.is_external():
-		return reach.has(grid.room_at.get(cell, -1))
-	for r in reach:
-		var cells := ShipGrid.room_cells(blueprint.rooms[r])
-		if grid.module_at.get(cells[0], -2) == e.module_index:
+	for r in _access_rooms(e):
+		if reach.has(r):
 			return true
 	return false
 
@@ -1030,7 +1211,8 @@ func _repair_crew(e: EquipmentState) -> Array:
 
 
 ## Rooms from which the crew work on `e`: its own room, or for an external
-## system any room in the module it is mounted on.
+## system any room with a cell within EVA_REACH_CELLS of its mount (an
+## airlock walk along the hull).
 func _access_rooms(e: EquipmentState) -> Array[int]:
 	var out: Array[int] = []
 	var cell: Vector3i = blueprint.equipment[e.index].cell
@@ -1040,8 +1222,11 @@ func _access_rooms(e: EquipmentState) -> Array[int]:
 			out.append(r)
 		return out
 	for r in blueprint.rooms.size():
-		if grid.module_at.get(ShipGrid.room_cells(blueprint.rooms[r])[0], -2) == e.module_index:
-			out.append(r)
+		for c in ShipGrid.room_cells(blueprint.rooms[r]):
+			var d := (c - cell).abs()
+			if maxi(d.x, maxi(d.y, d.z)) <= EVA_REACH_CELLS:
+				out.append(r)
+				break
 	return out
 
 

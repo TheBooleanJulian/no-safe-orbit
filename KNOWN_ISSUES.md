@@ -16,9 +16,8 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   collisions; a recovered craft is serviced for free (its ammunition and
   propellant don't come from the carrier's stores). EW jamming exists only
   as a hook (Milestone 7).
-- **The station is abstract.** B docks from anywhere; there is no station to
-  fly back to, and propellant and ammunition are refilled free at every
-  launch. The cargo hold has no capacity limit yet.
+- **The station is abstract.** The jump drive takes you there from anywhere
+  out of combat; there is no station to fly to.
 - **Loot balance is untested by play.** Rates, pity, costs and salvage yields
   are tested for correctness, not for fun; expect tuning.
 - **Crew are abstract.** Roles, stations, routes and casualties are
@@ -51,7 +50,13 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   inside it.** A room spanning two modules stays put (and the validator flags
   it). Carrying is ambiguous while modules overlap.
 - **In-game rebinding covers keys, mouse buttons and gamepad buttons/axes**;
-  the mouse virtual stick itself is fixed to mouse movement.
+  the aim cursor itself is fixed to mouse movement (on a gamepad the aim is
+  the screen centre).
+- **Wedges are approximations in two places:** collisions and the blast treat
+  a wedge cell as a full cell; the HUD damage map draws it as a full cell.
+- **Older designs keep their legacy sections** and their automatic power
+  distribution; convert them by rebuilding from blocks (the template shows
+  how).
 - **No audio.** (Milestone 8.)
 
 ## Fixed (2026-10-19, third pass)

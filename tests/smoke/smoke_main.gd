@@ -69,9 +69,13 @@ func _run() -> void:
 	_check(absf(player.delta_v_expended - dv_before) < 1e-6,
 		"hold-orbit assist spends no Δv while coasting (spent %.4f m/s)" % (player.delta_v_expended - dv_before))
 
-	# Fire for ~0.6 s through the fire action: at 240 rpm that is 3 rounds.
+	# Fire for 3 s through the fire action, the cursor on the target: the
+	# turret trains on, then fires at 50 rpm.
 	Input.action_press("fire")
-	await _run_until_sim_time(main, 0.6)
+	var t_fire := main.world.sim_time
+	while main.world.sim_time - t_fire < 3.0:
+		main.aim_cursor_at_lead()
+		await process_frame
 	Input.action_release("fire")
 	_check(player.rounds_fired >= 2 and not main.world.projectiles().is_empty(),
 		"fire action launches rounds (fired %d, in flight %d)" % [player.rounds_fired, main.world.projectiles().size()])
@@ -125,6 +129,7 @@ func _run() -> void:
 		if tof > 0.0:
 			player.orientation = Quaternion(Vector3.FORWARD, FireControl.lead_point(aim, tgt.velocity - player.velocity, tof).normalized())
 			player.angular_velocity = Vector3.ZERO
+		main.aim_cursor_at_lead()
 		await process_frame
 	Input.action_release("fire")
 	await process_frame

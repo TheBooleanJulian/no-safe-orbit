@@ -3,9 +3,11 @@ extends TestCase
 ## hatches, picking, placement preview) and that validation follows edits.
 
 
+## Editing operations against the original section-built frigate (a fixed
+## fixture with known module ids and layout).
 func _editor() -> ShipEditor:
 	var errors := PackedStringArray()
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	var bp := BlueprintIO.load_file("res://tests/fixtures/frigate_legacy.json", errors)
 	return ShipEditor.new(bp, ConstructionCatalog.default_catalog())
 
 
@@ -113,3 +115,30 @@ func test_preview_reports_new_errors_without_editing() -> void:
 	assert_true(BlueprintIO.to_json(ed.blueprint) == json, "preview leaves the blueprint unchanged")
 	var none := ed.preview_new_errors(func(bp: ShipBlueprint) -> void: bp.add_equipment(&"radiator", Vector3i(3, 2, 6), &"dorsal"))
 	assert_true(none.is_empty(), "valid placement previews clean")
+
+
+func test_every_part_has_an_engineering_card() -> void:
+	var catalog := ConstructionCatalog.default_catalog()
+	for entry in [["hull", catalog.hull], ["room", catalog.rooms], ["equipment", catalog.equipment]]:
+		for id in entry[1]:
+			var text := Shipyard.describe_definition(entry[0], catalog, id)
+			assert_true(text.contains("COST") and not text.contains("Connectors"), "%s card has costs and no connector list" % id)
+	var gun := Shipyard.describe_definition("equipment", catalog, &"kinetic_cannon")
+	assert_true(gun.contains("rpm") and gun.contains("penetration") and gun.contains("uses"), "cannon card: rate of fire, penetration, power:\n%s" % gun)
+	var room := Shipyard.describe_definition("room", catalog, &"magazine")
+	assert_true(room.contains("PER CELL") and room.contains("rounds"), "room card is per cell:\n%s" % room)
+
+
+func test_middle_of_a_bottom_cell_picks_the_underside() -> void:
+	var ed := ShipEditor.new(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()), ConstructionCatalog.default_catalog())
+	var deck := DeckEditor.new()
+	deck.editor = ed
+	# Deck 0 of the engine section: covered above by deck 1, open below.
+	assert_true(deck.vertical_face(Vector3i(3, 0, 13), false) == &"ventral", "bottom deck: the underside")
+	assert_true(deck.vertical_face(Vector3i(3, 0, 13), true) == &"dorsal", "Shift: the other face")
+	assert_true(deck.vertical_face(Vector3i(3, 2, 6), false) == &"dorsal", "top deck: the top")
+	# Right-click in the middle finds an underside RCS too.
+	var id := ed.place_equipment(&"rcs_block", Vector3i(2, 0, 13), &"ventral")
+	assert_true(ed.item_at(Vector3i(2, 0, 13), &"dorsal") == id, "the underside RCS is found from the middle of its cell")
+	assert_true(ed.remove(id) and ed.blueprint.find(id) == null, "and removed")
+	deck.free()

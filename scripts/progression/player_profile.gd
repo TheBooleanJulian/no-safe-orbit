@@ -15,7 +15,11 @@ extends RefCounted
 ##   only the cargo: a respawn fee in credits rehires, rebuilds and rearms
 ##   the same design.
 
-const SCHEMA_VERSION := 2
+## v3: a hangar of vessels (one active) instead of a single vessel.
+const SCHEMA_VERSION := 3
+## Earth Shipyard's fee for laying down a new hull (credits); its parts are
+## paid in spare parts like any refit.
+const NEW_HULL_FEE := 250
 const DEFAULT_PATH := "user://profile.json"
 const STARTING_SPARE_PARTS := 60
 const STARTING_CREDITS := 300
@@ -43,8 +47,24 @@ var total_pulls: int = 0
 var missions_completed: int = 0
 var vessels_lost: int = 0
 var loot_log: PackedStringArray = PackedStringArray()
-## The vessel in the hangar; null until the first launch.
-var vessel: ShipInstance
+## Every vessel in the hangar, and which one is flown and edited.
+var vessels: Array[ShipInstance] = []
+var active_vessel: int = 0
+## Set by the shipyard while a new hull is on the slip (not saved): every
+## vessel's rarer parts are then spoken for, the active one's included.
+var designing_new: bool = false
+## The active vessel; null until the first launch. Assigning replaces it.
+var vessel: ShipInstance:
+	get:
+		return vessels[active_vessel] if active_vessel >= 0 and active_vessel < vessels.size() else null
+	set(v):
+		if v == null:
+			return
+		if vessels.is_empty():
+			vessels.append(v)
+			active_vessel = 0
+		else:
+			vessels[active_vessel] = v
 
 ## Loot RNG, persisted so reloading cannot re-roll a pull.
 var _rng := RandomNumberGenerator.new()
@@ -88,13 +108,23 @@ func check_design(bp: ShipBlueprint, catalog: ConstructionCatalog, report: ShipV
 		if not used.has(e.def_id):
 			used[e.def_id] = [0, e.id]
 		used[e.def_id][0] += 1
+	# Units fitted to the other vessels in the hangar are not free.
+	var elsewhere := {}
+	for i in vessels.size():
+		if i != active_vessel or designing_new:
+			var units := rare_units(vessels[i].blueprint, catalog)
+			for id in units:
+				elsewhere[id] = int(elsewhere.get(id, 0)) + int(units[id])
 	for id in used:
 		var need: int = used[id][0]
-		if need > owned(id):
+		var fitted: int = elsewhere.get(String(id), 0)
+		var free := owned(id) - fitted
+		if need > free:
 			var def: EquipmentDefinition = catalog.equipment[id]
 			report.add(ShipValidator.Severity.ERROR, &"part_not_owned",
-				"%s: the design uses %d but you own %d. Find more in salvage or remove %s." % [
-					def.display_name, need, owned(id), "it" if need - owned(id) == 1 else "some"], used[id][1])
+				"%s: the design uses %d but you own %d%s. Find more in salvage or remove %s." % [
+					def.display_name, need, owned(id), " (%d fitted to your other vessels)" % fitted if fitted > 0 else "",
+					"it" if need - free == 1 else "some"], used[id][1])
 
 
 ## Rarer equipment units `bp` uses, by definition id.
@@ -120,6 +150,25 @@ func pull(n: int, catalog: ConstructionCatalog) -> Array[LootRoller.Drop]:
 		total_pulls += 1
 		out.append(d)
 	return out
+
+
+## Open `n` salvage crates: each holds loot with `chance`, else it is empty
+## (null in the result). Pity only counts crates that hold loot.
+func open_crates(n: int, chance: float, catalog: ConstructionCatalog) -> Array:
+	var pool := LootRoller.build_pool(catalog)
+	var out := []
+	for i in n:
+		total_pulls += 1
+		if _rng.randf() >= chance:
+			out.append(null)
+			continue
+		out.append(LootRoller.pull(_rng, pool, pity))
+	return out
+
+
+## Developer aid (shipyard button): free credits for testing.
+func dev_grant_credits(amount: int) -> void:
+	credits += amount
 
 
 ## Put a drop in the vessel's cargo hold (at risk until banked).
@@ -217,6 +266,39 @@ func ensure_vessel(bp: ShipBlueprint) -> ShipInstance:
 	return vessel
 
 
+## Spare parts and credits a new hull to `bp` costs: every part built new,
+## and the yard's fee.
+func new_hull_cost(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Vector2i:
+	var empty := ShipInstance.new()
+	empty.blueprint = ShipBlueprint.new()
+	return Vector2i(ServiceYard.total_cost(ServiceYard.refit_jobs(empty, bp, catalog)), NEW_HULL_FEE)
+
+
+## Lay down a new vessel to `bp` and make it the active one. Returns "" on
+## success, or why not (the cost is only taken on success).
+func commission(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
+	var cost := new_hull_cost(bp, catalog)
+	if cost.x > spare_parts:
+		return "A new hull to this design needs %d spare parts; you have %d" % [cost.x, spare_parts]
+	if cost.y > credits:
+		return "The yard's fee is %d credits; you have %d" % [cost.y, credits]
+	spare_parts -= cost.x
+	credits -= cost.y
+	var v := ShipInstance.fresh(bp)
+	v.record("Commissioned as %s (%d spare parts, %d credits)" % [bp.name, cost.x, cost.y])
+	vessels.append(v)
+	active_vessel = vessels.size() - 1
+	return ""
+
+
+## Make vessel `index` the active one (flown and edited).
+func select_vessel(index: int) -> bool:
+	if index < 0 or index >= vessels.size():
+		return false
+	active_vessel = index
+	return true
+
+
 ## Back at the station with `after` (ShipSystems.condition()): the vessel
 ## keeps its damage (repairs are paid for at the yard).
 func dock(after: Dictionary, _catalog: ConstructionCatalog) -> PackedStringArray:
@@ -284,7 +366,8 @@ func to_dict() -> Dictionary:
 		"loot_log": Array(loot_log),
 		# 64-bit RNG values do not survive JSON numbers (doubles): strings.
 		"rng": {"seed": str(_rng.seed), "state": str(_rng.state)},
-		"vessel": vessel.to_dict() if vessel != null else null,
+		"vessels": vessels.map(func(v: ShipInstance) -> Dictionary: return v.to_dict()),
+		"active_vessel": active_vessel,
 	}
 
 
@@ -297,6 +380,7 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 		errors.append("Profile schema %d is newer than this game supports (%d)" % [int(version), SCHEMA_VERSION])
 		return null
 	# Migrations, oldest first. v1 → v2: credits and cargo added (defaults).
+	# v2 → v3: the single "vessel" becomes the hangar's only vessel.
 	var p := PlayerProfile.new(1)
 	p.spare_parts = int(d.get("spare_parts", STARTING_SPARE_PARTS))
 	p.credits = int(d.get("credits", STARTING_CREDITS))
@@ -321,7 +405,15 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 		p._rng.seed = str(rng.seed).to_int()
 		p._rng.state = str(rng.state).to_int()
 	if d.get("vessel") is Dictionary:
-		p.vessel = ShipInstance.from_dict(d.vessel, errors)
+		var v := ShipInstance.from_dict(d.vessel, errors)
+		if v != null:
+			p.vessels.append(v)
+	for vd in d.get("vessels", []):
+		if vd is Dictionary:
+			var v := ShipInstance.from_dict(vd, errors)
+			if v != null:
+				p.vessels.append(v)
+	p.active_vessel = clampi(int(d.get("active_vessel", 0)), 0, maxi(p.vessels.size() - 1, 0))
 	return p
 
 

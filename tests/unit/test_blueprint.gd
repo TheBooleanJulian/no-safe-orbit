@@ -50,7 +50,7 @@ func test_frigate_template_validates_clean_and_compiles() -> void:
 	var stats := _stats(bp)
 	var cfg := stats.to_ship_config(bp.name)
 	assert_true(cfg.validate().is_empty(), "compiled ShipConfig problems: %s" % ", ".join(cfg.validate()))
-	assert_true(stats.mass_kg > 300_000.0 and stats.mass_kg < 450_000.0, "frigate mass %.0f kg in 300–450 t" % stats.mass_kg)
+	assert_true(stats.mass_kg > 300_000.0 and stats.mass_kg < 550_000.0, "frigate mass %.0f kg in 300–550 t" % stats.mass_kg)
 	var accel := stats.thrust_forward_n / stats.mass_kg
 	assert_true(accel > 5.0 and accel < 12.0, "main-engine acceleration %.2f m/s² in 5–12" % accel)
 	assert_near(stats.center_of_mass_m.x, 12.0, 0.25, "CoM on the centreline (x, m)")
@@ -75,7 +75,7 @@ func test_blueprint_round_trip_has_no_data_loss() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	# New ids continue after loaded ones (no id reuse).
 	var added := loaded.add_room(&"corridor", 2, Rect2i(3, 4, 1, 1))
-	assert_true(added.id == "r54", "next id after a loaded design continues numbering (got %s)" % added.id)
+	assert_true(added.id == "r119", "next id after a loaded design continues numbering (got %s)" % added.id)
 
 
 func test_unsupported_or_malformed_files_are_rejected_safely() -> void:
@@ -105,16 +105,14 @@ func test_detached_module_detected() -> void:
 	_expect(bp, &"module_detached", ShipValidator.Severity.ERROR, "pod floating in space")
 
 
-func test_incompatible_connectors_do_not_attach() -> void:
-	# Pod's starboard "pod" connector against the engine section's bare port face.
+func test_any_common_face_attaches() -> void:
+	# The pod's bare port side against the engine section's bare face: one
+	# common face is enough (connector types no longer gate attachment).
 	var bp := _template()
 	var pod := bp.add_module(&"side_pod", Vector3i(0, 0, 12))
 	var report := _report(bp)
-	var issue: ShipValidator.Issue = null
-	for i in report.issues:
-		if i.code == &"module_detached" and i.subject == pod.id:
-			issue = i
-	assert_true(issue != null and issue.message.contains("don't match"), "mismatched connectors reported for %s:\n%s" % [pod.id, report.summary()])
+	assert_true(not report.issues.any(func(i: ShipValidator.Issue) -> bool: return i.code == &"module_detached" and i.subject == pod.id),
+		"a module sharing a face is attached:\n%s" % report.summary())
 
 
 func test_rotation_maps_faces() -> void:
@@ -241,14 +239,15 @@ func test_every_cannon_mount_compiles() -> void:
 
 func test_mass_and_center_of_mass_hand_computed() -> void:
 	# Fuselage 12×9×12 m (52 t, centre 6, 4.5, 6), a 1-cell corridor (400 kg,
-	# centre 1.5, 1.5, 1.5), a radiator on top of cell (0, 2, 0) (2.5 t at 1.5, 9, 1.5).
+	# centre 1.5, 1.5, 1.5), a 2-cell radiator on top of cells (0, 2, 0–1)
+	# (5 t at 1.5, 9, 3).
 	var bp := ShipBlueprint.new()
 	bp.add_module(&"fuselage_section", Vector3i.ZERO)
 	bp.add_room(&"corridor", 0, Rect2i(0, 0, 1, 1))
 	bp.add_equipment(&"radiator", Vector3i(0, 2, 0), &"dorsal")
 	var s := _stats(bp)
-	assert_near(s.mass_kg, 54_900.0, 1e-6, "total mass (kg)")
-	assert_vec_near(s.center_of_mass_m, Vector3(316_350.0, 257_100.0, 316_350.0) / 54_900.0, 1e-4, "centre of mass (m)")
+	assert_near(s.mass_kg, 57_400.0, 1e-6, "total mass (kg)")
+	assert_vec_near(s.center_of_mass_m, Vector3(320_100.0, 279_600.0, 327_600.0) / 57_400.0, 1e-4, "centre of mass (m)")
 
 
 func test_inertia_uses_parallel_axis() -> void:
