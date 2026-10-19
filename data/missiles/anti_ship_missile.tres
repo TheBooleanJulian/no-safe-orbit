@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MissileConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/missile_config.gd" id="1_m"]
+
+[resource]
+script = ExtResource("1_m")
+display_name = "Anti-ship missile"
+warhead = 0
+mass_kg = 250.0
+accel_mps2 = 60.0
+delta_v_mps = 1500.0
+turn_rate_deg_s = 120.0
+fuse_radius_m = 5.0
+hull_hp = 6.0
+penetration_mm = 160.0
+blast_radius_m = 8.0
+unit_credits = 60

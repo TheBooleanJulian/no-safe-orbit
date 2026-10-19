@@ -19,5 +19,6 @@ thrust_n = 0.0
 hit_points = 80.0
 shield_mm = 45.0
 color = Color(1.0, 0.55, 0.15, 1)
+emp_hardening = 0.5
 rarity = 2
 drop_weight = 8.0

@@ -54,8 +54,10 @@ func test_every_flight_action_has_gamepad_default() -> void:
 	var missing := PackedStringArray()
 	for entry in InputBindings.ACTIONS:
 		# Keyboard-only by design: releasing the mouse, and the information
-		# panel toggles (on a gamepad the Tab overview covers them).
-		if entry[0] in [&"release_mouse", &"toggle_orbit_panel", &"toggle_details", &"toggle_help", &"orbit_camera", &"cycle_target", &"grapple"]:
+		# panel toggles (on a gamepad the Tab overview covers them); every pad
+		# button is taken, so targeting, the arm and missiles are keys only.
+		if entry[0] in [&"release_mouse", &"toggle_orbit_panel", &"toggle_details", &"toggle_help", &"orbit_camera", &"cycle_target", &"grapple",
+				&"fire_missile"]:
 			continue
 		if InputBindings.describe(entry[0], InputBindings.Kind.GAMEPAD) == "—":
 			missing.append(String(entry[0]))

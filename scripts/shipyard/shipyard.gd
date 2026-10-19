@@ -60,6 +60,7 @@ var place_rotation: int = 0
 var place_flip: bool = false
 ## Which faces an armour stroke covers.
 var armor_faces: OptionButton
+var armor_clear: Button
 var underside_button: Button
 var selected_id: String = ""
 var _hover_cell := Vector3i.ZERO
@@ -259,6 +260,7 @@ func select_palette(kind: String, def_id: StringName) -> void:
 		iso_view.drag_rooms = deck_editor.drag_rooms
 	if armor_faces != null:
 		armor_faces.visible = kind == "armor"
+		armor_clear.visible = kind == "armor"
 	if kind == "bus":
 		var entry: Array = BUS_ENTRIES[def_id]
 		info_label.text = entry[2] % [ShipStats.BUS_KG_PER_CELL / 1000.0, ServiceYard.BUS_CELLS_PER_PART] if entry[0] else entry[2]
@@ -754,6 +756,12 @@ func _build_palette() -> void:
 	armor_faces.tooltip_text = "Which faces an armour stroke covers"
 	armor_faces.visible = false
 	box.add_child(armor_faces)
+	armor_clear = Button.new()
+	armor_clear.text = "Clear all armour"
+	armor_clear.tooltip_text = "Strip every armour plate off the design (Ctrl+Z puts them back)"
+	armor_clear.visible = false
+	armor_clear.pressed.connect(func() -> void: _set_status("Removed %d armour plates" % editor.clear_armor()))
+	box.add_child(armor_clear)
 	var turn_row := HBoxContainer.new()
 	for spec in [["⟳ Rotate [R]", "Turn the part being placed, or the selected module", rotate_current],
 			["⇅ Flip [F]", "Upside down: a wedge's slope faces down instead of up", flip_current]]:
@@ -809,7 +817,7 @@ static func category_of(kind: String, def: Resource) -> String:
 			return "Propulsion"
 		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION:
 			return "Power & thermal"
-		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE:
+		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE, EquipmentDefinition.Kind.MISSILE_LAUNCHER:
 			return "Weapons"
 		EquipmentDefinition.Kind.SENSOR, EquipmentDefinition.Kind.GRAPPLE:
 			return "Sensors"
@@ -1189,8 +1197,9 @@ func _refresh_hangar() -> void:
 			lines.append("  … %d more" % (jobs.size() - 5))
 	var supply := ServiceYard.resupply_needs(v, catalog)
 	if int(supply.credits) > 0 and not building_new:
-		lines.append("RESUPPLY  %.1f t propellant · %d rounds — %d cr at launch%s" % [supply.propellant_kg / 1000.0, supply.rounds, supply.credits,
-			"  [color=#ff7766](credits short: partial)[/color]" if int(supply.credits) > profile.credits else ""])
+		lines.append("RESUPPLY  %.1f t propellant · %d rounds%s — %d cr at launch%s" % [supply.propellant_kg / 1000.0, supply.rounds,
+			" · %d missile%s (%d cr)" % [supply.missiles, "" if supply.missiles == 1 else "s", supply.missile_credits] if int(supply.missiles) > 0 else "",
+			supply.credits, "  [color=#ff7766](credits short: partial)[/color]" if int(supply.credits) > profile.credits else ""])
 	if building_new:
 		var hull := profile.new_hull_cost(editor.blueprint, editor.catalog)
 		lines.append(CyberTheme.tint("NEW HULL on the slip: %d spare parts + %d credits at commissioning" % [hull.x, hull.y], CyberTheme.AMBER))
@@ -1460,6 +1469,22 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 				"gun %s" % c.cannon.display_name if c.cannon != null else "unarmed (recon)", c.hull_hp])
 		EquipmentDefinition.Kind.DOCKING_COLLAR:
 			lines.append("GANGWAY up to %.0f m · seals in %.0f s · opens into the room behind it" % [Docking.GANGWAY_MAX_M, Docking.COLLAR_SEAL_S])
+		EquipmentDefinition.Kind.MISSILE_LAUNCHER:
+			var m := e.missile
+			var effect := ""
+			match m.warhead:
+				MissileConfig.Warhead.ANTI_SHIP:
+					effect = "%.0f mm penetrator + %.0f m blast" % [m.penetration_mm, m.blast_radius_m]
+				MissileConfig.Warhead.EMP:
+					effect = "EMP: resets unhardened electronics (full strength within %.0f m), no damage" % m.effect_radius_m
+				MissileConfig.Warhead.NUCLEAR:
+					effect = "radiation, heat and EMP (full strength within %.0f m); armour facing it shields the crew" % m.effect_radius_m
+			lines.append("LAUNCHER %d × %s · [M] fires (needs a lock) · reloads in %.0f s · restocked at the yard for %d cr each" % [
+				e.missile_capacity, m.display_name, ShipSystems.LAUNCHER_RELOAD_S, m.unit_credits])
+			lines.append("MISSILE %.0f m/s² · Δv %.1f km/s · turns %.0f°/s · %s · point defence can shoot it down" % [
+				m.accel_mps2, m.delta_v_mps / 1000.0, m.turn_rate_deg_s, effect])
+	if e.emp_hardening > 0.0:
+		lines.append("EMP HARDENED %d %%: resets that much shorter" % roundi(e.emp_hardening * 100.0))
 	if e.rarity != Rarity.Tier.COMMON:
 		lines.append("%s — found in salvage" % Rarity.name_of(e.rarity).to_upper())
 	return "\n".join(lines)

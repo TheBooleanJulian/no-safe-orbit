@@ -75,6 +75,36 @@ static func main_thrust_fraction(cfg: ShipConfig, thrust_body: Vector3) -> float
 	return clampf(-thrust_body.z / cfg.thrust_forward_n, 0.0, 1.0)
 
 
+## How hard the engines and the RCS are working (each 0–1) for a body
+## thrust and torque: x = main engines (aft, reverse and side engines, as
+## the busiest side's share of what it can give), y = RCS (translation on
+## sides without enough engines, and rotation).
+static func thrust_fractions(cfg: ShipConfig, thrust_body: Vector3, torque_body: Vector3) -> Vector2:
+	var engine := 0.0
+	var rcs := 0.0
+	for axis in 3:
+		var t := thrust_body[axis]
+		if absf(t) < 1.0:
+			continue
+		var positive := t > 0.0
+		var side_max := cfg.max_thrust(axis, positive)
+		if side_max <= 0.0:
+			continue
+		var share := clampf(absf(t) / side_max, 0.0, 1.0)
+		if axis == 2 and not positive:
+			engine = maxf(engine, share)
+			continue
+		var extra := cfg.engine_thrust_n[axis * 2 + (0 if positive else 1)] if cfg.engine_thrust_n.size() == 6 else 0.0
+		if extra > 0.0:
+			engine = maxf(engine, share)
+		if side_max - extra > 0.0:
+			rcs = maxf(rcs, share)
+	for axis in 3:
+		if cfg.max_torque_nm[axis] > 0.0:
+			rcs = maxf(rcs, clampf(absf(torque_body[axis]) / cfg.max_torque_nm[axis], 0.0, 1.0))
+	return Vector2(engine, rcs)
+
+
 ## Thrust (N, body frame) the ship applies this tick.
 ## Commanded axes get the commanded fraction of their thrust budget. With
 ## flight assist and a translation hold, uncommanded axes thrust against

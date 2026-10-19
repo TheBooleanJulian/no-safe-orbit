@@ -108,6 +108,20 @@ const FIRE_WOUND_CHANCE_PER_S := 0.04
 const FOAM_CHARGES := 2
 const FOAM_DELAY_S := 3.0
 const CREW_FIGHT_S := 20.0
+## EMP: an exposed system at exposure 1 is reset for EMP_RESET_S (internal
+## ones see half, hardening takes its share off), never longer than
+## EMP_MAX_S; under 2 s it rides it out.
+const EMP_RESET_S := 20.0
+const EMP_MAX_S := 90.0
+const EMP_INTERNAL_FACTOR := 0.5
+## Nuclear: dose = exposure ÷ (1 + armour facing the burst / 60 mm). Crew
+## are wounded above 0.4, killed above 1.5 (rising chance); the ship takes
+## NUKE_HEAT_K per unit of dose (capped); above exposure 3 the hull facing
+## the burst is ablated.
+const NUKE_HEAT_K := 120.0
+const NUKE_HEAT_MAX_K := 400.0
+## Launcher reload between missiles (s).
+const LAUNCHER_RELOAD_S := 4.0
 ## Without a working sensor mast: eyeballs and backup optics (m).
 const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
@@ -143,12 +157,14 @@ class EquipmentState:
 	var hp: float
 	var max_hp: float
 	var powered: bool = true
+	## Seconds until an EMP-reset system is back online (0 = working).
+	var disrupted_s: float = 0.0
 
 	func destroyed() -> bool:
 		return hp <= 0.0
 
 	func working() -> bool:
-		return hp > 0.0 and powered
+		return hp > 0.0 and powered and disrupted_s <= 0.0
 
 
 class ModuleState:
@@ -201,6 +217,9 @@ var tech: Dictionary = {}
 var fires: Dictionary = {}
 ## Foam charges used per room (index).
 var foam_used: Dictionary = {}
+## Missiles fired per launcher (equipment id), and launcher reload timers.
+var missiles_used: Dictionary = {}
+var launcher_cooldown: Dictionary = {}
 var temperature_k: float = NOMINAL_TEMP_K
 var reactor_state: Reactor = Reactor.NORMAL
 var power_supply_kw: float = 0.0
@@ -841,7 +860,160 @@ func tick(ship: ShipState, dt: float) -> bool:
 		changed = true
 	if _advance_fires(dt):
 		changed = true
+	if _advance_disruption(dt):
+		changed = true
+	for id in launcher_cooldown.keys():
+		launcher_cooldown[id] = maxf(float(launcher_cooldown[id]) - dt, 0.0)
 	return changed or _config == null
+
+
+## EMP-reset systems come back one by one.
+func _advance_disruption(dt: float) -> bool:
+	var back := false
+	for e in equipment:
+		if e.disrupted_s > 0.0:
+			e.disrupted_s = maxf(e.disrupted_s - dt, 0.0)
+			if e.disrupted_s <= 0.0:
+				_note("%s %s back online after the EMP" % [e.def.display_name, e.id])
+				back = true
+	if back:
+		solve_power()
+		_config = null
+	return back
+
+
+## Systems still resetting after an EMP: [{id, name, left_s}].
+func disrupted() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for e in equipment:
+		if e.disrupted_s > 0.0 and not e.destroyed():
+			out.append({"id": e.id, "name": e.def.display_name, "left_s": e.disrupted_s})
+	return out
+
+
+## An EMP at `exposure` (1 = the warhead's effect radius). Returns what reset.
+func emp(exposure: float) -> PackedStringArray:
+	var lines := PackedStringArray()
+	for e in equipment:
+		if e.destroyed() or not EquipmentDefinition.ELECTRONIC.has(e.def.kind):
+			continue
+		var k := exposure * (1.0 - clampf(e.def.emp_hardening, 0.0, 1.0)) * (1.0 if e.def.is_external() else EMP_INTERNAL_FACTOR)
+		var s := minf(EMP_RESET_S * k, EMP_MAX_S)
+		if s < 2.0:
+			continue
+		e.disrupted_s = maxf(e.disrupted_s, s)
+		lines.append("%s %s reset (%.0f s)" % [e.def.display_name, e.id, s])
+	if not lines.is_empty():
+		_note("EMP: %s" % "; ".join(lines))
+		solve_power()
+		_config = null
+	return lines
+
+
+## Mean armour (skin + plates, mm) on the faces turned towards `dir_body`.
+func facing_armor_mm(dir_body: Vector3) -> float:
+	var total := 0.0
+	var n := 0
+	for key: String in plates:
+		var cf := ShipBlueprint.parse_plate_key(key)
+		if Vector3(ShipGrid.FACE_NORMALS.get(cf[1], Vector3i.ZERO)).dot(dir_body) > 0.5:
+			total += float(plates[key])
+			n += 1
+	var skin := 0.0
+	for m in modules:
+		skin += m.armor_mm
+	skin /= maxf(modules.size(), 1)
+	return skin + (total / n if n > 0 else 0.0)
+
+
+## A nuclear burst at `exposure` from body direction `dir_body` (towards the
+## burst): radiation on the crew, heat, hull ablation close in, and an EMP.
+func nuclear(exposure: float, dir_body: Vector3) -> PackedStringArray:
+	var dir := dir_body.normalized()
+	var dose := exposure / (1.0 + facing_armor_mm(dir) / 60.0)
+	var lines := PackedStringArray(["Nuclear burst: exposure %.1f, dose %.1f behind %.0f mm" % [exposure, dose, facing_armor_mm(dir)]])
+	if crew != null:
+		var killed := 0
+		var hurt := 0
+		for m in crew.members:
+			if m.state == CrewRoster.State.DEAD or m.location < 0:
+				continue
+			var r := damage_rng.randf()
+			if r < clampf(dose - 1.5, 0.0, 1.0):
+				m.state = CrewRoster.State.DEAD
+				killed += 1
+			elif r < clampf(dose - 0.4, 0.0, 1.0) and m.state == CrewRoster.State.FIT:
+				m.state = CrewRoster.State.WOUNDED
+				hurt += 1
+		if killed + hurt > 0:
+			lines.append("radiation: %d killed, %d sick" % [killed, hurt])
+	temperature_k += minf(NUKE_HEAT_K * dose, NUKE_HEAT_MAX_K)
+	if exposure > 3.0:
+		var c := ShipGrid.CELL_SIZE_M
+		var com := stats.center_of_mass_m
+		for i in modules.size():
+			var center := Vector3(blueprint.modules[i].position) * c + Vector3(grid.module_size(i)) * c * 0.5 - com
+			if center.normalized().dot(dir) > 0.2 and damage_module(i, modules[i].max_structure * 0.12 * (exposure - 3.0)):
+				lines.append("Module %s ablated away" % blueprint.modules[i].id)
+		for key: String in plates.keys():
+			var cf := ShipBlueprint.parse_plate_key(key)
+			if Vector3(ShipGrid.FACE_NORMALS.get(cf[1], Vector3i.ZERO)).dot(dir) > 0.5:
+				plates[key] = maxf(float(plates[key]) - 4.0 * exposure, 0.0)
+	lines.append_array(emp(exposure * 1.5))
+	_note("; ".join(lines))
+	_config = null
+	return lines
+
+
+## A warhead's blast at a body point: modules and systems within `radius`
+## take damage falling off with distance; rooms near the centre breach.
+func blast_at(pos_body: Vector3, radius: float, structure_fraction: float, hp: float, title: String) -> Dictionary:
+	var blast := {"pos_body": pos_body, "radius": radius, "lines": PackedStringArray([title])}
+	explosions.append(blast)
+	var c := ShipGrid.CELL_SIZE_M
+	var com := stats.center_of_mass_m
+	for i in modules.size():
+		var center := Vector3(blueprint.modules[i].position) * c + Vector3(grid.module_size(i)) * c * 0.5 - com
+		var k := clampf(1.0 - center.distance_to(pos_body) / radius, 0.0, 1.0)
+		if k > 0.0 and damage_module(i, modules[i].max_structure * structure_fraction * k):
+			blast.lines.append("Module %s wrecked" % blueprint.modules[i].id)
+	for i in rooms.size():
+		var cells := ShipGrid.room_cells(blueprint.rooms[i])
+		var center := Vector3.ZERO
+		for cell in cells:
+			center += ShipGrid.cell_center_m(cell)
+		center = center / cells.size() - com
+		if center.distance_to(pos_body) < radius * 0.6 and breach_room(i):
+			blast.lines.append("%s %s breached" % [_room_name(i), blueprint.rooms[i].id])
+	for e in equipment:
+		var k := clampf(1.0 - e.body_position.distance_to(pos_body) / radius, 0.0, 1.0)
+		if k > 0.0 and not e.destroyed() and damage_equipment(e, hp * k):
+			blast.lines.append("%s %s destroyed" % [e.def.display_name, e.id])
+	_note("; ".join(blast.lines))
+	return blast
+
+
+## Missiles left in a launcher.
+func missiles_left(e: EquipmentState) -> int:
+	return maxi(e.def.missile_capacity - int(missiles_used.get(e.id, 0)), 0) if e.def.missile != null else 0
+
+
+## A launcher that can fire now (working, loaded, reloaded), or null.
+func ready_launcher() -> EquipmentState:
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER and e.working() and missiles_left(e) > 0 \
+				and float(launcher_cooldown.get(e.id, 0.0)) <= 0.0:
+			return e
+	return null
+
+
+## Missiles aboard by type (display name -> count).
+func missile_count() -> Dictionary:
+	var out := {}
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER and e.def.missile != null and not e.destroyed():
+			out[e.def.missile.display_name] = int(out.get(e.def.missile.display_name, 0)) + missiles_left(e)
+	return out
 
 
 ## Fires burn, smoulder, are foamed or fought; true when something changed.
@@ -1371,6 +1543,8 @@ func condition() -> Dictionary:
 		for room: int in foam_used:
 			foam[blueprint.rooms[room].id] = foam_used[room]
 		out["foam_used"] = foam
+	if not missiles_used.is_empty():
+		out["missiles_used"] = missiles_used.duplicate()
 	var worn := {}
 	for key in plates:
 		var full := float(blueprint.armor.get(key, 0.0))
@@ -1406,6 +1580,11 @@ func apply_condition(c: Dictionary) -> void:
 		if blueprint.coolant.has(str(key)):
 			coolant_cut[str(key)] = true
 	_cooled = null
+	missiles_used.clear()
+	var fired: Dictionary = c.get("missiles_used", {})
+	for e in equipment:
+		if fired.has(e.id):
+			missiles_used[e.id] = clampi(int(fired[e.id]), 0, e.def.missile_capacity)
 	foam_used.clear()
 	var foam: Dictionary = c.get("foam_used", {})
 	for i in blueprint.rooms.size():

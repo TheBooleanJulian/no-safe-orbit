@@ -5,6 +5,8 @@ extends RefCounted
 ## slid along its axis, or turned, to the nearest spot where every cell is a
 ## free, flat exterior face. If nothing fits it stays put (the validator
 ## then says so). Returns what it moved.
+## Armour plates left on faces a later deck or module covered (or on cells
+## that are no longer hull) are dropped by prune_plates.
 
 static func fit_spans(bp: ShipBlueprint, catalog: ConstructionCatalog) -> PackedStringArray:
 	var moved := PackedStringArray()
@@ -49,3 +51,17 @@ static func _span_ok(grid: ShipGrid, bp: ShipBlueprint, index: int, start: Vecto
 		if not grid.is_exterior_face(c, e.face) or grid.slope_faces(c).has(e.face) or taken.has("%s|%s" % [c, e.face]):
 			return false
 	return true
+
+
+## Drop armour plates that can no longer be reached: on a cell that is not
+## hull, or on a face that is not exterior any more. A wedge's slope plate
+## is stored under its plate_face, which plateable_faces already reports.
+## Returns how many went.
+static func prune_plates(bp: ShipBlueprint, grid: ShipGrid) -> int:
+	var gone := 0
+	for key: String in bp.armor.keys():
+		var cf := ShipBlueprint.parse_plate_key(key)
+		if not grid.plateable_faces(cf[0]).has(cf[1]):
+			bp.armor.erase(key)
+			gone += 1
+	return gone

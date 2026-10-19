@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="MissileConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/missile_config.gd" id="1_m"]
+
+[resource]
+script = ExtResource("1_m")
+display_name = "EMP missile"
+warhead = 1
+mass_kg = 320.0
+accel_mps2 = 50.0
+delta_v_mps = 1400.0
+turn_rate_deg_s = 100.0
+fuse_radius_m = 150.0
+hull_hp = 8.0
+effect_radius_m = 250.0
+unit_credits = 180
