@@ -7,8 +7,9 @@ extends RefCounted
 ##
 ## Ownership model (docs/ARCHITECTURE.md → Progression):
 ## - COMMON parts: unlimited, fabricated from spare parts.
-## - Rarer equipment: `inventory[id]` units banked in total, installed or
-##   not. A design may use at most that many.
+## - Rarer equipment: `inventory[id]` units banked in total. Any design —
+##   any vessel in the hangar — may use up to that many: the yard moves
+##   units between hulls as they are refitted.
 ## - Rarer hull modules and rooms: blueprints, unlocked once banked.
 ## - Salvage goes into the vessel's cargo hold. It is only safe once banked
 ##   at the station (bank_cargo). Losing the vessel loses the cargo — and
@@ -16,7 +17,11 @@ extends RefCounted
 ##   the same design.
 
 ## v3: a hangar of vessels (one active) instead of a single vessel.
-const SCHEMA_VERSION := 3
+## v4: parts that stopped being common are granted to the saves using them.
+const SCHEMA_VERSION := 4
+## Equipment that was common before v4: owners get as many units as their
+## designs already use.
+const NO_LONGER_COMMON_V4 := ["kinetic_cannon"]
 ## Earth Shipyard's fee for laying down a new hull (credits); its parts are
 ## paid in spare parts like any refit.
 const NEW_HULL_FEE := 250
@@ -108,23 +113,14 @@ func check_design(bp: ShipBlueprint, catalog: ConstructionCatalog, report: ShipV
 		if not used.has(e.def_id):
 			used[e.def_id] = [0, e.id]
 		used[e.def_id][0] += 1
-	# Units fitted to the other vessels in the hangar are not free.
-	var elsewhere := {}
-	for i in vessels.size():
-		if i != active_vessel or designing_new:
-			var units := rare_units(vessels[i].blueprint, catalog)
-			for id in units:
-				elsewhere[id] = int(elsewhere.get(id, 0)) + int(units[id])
 	for id in used:
 		var need: int = used[id][0]
-		var fitted: int = elsewhere.get(String(id), 0)
-		var free := owned(id) - fitted
+		var free := owned(id)
 		if need > free:
 			var def: EquipmentDefinition = catalog.equipment[id]
 			report.add(ShipValidator.Severity.ERROR, &"part_not_owned",
-				"%s: the design uses %d but you own %d%s. Find more in salvage or remove %s." % [
-					def.display_name, need, owned(id), " (%d fitted to your other vessels)" % fitted if fitted > 0 else "",
-					"it" if need - free == 1 else "some"], used[id][1])
+				"%s: the design uses %d but you own %d. Find more in salvage or remove %s." % [
+					def.display_name, need, owned(id), "it" if need - free == 1 else "some"], used[id][1])
 
 
 ## Rarer equipment units `bp` uses, by definition id.
@@ -413,8 +409,34 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 			var v := ShipInstance.from_dict(vd, errors)
 			if v != null:
 				p.vessels.append(v)
+	for v in p.vessels:
+		BlueprintFix.fit_spans(v.blueprint, ConstructionCatalog.default_catalog())
 	p.active_vessel = clampi(int(d.get("active_vessel", 0)), 0, maxi(p.vessels.size() - 1, 0))
+	if int(version) < 4:
+		var designs: Array[ShipBlueprint] = []
+		for v in p.vessels:
+			designs.append(v.blueprint)
+		for file in BlueprintIO.list_user():
+			var bp := BlueprintIO.load_file(file, PackedStringArray())
+			if bp != null:
+				designs.append(bp)
+		p.grant_used(NO_LONGER_COMMON_V4, designs)
 	return p
+
+
+## Migration aid: own at least as many of each of `ids` as any one of
+## `designs` uses.
+func grant_used(ids: Array, designs: Array[ShipBlueprint]) -> void:
+	for id in ids:
+		var most := 0
+		for bp in designs:
+			var n := 0
+			for e in bp.equipment:
+				if String(e.def_id) == id:
+					n += 1
+			most = maxi(most, n)
+		if most > owned(StringName(id)):
+			inventory[id] = most
 
 
 func save(file_path: String = "") -> Error:

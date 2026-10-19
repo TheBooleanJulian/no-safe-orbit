@@ -640,7 +640,7 @@ func _refresh_stats() -> void:
 		"POWER      %.0f / %.0f kW" % [s.power_draw_kw, s.power_generation_kw],
 		"HEAT       %.0f / %.0f kW rejected" % [s.heat_generation_kw, s.heat_rejection_kw],
 		"CREW       %d berths" % s.crew_capacity,
-		"MAGAZINE   %d rounds" % s.rounds_capacity,
+		"MAGAZINE   %.1f t · %d rounds" % [s.magazine_kg / 1000.0, s.rounds_capacity],
 		"CARGO      %.0f m³" % s.cargo_m3,
 		"HULL       %.0f × %.0f × %.0f m" % [s.hull_bounds_m.size.x, s.hull_bounds_m.size.y, s.hull_bounds_m.size.z],
 	])
@@ -1206,6 +1206,8 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 				per.append("%d berth%s" % [d.crew_capacity_per_cell, "" if d.crew_capacity_per_cell == 1 else "s"])
 			if d.rounds_per_cell > 0:
 				per.append("%d rounds" % d.rounds_per_cell)
+			if d.ammo_kg_per_cell > 0.0:
+				per.append("%.0f kg of rounds" % d.ammo_kg_per_cell)
 			if d.cargo_m3_per_cell > 0.0:
 				per.append("%.0f m³ cargo" % d.cargo_m3_per_cell)
 			return "\n".join(PackedStringArray([

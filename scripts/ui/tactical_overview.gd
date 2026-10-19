@@ -184,7 +184,7 @@ func _build_power_tab() -> void:
 
 func _build_wing_tab() -> void:
 	var box := _tab_box()
-	box.add_child(_caption_label("[L] launch all  ·  [K] recall all"))
+	box.add_child(_caption_label("[[] launch all  ·  []] recall all"))
 	_wing_box = VBoxContainer.new()
 	box.add_child(_wing_box)
 

@@ -154,7 +154,7 @@ func _build_cards() -> void:
 	details_label = Label.new()
 	details_label.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL + 1)
 	dbox.add_child(details_label)
-	_heading_into(details_label, "DETAILS & COMBAT LOG  [J]", CyberTheme.CYAN)
+	_heading_into(details_label, "DETAILS & COMBAT LOG  [P]", CyberTheme.CYAN)
 	$Root/LeftColumn.add_child(_details_panel)
 	# Weapon strip (bottom centre).
 	_weapon_panel = PanelContainer.new()
@@ -180,7 +180,7 @@ func _build_cards() -> void:
 	warning_label.add_theme_font_size_override("font_size", CyberTheme.SIZE_TITLE)
 	warning_label.remove_theme_color_override("font_shadow_color")
 	# Help: one line always, the full card with H.
-	help_label.text = "[H] help · [F1] keys · [Tab] ship · [O] orbit · [J] log · [Shift] zoom · [RMB] look"
+	help_label.text = "[H] help · [F1] keys · [Tab] ship · [O] orbit · [P] log · [Shift] zoom · [RMB] look"
 	help_label.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
 	help_label.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
 	help_panel = PanelContainer.new()
@@ -199,15 +199,15 @@ func _build_cards() -> void:
 	$Root.add_child(help_panel)
 
 
-const HELP_TEXT := """FLIGHT     W/S main/reverse · A/D turn (strafe on the docking cam) · R/F up/down
-           arrows pitch & yaw · Q/E roll · right-drag orbits the camera (right click resets)
-ASSIST     Z on/off · X hold orbit ↔ match target (yellow markers = relative to target)
+const HELP_TEXT := """FLIGHT     W/S pitch · A/D yaw · Q/E roll · R/F main engine / reverse · IJKL strafe
+           arrows pitch & yaw · right-drag orbits the camera (right click resets)
+ASSIST     Z on/off · X cycles: hold orbit → match target → target markers (yellow, coast)
 GUNNERY    mouse aims the turrets (click captures; Esc releases) · LMB / Enter fire
-           Shift zoom on/off · ◇ lead marker (needs a lock)
+           Shift zoom on/off, wheel = magnification · ◇ lead marker (needs a lock) · U next target
 POWER      1 SYS · 2 ENG · 3 WEP · 4 balance
 SHIP       Tab damage control, crew, power, wing · C patch damage
-CONTACTS   T target hostile · G salvage beacon · V gangway · N board / withdraw · L / K launch / recall craft
-PANELS     O orbit · J details & combat log · H this help · F1 rebind
+CONTACTS   T target hostile · G salvage beacon · Y grappling arm · V gangway · N board / withdraw · [ / ] launch / recall craft
+PANELS     O orbit · P details & combat log · H this help · F1 rebind
 MISSION    hold B 5 s: jump drive to Earth Shipyard (out of combat) · Backspace restart / respawn"""
 
 
@@ -437,7 +437,7 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	overlay.camera = camera
 	overlay.ship_render_pos = player.interpolated_position(alpha) - render_origin
 	overlay.ship_forward = player.interpolated_orientation(alpha) * Vector3.FORWARD
-	overlay.velocity_relative_to_target = has_target and input.flight_assist and input.velocity_hold == PlayerInput.VelocityHold.TARGET
+	overlay.velocity_relative_to_target = has_target and input.target_relative()
 	if overlay.velocity_relative_to_target:
 		overlay.ship_velocity = player.velocity - target.velocity
 	else:
@@ -612,6 +612,8 @@ func _assist_text(input: PlayerInput, has_target: bool) -> String:
 		return "OFF — MANUAL"
 	if input.velocity_hold == PlayerInput.VelocityHold.TARGET:
 		return "ON · MATCH TARGET" if has_target else "ON · MATCH TARGET (none) → HOLD ORBIT"
+	if input.velocity_hold == PlayerInput.VelocityHold.TARGET_MARKERS:
+		return "ON · HOLD ORBIT · TARGET MARKERS" if has_target else "ON · HOLD ORBIT"
 	return "ON · HOLD ORBIT"
 
 
@@ -683,7 +685,7 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 				break
 	if _incoming != null and t - _incoming_time < HIT_ALERT_S:
 		var subject := _incoming.destroyed_ids[0] if not _incoming.destroyed_ids.is_empty() else (_incoming.damaged_ids[0] if not _incoming.damaged_ids.is_empty() else "")
-		out.append(_alert("caution", "HIT TAKEN: %s" % _incoming.headline(), "HIT TAKEN — %s" % _incoming.headline().to_upper(), "[J] log · [Tab] damage", subject))
+		out.append(_alert("caution", "HIT TAKEN: %s" % _incoming.headline(), "HIT TAKEN — %s" % _incoming.headline().to_upper(), "[P] log · [Tab] damage", subject))
 	if orbit != null:
 		var t_entry := orbit.time_to_radius_descending(world.body.entry_radius_m())
 		if not is_nan(t_entry):
@@ -761,6 +763,7 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 		track_line,
 		"RANGE   %s%s   CLOSING %s%s" % [est, HudFormat.distance(rng), est, HudFormat.signed_speed(-rr)],
 		"REL     %s%.1f m/s   ETA %s" % [est, rel_v, eta],
+		_approach_line(player, pos, vel, est),
 	])
 	var close_look := measured and (player_wing == null or player_wing.has_close_look(world, target))
 	if target.systems != null:
@@ -780,8 +783,20 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 			lines.append_array(_boarding_lines(world, player, target))
 	var hit_age := t - _last_hit_time
 	if hit_age < 3.0 and _outgoing != null:
-		lines.append("HIT     %s  (+%.1f s)  [J] log" % [_outgoing.headline(), hit_age])
+		lines.append("HIT     %s  (+%.1f s)  [P] log" % [_outgoing.headline(), hit_age])
 	target_label.text = "\n".join(lines)
+
+
+## Closest approach on present courses: when, how near, and (closing inside
+## 2 km) time to impact.
+func _approach_line(player: ShipState, pos: Vector3, vel: Vector3, est: String) -> String:
+	var ca := RelativeMotion.closest_approach(player.position, player.velocity, pos, vel)
+	if ca.time <= 0.0:
+		return "CPA     %snow — opening" % est
+	var line := "CPA     %s%s in %s" % [est, HudFormat.distance(ca.miss), HudFormat.duration(ca.time)]
+	if ca.miss < 50.0:
+		line += "   %s COLLISION COURSE" % CyberTheme.GLYPH_CRITICAL
+	return line
 
 
 ## Scan: hold the lock with an active sensor mast, then the estimated cargo
@@ -855,7 +870,7 @@ func _update_weapon_strip(player: ShipState) -> void:
 	if cannon != null:
 		lines.append("GUNS  %s" % turret_summary(player.turret_status))
 	if player_wing != null and not player_wing.crafts.is_empty():
-		lines.append("WING  %s   [L] launch [K] recall" % wing_text(player_wing))
+		lines.append("WING  %s   [[] launch []] recall" % wing_text(player_wing))
 	weapon_label.text = "\n".join(lines)
 
 

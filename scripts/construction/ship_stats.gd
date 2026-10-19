@@ -52,6 +52,8 @@ var heat_generation_kw: float = 0.0
 var heat_rejection_kw: float = 0.0
 var crew_capacity: int = 0
 var rounds_capacity: int = 0
+## Ammunition stowage in the magazines (kg); rounds_capacity follows from it.
+var magazine_kg: float = 0.0
 var cargo_m3: float = 0.0
 ## Hull bounds in grid metres.
 var hull_bounds_m: AABB = AABB()
@@ -100,6 +102,7 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 		s.heat_generation_kw += def.heat_kw_per_cell * cells
 		s.crew_capacity += def.crew_capacity_per_cell * cells
 		s.rounds_capacity += def.rounds_per_cell * cells
+		s.magazine_kg += def.ammo_kg_per_cell * cells
 		# Hold space is what internal equipment (tanks…) leaves free.
 		var free := 0
 		for cell in ShipGrid.room_cells(r):
@@ -164,6 +167,7 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 			EquipmentDefinition.Kind.PROPELLANT_TANK:
 				s.propellant_capacity_kg += def.propellant_capacity_kg
 				propellant.append({"mass": def.propellant_capacity_kg, "center": pos, "size": size_m})
+	s.rounds_capacity += rounds_from_mass(s.magazine_kg, s.cannon_configs)
 	s.main_isp_s = s.thrust_forward_n / main_flow if main_flow > 0.0 else 0.0
 	s.rcs_isp_s = s.thrust_rcs_n / rcs_flow if rcs_flow > 0.0 else 0.0
 
@@ -269,6 +273,26 @@ func to_ship_config(display_name: String) -> ShipConfig:
 		cfg.pd_normals_body = pd_normals
 		cfg.pd_mount_ids = pd_ids
 	return cfg
+
+
+## Rounds `kg` of stowage holds for these mounts: shared by mount count,
+## each calibre's share divided by its round mass.
+static func rounds_from_mass(kg: float, guns: Array[KineticCannonConfig]) -> int:
+	if guns.is_empty() or kg <= 0.0:
+		return 0
+	var total := 0
+	var shares := magazine_shares(guns)
+	for g: KineticCannonConfig in shares:
+		total += floori(kg * float(shares[g]) / g.round_mass_kg + 1e-6)
+	return total
+
+
+## Each gun type's share of the stowage mass, by mount count.
+static func magazine_shares(guns: Array[KineticCannonConfig]) -> Dictionary:
+	var out := {}
+	for g in guns:
+		out[g] = float(out.get(g, 0.0)) + 1.0 / guns.size()
+	return out
 
 
 ## Body-frame position (relative to the CoM) of a grid-metre point.

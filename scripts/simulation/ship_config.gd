@@ -104,6 +104,9 @@ func scale_rate_of_fire(factor: float) -> void:
 	if cannon == null:
 		return
 	var scaled := {}
+	# A fresh array: `duplicate()` of a config shares this one with the base
+	# config, and scaling it in place compounded on every recompute.
+	mount_cannons = mount_cannons.duplicate()
 	for gun in [cannon] + mount_cannons:
 		if gun != null and not scaled.has(gun):
 			var copy: KineticCannonConfig = gun.duplicate()

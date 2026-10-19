@@ -12,8 +12,9 @@ extends Resource
 @export var magazine_rounds: int = 400
 ## Projectile mass (kg). Also sets recoil: Δv_ship = m_round · v_muzzle / m_ship.
 @export var round_mass_kg: float = 4.0
-## Armour penetration (mm of hull armour) at an impact speed equal to the
-## muzzle velocity. Scales with impact speed^1.4 (de Marre-style).
+## Armour penetration (mm of hull armour). Rounds keep it however far they
+## fly (vacuum: nothing slows them); a head-on closing speed adds up to
+## HEAD_ON_BONUS_MAX, de Marre-style (speed^1.4).
 @export var penetration_mm: float = 60.0
 ## Turret training speed (°/s); 0 = a fixed gun firing along the nose.
 ## Turrets only exist on ships built from a blueprint (mount faces known).
@@ -22,6 +23,7 @@ extends Resource
 @export var dispersion_deg: float = 0.0
 
 const PENETRATION_SPEED_EXPONENT := 1.4
+const HEAD_ON_BONUS_MAX := 1.3
 
 
 func fire_interval_s() -> float:
@@ -30,7 +32,8 @@ func fire_interval_s() -> float:
 
 ## Penetration (mm) at a given impact speed relative to the target.
 func penetration_at(impact_speed_mps: float) -> float:
-	return penetration_mm * pow(maxf(impact_speed_mps, 0.0) / muzzle_velocity_mps, PENETRATION_SPEED_EXPONENT)
+	var k := pow(maxf(impact_speed_mps, 0.0) / muzzle_velocity_mps, PENETRATION_SPEED_EXPONENT)
+	return penetration_mm * clampf(k, 1.0, HEAD_ON_BONUS_MAX)
 
 
 func validate() -> PackedStringArray:

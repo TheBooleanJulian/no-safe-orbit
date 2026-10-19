@@ -92,6 +92,11 @@ var _wing_log_seen := {}  # AirWing -> log_count already shown
 
 static func get_profile() -> PlayerProfile:
 	if profile == null:
+		# `-- --profile=user://x.json`: play on another profile (the checks
+		# boot the game this way, never touching the player's own save).
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--profile="):
+				PlayerProfile.path = arg.trim_prefix("--profile=")
 		profile = PlayerProfile.load_or_new()
 	return profile
 
@@ -634,7 +639,7 @@ func jump_waiting() -> PackedStringArray:
 	var out := PackedStringArray()
 	var out_craft := player_wing.flying().map(func(c: AirWing.Craft) -> String: return c.label)
 	if not out_craft.is_empty():
-		out.append("recall craft %s [K]" % ", ".join(out_craft))
+		out.append("recall craft %s []]" % ", ".join(out_craft))
 	for b in world.boardings:
 		if b.link.attacker_id == PLAYER_ID and not b.finished() and b.team.any(func(m: CrewRoster.Member) -> bool: return m.location < 0 and m.state != CrewRoster.State.DEAD):
 			out.append("withdraw the boarding party [N]")
@@ -980,6 +985,7 @@ func _process(delta: float) -> void:
 		if player_input.zoomed:
 			_center_view_on_aim(player)
 	camera.zoomed = player_input.zoomed and not hud.overview.visible
+	camera.fov_zoomed = player_input.zoom_fov()
 	camera.orbit = player_input.camera_orbit
 	camera.follow(_views[PLAYER_ID], delta)
 	_update_docking_cam(player, target, alpha, render_origin)

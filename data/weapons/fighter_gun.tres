@@ -7,6 +7,6 @@ script = ExtResource("1_gun")
 display_name = "Fighter gun"
 muzzle_velocity_mps = 900.0
 rate_of_fire_rpm = 300.0
-magazine_rounds = 300
+magazine_rounds = 450
 round_mass_kg = 0.3
 penetration_mm = 12.0
