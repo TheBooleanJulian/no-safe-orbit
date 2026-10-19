@@ -4,6 +4,27 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-19 — Ship control, station economy, cyberpunk UI
+
+### Added
+- Power distribution (1/2/3/4), crew orders (cover lost roles), damage
+  control pick, boarding party size; tactical overview (Tab).
+- Ship AI flies a ship whose bridge crew is lost (half thrust and turn
+  rate). Reactors explode at 0 %.
+- Station: cargo hold (salvage at risk until banked), credits (bounties,
+  spare parts shop), respawn fee; death loses only the cargo and rebuilds
+  the same design. Combat log and debrief with lessons for the shipyard.
+- Always-visible damage map, boarding overlay in the hit cam, docking cam.
+- Procedural hull plating, ship names on the hull, hazard-striped collars
+  with beacons, white RCS jets, reactor fireballs.
+- Enemies vary and get tougher by mission; salvage strips the wreck's best
+  intact rare part.
+
+### Changed
+- Medium kinetic cannon: 1000 m/s, 120 rpm (was 1500 m/s, 240 rpm).
+- Cyan/magenta UI throughout. The shipyard is the station.
+- Destroyed rare parts are rebuilt instead of written off.
+
 ## [0.6.0] — 2026-10-19 — Milestone 5: crew and boarding; real-season Earth
 
 ### Added

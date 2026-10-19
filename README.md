@@ -46,6 +46,9 @@ godot --path .
 | Damage control (workshop field repair) | C | D-pad down |
 | Extend / release a boarding gangway | V | D-pad left |
 | Send the boarding party / order it home | N | D-pad right |
+| Divert power to systems / engines / weapons | 1 / 2 / 3 | paddles 1–3 |
+| Balance power | 4 | paddle 4 |
+| Tactical overview (ship map, power, crew, damage control) | Tab | left stick click |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
 | Dock at the shipyard (with the ship you're flying) | B | Start |
 | Controls panel (rebinding) | F1 | Guide |
@@ -103,8 +106,11 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
 1. **Disable** the target — knock out its guns, its power or its bridge. A
    clean disabling shot pays better than shooting it to pieces.
 2. **Salvage**: close to under 500 m, match velocity (X) to under 5 m/s and
-   press **G**. You recover `10 + 50 × intact` spare parts and 1–5 loot crates;
-   the next contact then arrives.
+   press **G**. The station pays a bounty in credits at once (`100 + 100 ×
+   intact`, doubled for a captured ship). `10 + 50 × intact` spare parts, 1–5
+   loot crates and the wreck's best intact rare part go into your **cargo
+   hold** — at risk until you bank them. The next contact then arrives,
+   and each one is tougher (rarer guns, armour, RCS and reactors).
 3. **Loot** uses cascading weighted rarity: every crate starts Common and
    climbs a tier with 30 % / 30 % / 25 % / 20 % chances (Common 70 %,
    Uncommon 21 %, Rare 6.75 %, Epic 1.8 %, Legendary 0.45 %), then picks a part
@@ -116,15 +122,21 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
    monocoque fuselage, workshop, dense magazine). Duplicate blueprints are
    scrapped for spare parts. The rates and pity countdown are shown with every
    salvage.
-4. **Dock** with **B**. The vessel keeps exactly the damage it came back
-   with (also when you restart, or quit mid-sortie). A rarer part destroyed in
-   flight is written off; losing the ship writes off every rarer part aboard,
-   but the fleet issues a new hull of the same design.
-5. **Repair** at the shipyard's HANGAR & SERVICE panel, paid in spare parts
+4. **Dock** at the station with **B**. The vessel keeps exactly the damage
+   it came back with (also when you restart, or quit mid-sortie). The
+   station opens on the **debrief**: what you hit, where the hits on you came
+   from, what armour stopped, what you lost, and lessons for the shipyard
+   (saved under `user://debriefs/`). **Bank cargo** to make the hold's
+   contents safe. Buy spare parts with credits.
+5. **Death** loses only what is in the cargo hold. The station rehires,
+   rebuilds and rearms the same design — rare parts fitted to it included —
+   for a respawn fee in credits (50 + 5 per berth). Backspace respawns in
+   orbit; B returns to the station. The debrief shows either way.
+6. **Repair** at the shipyard's HANGAR & SERVICE panel, paid in spare parts
    (a part's repair costs its new price × how damaged it is). Short of parts?
    Choose what comes first: full restoration, combat readiness, mobility or
    hull integrity. Unrepaired parts fly as they are.
-6. **Refit / relaunch**: new parts in an edited design must be paid for at
+7. **Refit / relaunch**: new parts in an edited design must be paid for at
    launch. Rarer parts can only be used if you own enough units / have the
    blueprint — the validator says what is missing.
 
@@ -134,13 +146,31 @@ a damage-control (or engineering) crew member walks there first, it costs
 spare parts, and it stops if the workshop or the part's room loses pressure
 or the repairer is hurt. Destroyed parts still need the yard.
 
+## Running the ship
+
+- **Damage map** (bottom left, always on): modules by structure, rooms by
+  pressure, systems by state, crew as dots.
+- **Power** (1 / 2 / 3, 4 to balance): six pips across SYS (turning and
+  repair speed), ENG (thrust) and WEP (rate of fire), 0–4 each: 50 % at 0
+  pips, 100 % at 2, 150 % at 4.
+- **Tactical overview** (Tab): your ship deck by deck, the target (with
+  boarding control), power, crew by role and where they are, orders to send
+  a general crew member to cover a lost role (bridge, guns, engineering,
+  damage control), what damage control patches first, and the boarding
+  party size.
+- **Bridge crew lost**: the ship AI flies it with half thrust and turn rate,
+  assist locked on, until someone takes over the bridge.
+- **Reactors explode** at 0 %: blast damage within 15 m, falling off with
+  distance.
+
 ## Crew and boarding
 
 Every berth holds one crew member with a role: command (bridge), engineering,
 damage control, weapons (magazine), security, medical and general crew. They
 are not drawn; moving between rooms takes 5 s per room, through pressurised
 rooms only. A room that vents wounds or kills whoever is in it. No command
-crew on a pressurised bridge halves your turn rates; no weapons crew able to
+crew on a pressurised bridge hands the ship to the ship AI (half thrust and
+turn rate); no weapons crew able to
 reach the magazine halves the guns' rate of fire. The dead must be replaced
 at the yard (2 spare parts each); the wounded recover when you dock.
 
@@ -160,6 +190,11 @@ at the yard (2 spare parts each); the wounded recover when you dock.
    resolved by numbers and roles, not instant kills: a full crew will
    usually repel eight boarders, so thin them out first — venting their
    quarters, or cutting straight into a bridge that sits under the hull.
+The hit-cam window shows the boarded ship's rooms while the fight goes on:
+cyan = taken, pulsing magenta = fought over, red = defended. Within 150 m a
+**docking cam** shows the view out of your collar with the tolerances, and
+every ship's docking collar is hazard-striped with a blinking beacon.
+
 4. Take the bridge and the ship surrenders: salvage it (**G**) for two extra
    crates; your party comes home with the prize. **N** again orders a
    withdrawal; if the gangway is gone, they are stranded. Leaving (B) with

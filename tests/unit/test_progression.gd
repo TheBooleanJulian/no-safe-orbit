@@ -554,3 +554,38 @@ func test_field_repair_is_interrupted_when_the_workshop_vents() -> void:
 	assert_true(s.repair_task == null and s.event_log[-1].contains("interrupted"), "breaching the workshop stops the repair: %s" % s.event_log[-1])
 	assert_near(s.equipment_by_id("e28").hp, 30.0, 1e-6, "no hit points restored (hp)")
 	assert_true(s.field_repair_block_reason().contains("workshop"), "and no new repair can start: %s" % s.field_repair_block_reason())
+
+
+# --- Enemies ------------------------------------------------------------------------
+
+func test_enemies_get_tougher_and_stay_valid() -> void:
+	var rare_counts := []
+	for mission in range(1, 13):
+		var bp := EnemyFactory.design(mission, _template(), _catalog())
+		var again := EnemyFactory.design(mission, _template(), _catalog())
+		assert_true(JSON.stringify(bp.to_dict()) == JSON.stringify(again.to_dict()), "mission %d enemy is deterministic" % mission)
+		assert_true(not ShipValidator.validate(bp, _catalog()).has_errors(), "mission %d enemy is a valid design" % mission)
+		var rares := 0
+		for e in bp.equipment:
+			rares += 1 if (_catalog().equipment[e.def_id] as EquipmentDefinition).rarity != Rarity.Tier.COMMON else 0
+		for m in bp.modules:
+			rares += 1 if (_catalog().hull[m.def_id] as HullModuleDefinition).rarity != Rarity.Tier.COMMON else 0
+		rare_counts.append(rares)
+	assert_true(rare_counts[0] == 0, "the first enemy is the plain template")
+	var early := 0
+	var late := 0
+	for k in 4:
+		early += rare_counts[k]
+		late += rare_counts[8 + k]
+	assert_true(late > early, "later enemies carry more rare parts (%s)" % [rare_counts])
+
+
+func test_salvage_strips_the_best_intact_rare_part() -> void:
+	var bp := _template()
+	(bp.find("e41") as ShipBlueprint.PlacedEquipment).def_id = &"railgun"
+	(bp.find("e33") as ShipBlueprint.PlacedEquipment).def_id = &"rcs_block_heavy"
+	var wreck := _ship(bp)
+	assert_true(EnemyFactory.recoverable_part(wreck.systems).def.id == &"railgun", "the epic railgun beats the uncommon RCS")
+	wreck.systems.damage_equipment(wreck.systems.equipment_by_id("e41"), 30.0)
+	assert_true(EnemyFactory.recoverable_part(wreck.systems).def.id == &"rcs_block_heavy", "a wrecked railgun is not worth stripping")
+	assert_true(EnemyFactory.recoverable_part(_ship(_template()).systems) == null, "an all-common wreck has nothing rare")

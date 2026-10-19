@@ -84,7 +84,6 @@ func _start_scenario() -> void:
 	hud.profile = p
 	var vessel := p.ensure_vessel(launch_blueprint if launch_blueprint != null else template)
 	_designs[PLAYER_ID] = _compile(vessel.blueprint, template)
-	_designs[TARGET_ID] = _compile(template, template)
 
 	world = WorldSimulation.new()
 	var r0 := EARTH.radius_m + START_ALTITUDE_M
@@ -116,8 +115,12 @@ func _start_scenario() -> void:
 ## have something to show.
 func _spawn_target() -> void:
 	var player := world.get_ship(PLAYER_ID)
+	var mission := get_profile().missions_completed + 1
+	var template := _load_template()
+	_designs[TARGET_ID] = _compile(EnemyFactory.design(mission, template, ConstructionCatalog.default_catalog()), template)
+	var class_name_word: String = (_designs[TARGET_ID].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
 	var target := ShipState.create(
-		TARGET_ID, "TGT-%02d KESTREL" % (get_profile().missions_completed + 1), _designs[TARGET_ID].config,
+		TARGET_ID, "TGT-%02d %s" % [mission, class_name_word], _designs[TARGET_ID].config,
 		player.position + Vector3(400, 120, -2500), player.velocity + Vector3(-25, 1.5, 6.0), Quaternion(Vector3.UP, 0.9))
 	target.angular_velocity = Vector3(0.0, 0.03, 0.01)
 	target.attach_systems(_new_systems(TARGET_ID))
@@ -313,6 +316,15 @@ func salvage_target() -> Array[LootRoller.Drop]:
 	# station pays the bounty at once.
 	p.vessel.cargo["spare_parts"] = int(p.vessel.cargo.get("spare_parts", 0)) + parts
 	var drops := p.pull(Salvage.pulls_for(target.systems), ConstructionCatalog.default_catalog())
+	# The best intact rarer part fitted to the wreck comes too.
+	var fitted := EnemyFactory.recoverable_part(target.systems)
+	if fitted != null:
+		var part := LootRoller.Drop.new()
+		part.kind = &"equipment"
+		part.def_id = fitted.def.id
+		part.rarity = fitted.def.rarity
+		part.display_name = "%s (stripped from the wreck)" % fitted.def.display_name
+		drops.push_front(part)
 	for d in drops:
 		p.stow(d)
 	p.credits += bounty
