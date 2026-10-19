@@ -330,6 +330,11 @@ func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElem
 		warning_label.visible = true
 		return
 	var sys := player.systems
+	if sys != null and not sys.has_command():
+		warning_label.text = "BRIDGE CREW LOST — SHIP AI IN CONTROL: %d %% THRUST AND TURN RATE, ASSIST LOCKED ON" % roundi(ShipSystems.SHIP_AI_FACTOR * 100.0)
+		warning_label.add_theme_color_override("font_color", COLOR_WARN)
+		warning_label.visible = true
+		return
 	if sys != null and (sys.reactor_state != ShipSystems.Reactor.NORMAL or sys.power_unmet_kw > 0.0):
 		if sys.reactor_state == ShipSystems.Reactor.SCRAM:
 			warning_label.text = "REACTOR SCRAM — %.0f K — NO POWER UNTIL IT COOLS BELOW %.0f K" % [sys.temperature_k, ShipSystems.RESTART_TEMP_K]

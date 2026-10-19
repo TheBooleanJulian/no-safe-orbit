@@ -22,9 +22,13 @@ extends RefCounted
 ##   one damaged system at a time, up to FIELD_REPAIR_LIMIT of its condition.
 ##   A fit damage-control or engineering crew member must walk there first.
 ## - Crew (CrewRoster): people in a room that vents are killed or wounded.
-##   No fit command crew on a pressurised bridge halves the assist turn
-##   rates; no fit weapons crew able to reach a magazine halves the guns'
-##   rate of fire (autoloaders only).
+##   No fit command crew on a pressurised bridge: the ship AI flies it, with
+##   limited mobility (thrust and turn rates × SHIP_AI_FACTOR, assist always
+##   on). No fit weapons crew able to reach a magazine halves the guns' rate
+##   of fire (autoloaders only).
+## - A reactor at 0 % breaches containment and explodes: modules, systems and
+##   rooms within REACTOR_BLAST_RADIUS_M take damage falling off with
+##   distance (a second reactor caught in it explodes too).
 
 enum Reactor { NORMAL, THROTTLED, SCRAM }
 
@@ -54,7 +58,14 @@ const FIELD_REPAIR_LIMIT := 0.75
 const FIELD_REPAIR_SETUP_S := 10.0
 const FIELD_REPAIR_S_PER_HP := 1.0
 ## Which damaged system the crew patch first (lower = sooner).
-const NO_COMMAND_RATE_FACTOR := 0.5
+## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
+const SHIP_AI_FACTOR := 0.5
+const REACTOR_BLAST_RADIUS_M := 15.0
+## Structure points / system hit points destroyed at the blast centre.
+const REACTOR_BLAST_STRUCTURE := 150.0
+const REACTOR_BLAST_HP := 90.0
+## Rooms whose centre is within this fraction of the radius are breached.
+const REACTOR_BLAST_BREACH_FRACTION := 0.6
 const NO_GUN_CREW_RATE_FACTOR := 0.5
 const FIELD_REPAIR_ORDER := {
 	EquipmentDefinition.Kind.REACTOR: 0,
@@ -135,6 +146,8 @@ var repair_task: RepairTask
 var crew: CrewRoster
 ## Taken by a boarding party: it surrenders and stops fighting.
 var captured: bool = false
+## Reactor explosions not yet shown: {pos_body, radius, lines}.
+var explosions: Array[Dictionary] = []
 
 var _attachments: Array[Array] = []
 var _config: ShipConfig
@@ -269,8 +282,51 @@ func damage_equipment(e: EquipmentState, amount: float) -> bool:
 	if e.destroyed():
 		_note("%s %s destroyed" % [e.def.display_name, e.id])
 		solve_power()
+		if e.def.kind == EquipmentDefinition.Kind.REACTOR:
+			_explode(e)
 		return true
 	return false
+
+
+## Reactor containment failure: blast damage falling off linearly with
+## distance from the reactor.
+func _explode(src: EquipmentState) -> void:
+	var blast := {"pos_body": src.body_position, "radius": REACTOR_BLAST_RADIUS_M,
+		"lines": PackedStringArray(["%s %s CONTAINMENT FAILURE — explosion" % [src.def.display_name, src.id]])}
+	explosions.append(blast)
+	_note(blast.lines[0])
+	var c := ShipGrid.CELL_SIZE_M
+	var com := stats.center_of_mass_m
+	for i in modules.size():
+		var center := Vector3(blueprint.modules[i].position) * c + Vector3(grid.module_size(i)) * c * 0.5 - com
+		var k := _blast_falloff(center, src.body_position)
+		if k > 0.0 and damage_module(i, REACTOR_BLAST_STRUCTURE * k):
+			blast.lines.append("Module %s wrecked by the blast" % blueprint.modules[i].id)
+	for i in rooms.size():
+		var cells := ShipGrid.room_cells(blueprint.rooms[i])
+		var center := Vector3.ZERO
+		for cell in cells:
+			center += ShipGrid.cell_center_m(cell)
+		center = center / cells.size() - com
+		if center.distance_to(src.body_position) < REACTOR_BLAST_RADIUS_M * REACTOR_BLAST_BREACH_FRACTION and breach_room(i):
+			blast.lines.append("%s %s breached by the blast" % [_room_name(i), blueprint.rooms[i].id])
+	for e in equipment:
+		if e == src or e.destroyed():
+			continue
+		var k := _blast_falloff(e.body_position, src.body_position)
+		if k > 0.0 and damage_equipment(e, REACTOR_BLAST_HP * k):
+			blast.lines.append("%s %s destroyed by the blast" % [e.def.display_name, e.id])
+
+
+func _blast_falloff(p: Vector3, center: Vector3) -> float:
+	return clampf(1.0 - p.distance_to(center) / REACTOR_BLAST_RADIUS_M, 0.0, 1.0)
+
+
+## Explosions since the last call (for flashes and HUD).
+func take_explosions() -> Array[Dictionary]:
+	var out := explosions
+	explosions = []
+	return out
 
 
 ## Returns true if this wrecked the module.
@@ -519,7 +575,13 @@ func effective_config() -> ShipConfig:
 		if torque[axis] <= 0.0:
 			cfg.assist_max_rate_rad_s[axis] = 0.0
 	if not has_command():
-		cfg.assist_max_rate_rad_s *= NO_COMMAND_RATE_FACTOR
+		# Ship AI in control: limited mobility.
+		cfg.assist_max_rate_rad_s *= SHIP_AI_FACTOR
+		cfg.thrust_forward_n *= SHIP_AI_FACTOR
+		cfg.thrust_reverse_n *= SHIP_AI_FACTOR
+		cfg.thrust_lateral_n *= SHIP_AI_FACTOR
+		cfg.thrust_vertical_n *= SHIP_AI_FACTOR
+		cfg.thrust_torque_body *= SHIP_AI_FACTOR
 	if cfg.cannon != null and not has_gun_crew():
 		var gun: KineticCannonConfig = cfg.cannon.duplicate()
 		gun.rate_of_fire_rpm *= NO_GUN_CREW_RATE_FACTOR

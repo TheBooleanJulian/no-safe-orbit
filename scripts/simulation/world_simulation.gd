@@ -199,6 +199,10 @@ func step() -> void:
 		if not ship.is_active():
 			continue
 		var input: ShipControlInput = _inputs.get(id, _neutral_input)
+		if ship.systems != null and not ship.systems.has_command() and not input.flight_assist:
+			# Ship AI in control: it always flies with assist.
+			input = ShipControlInput.create(input.translation, input.rotation, true)
+			input.fire = _inputs.get(id, _neutral_input).fire
 		_resolve_hold(input)
 		ShipDynamics.step(ship, input, fixed_dt, frame)
 		_update_cannon(ship, input, spawned)

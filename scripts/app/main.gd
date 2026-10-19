@@ -357,6 +357,14 @@ func _process(delta: float) -> void:
 		hud.notice(line, world.sim_time)
 		GameLog.info("boarding", line)
 	var hits := world.take_hit_events()
+	for id in world.ship_ids():
+		var s := world.get_ship(id).systems
+		if s == null:
+			continue
+		for blast in s.take_explosions():
+			hit_flashes.add_explosion(id, blast.pos_body, blast.radius)
+			hud.notice("%s: %s" % [world.get_ship(id).display_name, blast.lines[0]], world.sim_time)
+			GameLog.info("main", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
 	for ev in hits:
 		hit_flashes.add(ev)

@@ -169,12 +169,16 @@ static func _strike(systems: ShipSystems, e: ShipSystems.EquipmentState, pen: fl
 	if e.destroyed():
 		return pen
 	var absorbed := minf(pen, e.def.shielding_mm())
+	var blasts := systems.explosions.size()
 	var destroyed := systems.damage_equipment(e, absorbed)
 	if destroyed:
 		report.destroyed_ids.append(e.id)
 		report.event(&"system_destroyed", e.id, here, "%s %s destroyed (%.0f mm absorbed)" % [e.def.display_name, e.id, absorbed])
 		if e.def.kind == EquipmentDefinition.Kind.PROPELLANT_TANK:
 			report.propellant_lost_kg += e.def.propellant_capacity_kg
+		for blast in systems.explosions.slice(blasts):
+			for line in blast.lines:
+				report.event(&"explosion", e.id, blast.pos_body, line)
 	else:
 		report.damaged_ids.append(e.id)
 		report.event(&"system_damaged", e.id, here, "%s %s damaged (%.0f mm absorbed, %.0f%% condition left)" % [
