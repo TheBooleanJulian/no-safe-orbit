@@ -24,6 +24,8 @@ enum Kind {
 	## Power distribution unit: a bus network's reactors only feed its loads
 	## through a working one (designs with a routed bus).
 	POWER_DISTRIBUTION,
+	## Point-defence turret: engages hostile craft on its own (its `cannon`).
+	POINT_DEFENCE,
 }
 
 enum Mount { INTERNAL, EXTERNAL }
@@ -73,6 +75,7 @@ const DAMAGE_DEFAULTS := {
 	Kind.CRAFT_MOUNT: [20.0, 8.0],
 	Kind.SENSOR: [12.0, 4.0],
 	Kind.POWER_DISTRIBUTION: [15.0, 6.0],
+	Kind.POINT_DEFENCE: [12.0, 5.0],
 }
 
 
@@ -114,8 +117,8 @@ func validate() -> PackedStringArray:
 		problems.append("%s: external equipment needs allowed_faces" % id)
 	if kind == Kind.CRAFT_MOUNT and craft == null:
 		problems.append("%s: craft mounts need a craft ShipConfig" % id)
-	if kind == Kind.CANNON and cannon == null:
-		problems.append("%s: cannon equipment needs a KineticCannonConfig" % id)
+	if (kind == Kind.CANNON or kind == Kind.POINT_DEFENCE) and cannon == null:
+		problems.append("%s: gun equipment needs a KineticCannonConfig" % id)
 	if (kind == Kind.MAIN_ENGINE or kind == Kind.RCS) and isp_s <= 0.0:
 		problems.append("%s: thrusters need a positive isp_s" % id)
 	if kind == Kind.PROPELLANT_TANK and propellant_capacity_kg <= 0.0:

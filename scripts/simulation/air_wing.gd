@@ -141,7 +141,7 @@ func launch(world: WorldSimulation, c: Craft) -> String:
 	var ship := ShipState.create(c.id, c.label, c.config, frame[0] + frame[1] * LAUNCH_CLEAR_M,
 		carrier.velocity + frame[1] * LAUNCH_PUSH_MPS, carrier.orientation)
 	ship.propellant_kg = c.config.propellant_capacity_kg * c.propellant_fraction
-	ship.cannon_rounds = c.ammo
+	ship.set_rounds(c.ammo)
 	ship.hull_damage = (1.0 - c.hull_fraction) * c.config.hull_hp
 	world.add_ship(ship)
 	c.status = Status.FLYING
@@ -222,7 +222,7 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 	if carrier != null and carrier.is_active():
 		var frame := rack_frame(world, c)
 		rack_point = frame[0] + frame[1] * (RECOVER_RADIUS_M * 0.5)
-	world.set_input(c.id, CraftAI.command(s, directive, carrier, rack_point, target, hostiles, c.priority))
+	world.set_input(c.id, CraftAI.command(s, directive, carrier, rack_point, target, hostiles, c.priority, _slot_of(c, directive)))
 	if directive == CraftAI.Directive.RETURN and carrier != null and carrier.is_active() \
 			and s.position.distance_to(rack_point) < RECOVER_RADIUS_M \
 			and (s.velocity - carrier.velocity).length() < RECOVER_SPEED_MPS:
@@ -250,10 +250,22 @@ func _resupply_from(carrier: ShipState, c: Craft) -> String:
 			if cost > carrier.cannon_rounds:
 				got = floori(carrier.cannon_rounds / maxf(per_round, 1e-6))
 				cost = carrier.cannon_rounds
-			carrier.cannon_rounds -= cost
+			carrier.draw_rounds(cost)
 		c.ammo += got
 		short = short or got < need_rounds
 	return "refuelled and rearmed from the carrier" if not short else "only partly refuelled / rearmed — the carrier is short"
+
+
+## Formation slot: this craft's place among the flying craft on the same
+## directive (0 = lead).
+func _slot_of(c: Craft, directive: int) -> int:
+	var slot := 0
+	for other in crafts:
+		if other == c:
+			return slot
+		if other.status == Status.FLYING and other.directive == directive:
+			slot += 1
+	return slot
 
 
 func _recover(world: WorldSimulation, c: Craft) -> void:

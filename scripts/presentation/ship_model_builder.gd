@@ -113,6 +113,18 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				_box(part, Vector3.ONE * 0.5 + along * (long_m - 0.5), mount + normal * 0.15, _mat(mats, Color(0.3, 0.32, 0.35) * tint))
 			EquipmentDefinition.Kind.DOCKING_COLLAR:
 				model.beacons.append(_collar(part, mount, normal))
+			EquipmentDefinition.Kind.POINT_DEFENCE:
+				# A small dome with twin barrels on a pivot.
+				var dome := _cylinder(part, 0.6, 0.75, 0.5, Vector3.ZERO, mat)
+				dome.transform = Transform3D(_basis_y_along(normal), mount + normal * 0.25)
+				var pd_pivot := Node3D.new()
+				pd_pivot.name = "PdPivot"
+				pd_pivot.position = mount + normal * 0.6
+				part.add_child(pd_pivot)
+				for side in [-0.18, 0.18]:
+					var tube := _cylinder(pd_pivot, 0.06, 0.07, 1.8, Vector3(side, 0, -0.9), mat)
+					tube.rotation_degrees = Vector3(90, 0, 0)
+				model.turrets.append({"id": bp.equipment[i].id, "pivot": pd_pivot, "pd": true})
 			EquipmentDefinition.Kind.SENSOR:
 				_sensor_mast(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))
 			EquipmentDefinition.Kind.CRAFT_MOUNT:

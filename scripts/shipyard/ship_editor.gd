@@ -426,17 +426,113 @@ func _move_bus(cells: Dictionary, map: Callable) -> void:
 	blueprint.bus.merge(moved, true)
 
 
+## Move several modules together, carrying everything that lies entirely
+## inside them as a group (rooms spanning blocks of the group included).
+func move_group(ids: Array, delta: Vector3i) -> bool:
+	var mods: Array = ids.map(func(id: Variant) -> Variant: return blueprint.find(str(id))).filter(
+		func(m: Variant) -> bool: return m is ShipBlueprint.PlacedModule and catalog.hull.has(m.def_id))
+	if mods.is_empty():
+		return false
+	var inside := {}
+	for m in mods:
+		for c in grid.module_cells(blueprint.modules.find(m)):
+			inside[c] = true
+	var contents := _contents_in(inside)
+	_checkpoint()
+	_move_plates(inside, func(c: Vector3i) -> Vector3i: return c + delta, 0)
+	_move_bus(inside, func(c: Vector3i) -> Vector3i: return c + delta)
+	for m in mods:
+		m.position += delta
+	for room: ShipBlueprint.PlacedRoom in contents.rooms:
+		_shift_room(room, delta)
+	for e: ShipBlueprint.PlacedEquipment in contents.equipment:
+		e.cell += delta
+	for h: ShipBlueprint.Hatch in contents.hatches:
+		h.a += delta
+		h.b += delta
+	_refresh()
+	return true
+
+
+## Rebuild the old large sections from blocks where they tile (pressurised
+## 2×2 blocks, or trusses for unpressurised sections), with armour plates
+## standing in for their thicker skins. Sections that can't tile (an odd
+## length) stay. Returns {converted, kept}.
+func convert_legacy() -> Dictionary:
+	var out := {"converted": 0, "kept": PackedStringArray()}
+	var plan := []  # [module, [[def, pos, rot]], cells, plate mm]
+	for i in blueprint.modules.size():
+		var def := grid.module_def(i)
+		if def == null or not def.legacy:
+			continue
+		var m := blueprint.modules[i]
+		var size := grid.module_size(i)
+		var pieces := []
+		if def.interior and size.x % 2 == 0 and size.z % 2 == 0:
+			for x in range(0, size.x, 2):
+				for y in size.y:
+					for z in range(0, size.z, 2):
+						pieces.append([&"hull_block", m.position + Vector3i(x, y, z), 0])
+		elif not def.interior and size.z % 2 == 0:
+			for x in size.x:
+				for y in size.y:
+					for z in range(0, size.z, 2):
+						pieces.append([&"truss_block", m.position + Vector3i(x, y, z), 0])
+		elif not def.interior and size.x % 2 == 0:
+			for x in range(0, size.x, 2):
+				for y in size.y:
+					for z in size.z:
+						pieces.append([&"truss_block", m.position + Vector3i(x, y, z), 1])
+		else:
+			out.kept.append(m.id)
+			continue
+		var skin: float = catalog.hull[pieces[0][0]].armor_mm
+		var extra := def.armor_mm - skin
+		var mm := ShipBlueprint.PLATE_THICK_MM if extra >= 50.0 else (ShipBlueprint.PLATE_THIN_MM if extra >= 15.0 else 0)
+		plan.append([m, pieces, grid.module_cells(i), mm])
+	if plan.is_empty():
+		return out
+	_checkpoint()
+	for p in plan:
+		blueprint.remove(p[0].id)
+		for piece in p[1]:
+			blueprint.add_module(piece[0], piece[1], piece[2])
+		out.converted += 1
+	grid = ShipGrid.build(blueprint, catalog)
+	for p in plan:
+		if p[3] <= 0:
+			continue
+		for c in p[2]:
+			for face in grid.plateable_faces(c):
+				blueprint.armor[ShipBlueprint.plate_key(c, face)] = p[3]
+	_refresh()
+	return out
+
+
+## Whether the design still has old large sections.
+func has_legacy() -> bool:
+	for i in blueprint.modules.size():
+		var def := grid.module_def(i)
+		if def != null and def.legacy:
+			return true
+	return false
+
+
 ## Rooms, equipment and hatches lying entirely inside a module's cells
 ## (and the cells themselves, as a set).
 func _contents_of(m: ShipBlueprint.PlacedModule) -> Dictionary:
-	var out := {"rooms": [], "equipment": [], "hatches": [], "cells": {}}
 	var index := blueprint.modules.find(m)
 	if not catalog.hull.has(m.def_id):
-		return out
+		return {"rooms": [], "equipment": [], "hatches": [], "cells": {}}
 	var inside := {}
 	for c in grid.module_cells(index):
 		inside[c] = true
-	out.cells = inside
+	return _contents_in(inside)
+
+
+## Rooms, equipment and hatches lying entirely inside a set of cells.
+func _contents_in(inside: Dictionary) -> Dictionary:
+	var out := {"rooms": [], "equipment": [], "hatches": [], "cells": inside}
 	var all_inside := func(cells: Array) -> bool:
 		return not cells.is_empty() and cells.all(func(c: Vector3i) -> bool: return inside.has(c))
 	for r in blueprint.rooms:

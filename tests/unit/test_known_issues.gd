@@ -102,3 +102,103 @@ func test_a_mixed_battery_leads_each_gun_on_its_own() -> void:
 	assert_true(corr.length() > 10.0, "the railgun's own lead differs from the cannon's by %.0f m" % corr.length())
 	input.lead_target_id = &""
 	assert_true(world._lead_correction(me, input, 1) == Vector3.ZERO, "no lock: no correction")
+
+
+func test_a_medic_treats_the_wounded_in_flight() -> void:
+	var ship := _ship(&"s")
+	var sys := ship.systems
+	var patient: CrewRoster.Member
+	for m in sys.crew.members:
+		if m.role == CrewRoster.Role.SECURITY:
+			patient = m
+			break
+	patient.state = CrewRoster.State.WOUNDED
+	var t := 0.0
+	while t < ShipSystems.MEDICAL_TREATMENT_S + 1.0 and patient.state == CrewRoster.State.WOUNDED:
+		sys.tick(ship, 0.5)
+		t += 0.5
+	assert_true(patient.fit(), "treated by the medic in %.0f s" % t)
+	for m in sys.crew.members:
+		if m.role == CrewRoster.Role.MEDICAL:
+			m.state = CrewRoster.State.DEAD
+	patient.state = CrewRoster.State.WOUNDED
+	for i in 200:
+		sys.tick(ship, 0.5)
+	assert_true(not patient.fit(), "no medic: the wounded wait for the yard")
+
+
+func test_craft_fly_in_formation() -> void:
+	assert_true(CraftAI.escort_offset(1).distance_to(CraftAI.escort_offset(2)) > 30.0 and CraftAI.escort_offset(0) != CraftAI.escort_offset(1),
+		"escorts take separate stations")
+	var me := _ship(&"me")
+	var target := _ship(&"t", Vector3(0, 0, -3000))
+	var a := ShipControlInput.neutral()
+	var b := ShipControlInput.neutral()
+	var craft := ShipState.create(&"f", "F", (load("res://data/catalog/equipment/fighter_bay.tres") as EquipmentDefinition).craft, Vector3(0, 0, -100))
+	CraftAI.attack(craft, target, CraftAI.STRIKE_RANGE_M, 0, a, 0)
+	CraftAI.attack(craft, target, CraftAI.STRIKE_RANGE_M, 0, b, 1)
+	assert_true(a.translation.distance_to(b.translation) > 0.05 or a.rotation.distance_to(b.rotation) > 0.05, "a wingman takes its own approach")
+	assert_true(me.is_active(), "the carrier is untouched")
+
+
+func test_the_enemy_spends_its_power_like_a_fighter() -> void:
+	var me := _ship(&"me")
+	var them := _ship(&"them", Vector3(0, 0, -2000))
+	GunneryAI.combat(them, me, 0.0)
+	assert_true(them.systems.pips[2] == 3, "healthy and fighting: weapons pips up (%s)" % str(them.systems.pips))
+
+
+func _alongside(a: ShipState, b: ShipState, gap: float) -> void:
+	b.orientation = Quaternion(Vector3.UP, PI)
+	var pa: Docking.Port = Docking.collars(a.systems)[0]
+	var pb: Docking.Port = Docking.collars(b.systems)[0]
+	b.position = pa.world_position(a) + pa.world_normal(a) * gap - b.orientation * pb.position_body
+	b.velocity = a.velocity
+	b.snapshot_previous()
+
+
+func test_an_enemy_closes_in_to_board_a_beaten_ship() -> void:
+	var world := WorldSimulation.new(DT)
+	var prey := _ship(&"prey")
+	var hunter := _ship(&"hunter")
+	_alongside(prey, hunter, 120.0)
+	world.add_ship(prey)
+	world.add_ship(hunter)
+	prey.systems.damage_equipment(prey.systems.equipment_by_id("e41"), 1000.0)
+	assert_true(GunneryAI.wants_to_board(hunter, prey), "a disabled ship is worth boarding")
+	var docked := false
+	for i in 60 * 120:
+		var found := Docking.best(hunter, prey)
+		if not found.is_empty() and found.assessment.ok:
+			docked = true
+			break
+		world.set_input(&"hunter", GunneryAI.dock_approach(hunter, prey))
+		world.step()
+	assert_true(docked, "the approach brings a collar into gangway tolerance (%s)" % str(Docking.best(hunter, prey).get("assessment", {}).get("problems", [])))
+
+
+func test_defenders_can_counterattack_the_boarders() -> void:
+	var world := WorldSimulation.new(0.1)
+	var a := _ship(&"a")
+	var b := _ship(&"b")
+	_alongside(a, b, 15.0)
+	world.add_ship(a)
+	world.add_ship(b)
+	b.systems.damage_equipment(b.systems.equipment_by_id("e28"), 1000.0)
+	b.systems.invalidate()
+	var link := world.dock(&"a", &"b").get("link") as DockingLink
+	for i in 200:
+		if link.sealed():
+			break
+		world.step()
+	var party := world.start_boarding(link, 8)
+	assert_true(party != null, "boarders go")
+	party.set_defence(BoardingAction.Defence.COUNTERATTACK)
+	for i in 3000:
+		if party.phase == BoardingAction.Phase.ABOARD:
+			break
+		world.step()
+	var entry := link.b_port.room
+	var meeting := b.systems.crew.members.filter(func(m: CrewRoster.Member) -> bool:
+		return m.role == CrewRoster.Role.SECURITY and m.location == entry)
+	assert_true(not meeting.is_empty(), "counter-attack: security head for the boarders' room")

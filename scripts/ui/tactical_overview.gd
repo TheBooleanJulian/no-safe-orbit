@@ -149,6 +149,11 @@ func _build_crew_tab() -> void:
 	for role in COVERABLE:
 		cover.add_child(_button("Cover %s" % CrewRoster.ROLE_NAMES[role], func() -> void: command.emit(&"cover", role)))
 	box.add_child(cover)
+	box.add_child(_heading("IF WE ARE BOARDED", CyberTheme.AMBER))
+	var defence := HBoxContainer.new()
+	for d in BoardingAction.Defence.size():
+		defence.add_child(_button("Defence: %s" % BoardingAction.DEFENCE_NAMES[d], func() -> void: command.emit(&"defence", d), CyberTheme.AMBER))
+	box.add_child(defence)
 	box.add_child(_heading("BOARDING PARTY", CyberTheme.MAGENTA))
 	var row := HBoxContainer.new()
 	row.add_child(_button("−", func() -> void: command.emit(&"party", -1), CyberTheme.MAGENTA))
