@@ -17,8 +17,14 @@ func _template() -> ShipBlueprint:
 	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
 
 
-func _ship(id: StringName, pos: Vector3 = Vector3.ZERO) -> ShipState:
+## `pd`: keep the template's point-defence turrets (off for a target the
+## tests' craft must reach unharmed).
+func _ship(id: StringName, pos: Vector3 = Vector3.ZERO, pd: bool = true) -> ShipState:
 	var bp := _template()
+	if not pd:
+		for e in bp.equipment.duplicate():
+			if e.def_id == &"point_defence":
+				bp.remove(e.id)
 	var grid := ShipGrid.build(bp, _catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var cfg := stats.to_ship_config(bp.name)
@@ -31,7 +37,7 @@ func _ship(id: StringName, pos: Vector3 = Vector3.ZERO) -> ShipState:
 func _setup(target_pos: Vector3 = Vector3(0, 0, -3000)) -> Array:
 	var world := WorldSimulation.new(DT)
 	var carrier := _ship(&"c")
-	var target := _ship(&"t", target_pos)
+	var target := _ship(&"t", target_pos, false)
 	world.add_ship(carrier)
 	world.add_ship(target)
 	var wing := AirWing.for_ship(carrier)

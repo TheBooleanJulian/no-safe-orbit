@@ -27,6 +27,9 @@ const SUN_ENERGY := 1.4
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 var gangways := GangwayView.new()
+var audio := ShipAudio.new()
+var _rounds_heard := 0
+var _alert_heard := ""
 
 ## Design the player flies; set by the shipyard before it switches to this
 ## scene. Null = the default template. Only used to commission the first
@@ -97,6 +100,8 @@ func _ready() -> void:
 	InputBindings.apply_saved()
 	gangways.name = "Gangways"
 	add_child(gangways)
+	audio.name = "Audio"
+	add_child(audio)
 	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
 	stars.build(celestial)
 	hud.celestial = celestial
@@ -911,12 +916,18 @@ func _process(delta: float) -> void:
 	var running := player.is_active() and not player_captured() and not hud.controls.visible
 	var alpha := world.advance(delta) if running else 1.0
 	for line in world.take_link_events():
+		if line.contains("sealed") or line.contains("SEALED"):
+			audio.play("dock")
+		elif line.begins_with("COLLISION"):
+			audio.play("hit", 4.0)
 		hud.notice(line, world.sim_time)
 		GameLog.info("boarding", line)
 		combat_log.record(world.sim_time, "boarding", line)
 	var hits := world.take_hit_events()
 	for ev in hits:
 		combat_log.note_hit(ev, PLAYER_ID, world.sim_time, world)
+		if ev.target_id == PLAYER_ID:
+			audio.play("ricochet" if ev.report != null and ev.report.ricochet else "hit")
 		# A passive contact fired upon by us (or our craft) fights back.
 		if ev.target_id == TARGET_ID and not target_hostile and (ev.shooter_id == PLAYER_ID or player_wing.by_id(ev.shooter_id) != null):
 			set_target_hostile(true, "fired upon")
@@ -926,6 +937,7 @@ func _process(delta: float) -> void:
 			continue
 		for blast in s.take_explosions():
 			hit_flashes.add_explosion(id, blast.pos_body, blast.radius)
+			audio.play("explosion", 0.0 if id == PLAYER_ID else -14.0)
 			# The camera feels it: hard on our own ship, less with distance.
 			var dist := world.get_ship(id).position.distance_to(player.position)
 			camera.shake(2.5 * clampf(1.0 - dist / 800.0, 0.0, 1.0))
@@ -987,6 +999,23 @@ func _process(delta: float) -> void:
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track
 	hud.update_display(world, PLAYER_ID, TARGET_ID, alpha, render_origin, camera, player_input)
+	_update_audio(player)
+
+
+## Our guns, engines, the jump drive and new danger alerts, heard aboard.
+func _update_audio(player: ShipState) -> void:
+	if player.rounds_fired > _rounds_heard:
+		audio.play("gun")
+	_rounds_heard = player.rounds_fired
+	var fwd := 0.0
+	if player.config.thrust_forward_n > 0.0:
+		fwd = clampf(-player.last_thrust_body.z / player.config.thrust_forward_n, 0.0, 1.0)
+	audio.set_engine(fwd if player.is_active() else 0.0)
+	audio.set_jump(float(hud.jump_state.progress) if hud.jump_state.has("progress") else -1.0)
+	var danger := hud.warning_label.text if hud.warning_label.visible and hud.top_alert_level == "danger" else ""
+	if danger != "" and danger.get_slice(" ", 1) != _alert_heard.get_slice(" ", 1):
+		audio.play("alert")
+	_alert_heard = danger
 
 
 ## Real Sun direction for the scenario date; dark while the player is in

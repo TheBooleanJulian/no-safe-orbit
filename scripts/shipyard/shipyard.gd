@@ -68,6 +68,9 @@ var _hangar_label: RichTextLabel
 var loot_tables_label: RichTextLabel
 ## The hangar's vessels (pick the one to fly and edit) and "build new".
 var vessel_picker: OptionButton
+## Modules selected together (Shift-click, Ctrl+A); arrows move them as one.
+var group_ids: Array[String] = []
+var _convert_button: Button
 ## Designing a new hull: Launch commissions it instead of refitting.
 var building_new: bool = false
 var _cargo_label: RichTextLabel
@@ -165,6 +168,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key := k.keycode
 	if k.ctrl_pressed or k.meta_pressed:
 		match key:
+			KEY_A:
+				select_all_hull()
 			KEY_Z:
 				redo() if k.shift_pressed else undo()
 			KEY_Y:
@@ -195,11 +200,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				editor.remove(selected_id)
 				selected_id = ""
 		KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT:
-			if selected_id != "":
+			if selected_id != "" or group_ids.size() > 1:
 				# Screen directions: nose right (−z), starboard down (+x).
 				var d := {KEY_UP: Vector3i(-1, 0, 0), KEY_DOWN: Vector3i(1, 0, 0),
 					KEY_LEFT: Vector3i(0, 0, 1), KEY_RIGHT: Vector3i(0, 0, -1)}
-				editor.move(selected_id, d[key])
+				if group_ids.size() > 1:
+					editor.move_group(group_ids, d[key])
+				else:
+					editor.move(selected_id, d[key])
 		KEY_ESCAPE:
 			set_tool(Tool.SELECT)
 		_:
@@ -257,7 +265,37 @@ func change_deck(delta: int) -> void:
 	_refresh_views()
 
 
-## F: place hull upside down, or flip the selected module.
+## Ctrl+A: the whole hull as one group (everything moves with it).
+func select_all_hull() -> void:
+	set_tool(Tool.SELECT)
+	group_ids.clear()
+	for m in editor.blueprint.modules:
+		group_ids.append(m.id)
+	selected_id = group_ids[0] if not group_ids.is_empty() else ""
+	_set_status("Whole hull selected (%d modules) — arrow keys move the ship" % group_ids.size())
+	_refresh_views()
+
+
+## Rebuild the design's old large sections from blocks. On the vessel's own
+## design (nothing else changed) it is free: the yard re-plates the hull.
+func convert_to_blocks() -> Dictionary:
+	if not editor.has_legacy():
+		_set_status("No old sections to convert")
+		return {}
+	var same_as_vessel := not building_new and JSON.stringify(editor.blueprint.to_dict()) == JSON.stringify(profile.vessel.blueprint.to_dict())
+	if same_as_vessel and not (profile.vessel.condition.get("modules", {}) as Dictionary).is_empty():
+		_set_status("Repair the hull first: damaged sections can't be converted", true)
+		return {}
+	var result := editor.convert_legacy()
+	if same_as_vessel:
+		# The hull's parts are reused: the vessel adopts the converted design as is.
+		profile.vessel.blueprint = editor.blueprint.duplicate_blueprint()
+		profile.vessel.record("Hull rebuilt from blocks (%d sections)" % result.converted)
+		_save_profile()
+	_set_status("Converted %d section%s to blocks%s" % [result.converted, "" if result.converted == 1 else "s",
+		" — kept %s (an odd length doesn't tile)" % ", ".join(result.kept) if not result.kept.is_empty() else ""])
+	_refresh_hangar()
+	return result
 func flip_current() -> void:
 	if tool == Tool.PLACE and place_kind == "hull":
 		place_flip = not place_flip
@@ -300,7 +338,22 @@ func apply_at(cell: Vector3i, face: StringName, button: MouseButton = MOUSE_BUTT
 		return
 	match tool:
 		Tool.SELECT:
-			selected_id = editor.item_at(cell, face)
+			var picked := editor.item_at(cell, face)
+			var module: Variant = editor.blueprint.find(editor.item_at(cell, &""))
+			if shift and module is ShipBlueprint.PlacedModule:
+				# Shift-click builds a group of modules that move together.
+				var mid: String = module.id
+				if group_ids.is_empty() and selected_id != "" and editor.blueprint.find(selected_id) is ShipBlueprint.PlacedModule:
+					group_ids.append(selected_id)
+				if group_ids.has(mid):
+					group_ids.erase(mid)
+				else:
+					group_ids.append(mid)
+				selected_id = mid
+				_set_status("Group: %d modules — arrow keys move them together" % group_ids.size())
+			else:
+				group_ids.clear()
+				selected_id = picked
 			_refresh_views()
 		Tool.HATCH:
 			var other := DeckEditor.across(cell, face)
@@ -532,6 +585,8 @@ func _refresh_views() -> void:
 		v.deck = deck_editor.deck
 		v.queue_redraw()
 	deck_editor.selection_cells = editor.cells_of(selected_id) if selected_id != "" else ([] as Array[Vector3i])
+	for gid in group_ids:
+		deck_editor.selection_cells.append_array(editor.cells_of(gid))
 	if iso_view != null and iso_view.visible and iso_view.deck != deck_editor.deck:
 		iso_view.set_deck(deck_editor.deck)
 
@@ -667,7 +722,7 @@ static func category_of(kind: String, def: Resource) -> String:
 			return "Propulsion"
 		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION:
 			return "Power & thermal"
-		EquipmentDefinition.Kind.CANNON:
+		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE:
 			return "Weapons"
 		EquipmentDefinition.Kind.SENSOR:
 			return "Sensors"
@@ -860,6 +915,12 @@ func _build_hangar_panel() -> void:
 	_repair_button.pressed.connect(func() -> void: repair())
 	row.add_child(_priority)
 	row.add_child(_repair_button)
+	_convert_button = Button.new()
+	_convert_button.text = "Convert to blocks"
+	_convert_button.tooltip_text = "Rebuild the old large sections from blocks with armour plates (free on your own vessel's design)"
+	CyberTheme.style_button(_convert_button, CyberTheme.AMBER)
+	_convert_button.pressed.connect(func() -> void: convert_to_blocks())
+	row.add_child(_convert_button)
 	var row2 := HFlowContainer.new()
 	_bank_button = Button.new()
 	_bank_button.text = "Bank cargo"
@@ -958,6 +1019,8 @@ func _refresh_hangar() -> void:
 		var cost := profile.new_hull_cost(editor.blueprint, editor.catalog)
 		launch_button.text = "COMMISSION ▶ · %d parts + %d cr" % [cost.x, cost.y]
 	_fill_vessel_picker()
+	if _convert_button != null:
+		_convert_button.visible = editor.has_legacy()
 	var plan := ServiceYard.plan(jobs, _priority.selected, profile.spare_parts, v, profile)
 	_repair_button.disabled = plan.is_empty()
 	_bank_button.disabled = v.cargo_is_empty()
@@ -1167,6 +1230,10 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 			lines.append("TURRET %s · spread %.2f° · energy %.1f MJ a round · fed from magazines" % [
 				"trains %.0f°/s" % g.traverse_deg_s if g.traverse_deg_s > 0.0 else "fixed, fires along the nose", g.dispersion_deg,
 				0.5 * g.round_mass_kg * g.muzzle_velocity_mps * g.muzzle_velocity_mps / 1.0e6])
+		EquipmentDefinition.Kind.POINT_DEFENCE:
+			var pg := e.cannon
+			lines.append("POINT DEFENCE engages hostile craft within %.1f km on its own · %.0f rpm · %d rounds of its own · trains %.0f°/s · works with a gangway attached" % [
+				WorldSimulation.PD_RANGE_M / 1000.0, pg.rate_of_fire_rpm, pg.magazine_rounds, pg.traverse_deg_s])
 		EquipmentDefinition.Kind.MAIN_ENGINE:
 			lines.append("THRUST %.0f kN · Isp %.0f s · burns %.1f kg/s · aft faces only" % [e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
 		EquipmentDefinition.Kind.RCS:

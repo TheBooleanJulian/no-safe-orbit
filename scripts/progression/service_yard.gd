@@ -32,6 +32,7 @@ const ORDER := {
 const CATEGORY := {
 	EquipmentDefinition.Kind.REACTOR: &"combat",
 	EquipmentDefinition.Kind.CANNON: &"combat",
+	EquipmentDefinition.Kind.POINT_DEFENCE: &"combat",
 	EquipmentDefinition.Kind.RADIATOR: &"combat",
 	EquipmentDefinition.Kind.MAIN_ENGINE: &"mobility",
 	EquipmentDefinition.Kind.RCS: &"mobility",

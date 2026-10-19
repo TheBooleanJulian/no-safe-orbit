@@ -62,6 +62,11 @@ var cannon_normals: PackedVector3Array = PackedVector3Array()
 var cannon_config: KineticCannonConfig
 ## Each mount's gun (same order as cannon_ids).
 var cannon_configs: Array[KineticCannonConfig] = []
+## Point-defence turrets.
+var pd_ids: PackedStringArray = PackedStringArray()
+var pd_positions_m: PackedVector3Array = PackedVector3Array()
+var pd_normals: PackedVector3Array = PackedVector3Array()
+var pd_gun: KineticCannonConfig
 ## Armour plates: total mass and count.
 var plate_mass_kg: float = 0.0
 var plate_count: int = 0
@@ -144,6 +149,11 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 				rcs_flow += def.thrust_n / def.isp_s
 				s.rcs_count += 1
 				rcs.append(pos)
+			EquipmentDefinition.Kind.POINT_DEFENCE:
+				s.pd_ids.append(bp.equipment[i].id)
+				s.pd_positions_m.append(pos)
+				s.pd_normals.append(Vector3(ShipGrid.FACE_NORMALS.get(bp.equipment[i].face, Vector3i.UP)))
+				s.pd_gun = def.cannon
 			EquipmentDefinition.Kind.CANNON:
 				s.cannon_ids.append(bp.equipment[i].id)
 				s.cannon_positions_m.append(pos)
@@ -250,6 +260,14 @@ func to_ship_config(display_name: String) -> ShipConfig:
 		cfg.cannon_mount_normals_body = cannon_normals
 	else:
 		cfg.cannon_muzzles_body = PackedVector3Array()
+	if pd_gun != null:
+		cfg.pd_gun = pd_gun
+		var mounts := PackedVector3Array()
+		for p in pd_positions_m:
+			mounts.append(p - center_of_mass_m)
+		cfg.pd_mounts_body = mounts
+		cfg.pd_normals_body = pd_normals
+		cfg.pd_mount_ids = pd_ids
 	return cfg
 
 

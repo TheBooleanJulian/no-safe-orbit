@@ -183,3 +183,21 @@ func test_a_gangway_locks_the_primary_weapons() -> void:
 	_run(world, 2.0)
 	assert_true(a.rounds_fired == 0 and a.turret_status[0] == ShipState.Turret.LOCKED,
 		"locked gun holds fire (%d fired, status %d)" % [a.rounds_fired, a.turret_status[0]])
+
+
+func test_point_defence_engages_hostile_craft_but_not_our_own() -> void:
+	var world := WorldSimulation.new(DT)
+	var ship := _ship(&"ship")
+	world.add_ship(ship)
+	assert_true(ship.config.pd_mounts_body.size() == 2, "the frigate carries two point-defence turrets")
+	var fighter_cfg: ShipConfig = (load("res://data/catalog/equipment/fighter_bay.tres") as EquipmentDefinition).craft
+	var ours := ShipState.create(&"ship_e51", "Ours", fighter_cfg, Vector3(0, 60, -400))
+	var hostile := ShipState.create(&"raider_e51", "Raider", fighter_cfg, Vector3(0, 80, -700))
+	world.add_ship(ours)
+	world.add_ship(hostile)
+	_run(world, 6.0)
+	assert_true(not ship.pd_targets.has("ship_e51"), "our own fighter is never engaged")
+	assert_true(hostile.hull_damage > 0.0 or not hostile.is_active(), "the hostile fighter is hit (%.1f)" % hostile.hull_damage)
+	assert_true(ours.hull_damage == 0.0, "ours is untouched")
+	# Automatic defences keep working with a gangway attached.
+	assert_true(ship.pd_rounds[0] + ship.pd_rounds[1] < 2 * ship.config.pd_gun.magazine_rounds, "it spent its own rounds")

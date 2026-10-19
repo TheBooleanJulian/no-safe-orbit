@@ -59,6 +59,7 @@ const PRIORITY := {
 	EquipmentDefinition.Kind.RCS: 1,
 	EquipmentDefinition.Kind.MAIN_ENGINE: 2,
 	EquipmentDefinition.Kind.CANNON: 3,
+	EquipmentDefinition.Kind.POINT_DEFENCE: 3,
 }
 const ROOM_PRIORITY := 0
 ## Field repairs restore a damaged system to this fraction of its hit points.

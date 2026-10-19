@@ -228,6 +228,7 @@ func step() -> void:
 		_resolve_hold(input)
 		ShipDynamics.step(ship, input, fixed_dt, frame)
 		_update_cannon(ship, input, spawned)
+		_update_point_defence(ship, spawned)
 		if ship.systems != null and ship.systems.tick(ship, fixed_dt):
 			ship.config = ship.systems.effective_config()
 	_step_collisions()
@@ -346,6 +347,65 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		ship.spend_round(cannon)
 		ship.rounds_fired += 1
 		ship.cannon_cooldowns[k] += cannon.fire_interval_s()
+
+
+## Point-defence range (m) and how close to the lead a barrel must be (deg).
+const PD_RANGE_M := 2000.0
+const PD_READY_DEG := 1.5
+
+
+## Point defence: each working PD turret picks the nearest hostile craft in
+## range (any craft that isn't this ship's own), trains on its lead and fires
+## on its own — gangway or not (automatic defences).
+func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> void:
+	var cfg := ship.config
+	if cfg.pd_gun == null or ship.systems == null:
+		return
+	var gun := cfg.pd_gun
+	var inv := ship.orientation.inverse()
+	for k in cfg.pd_mounts_body.size():
+		ship.pd_cooldowns[k] = maxf(ship.pd_cooldowns[k] - fixed_dt, 0.0)
+		ship.pd_targets[k] = ""
+		var e := ship.systems.equipment_by_id(cfg.pd_mount_ids[k])
+		if e == null or not e.working() or ship.pd_rounds[k] <= 0:
+			continue
+		var n := cfg.pd_normals_body[k]
+		var muzzle := cfg.pd_mounts_body[k] + n * 0.6
+		var muzzle_world := ship.position + ship.orientation * muzzle
+		var best: ShipState
+		for id in _ship_order:
+			var other: ShipState = _ships[id]
+			if other == ship or not other.is_active() or other.systems != null or other.config.hull_hp <= 0.0 or _is_craft_of(id, ship.id):
+				continue
+			if other.position.distance_to(muzzle_world) < PD_RANGE_M and (best == null or other.position.distance_squared_to(muzzle_world) < best.position.distance_squared_to(muzzle_world)):
+				best = other
+		if best == null:
+			ship.pd_dirs[k] = _rotate_toward(ship.pd_dirs[k], n, deg_to_rad(gun.traverse_deg_s) * fixed_dt)
+			continue
+		var rel := best.position - muzzle_world
+		var rel_v := best.velocity - ship.velocity
+		var t := FireControl.intercept_time(rel, rel_v, gun.muzzle_velocity_mps)
+		if t < 0.0:
+			continue
+		var want := (inv * FireControl.lead_point(rel, rel_v, t)).normalized()
+		if want.dot(n) < TURRET_ARC_MIN_DOT:
+			continue  # under its face: another mount's job
+		ship.pd_targets[k] = String(best.id)
+		var dir := _rotate_toward(ship.pd_dirs[k], want, deg_to_rad(gun.traverse_deg_s) * fixed_dt)
+		ship.pd_dirs[k] = dir
+		if ship.pd_cooldowns[k] > 1e-9 or rad_to_deg(dir.angle_to(want)) > PD_READY_DEG or _hull_in_the_way(ship, muzzle, dir):
+			continue
+		var shot := ProjectileState.new()
+		shot.id = _next_round_id
+		_next_round_id += 1
+		shot.shooter_id = ship.id
+		shot.weapon = gun
+		shot.position = muzzle_world
+		shot.prev_position = shot.position
+		shot.velocity = ship.velocity + ship.orientation * _scatter(dir, deg_to_rad(gun.dispersion_deg)) * gun.muzzle_velocity_mps
+		spawned.append(shot)
+		ship.pd_rounds[k] -= 1
+		ship.pd_cooldowns[k] += gun.fire_interval_s()
 
 
 ## Trains mount k towards the aim point (turrets) and says whether it can

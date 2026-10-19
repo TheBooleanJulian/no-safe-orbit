@@ -49,6 +49,9 @@ var track: SensorTrack
 var loot: LootCarousel
 ## With the drawer open, the target card / hit cam / radar still fit to its left.
 var right_column_fits: bool = true
+var radar_fits: bool = true
+## Level ("danger" / "caution") of the alert in the banner, "" if none.
+var top_alert_level: String = ""
 ## Jump drive while [B] is held (Main): {progress, left_s, waiting} or
 ## {blocked}; {} when not charging.
 var jump_state: Dictionary = {}
@@ -330,6 +333,8 @@ func _reflow_for_drawer() -> void:
 	radar.offset_right = -gutter - drawer
 	var left_end := ($Root/LeftColumn as Control).get_global_rect().end.x
 	right_column_fits = drawer <= 0.0 or right - gutter - _side_w >= left_end + gutter
+	# The radar also needs to clear the (re-centred) weapon strip.
+	radar_fits = drawer <= 0.0 or right - gutter - _radar_size >= right * 0.5 + w * 0.5 + gutter
 
 
 ## The banner sits in the gap between the two cards; if that gap is too
@@ -480,7 +485,7 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	help_label.visible = not overview.visible and not docking_cam.visible
 	_reflow_for_drawer()
 	($Root/TargetPanel as Control).visible = right_column_fits
-	radar.visible = right_column_fits
+	radar.visible = right_column_fits and radar_fits
 	if not right_column_fits and not hit_cam.showing_boarding():
 		hit_cam.visible = false
 	if overview.visible:
@@ -695,10 +700,12 @@ func _alert(level: String, short: String, text: String, action: String, subject:
 
 func _update_banner(alerts: Array[Dictionary]) -> void:
 	alert_subject = ""
+	top_alert_level = ""
 	if alerts.is_empty():
 		warning_label.visible = false
 		return
 	var a: Dictionary = alerts[0]
+	top_alert_level = a.level
 	alert_subject = a.subject
 	var color := CyberTheme.RED if a.level == "danger" else CyberTheme.AMBER
 	warning_label.text = "%s %s   ·   %s" % [a.glyph, a.text, a.action]
@@ -843,13 +850,28 @@ func _update_weapon_strip(player: ShipState) -> void:
 		var bars := roundi(frac * 10.0)
 		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config, player), "▮".repeat(bars) + "▯".repeat(10 - bars),
 			player.cannon_rounds, cannon.magazine_rounds, "  EMPTY" if player.cannon_rounds == 0 else ""])
-	parts.append("PD  %s none fitted" % CyberTheme.GLYPH_OFFLINE)
+	parts.append(pd_text(player))
 	var lines := PackedStringArray(["   ·   ".join(parts)])
 	if cannon != null:
 		lines.append("GUNS  %s" % turret_summary(player.turret_status))
 	if player_wing != null and not player_wing.crafts.is_empty():
 		lines.append("WING  %s   [L] launch [K] recall" % wing_text(player_wing))
 	weapon_label.text = "\n".join(lines)
+
+
+## Point defence on the weapon strip: mounts, what they're engaging, rounds.
+static func pd_text(ship: ShipState) -> String:
+	var cfg := ship.config
+	if cfg.pd_gun == null or cfg.pd_mounts_body.is_empty():
+		return "PD  %s none fitted" % CyberTheme.GLYPH_OFFLINE
+	var engaging := 0
+	var rounds := 0
+	for k in cfg.pd_mounts_body.size():
+		rounds += ship.pd_rounds[k]
+		if ship.pd_targets[k] != "":
+			engaging += 1
+	return "PD  %s ×%d %s · %d rds" % [CyberTheme.GLYPH_CREW if engaging > 0 else CyberTheme.GLYPH_OK, cfg.pd_mounts_body.size(),
+		"ENGAGING" if engaging > 0 else "ready", rounds]
 
 
 ## "Medium kinetic cannon ×1 50 rpm · Railgun ×1 60 rpm" — the battery.
