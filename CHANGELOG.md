@@ -4,6 +4,36 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-10-20 — Operations pass: turrets, blocks and armour, power bus, jump drive
+
+### Added
+- Turrets: every gun trains on the mouse aim at its own traverse rate and
+  fires once on target; per-gun reticles; guns hold fire when their own hull
+  is in the way. Mouse aim cursor; right-drag camera orbit; Shift zoom toggle
+  centred on the aim.
+- Scans (lock + sensor mast, 4 s): approximate cargo, scrap value, bounty.
+- Ship-to-ship collisions with ramming damage.
+- Dimensional jump drive (hold B 5 s, out of combat) to Earth Shipyard.
+- Salvage beacon (50 % scrap) vs boarding takeover (80 % scrap, better
+  crates into the hold, automatic withdrawal); cargo capacity and venting;
+  loot carousel; loot tables in the shipyard; DEV +100 cr.
+- Hull building blocks (2×2×1 pressurised, 1×2×1 / 1×1×1 wedges, 1×2×1
+  truss); angled armour; painted 40 / 80 mm plates.
+- Player-routed power bus with distribution units; auto-route.
+- 2-cell radiators; internal fighter bay and hangar; models for the sensor
+  mast, docked drones, hangar doors, fighter and drone.
+- Isometric shipyard view (edits too); build new ships into a hangar fleet.
+- Reactor explosion effect and camera shake.
+
+### Changed
+- A/D yaw (strafe while the docking camera is up); R/F only for up/down.
+- Kinetic cannon 50 rpm, 48 mm; ship AI keeps the guns at half rate.
+- Gangway attached: primary weapons locked. Contacts turn hostile when hit.
+- Modules attach on any common face; underside equipment placement fixed.
+- Passive hull cooling per exposed face; reactor blast scaled per module.
+- Profile schema 3 (hangar of vessels); blueprint schema 2 (flips, plates,
+  bus).
+
 ## [0.9.0] — 2026-10-19 — UI simplification and polish
 
 ### Added
