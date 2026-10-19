@@ -16,9 +16,9 @@ const OK := Color(0.3, 1.0, 0.7)
 
 ## Glass panel: cyan frame with a thicker accent edge on the left (or the
 ## given accent colour, e.g. MAGENTA for alerts and enemy information).
-static func panel(accent: Color = CYAN, margin: float = 10.0) -> StyleBoxFlat:
+static func panel(accent: Color = CYAN, margin: float = 10.0, opacity: float = BG.a) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
-	s.bg_color = BG
+	s.bg_color = Color(BG.r, BG.g, BG.b, opacity)
 	s.border_color = accent * Color(1, 1, 1, 0.85)
 	s.set_border_width_all(1)
 	s.border_width_left = 3

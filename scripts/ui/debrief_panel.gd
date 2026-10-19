@@ -13,7 +13,7 @@ var _footer: Label
 func _ready() -> void:
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, 14))
+	add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, 14, 0.97))
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	add_child(box)

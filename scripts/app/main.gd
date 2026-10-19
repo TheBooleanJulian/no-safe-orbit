@@ -67,6 +67,7 @@ func _ready() -> void:
 	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
 	stars.build(celestial)
 	hud.celestial = celestial
+	hud.overview.command.connect(_on_overview_command)
 	sky.configure(EARTH)
 	_start_scenario()
 
@@ -217,6 +218,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		if not target_hostile:
 			world.set_input(TARGET_ID, ShipControlInput.neutral())
 		return
+	elif event.is_action_pressed("tactical_overview"):
+		hud.overview.toggle()
+		if hud.overview.visible:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		return
 	elif event.is_action_pressed("toggle_controls"):
 		hud.controls.toggle()
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -325,6 +331,40 @@ func salvage_target() -> Array[LootRoller.Drop]:
 	return drops
 
 
+func _on_overview_command(name: StringName, arg: Variant) -> void:
+	var sys := world.get_ship(PLAYER_ID).systems
+	match name:
+		&"divert":
+			sys.divert(arg)
+		&"balance":
+			sys.balance_power()
+		&"cover":
+			var why := sys.cover_role(arg)
+			hud.notice("CREW: " + why if why != "" else "Crew: sending a general crew member to cover %s" % CrewRoster.ROLE_NAMES[arg], world.sim_time)
+		&"party":
+			boarding_party_size = clampi(boarding_party_size + int(arg), 1, BoardingAction.MAX_TEAM)
+			hud.boarding_party_size = boarding_party_size
+		&"repair_pick":
+			sys.preferred_repair_id = str(arg)
+		&"repair":
+			start_field_repair()
+
+
+## Docking camera out of our collar while a target is in boarding range and
+## no gangway is sealed yet.
+func _update_docking_cam(player: ShipState, target: ShipState, alpha: float, render_origin: Vector3) -> void:
+	var link := world.link_for(PLAYER_ID)
+	var mine := Docking.collars(player.systems)
+	if not target.is_active() or mine.is_empty() or (link != null and link.sealed()) 			or player.position.distance_to(target.position) > DockingCam.SHOW_RANGE_M:
+		hud.docking_cam.visible = false
+		return
+	var found := Docking.best(player, target)
+	var port: Docking.Port = found.a_port if not found.is_empty() else mine[0]
+	var q := player.interpolated_orientation(alpha)
+	var from := player.interpolated_position(alpha) + q * port.position_body - render_origin
+	hud.docking_cam.show_view(from, q * port.normal_body, q * Vector3.UP, found.get("assessment", {}))
+
+
 ## V: extend a gangway to the target, or release the one we have.
 func toggle_dock() -> void:
 	var link := world.link_for(PLAYER_ID)
@@ -427,6 +467,11 @@ func _process(delta: float) -> void:
 		view.sync_from(ship, alpha, render_origin)
 
 	camera.follow(_views[PLAYER_ID], delta)
+	_update_docking_cam(player, target, alpha, render_origin)
+	var link := world.link_for(PLAYER_ID)
+	var boarding := world.boarding_for(link) if link != null else null
+	if boarding != null and not hud.hit_cam.showing_boarding():
+		hud.hit_cam.show_boarding(boarding, _designs[TARGET_ID], target.systems, target.display_name)
 	var continuous := world.continuous_position(render_origin)
 	dust.update_origin(continuous)
 	dust_far.update_origin(continuous)

@@ -5,7 +5,7 @@ extends CanvasLayer
 
 const COLOR_WARN := Color(0.96, 0.78, 0.26)
 const COLOR_DANGER := Color(1.0, 0.38, 0.32)
-const COLOR_TARGET := Color(1.0, 0.45, 0.3, 0.95)
+const COLOR_TARGET := Color(1.0, 0.17, 0.84, 0.95)
 const COLOR_APSIS := Color(0.35, 1.0, 0.55, 0.9)
 ## Below this eccentricity, apsis positions and times are meaningless.
 const CIRCULAR_ECCENTRICITY := 1e-4
@@ -33,6 +33,13 @@ var profile: PlayerProfile
 var loot: LootPanel
 ## Post-combat debrief, shown when the ship is lost (created in _ready).
 var debrief: DebriefPanel
+## Always-visible module and damage map of your ship.
+var damage_map: ShipSchematic
+## Tab: tactical overview and ship management.
+var overview: TacticalOverview
+var docking_cam: DockingCam
+## Boarding party size chosen in the overview (set by Main).
+var boarding_party_size: int = BoardingAction.MAX_TEAM
 
 var _last_hit_time := -INF
 var _hits_scored := 0
@@ -57,6 +64,28 @@ func _ready() -> void:
 	debrief.name = "Debrief"
 	$Root.add_child(debrief)
 	debrief.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	damage_map = ShipSchematic.new()
+	damage_map.name = "DamageMap"
+	damage_map.title = "SHIP // MODULES & DAMAGE   [Tab] overview"
+	$Root.add_child(damage_map)
+	damage_map.anchor_top = 1.0
+	damage_map.anchor_bottom = 1.0
+	damage_map.offset_left = 16
+	damage_map.offset_right = 416
+	damage_map.offset_top = -268
+	damage_map.offset_bottom = -78
+	damage_map.show_legend = true
+	docking_cam = DockingCam.new()
+	docking_cam.name = "DockingCam"
+	$Root.add_child(docking_cam)
+	docking_cam.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 80)
+	overview = TacticalOverview.new()
+	overview.name = "Overview"
+	$Root.add_child(overview)
+	overview.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	($Root/TargetPanel as PanelContainer).add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, 0))
+	hit_cam.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, 6))
+	loot.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, 14))
 
 
 ## A one-line message on the flight panel for a few seconds.
@@ -120,6 +149,10 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	overlay.queue_redraw()
 
 	_update_radar(player, target if has_target else null)
+	damage_map.systems = player.systems
+	if overview.visible:
+		var link := world.link_for(player.id)
+		overview.update_view(player, target, world.boarding_for(link) if link != null else null, boarding_party_size, world.sim_time)
 
 
 func _update_flight_panel(player: ShipState, input: PlayerInput, sim_time: float, has_target: bool) -> void:

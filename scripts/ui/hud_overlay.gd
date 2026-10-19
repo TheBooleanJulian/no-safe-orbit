@@ -5,12 +5,12 @@ extends Control
 ## path with apsis and entry markers, target bracket with an edge arrow when
 ## off-screen, the lead (fire-control) pip, and the mouse virtual stick.
 
-const COLOR_HEADING := Color(0.85, 0.9, 1.0, 0.85)
+const COLOR_HEADING := Color(0.0, 0.94, 1.0, 0.9)
 const COLOR_PROGRADE := Color(0.35, 1.0, 0.55, 0.95)
 const COLOR_PATH := Color(0.35, 1.0, 0.55, 0.45)
-const COLOR_TARGET := Color(1.0, 0.45, 0.3, 0.95)
+const COLOR_TARGET := Color(1.0, 0.17, 0.84, 0.95)
 const COLOR_LEAD := Color(1.0, 0.8, 0.35, 0.95)
-const COLOR_STICK := Color(0.85, 0.9, 1.0, 0.5)
+const COLOR_STICK := Color(0.0, 0.94, 1.0, 0.5)
 const MARKER_DISTANCE_M := 5000.0
 const EDGE_MARGIN := 48.0
 const MIN_PROGRADE_SPEED := 0.5
