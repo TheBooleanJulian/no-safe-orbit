@@ -154,6 +154,9 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 		"SYSTEMS    %s" % sys.status_line(),
 		"DMG CTRL   %s" % _repair_text(sys),
 	]
+	if sys.crew != null and not sys.crew.members.is_empty():
+		lines.append("CREW       %s  %s" % [sys.crew.summary(),
+			("CMD ok" if sys.has_command() else "NO COMMAND") + (" · GUN CREW ok" if sys.has_gun_crew() else " · NO GUN CREW")])
 	if profile != null:
 		lines.append("SPARES     %d parts" % profile.spare_parts)
 	if _notice != "" and sim_time - _notice_time < NOTICE_S:
@@ -267,11 +270,46 @@ func _update_target_panel(world: WorldSimulation, player: ShipState, target: Shi
 			var why := Salvage.block_reason(player, target)
 			lines.append("DISABLED   %s  —  %d%% intact" % [target.systems.disabled_reason().to_upper(), roundi(target.systems.intact_fraction() * 100.0)])
 			lines.append("SALVAGE    %s" % ("READY — press [G]" if why == "" else why))
+		lines.append_array(_boarding_lines(world, player, target))
 	if _outgoing != null:
 		lines.append("LAST HIT   %s" % _outgoing.headline())
 		for line in _outgoing.lines.slice(maxi(_outgoing.lines.size() - 3, 1)):
 			lines.append("  " + line.left(58))
 	target_label.text = "\n".join(lines)
+
+
+## Docking tolerances when close, gangway state, and the boarding action.
+func _boarding_lines(world: WorldSimulation, player: ShipState, target: ShipState) -> Array:
+	var lines := []
+	var link := world.link_for(player.id)
+	if link == null:
+		if player.position.distance_to(target.position) > 300.0:
+			return lines
+		var found := Docking.best(player, target)
+		if found.is_empty():
+			return lines
+		var s: Dictionary = found.assessment
+		lines.append("DOCKING    %s  [V]" % ("READY — %s" % ("collar" if found.b_port.kind == &"collar" else "hull cut") if s.ok else "; ".join(s.problems)))
+		lines.append("           port gap %.0f / %.0f m · %.2f / %.1f m/s · %.0f° / %.0f°" % [s.range, Docking.GANGWAY_MAX_M,
+			s.rel_speed, Docking.MAX_REL_SPEED_MPS, s.misalign_deg, Docking.MAX_MISALIGN_DEG])
+		return lines
+	if not link.sealed():
+		lines.append("GANGWAY    %s %.0f / %.0f s  [V] release" % ["mating" if link.b_port.kind == &"collar" else "cutting in",
+			link.progress_s, link.required_s])
+		return lines
+	var b := world.boarding_for(link)
+	if b == null:
+		lines.append("GANGWAY    SEALED — [N] send boarders  [V] release")
+		return lines
+	var where := "on the gangway" if b.room < 0 else target.systems.blueprint.rooms[b.room].id
+	var doing: String = {&"cut": "cutting a hatch", &"move": "moving", &"cross": "crossing", &"muster": "mustering"}.get(b.action, "")
+	if b.room >= 0 and not b.defenders_in(b.room).is_empty():
+		doing = "FIGHTING %d defenders" % b.defenders_in(b.room).size()
+	lines.append("BOARDING   %s  %s %s  team %d/%d fit%s" % [BoardingAction.PHASE_NAMES[b.phase].to_upper(), where, doing,
+		b.fit_team().size(), b.team.size(), "  [N] withdraw" if not b.finished() else ""])
+	for line in b.log.slice(maxi(b.log.size() - 3, 0)):
+		lines.append("  " + line.left(58))
+	return lines
 
 
 func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElements) -> void:

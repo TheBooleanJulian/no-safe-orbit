@@ -20,6 +20,11 @@ extends RefCounted
 ##   breaches, hatches) round-trips through condition() / apply_condition().
 ## - Field repair: a powered, pressurised workshop the crew can reach patches
 ##   one damaged system at a time, up to FIELD_REPAIR_LIMIT of its condition.
+##   A fit damage-control or engineering crew member must walk there first.
+## - Crew (CrewRoster): people in a room that vents are killed or wounded.
+##   No fit command crew on a pressurised bridge halves the assist turn
+##   rates; no fit weapons crew able to reach a magazine halves the guns'
+##   rate of fire (autoloaders only).
 
 enum Reactor { NORMAL, THROTTLED, SCRAM }
 
@@ -49,6 +54,8 @@ const FIELD_REPAIR_LIMIT := 0.75
 const FIELD_REPAIR_SETUP_S := 10.0
 const FIELD_REPAIR_S_PER_HP := 1.0
 ## Which damaged system the crew patch first (lower = sooner).
+const NO_COMMAND_RATE_FACTOR := 0.5
+const NO_GUN_CREW_RATE_FACTOR := 0.5
 const FIELD_REPAIR_ORDER := {
 	EquipmentDefinition.Kind.REACTOR: 0,
 	EquipmentDefinition.Kind.MAIN_ENGINE: 1,
@@ -95,6 +102,9 @@ class RoomState:
 ## A field repair in progress: crew patching one system.
 class RepairTask:
 	var equipment_id: String
+	## Crew member doing it, and the part of total_s spent getting there.
+	var member_id: String
+	var travel_s: float
 	var total_s: float
 	var remaining_s: float
 	var target_hp: float
@@ -122,6 +132,9 @@ var heat_rejection_kw: float = 0.0
 var event_log: PackedStringArray = PackedStringArray()
 ## Field repair under way, or null.
 var repair_task: RepairTask
+var crew: CrewRoster
+## Taken by a boarding party: it surrenders and stops fighting.
+var captured: bool = false
 
 var _attachments: Array[Array] = []
 var _config: ShipConfig
@@ -157,6 +170,7 @@ static func create(bp: ShipBlueprint, p_grid: ShipGrid, p_stats: ShipStats, conf
 		e.max_hp = def.max_hit_points()
 		e.hp = e.max_hp
 		s.equipment.append(e)
+	s.crew = CrewRoster.default_for(bp, p_grid, p_stats)
 	s.solve_power()
 	return s
 
@@ -312,7 +326,10 @@ func update_pressure() -> void:
 		var was := rooms[i].pressurized
 		rooms[i].pressurized = not vacuum.has(i)
 		if was and not rooms[i].pressurized:
-			_note("%s %s depressurised" % [_room_name(i), blueprint.rooms[i].id])
+			var hurt: Vector2i = crew.vent(i) if crew != null else Vector2i.ZERO
+			_note("%s %s depressurised%s" % [_room_name(i), blueprint.rooms[i].id,
+				" — %d killed, %d wounded" % [hurt.x, hurt.y] if hurt != Vector2i.ZERO else ""])
+			_config = null
 
 
 # --- Power ---------------------------------------------------------------------
@@ -501,8 +518,100 @@ func effective_config() -> ShipConfig:
 	for axis in 3:
 		if torque[axis] <= 0.0:
 			cfg.assist_max_rate_rad_s[axis] = 0.0
+	if not has_command():
+		cfg.assist_max_rate_rad_s *= NO_COMMAND_RATE_FACTOR
+	if cfg.cannon != null and not has_gun_crew():
+		var gun: KineticCannonConfig = cfg.cannon.duplicate()
+		gun.rate_of_fire_rpm *= NO_GUN_CREW_RATE_FACTOR
+		cfg.cannon = gun
 	_config = cfg
 	return cfg
+
+
+## Something outside (crew casualties, capture) changed what the ship can do.
+func invalidate() -> void:
+	_config = null
+
+
+# --- Crew ------------------------------------------------------------------------
+
+## Rooms from `from` to `to` (inclusive) through hatches, or [] if there is
+## no way. Unsuited crew need every room pressurised; `blocked` hatch ids
+## (sealed doors) are impassable; destroyed hatches are open holes.
+func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -> Array[int]:
+	var none: Array[int] = []
+	if from < 0 or to < 0 or (not suited and (not rooms[from].pressurized or not rooms[to].pressurized)):
+		return none
+	var prev := {from: -1}
+	var queue := [from]
+	while not queue.is_empty():
+		var i: int = queue.pop_front()
+		if i == to:
+			break
+		for h in blueprint.hatches:
+			if blocked.has(h.id) and not destroyed_hatches.has(h.id):
+				continue
+			var ra: int = grid.room_at.get(h.a, -1)
+			var rb: int = grid.room_at.get(h.b, -1)
+			var other := rb if ra == i else (ra if rb == i else -1)
+			if other >= 0 and not prev.has(other) and (suited or rooms[other].pressurized):
+				prev[other] = i
+				queue.append(other)
+	if not prev.has(to):
+		return none
+	var path: Array[int] = []
+	var at := to
+	while at >= 0:
+		path.push_front(at)
+		at = prev[at]
+	return path
+
+
+## The hatch joining two neighbouring rooms ("" if none).
+func hatch_between_rooms(a: int, b: int) -> String:
+	for h in blueprint.hatches:
+		var ra: int = grid.room_at.get(h.a, -1)
+		var rb: int = grid.room_at.get(h.b, -1)
+		if (ra == a and rb == b) or (ra == b and rb == a):
+			return h.id
+	return ""
+
+
+func room_role(i: int) -> StringName:
+	var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
+	return def.role if def != null else &""
+
+
+func command_room() -> int:
+	for i in blueprint.rooms.size():
+		if room_role(i) == &"command":
+			return i
+	return -1
+
+
+## Someone fit is in command on a pressurised bridge (ships without a crew
+## model always are).
+func has_command() -> bool:
+	if crew == null or crew.members.is_empty():
+		return true
+	for m in crew.members:
+		if m.fit() and m.role == CrewRoster.Role.COMMAND and m.location >= 0 \
+				and rooms[m.location].pressurized and room_role(m.location) == &"command":
+			return true
+	return false
+
+
+## A fit weapons crew member can reach a pressurised magazine.
+func has_gun_crew() -> bool:
+	if crew == null or not crew.members.any(func(m: CrewRoster.Member) -> bool: return m.role == CrewRoster.Role.WEAPONS):
+		return true
+	for m in crew.members:
+		if not m.fit() or m.role != CrewRoster.Role.WEAPONS or m.location < 0:
+			continue
+		for i in blueprint.rooms.size():
+			if room_role(i) == &"magazine" and not route(m.location, i).is_empty():
+				return true
+	return false
 
 
 ## One-line state for HUD panels.
@@ -530,6 +639,8 @@ func _note(text: String) -> void:
 ## Why the ship can no longer fight ("" while it still can): every gun is
 ## out, the power is gone, or nobody can reach a pressurised command room.
 func disabled_reason() -> String:
+	if captured:
+		return "captured"
 	if power_supply_kw <= 0.0:
 		return "no power"
 	if reachable_rooms().is_empty():
@@ -577,7 +688,11 @@ func condition() -> Dictionary:
 			breached.append(blueprint.rooms[i].id)
 	var hatches := destroyed_hatches.keys()
 	hatches.sort()
-	return {"equipment": eq, "modules": mods, "breached": breached, "hatches": hatches}
+	var out := {"equipment": eq, "modules": mods, "breached": breached, "hatches": hatches}
+	var hurt: Dictionary = crew.casualties() if crew != null else {}
+	if not hurt.is_empty():
+		out["crew"] = hurt
+	return out
 
 
 ## Restore a saved condition. Ids the blueprint no longer has are ignored;
@@ -601,7 +716,15 @@ func apply_condition(c: Dictionary) -> void:
 		if blueprint.find(str(h)) != null:
 			destroyed_hatches[str(h)] = true
 	update_pressure()
+	if crew != null:
+		crew.apply_casualties(c.get("crew", {}))
+		# Nobody starts a sortie in a vented room: they wait on the bridge.
+		var bridge := command_room()
+		for m in crew.members:
+			if m.location >= 0 and not rooms[m.location].pressurized:
+				m.location = bridge if bridge >= 0 and rooms[bridge].pressurized else -1
 	solve_power()
+	_config = null
 
 
 # --- Field repair --------------------------------------------------------------
@@ -642,9 +765,47 @@ func field_repair_block_reason() -> String:
 		return "no workshop aboard"
 	if working_workshop() < 0:
 		return "workshop unpowered, depressurised or cut off"
-	if field_repair_target() == null:
+	var e := field_repair_target()
+	if e == null:
 		return "nothing the crew can patch (destroyed parts need the yard)"
+	if _repair_crew(e).is_empty():
+		return "no fit damage-control or engineering crew can get to %s" % e.id
 	return ""
+
+
+## [member, route] for the nearest free damage-control (else engineering)
+## crew member who can walk to `e`, or [].
+func _repair_crew(e: EquipmentState) -> Array:
+	if crew == null:
+		return []
+	var best := []
+	for role in [CrewRoster.Role.DAMAGE_CONTROL, CrewRoster.Role.ENGINEERING]:
+		for m in crew.members:
+			if m.role != role or not m.available() or m.location < 0:
+				continue
+			for room in _access_rooms(e):
+				var path := route(m.location, room)
+				if not path.is_empty() and (best.is_empty() or path.size() < (best[1] as Array).size()):
+					best = [m, path]
+		if not best.is_empty():
+			return best
+	return best
+
+
+## Rooms from which the crew work on `e`: its own room, or for an external
+## system any room in the module it is mounted on.
+func _access_rooms(e: EquipmentState) -> Array[int]:
+	var out: Array[int] = []
+	var cell: Vector3i = blueprint.equipment[e.index].cell
+	if not e.def.is_external():
+		var r: int = grid.room_at.get(cell, -1)
+		if r >= 0:
+			out.append(r)
+		return out
+	for r in blueprint.rooms.size():
+		if grid.module_at.get(ShipGrid.room_cells(blueprint.rooms[r])[0], -2) == e.module_index:
+			out.append(r)
+	return out
 
 
 ## Next damaged (not destroyed) system the crew can reach and patch: by
@@ -673,20 +834,31 @@ func start_field_repair() -> EquipmentState:
 	if field_repair_block_reason() != "":
 		return null
 	var e := field_repair_target()
+	var who: Array = _repair_crew(e)
+	var m: CrewRoster.Member = who[0]
+	var path: Array = who[1]
 	repair_task = RepairTask.new()
 	repair_task.equipment_id = e.id
+	repair_task.member_id = m.id
 	repair_task.target_hp = FIELD_REPAIR_LIMIT * e.max_hp
-	repair_task.total_s = FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)
+	repair_task.travel_s = (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S
+	repair_task.total_s = repair_task.travel_s + FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)
 	repair_task.remaining_s = repair_task.total_s
-	_note("Damage control: patching %s %s (%.0f s)" % [e.def.display_name, e.id, repair_task.total_s])
+	m.busy = true
+	m.location = path[-1]
+	_note("Damage control: %s (%s) patching %s %s — %.0f s incl. %.0f s to get there" % [
+		m.id, CrewRoster.ROLE_NAMES[m.role], e.def.display_name, e.id, repair_task.total_s, repair_task.travel_s])
 	return e
 
 
 ## Returns true when the task finished (the flight config changes).
 func _advance_repair(dt: float) -> bool:
 	var e := equipment_by_id(repair_task.equipment_id)
+	var m: CrewRoster.Member = crew.by_id(repair_task.member_id) if crew != null else null
 	var why := ""
-	if e == null or e.destroyed():
+	if m == null or not m.fit():
+		why = "the repairer was hurt"
+	elif e == null or e.destroyed():
 		why = "the part was destroyed"
 	elif working_workshop() < 0:
 		why = "the workshop is down"
@@ -694,11 +866,14 @@ func _advance_repair(dt: float) -> bool:
 		why = "the crew lost access"
 	if why != "":
 		_note("Repair of %s interrupted: %s" % [repair_task.equipment_id, why])
+		if m != null:
+			m.busy = false
 		repair_task = null
 		return false
 	repair_task.remaining_s -= dt
 	if repair_task.remaining_s > 0.0:
 		return false
+	m.busy = false
 	e.hp = maxf(e.hp, repair_task.target_hp)
 	_note("%s %s patched to %.0f%%" % [e.def.display_name, e.id, 100.0 * e.hp / e.max_hp])
 	repair_task = null

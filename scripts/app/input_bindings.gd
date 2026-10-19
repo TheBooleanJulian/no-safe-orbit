@@ -31,6 +31,8 @@ const ACTIONS := [
 	[&"toggle_target_ai", "Target hostile on/off"],
 	[&"salvage", "Salvage disabled target"],
 	[&"field_repair", "Damage control (workshop repair)"],
+	[&"dock", "Extend / release gangway"],
+	[&"board", "Send boarders / withdraw"],
 	[&"release_mouse", "Release mouse"],
 	[&"toggle_controls", "Controls panel"],
 ]

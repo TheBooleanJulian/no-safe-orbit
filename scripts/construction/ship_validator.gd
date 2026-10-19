@@ -306,6 +306,13 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 				"%s %s has no magazine to feed it: 0 rounds. Add a magazine room." % [def.display_name, e.id], e.id)
 
 
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def != null and def.kind == EquipmentDefinition.Kind.DOCKING_COLLAR and grid.room_at.get(bp.equipment[i].cell, -1) < 0:
+			_add(report, Severity.WARNING, &"collar_leads_nowhere",
+				"%s %s opens into no room: nobody can use it. Put a room behind it." % [def.display_name, bp.equipment[i].id], bp.equipment[i].id)
+
+
 ## Fixed forward-firing mounts: anything in the hull straight ahead (−z) of
 ## the mount, in the cell layer just outside its face, blocks the line of fire.
 static func _arc_obstructed(grid: ShipGrid, e: ShipBlueprint.PlacedEquipment) -> bool:

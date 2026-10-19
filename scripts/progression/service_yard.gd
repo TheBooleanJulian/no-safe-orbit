@@ -20,12 +20,14 @@ const PRIORITY_NAMES := ["Full restoration", "Combat readiness", "Mobility", "Hu
 const RARE_FIT_FACTOR := 0.25
 const BREACH_PATCH_COST := 2
 const HATCH_COST := 1
+## Recruiting and training one replacement crew member.
+const RECRUIT_COST := 2
 ## Category order per priority.
 const ORDER := {
-	Priority.FULL: [&"combat", &"mobility", &"hull"],
-	Priority.COMBAT: [&"combat", &"hull", &"mobility"],
-	Priority.MOBILITY: [&"mobility", &"hull", &"combat"],
-	Priority.HULL: [&"hull", &"combat", &"mobility"],
+	Priority.FULL: [&"combat", &"mobility", &"crew", &"hull"],
+	Priority.COMBAT: [&"combat", &"crew", &"hull", &"mobility"],
+	Priority.MOBILITY: [&"mobility", &"hull", &"crew", &"combat"],
+	Priority.HULL: [&"hull", &"crew", &"combat", &"mobility"],
 }
 const CATEGORY := {
 	EquipmentDefinition.Kind.REACTOR: &"combat",
@@ -34,11 +36,13 @@ const CATEGORY := {
 	EquipmentDefinition.Kind.MAIN_ENGINE: &"mobility",
 	EquipmentDefinition.Kind.RCS: &"mobility",
 	EquipmentDefinition.Kind.PROPELLANT_TANK: &"mobility",
+	EquipmentDefinition.Kind.DOCKING_COLLAR: &"hull",
 }
 
 
 class Job:
 	## &"repair", &"replace" (destroyed part), &"module", &"breach", &"hatch",
+	## &"recruit" (one replacement crew member; subject = role name),
 	## &"build" (refit: a part the vessel does not have yet).
 	var kind: StringName
 	var subject: String
@@ -129,6 +133,17 @@ static func repair_jobs(vessel: ShipInstance, catalog: ConstructionCatalog) -> A
 		j.label = "Replace hatch %s" % id
 		j.order = 3.0
 		jobs.append(j)
+	var dead := vessel.dead_crew()
+	for role_name in dead:
+		for k in int(dead[role_name]):
+			var j := Job.new()
+			j.kind = &"recruit"
+			j.subject = str(role_name)
+			j.cost = RECRUIT_COST
+			j.category = &"crew"
+			j.label = "Recruit a %s crew member" % role_name
+			j.order = CrewRoster.ROLE_NAMES.find(str(role_name))
+			jobs.append(j)
 	return jobs
 
 
@@ -221,6 +236,15 @@ static func perform(jobs: Array[Job], vessel: ShipInstance, profile: PlayerProfi
 				(c.get("breached", []) as Array).erase(j.subject)
 			&"hatch":
 				(c.get("hatches", []) as Array).erase(j.subject)
+			&"recruit":
+				var dead: Dictionary = c.get("crew", {}).get("dead", {})
+				dead[j.subject] = int(dead.get(j.subject, 0)) - 1
+				if dead[j.subject] <= 0:
+					dead.erase(j.subject)
+				if dead.is_empty() and c.has("crew"):
+					(c.crew as Dictionary).erase("dead")
+					if (c.crew as Dictionary).is_empty():
+						c.erase("crew")
 		vessel.record("%s (%d parts)" % [j.label, j.cost])
 	return spent
 

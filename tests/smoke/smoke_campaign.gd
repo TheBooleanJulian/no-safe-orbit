@@ -104,6 +104,11 @@ func _run() -> void:
 
 	# 4. Return damaged: B docks.
 	var flown_condition := player.systems.condition()
+	# Docking keeps every scrap of damage; only the wounded recover ashore.
+	if flown_condition.has("crew"):
+		flown_condition.crew.erase("wounded")
+		if flown_condition.crew.is_empty():
+			flown_condition.erase("crew")
 	await _press("open_shipyard")
 	await _frames(3)
 	var yard := current_scene as Shipyard
@@ -112,7 +117,7 @@ func _run() -> void:
 		return _finish()
 	var vessel := yard.profile.vessel
 	_check(vessel.sorties == 1 and vessel.is_damaged() and JSON.stringify(vessel.condition) == JSON.stringify(flown_condition),
-		"the docked vessel keeps exactly the damage it flew back with")
+		"the docked vessel keeps exactly the damage it flew back with (the wounded recover)")
 	_check(yard._hangar_label.get_parsed_text().contains("DAMAGE"), "the hangar panel lists the damage")
 
 	# 5. Repair and reconfigure.

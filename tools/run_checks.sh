@@ -35,6 +35,7 @@ run_step unit      "$GODOT" --headless --path . -s res://tests/run_tests.gd
 run_step smoke     "$GODOT" --headless --path . -s res://tests/smoke/smoke_main.gd
 run_step shipyard  "$GODOT" --headless --path . -s res://tests/smoke/smoke_shipyard.gd
 run_step campaign  "$GODOT" --headless --path . -s res://tests/smoke/smoke_campaign.gd
+run_step boarding  "$GODOT" --headless --path . -s res://tests/smoke/smoke_boarding.gd
 run_step boot_main "$GODOT" --headless --path . --quit-after 600
 # Exported data: pack the project with the export preset (no templates
 # needed) and boot from the pack, so missing include filters fail here.
@@ -46,5 +47,5 @@ if ! grep -q "Orbital sandbox ready" "$LOG_DIR/pck_boot.log"; then
 	status=1
 fi
 
-grep -hE "tests, |smoke: |smoke_shipyard: |smoke_campaign: " "$LOG_DIR/unit.log" "$LOG_DIR/smoke.log" "$LOG_DIR/shipyard.log" "$LOG_DIR/campaign.log" 2>/dev/null
+grep -hE "tests, |smoke: |smoke_shipyard: |smoke_campaign: |smoke_boarding: " "$LOG_DIR/unit.log" "$LOG_DIR/smoke.log" "$LOG_DIR/shipyard.log" "$LOG_DIR/campaign.log" "$LOG_DIR/boarding.log" 2>/dev/null
 exit $status
