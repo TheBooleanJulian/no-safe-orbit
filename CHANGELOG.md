@@ -4,6 +4,45 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test feedback pass (2026-10-20)
+
+#### Added
+- Controls: W/S pitch, A/D yaw, Q/E roll, R/F main engine / reverse, IJKL
+  strafe; X cycles hold orbit → match target → target markers (yellow
+  markers without matching velocity); wheel zoom levels while zoomed;
+  closest-approach (CPA) line on the target card; U cycles the lead target
+  through enemy craft; craft markers in sensor range.
+- Grappling arm (Y): steadies a tumbling ship, matches velocity, lines up
+  collars for a gangway, siphons a hulk's propellant and rounds.
+- Emergency jump: leaves craft and boarders behind, with a red countdown.
+- Crew: spacesuits at general quarters, damage control seals breaches,
+  named crew, hiring, shipyard role changes and in-flight reassignment.
+- Quartermaster (rarer parts for credits) and upgrades (ship technology,
+  captain's training).
+- Fires and automatic foam suppression; optional auto-routed coolant loops.
+- Main engines on any face with an engine room inside; high-thrust engine.
+- Cutter Mk I and Corvette Mk I templates (common parts only).
+- Shipyard: zoom/pan, click-and-drag moves, CoM marker [C], top/underside
+  toggle [V], rotate/flip buttons; same-type rooms side by side join up.
+- Visuals: 3-cell accordion radiators, triangular wedge-side plates, open
+  truss lattice, charred/buckled worn plates, rotating radar array, windows
+  and running lights that go dark without power, room colours in the
+  schematic and hit cam, centre-screen red alerts, smaller dimmer far tracers.
+
+#### Changed
+- Guns: light autocannon common (45 mm, 120 rpm), heavy kinetic uncommon
+  (90 mm, 60 rpm), railgun 220 mm at 24 rpm — similar damage rates; no
+  penetration fall-off; magazines hold mass, not rounds.
+- Armoured propellant tank 40 mm; crew quarters 3 berths a cell; medic
+  25 s a patient; bigger bridges, workshops and life support work faster.
+- Craft carry 1.5× fuel and ammo; crate loot odds 60 % / 90 %.
+- Engines balanced on thrust × Isp; owned rare parts usable on any vessel.
+- Profile schema 4: saves using the once-common heavy cannon keep their
+  units. Boot checks use a throwaway profile, never the real save.
+
+#### Fixed
+- Rate of fire compounding on every recompute (no bullets / sudden bursts).
+
 ### Added
 - Enemies board a disabled player (from mission 2); crew defence policy
   (hold the bridge / counter-attack); V cuts their gangway.

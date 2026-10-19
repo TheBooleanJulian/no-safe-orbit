@@ -37,6 +37,8 @@ var lead_render_pos := Vector3.ZERO
 var lead_label := ""
 ## Where the mouse aims (screen px); the turrets train on it.
 var aim_point := Vector2.ZERO
+## Craft in sensor range: {pos (render), label, hostile, selected}.
+var craft_markers: Array[Dictionary] = []
 ## One per gun: {pos: Vector3 (render space), status: ShipState.Turret, label}.
 var gun_reticles: Array[Dictionary] = []
 ## Projected orbit, render space; occluded where the planet is in the way.
@@ -111,6 +113,8 @@ func _draw() -> void:
 		else:
 			_draw_edge_arrow(center, font)
 
+	_draw_craft_markers(font)
+
 	# Lead pip: where to point the nose so rounds meet the target.
 	if has_lead:
 		for extra in extra_leads:
@@ -132,6 +136,24 @@ func _draw() -> void:
 			# Below-left, clear of the target bracket and its range label.
 			var text_w := font.get_string_size(lead_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 			draw_string(font, lp + Vector2(-text_w - 12, 24), lead_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COLOR_LEAD)
+
+
+## Craft: a small diamond (magenta hostile, cyan ours) and its range; the
+## selected one (U) gets a bracket.
+func _draw_craft_markers(font: Font) -> void:
+	for m in craft_markers:
+		var pos: Vector3 = m.pos
+		if camera.is_position_behind(pos):
+			continue
+		var p := camera.unproject_position(pos)
+		if not _inner_rect().has_point(p):
+			continue
+		var col := COLOR_TARGET if m.hostile else COLOR_AIM
+		var d := 7.0
+		draw_polyline(PackedVector2Array([p + Vector2(0, -d), p + Vector2(d, 0), p + Vector2(0, d), p + Vector2(-d, 0), p + Vector2(0, -d)]), col, 1.5)
+		if m.selected:
+			_draw_bracket(p, 12.0)
+		draw_string(font, p + Vector2(10, -8), str(m.label), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
 
 
 ## Each gun's own reticle: a small ring where its barrel points. On target:

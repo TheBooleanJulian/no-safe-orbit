@@ -140,13 +140,13 @@ func test_the_block_built_template_flies() -> void:
 	assert_true(pool.all(func(d: LootRoller.Drop) -> bool: return d.kind != &"hull" or not catalog.hull[d.def_id].legacy), "legacy sections no longer drop")
 
 
-func test_radiators_span_two_cells_and_fighters_launch_from_a_hangar() -> void:
+func test_radiators_span_three_cells_and_fighters_launch_from_a_hangar() -> void:
 	var errors := PackedStringArray()
 	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
 	var catalog := _catalog()
 	var grid := ShipGrid.build(bp, catalog)
 	var rad := bp.equipment.find(bp.find("e42"))
-	assert_true(grid.external_cells(rad).size() == 2, "a radiator panel spans two cells")
+	assert_true(grid.external_cells(rad).size() == 3, "a radiator panel spans three cells")
 	# A second radiator overlapping its aft cell is refused.
 	var clash := bp.duplicate_blueprint()
 	clash.add_equipment(&"radiator", Vector3i(2, 2, 11), &"dorsal")

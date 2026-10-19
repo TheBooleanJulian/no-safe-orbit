@@ -205,9 +205,9 @@ func test_locked_blueprints_and_unowned_parts_are_errors() -> void:
 
 func test_mixed_gun_batteries_compile_per_mount() -> void:
 	var bp := _template()
-	bp.add_equipment(&"autocannon", Vector3i(4, 2, 4), &"dorsal")
+	bp.add_equipment(&"kinetic_cannon", Vector3i(4, 2, 4), &"dorsal")
 	var r := ShipValidator.validate(bp, _catalog())
-	assert_true(not r.has_errors(), "a kinetic cannon and an autocannon can share a ship:\n%s" % r.summary())
+	assert_true(not r.has_errors(), "an autocannon and a heavy kinetic cannon can share a ship:\n%s" % r.summary())
 	var cfg := ShipStats.compute(bp, ShipGrid.build(bp, _catalog())).to_ship_config("mixed")
 	assert_true(cfg.mount_cannon(0).display_name != cfg.mount_cannon(1).display_name and cfg.mount_cannon(1).magazine_rounds == cfg.cannon.magazine_rounds,
 		"each mount keeps its own gun, fed from one magazine")
@@ -414,8 +414,8 @@ func test_losing_the_vessel_loses_only_the_cargo_and_a_fee() -> void:
 	var lost := p.lose_vessel(_catalog())
 	assert_true(p.owned(&"railgun") == 1, "parts installed in the design are kept")
 	assert_true(p.vessel.cargo_is_empty() and p.owned(&"torch_drive") == 0, "the cargo is gone")
-	assert_true(credits - p.credits == fee and fee == PlayerProfile.RESPAWN_BASE_FEE + PlayerProfile.RESPAWN_FEE_PER_BERTH * 16,
-		"respawn fee %d credits (16 berths)" % fee)
+	assert_true(credits - p.credits == fee and fee == PlayerProfile.RESPAWN_BASE_FEE + PlayerProfile.RESPAWN_FEE_PER_BERTH * 24,
+		"respawn fee %d credits (24 berths)" % fee)
 	assert_true(JSON.stringify(p.vessel.blueprint.to_dict()) == design and not p.vessel.is_damaged(), "the same design, rebuilt and rearmed")
 	assert_true(lost.size() == 3 and p.vessels_lost == 1, "loss report: %s" % ", ".join(lost))
 	p.credits = 10
@@ -549,12 +549,13 @@ func test_field_repair_needs_a_working_workshop_and_patches_over_time() -> void:
 	# Damage control walk from the workshop r9 → corridor r8 → corridor r14 → reactor room r15.
 	var walk := 3.0 * CrewRoster.ROOM_TRANSIT_S
 	assert_near(s.repair_task.travel_s, walk, 1e-6, "walk from the workshop to the reactor room (s)")
-	assert_near(s.repair_task.total_s, walk + ShipSystems.FIELD_REPAIR_SETUP_S + 15.0, 1e-6, "repair time = walk + setup + 1 s per hp (s)")
+	var work := (ShipSystems.FIELD_REPAIR_SETUP_S + 15.0) / s.room_bonus(&"workshop")
+	assert_near(s.repair_task.total_s, walk + work, 1e-6, "repair time = walk + (setup + 1 s per hp) ÷ workshop size bonus (s)")
 	var t := 0.0
 	while s.repair_task != null and t < 60.0:
 		s.tick(ship, 0.5)
 		t += 0.5
-	assert_near(t, 40.0, 0.5, "repair finished after (s)")
+	assert_near(t, walk + work, 0.5, "repair finished after (s)")
 	assert_near(s.equipment_by_id("e28").hp, 45.0, 1e-4, "reactor patched to 75 % (hp)")
 	assert_true(s.field_repair_target() == null, "nothing left to patch: the engine is destroyed")
 
@@ -563,6 +564,7 @@ func test_field_repair_is_interrupted_when_the_workshop_vents() -> void:
 	var ship := _ship(_with_workshop())
 	var s := ship.systems
 	s.damage_equipment(s.equipment_by_id("e28"), 30.0)
+	s.fires.clear()  # no fire to confuse the hit points
 	s.start_field_repair()
 	s.tick(ship, 1.0)
 	var workshop := -1
@@ -654,7 +656,8 @@ func test_a_new_hull_is_commissioned_into_the_hangar() -> void:
 	old.schema_version = 2
 	var r := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(old)), PackedStringArray())
 	assert_true(r.vessels.size() == 1 and r.vessel.name == first.name, "a v2 profile's vessel becomes the hangar's only vessel")
-	# Rare parts fitted to one vessel are not free for another.
+	# Rare parts owned can go on any vessel's design, not just the one they
+	# were first fitted to.
 	p.inventory["railgun"] = 1
 	p.vessels[0].blueprint = _with_gun(&"railgun")
 	p.select_vessel(1)
@@ -663,4 +666,8 @@ func test_a_new_hull_is_commissioned_into_the_hangar() -> void:
 	with_rail.add_equipment(&"railgun", Vector3i(0, 0, 0), &"dorsal")
 	var rep := ShipValidator.Report.new()
 	p.check_design(with_rail, _catalog(), rep)
-	assert_true(rep.has_code(&"part_not_owned"), "the railgun on the frigate cannot also go on the cutter")
+	assert_true(not rep.has_code(&"part_not_owned"), "the railgun on the frigate can be used on the cutter's design too")
+	with_rail.add_equipment(&"railgun", Vector3i(0, 0, 0), &"port")
+	rep = ShipValidator.Report.new()
+	p.check_design(with_rail, _catalog(), rep)
+	assert_true(rep.has_code(&"part_not_owned"), "but not more than are owned")

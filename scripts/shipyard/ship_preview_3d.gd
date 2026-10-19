@@ -19,6 +19,8 @@ const ISO_PITCH := -0.6154797
 const EDGE_ZONE := 0.28
 
 var isometric: bool = false
+## Middle of a cell open both ways picks the underside (shipyard [V]).
+var prefer_underside: bool = false
 var editable: bool = false
 var deck: int = 0
 ## Room, armour and bus tools: left-drag draws a rectangle.
@@ -33,6 +35,8 @@ var _model: Node3D
 var _parts: Dictionary = {}
 var _overlay: Node3D
 var _editor: ShipEditor
+var _com: MeshInstance3D
+var _show_com := false
 var _center := Vector3.ZERO
 var _yaw := 2.4
 var _pitch := -0.45
@@ -94,7 +98,36 @@ func show_design(editor: ShipEditor) -> void:
 	_extent = maxf(editor.grid.hull_bounds_m().size.length(), 20.0)
 	_apply_cutaway()
 	_refresh_overlay()
+	_update_com()
 	_update_camera()
+
+
+## Centre of mass as a gold sphere drawn over the hull (shipyard [C]).
+func set_show_com(on: bool) -> void:
+	_show_com = on
+	_update_com()
+
+
+func _update_com() -> void:
+	if _com == null:
+		var mesh := SphereMesh.new()
+		mesh.radius = 1.0
+		mesh.height = 2.0
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(CyberTheme.AMBER, 0.9)
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.no_depth_test = true
+		mat.render_priority = 10
+		_com = MeshInstance3D.new()
+		_com.mesh = mesh
+		_com.material_override = mat
+		_pivot.add_child(_com)
+	var ok := _editor != null and _editor.stats != null and _editor.stats.mass_kg > 0.0
+	_com.visible = _show_com and ok
+	if ok:
+		_com.position = _editor.stats.center_of_mass_m - _center
+		_com.scale = Vector3.ONE * maxf(_extent * 0.025, 0.8)
 
 
 ## Turn the isometric view by quarter turns.
@@ -146,7 +179,9 @@ func _update_camera() -> void:
 	if isometric:
 		_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 		_camera.size = _extent * 1.1
-		var yaw := PI * 0.25 + _iso_turn * PI * 0.5
+		# From ahead and to port (front-left), like the deck editor's view
+		# turned to face the nose; ⟲ / ⟳ turn it in quarter steps.
+		var yaw := PI * 1.25 + _iso_turn * PI * 0.5
 		var dir := Vector3(sin(yaw) * cos(ISO_PITCH), -sin(ISO_PITCH), cos(yaw) * cos(ISO_PITCH))
 		_camera.position = dir * 400.0
 		_camera.look_at(Vector3.ZERO, Vector3.UP)
@@ -177,9 +212,10 @@ func _apply_cutaway() -> void:
 		var node: Node3D = _parts.get(e.id)
 		if node != null:
 			node.visible = not isometric or e.cell.y <= deck
-	var armour: Node3D = _parts.get("armour")
-	if armour != null:
-		armour.visible = not isometric
+	for extra in ["armour", "lights"]:
+		var node: Node3D = _parts.get(extra)
+		if node != null:
+			node.visible = not isometric
 	_update_camera()
 
 
@@ -239,7 +275,8 @@ func pick(pos: Vector2) -> Dictionary:
 		return {}
 	var o := _camera.project_ray_origin(pos)
 	var d := _camera.project_ray_normal(pos)
-	var plane_y := (deck + 1.0) * ShipGrid.CELL_SIZE_M - _center.y
+	# The deck's floor, where its rooms and the placement ghost are drawn.
+	var plane_y := deck * ShipGrid.CELL_SIZE_M + 0.15 - _center.y
 	if absf(d.y) < 1e-6:
 		return {}
 	var t := (plane_y - o.y) / d.y
@@ -263,13 +300,7 @@ func face_for(hit: Dictionary, shift: bool) -> StringName:
 			best_d = d[face]
 	if best != &"":
 		return best
-	var cell: Vector3i = hit.cell
-	var up := _editor.grid.is_exterior_face(cell, &"dorsal")
-	var down := _editor.grid.is_exterior_face(cell, &"ventral")
-	var face: StringName = &"ventral" if down and not up else &"dorsal"
-	if shift:
-		face = &"dorsal" if face == &"ventral" else &"ventral"
-	return face
+	return DeckEditor.pick_vertical(_editor, hit.cell, shift, prefer_underside)
 
 
 func _edit_input(event: InputEvent) -> void:

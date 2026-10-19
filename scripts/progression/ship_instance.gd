@@ -24,6 +24,48 @@ var sorties: int = 0
 var salvaged: int = 0
 ## Service record, newest last.
 var history: PackedStringArray = PackedStringArray()
+## Hired crew, one per berth: [{name, role (CrewRoster.Role), skill}].
+## Empty = the standard (unnamed) complement — older saves until named.
+var crew: Array = []
+
+
+## Name the standard complement once (older saves, new vessels): the same
+## people, now with names, so they can be managed and replaced one by one.
+func ensure_crew(catalog: ConstructionCatalog) -> void:
+	if not crew.is_empty():
+		return
+	var grid := ShipGrid.build(blueprint, catalog)
+	var roster := CrewRoster.default_for(blueprint, grid, ShipStats.compute(blueprint, grid))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(name)
+	for m in roster.members:
+		crew.append({"name": CrewNames.pick(rng), "role": m.role, "skill": 0})
+
+
+## Docked: the dead leave the roster (their berths are free to hire into);
+## the condition then carries no dead to recruit. Returns their names.
+func bury_dead() -> PackedStringArray:
+	var out := PackedStringArray()
+	var c: Dictionary = condition.get("crew", {})
+	var dead: Dictionary = c.get("dead", {})
+	if crew.is_empty() or dead.is_empty():
+		return out
+	for role_name in dead:
+		var role := CrewRoster.ROLE_NAMES.find(str(role_name))
+		var left := int(dead[role_name])
+		# Casualties fall on the first of each role (CrewRoster.apply_casualties).
+		var i := 0
+		while left > 0 and i < crew.size():
+			if int(crew[i].role) == role:
+				out.append(str(crew[i].name))
+				crew.remove_at(i)
+				left -= 1
+			else:
+				i += 1
+	c.erase("dead")
+	if c.is_empty():
+		condition.erase("crew")
+	return out
 
 
 static func fresh(bp: ShipBlueprint) -> ShipInstance:
@@ -178,6 +220,7 @@ func to_dict() -> Dictionary:
 		"sorties": sorties,
 		"salvaged": salvaged,
 		"history": Array(history),
+		"crew": crew.duplicate(true),
 	}
 
 
@@ -206,6 +249,9 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipInstance:
 	v.cargo = (cg as Dictionary).duplicate(true) if cg is Dictionary else {}
 	v.sorties = int(d.get("sorties", 0))
 	v.salvaged = int(d.get("salvaged", 0))
+	for entry in d.get("crew", []):
+		if entry is Dictionary:
+			v.crew.append({"name": str(entry.get("name", "")), "role": int(entry.get("role", 6)), "skill": int(entry.get("skill", 0))})
 	for line in d.get("history", []):
 		v.history.append(str(line))
 	return v

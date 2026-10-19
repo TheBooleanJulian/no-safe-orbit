@@ -22,7 +22,7 @@ func _ready() -> void:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
 	var title := Label.new()
-	title.text = "DOCKING CAM — collar view  [V] extend gangway"
+	title.text = "DOCKING CAM — [V] gangway · J/L I/K strafe · R/F in / out"
 	title.add_theme_color_override("font_color", CyberTheme.MAGENTA)
 	title.add_theme_font_size_override("font_size", 12)
 	box.add_child(title)

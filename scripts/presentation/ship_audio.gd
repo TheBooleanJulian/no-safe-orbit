@@ -37,7 +37,8 @@ func _ready() -> void:
 	_engine.stream = _make(2.0, _rumble, true)
 	_engine.volume_db = -80.0
 	add_child(_engine)
-	_engine.play()
+	if is_inside_tree():
+		_engine.play()
 	_jump = AudioStreamPlayer.new()
 	_jump.stream = _make(5.0, _spool)
 	_jump.volume_db = VOLUME_DB - 2.0

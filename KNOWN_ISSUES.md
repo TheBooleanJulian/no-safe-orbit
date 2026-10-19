@@ -5,17 +5,29 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 
 ## Open
 
-- **No human play-test yet.** Flight, the shipyard and combat were verified by
-  automated tests, end-to-end smoke tests and reviewed renders — not by a person
-  playing. Mouse and gamepad feel, readability of the orbit path and damage
-  reports, and whether real-scale orbital drift matters in a fight are untested.
-- **Balance is untested by play.** Loot rates, pity, costs, salvage yields,
-  resupply prices, boarding (a full crew repels a full party) and point
-  defence are tested for correctness, not for fun; expect tuning.
+- **Balance is still in development.** The play-test feedback pass retuned
+  guns (equal damage rates, penetration tiers), magazines, engines, loot
+  odds, the medic and crew sizes; hiring fees, quartermaster prices and
+  upgrade costs are first guesses. Expect further tuning.
+- **Fires, coolant loops and named crew are new** and covered by tests,
+  not yet by play.
 - **EW jamming exists only as a hook** for craft communications (Milestone 7).
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the
   old large sections from blocks, but a section of odd length (the old
   3-long engine section) doesn't tile and stays as it was.
+
+## Fixed (2026-10-20, play-test feedback)
+
+The user play-tested (the "no human play-test" item is closed). From the
+57-point feedback list: rate of fire no longer compounds (bullets missing /
+suddenly rapid fire) · enemy guns fire at the same rated rate as yours ·
+hatch placement no longer flips up or down (middle = ladder up, Shift =
+down) · building on the underside: a **Mount on: TOP / UNDERSIDE [V]**
+toggle · the isometric view looks from the front-left and picks on the deck
+floor · thin dark-grey armour and thin conduit no longer hide room names ·
+disabled ships that tumble can be held steady with the grappling arm and
+docked · the jump drive is only blocked while a hostile is actually firing ·
+beacon loot goes into the hold · fewer empty crates.
 
 ## Fixed (2026-10-20, second pass)
 
@@ -48,8 +60,13 @@ rare part · Earth texture 5400 × 2700.
   2026-10-19). Crossing it removes the vessel or round; skimming above it costs
   nothing.
 - **The station is reached by jump drive**, not flown to (decided 2026-10-20).
-- **Crew are roles, not characters:** no skills, morale or individual kit;
-  the wounded recover with a medic aboard or at the yard.
+- **Crew are named, with a role and a skill (0–2 stars)** — no morale or
+  individual kit; the wounded recover with a medic aboard or at the yard;
+  the dead leave their berths for new hires.
+- **Coolant loops are optional:** a design with no pipes cools as before;
+  once piped, only radiators on a reactor's loop work.
+- **Penetration does not fall off with range** (vacuum); a head-on closing
+  speed adds up to 30 %.
 - **Ships are blocks with procedural plating.** A wrecked module breaks up
   visually (shrinks and sheds plating), but its cells still count in the
   damage model.

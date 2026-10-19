@@ -75,7 +75,7 @@ func test_blueprint_round_trip_has_no_data_loss() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	# New ids continue after loaded ones (no id reuse).
 	var added := loaded.add_room(&"corridor", 2, Rect2i(3, 4, 1, 1))
-	assert_true(added.id == "r121", "next id after a loaded design continues numbering (got %s)" % added.id)
+	assert_true(added.id == "r122", "next id after a loaded design continues numbering (got %s)" % added.id)
 
 
 func test_unsupported_or_malformed_files_are_rejected_safely() -> void:
@@ -184,7 +184,7 @@ func test_external_equipment_needs_an_exterior_face() -> void:
 	_expect(bp, &"equipment_not_exterior", ShipValidator.Severity.ERROR, "engine on an inner face")
 	var bp2 := _template()
 	bp2.add_equipment(&"main_engine", Vector3i(2, 1, 0), &"fore")
-	_expect(bp2, &"equipment_bad_face", ShipValidator.Severity.ERROR, "main engine facing forward")
+	_expect(bp2, &"engine_needs_engine_room", ShipValidator.Severity.ERROR, "main engine facing forward, no engine room behind it")
 
 
 func test_obstructed_weapon_arc_reported() -> void:

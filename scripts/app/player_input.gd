@@ -3,12 +3,14 @@ extends RefCounted
 ## Turns keyboard/mouse state into a ShipControlInput. All bindings are named
 ## InputMap actions (project.godot → Input Map), so they are rebindable.
 ##
-## Steering is on the keys: A/D yaw (strafe while the docking camera is up),
-## arrows pitch and yaw, Q/E roll, R/F up/down. The captured mouse moves an
-## aim cursor: the turrets train on whatever is under it. Holding the right
-## button and moving the mouse orbits the camera around the ship instead; a
-## right click without dragging puts it back behind. Zoomed (Shift), the
-## camera centres on the aim and the mouse turns the view itself, finely.
+## Flying is on the keys: W/S pitch, A/D yaw, Q/E roll, R/F main engine
+## forward / reverse, IJKL strafe (J/L left/right, I/K up/down); arrows
+## pitch and yaw too. The captured mouse moves an aim cursor: the turrets
+## train on whatever is under it. Holding the right button and moving the
+## mouse orbits the camera around the ship instead; a right click without
+## dragging puts it back behind. Zoomed (Shift), the camera centres on the
+## aim, the mouse turns the view itself, finely, and the wheel steps through
+## magnifications.
 
 ## Aim cursor pixels per mouse pixel.
 const AIM_SENSITIVITY := 1.0
@@ -20,13 +22,20 @@ const ORBIT_CLICK_PX := 6.0
 ## Zoomed, the mouse turns the view this much slower than an orbit drag.
 const ZOOM_LOOK_FACTOR := 0.3
 
-## What flight assist holds on uncommanded translation axes.
+## What flight assist holds on uncommanded translation axes, and which
+## velocity the prograde markers show (X cycles).
 enum VelocityHold {
-	## Coast: keep the current orbit, spend no Δv.
+	## Coast: keep the current orbit, spend no Δv; markers orbital (green).
 	ORBIT,
-	## Null velocity relative to the target (velocity match).
+	## Null velocity relative to the target (velocity match); markers yellow.
 	TARGET,
+	## Coast, but the markers show motion relative to the target (yellow):
+	## put the target prograde on the target to head for it.
+	TARGET_MARKERS,
 }
+const HOLD_NAMES := ["HOLD ORBIT", "MATCH TARGET", "TARGET MARKERS"]
+## Zoomed field of view per wheel step (degrees).
+const ZOOM_LEVELS := [22.0, 12.0, 6.0, 3.0]
 
 var flight_assist: bool = true
 var velocity_hold: VelocityHold = VelocityHold.ORBIT
@@ -42,6 +51,8 @@ var camera_orbit: Vector2 = Vector2.ZERO
 ## so Main can centre the view on the aim.
 var zoomed: bool = false
 var zoom_changed: bool = false
+## Index into ZOOM_LEVELS (mouse wheel while zoomed).
+var zoom_level: int = 0
 ## Set when a click is consumed to capture the mouse, so it does not also
 ## fire; cleared once the fire action is released.
 var suppress_fire: bool = false
@@ -54,11 +65,15 @@ func handle_event(event: InputEvent) -> void:
 		flight_assist = not flight_assist
 		GameLog.info("input", "Flight assist %s" % ("ON" if flight_assist else "OFF"))
 	elif event.is_action_pressed("toggle_velocity_hold"):
-		velocity_hold = VelocityHold.TARGET if velocity_hold == VelocityHold.ORBIT else VelocityHold.ORBIT
-		GameLog.info("input", "Velocity hold: %s" % VelocityHold.keys()[velocity_hold])
+		velocity_hold = ((velocity_hold + 1) % VelocityHold.size()) as VelocityHold
+		GameLog.info("input", "Velocity hold: %s" % HOLD_NAMES[velocity_hold])
 	elif event.is_action_pressed("zoom_aim"):
 		zoomed = not zoomed
 		zoom_changed = true
+	elif zoomed and event is InputEventMouseButton and (event as InputEventMouseButton).pressed \
+			and ((event as InputEventMouseButton).button_index == MOUSE_BUTTON_WHEEL_UP or (event as InputEventMouseButton).button_index == MOUSE_BUTTON_WHEEL_DOWN):
+		var up := (event as InputEventMouseButton).button_index == MOUSE_BUTTON_WHEEL_UP
+		zoom_level = clampi(zoom_level + (1 if up else -1), 0, ZOOM_LEVELS.size() - 1)
 	elif event.is_action_pressed("orbit_camera"):
 		_orbiting = true
 		_orbit_drag = 0.0
@@ -77,17 +92,25 @@ func handle_event(event: InputEvent) -> void:
 			aim_offset = (aim_offset + rel * AIM_SENSITIVITY).clamp(-aim_limit, aim_limit)
 
 
+## Zoomed field of view (degrees).
+func zoom_fov() -> float:
+	return ZOOM_LEVELS[zoom_level]
+
+
+## Markers relative to the target (yellow) rather than orbital (green).
+func target_relative() -> bool:
+	return velocity_hold != VelocityHold.ORBIT
+
+
 ## `target_id` is the ship to match in TARGET hold (empty = none available).
-## `docking`: the docking camera is up, so A/D strafe instead of yawing.
-func build_input(_frame_delta: float, target_id: StringName = &"", docking: bool = false) -> ShipControlInput:
-	var steer := Input.get_axis("steer_left", "steer_right")
+func build_input(_frame_delta: float, target_id: StringName = &"", _docking: bool = false) -> ShipControlInput:
 	var translation := Vector3(
-		steer if docking else 0.0,
+		Input.get_axis("strafe_left", "strafe_right"),
 		Input.get_axis("thrust_down", "thrust_up"),
 		Input.get_axis("thrust_forward", "thrust_backward"))
 	var rotation := Vector3(
 		Input.get_axis("pitch_down", "pitch_up"),
-		Input.get_axis("yaw_right", "yaw_left") - (0.0 if docking else steer),
+		Input.get_axis("yaw_right", "yaw_left"),
 		Input.get_axis("roll_right", "roll_left"))
 	rotation = rotation.clamp(-Vector3.ONE, Vector3.ONE)
 	var input := ShipControlInput.create(translation, rotation, flight_assist)

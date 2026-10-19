@@ -70,7 +70,8 @@ static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipCon
 		_set_pips(sys, [2, 4, 0])  # everything into the engines
 		return flee(shooter, target)
 	# Power: guns while healthy, back to balanced when hurt.
-	_set_pips(sys, [1, 2, 3] if sys == null or sys.intact_fraction() > 0.6 else [2, 2, 2])
+	# Balanced in a fight: its guns fire at the rated rate, as the player's do.
+	_set_pips(sys, [2, 2, 2])
 	var input := command(shooter, target)
 	if target == null or not target.is_active():
 		return input

@@ -26,6 +26,9 @@ enum Kind {
 	POWER_DISTRIBUTION,
 	## Point-defence turret: engages hostile craft on its own (its `cannon`).
 	POINT_DEFENCE,
+	## Grappling arm: grabs a ship alongside, steadies it, lines up a collar
+	## and siphons a hulk's propellant and rounds (Grapple).
+	GRAPPLE,
 }
 
 enum Mount { INTERNAL, EXTERNAL }

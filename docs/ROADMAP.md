@@ -263,6 +263,28 @@ status. Renders reviewed (craft in flight, overview air-wing controls).
 | Enemy turns hostile when hit | `smoke_wing` (fighter hits) | |
 | Ship-to-ship collisions and ramming damage | `test_ramming_pushes_apart_and_hurts_the_lighter_side_more` | |
 
+## Play-test feedback pass (2026-10-20)
+
+The user play-tested and sent 57 points; all addressed. Highlights and
+where they are verified (`tests/unit/test_feedback_pass.gd` unless noted):
+
+| Request | Verified by | Result |
+|---|---|---|
+| WASD pitch/yaw, QE roll, RF thrust, IJKL strafe; strafe hint on the docking cam | `test_input_bindings`, smoke | |
+| Target markers without matching velocity; time to closest approach | `test_velocity_hold_cycles_three_modes`, `test_closest_approach` | X cycles 3 modes; CPA line |
+| Bullets missing / sudden rapid fire | `test_rate_of_fire_does_not_compound_on_recompute` | fixed |
+| Guns: tiers, equal DPS, railgun slower, no range fall-off, mass magazines, autocannon common | `test_each_gun_meets_its_armour`, `test_magazines_hold_mass_not_rounds`, `test_profiles_keep_the_parts_their_designs_use` | profile v4 keeps the user's cannons |
+| Spinning wrecks can't be docked; grapple arm | `test_the_grapple_steadies_a_tumbling_hulk_and_siphons_it` | |
+| Emergency jump; jump only blocked under fire | smoke (wing, campaign) | red countdown |
+| Suits, hull sealing, bigger rooms, medbay, faster medic | `test_suited_crew_…`, `test_damage_control_seals_breaches`, `test_bigger_rooms_work_faster` | |
+| Engines on any face; thrust × Isp balance | `test_engines_on_any_face_…`, `test_engines_trade_thrust_for_isp` | |
+| Coolant loops; foam suppression | `test_coolant_loops_feed_radiators`, `test_foam_puts_out_fires_until_it_runs_out` | |
+| Same-type rooms join | `test_same_type_rooms_side_by_side_need_no_hatch` | |
+| Templates of several sizes | `test_templates_of_every_size_use_only_standard_parts` | Cutter, Corvette, Frigate |
+| Named crew, hiring, reassignment; vendor; tech tree | `test_named_crew_…`, `test_crew_can_be_reassigned_mid_fight`, `test_the_quartermaster_and_the_upgrades`, `smoke_shipyard` | |
+| Shipyard: zoom/pan, drag-move, CoM toggle, underside toggle, hatch fix, iso from front-left, thin grey armour | `smoke_shipyard`, renders | |
+| Visuals: accordion radiators, triangular plates, truss lattice, char, radar, windows/lights, room colours, far tracers, centre alerts | manual | |
+
 ## Milestones 7–8
 
 Not started. See GAME_DESIGN.md §17.

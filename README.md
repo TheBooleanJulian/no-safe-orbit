@@ -34,19 +34,21 @@ godot --path .
 
 | Action | Keyboard / mouse | Gamepad |
 |---|---|---|
-| Main engine / reverse thrusters | W / S | left stick up / down |
-| Turn left / right (yaw; strafe while the docking camera is up) | A / D | left stick left / right |
-| Thrust up / down | R / F | RT / LT |
-| Pitch up / down | ↑ / ↓ | right stick down / up |
-| Yaw left / right | ← / → | right stick left / right |
+| Pitch down / up | W / S (or ↑ / ↓) | right stick up / down |
+| Yaw left / right | A / D (or ← / →) | right stick left / right |
 | Roll left / right | Q / E | LB / RB |
+| Main engine / reverse thrusters | R / F | left stick up / down |
+| Strafe left / right | J / L | left stick left / right |
+| Strafe up / down | I / K | RT / LT |
 | Aim the turrets (aim cursor) | mouse — click to capture, Esc to release | screen centre |
 | Orbit the camera around the ship / put it back behind | hold right mouse and move / right click | — |
 | Toggle flight assist | Z | Y |
-| Velocity hold: orbit ↔ match target | X | X |
+| Velocity hold: orbit → match target → target markers | X | X |
 | Fire (each gun fires once it is on the aim) | Left mouse (once captured) or Enter | A |
-| Zoom for gunnery (toggle; centres on the aim, the mouse turns the view) | Shift | right stick click |
-| Orbit details / details & combat log / help panels | O / J / H | — (use Tab) |
+| Zoom for gunnery (toggle; centres on the aim, the mouse turns the view; wheel = magnification) | Shift | right stick click |
+| Next target for the lead marker (the ship, then each hostile craft) | U | — |
+| Grappling arm: grab / release | Y | — |
+| Orbit details / details & combat log / help panels | O / P / H | — (use Tab) |
 | Target hostile on/off | T | B |
 | Drop a salvage beacon on a disabled target / close the loot window | G | D-pad up |
 | Damage control (workshop field repair) | C | D-pad down |
@@ -55,9 +57,9 @@ godot --path .
 | Divert power to systems / engines / weapons | 1 / 2 / 3 | paddles 1–3 |
 | Balance power | 4 | paddle 4 |
 | Tactical overview (ship map, power, crew, damage control, air wing) | Tab | left stick click |
-| Launch craft / recall craft | L / K | paddle / Misc |
+| Launch craft / recall craft | [ / ] | paddle / Misc |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
-| Dimensional jump drive to Earth Shipyard (hold 5 s, out of combat) | hold B | hold Start |
+| Dimensional jump drive to Earth Shipyard (hold 5 s, not while under fire) | hold B | hold Start |
 | Controls panel (rebinding) | F1 | Guide |
 
 **Propellant:** the Frigate Mk I carries 80 t — about 1.6 km/s of main-engine
@@ -71,6 +73,20 @@ then breach rooms, destroy hatches, cut power conduits and damage whatever
 systems lie on their path. Lost reactors, wrecked modules, cut conduits and
 overheating (throttle at 380 K, scram at 450 K) take systems offline. The
 target panel and the HIT TAKEN lines explain every hit.
+
+**Guns** are balanced to similar damage rates; what decides a fight is the
+armour you face (the hull skin is 20 mm; plates add 40 or 80 mm):
+
+| Gun | Rarity | Penetration | Rate | Against |
+|---|---|---|---|---|
+| Light autocannon | common | 45 mm | 120 rpm | bare hull; stopped by light armour |
+| Heavy kinetic cannon | uncommon | 90 mm | 60 rpm | light armour; stopped by heavy |
+| Railgun | rare | 220 mm | 24 rpm | everything, unless it glances off at a steep angle |
+
+Penetration doesn't fall off with range (vacuum); a head-on closing speed
+adds up to 30 %. **Magazines hold mass** (300 kg a cell, 540 kg dense),
+shared between the gun types aboard by mount count: heavier rounds, fewer of
+them.
 
 **Turrets:** guns train on the point under your aim cursor (at the target's
 range) at their own traverse rate — 30°/s for the kinetic cannon, 60°/s for
@@ -113,13 +129,19 @@ in order (the most severe recent hit wins the window).
 **Sky:** stars, Sun and Earth's rotation are real for 2026-10-19 12:00 UTC
 (Yale Bright Star Catalogue, NASA Blue Marble; see `data/ATTRIBUTION.md`).
 
-**Flight assist ON** (default) damps rotation to the requested turn rate. For
-translation it has two holds:
+**Flight assist ON** (default) damps rotation to the requested turn rate. X
+cycles three modes:
 
 - **HOLD ORBIT** (default): uncommanded axes coast. You stay on whatever orbit
   your burns put you on, and coasting spends no Δv.
-- **MATCH TARGET** (X): uncommanded axes thrust to null your velocity relative
+- **MATCH TARGET**: uncommanded axes thrust to null your velocity relative
   to the target, within real thrust limits. That costs Δv.
+- **TARGET MARKERS**: coast as in HOLD ORBIT, but the prograde / retrograde
+  markers show your motion relative to the target (yellow) — put the yellow
+  ring on the target to head for it, without matching velocity.
+
+The target card's **CPA** line gives the closest approach on present
+courses: how near and in how long (and COLLISION COURSE inside 50 m).
 
 **Manual** (Z): no hidden damping at all; spins persist until you counter-thrust.
 
@@ -144,12 +166,12 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
    - **Salvage beacon** (**G**, within 2 km): Earth Shipyard's tug brings
      the wreck in. You get **50 %** of its scrap value (what its intact parts
      are worth at the yard) and the bounty (`100 + 100 × intact`) in credits
-     now; its 1–5 crates each hold loot **40 %** of the time, banked at the
-     station.
+     now; its 1–5 crates each hold loot **60 %** of the time and go into your
+     **cargo hold**.
    - **Boarding takeover** (see Crew and boarding): **80 %** of the scrap
      value and double bounty; its stores (`10 + 50 × intact` spare parts) and
-     crates (+2, **85 %** loot each) go into your **cargo hold** — at risk
-     until you bank them, and limited by the hold's size.
+     crates (+2, **90 %** loot each) go into your **cargo hold**.
+   Loot in the hold is at risk until you bank it, and limited by its size.
    Either way the wreck's best intact rare part comes too, the crates open
    on a spinning carousel, and the next contact arrives — each one tougher
    (rarer guns, armour plates, RCS and reactors).
@@ -168,17 +190,18 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
    space): a spare part is 0.25 m³, a crated system 1 m³ per 2 t. Over
    capacity, an amber alert asks you to vent — Tab → CARGO lists the hold
    with a Vent button per line and "vent excess" (cheapest first); the jump
-   drive won't go until it fits.
+   vents the excess itself.
 4. **Jump home**: hold **B** for 5 s — the **dimensional jump drive** to
-   Earth Shipyard. It won't charge while a hostile you can see is still
-   fighting; at full charge it waits (amber alerts) for craft to be
-   recalled (K), boarders withdrawn (N) and the hold vented. The vessel
+   Earth Shipyard. It won't charge while a hostile has fired on you in the
+   last 10 s (one that hasn't opened fire doesn't stop it). Craft still out
+   and boarders still across are **left behind** — an emergency jump, with
+   a red countdown naming them; release B to wait for them. The vessel
    keeps exactly the damage it came back with (also when you restart, or
    quit mid-sortie). The
    station opens on the **debrief**: what you hit, where the hits on you came
    from, what armour stopped, what you lost, and lessons for the shipyard
    (saved under `user://debriefs/`). **Bank cargo** to make the hold's
-   contents safe. Buy spare parts with credits.
+   contents safe. Spend credits at the station (see below).
 5. **Death** loses only what is in the cargo hold. The station rehires,
    rebuilds and rearms the same design — rare parts fitted to it included —
    for a respawn fee in credits (50 + 5 per berth). Backspace respawns in
@@ -196,11 +219,26 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
    launch. Rarer parts can only be used if you own enough units / have the
    blueprint — the validator says what is missing.
 
+**Earth Shipyard's station** (HANGAR tabs):
+
+- **CREW**: your vessel's named crew — change roles for free, dismiss; hire
+  from a pool that changes every sortie (★ skill: each star works 20 %
+  faster at repairs and treatment; 40 cr + 40 a star). The dead leave their
+  berths, which you fill by hiring.
+- **QUARTERMASTER**: Okafor sells three rarer parts for credits (new stock
+  every sortie) and spare parts.
+- **UPGRADES**: ship technology for every vessel (thrust +5 %, radiators
+  +8 %, reactor output +8 % a level) and the captain's training (rate of
+  fire +5 %, damage control +15 %, medicine +15 %, salvage credits +5 %),
+  three levels each at 300 / 700 / 1500 cr.
+
 In flight, a ship with a **workshop** (a found room blueprint) that is
 powered, pressurised and reachable can patch damaged systems to 75 % (**C**):
 a damage-control (or engineering) crew member walks there first, it costs
 spare parts, and it stops if the workshop or the part's room loses pressure
-or the repairer is hurt. Destroyed parts still need the yard.
+or the repairer is hurt. Destroyed parts still need the yard. When the crew
+  can patch something, an amber line in the middle of the screen says
+  "press [C]".
 
 ## The HUD
 
@@ -218,7 +256,12 @@ Kept compact so the fight stays in view:
   look), and salvage / docking / boarding lines when they apply.
 - **Weapon strip** (bottom): gun and ammunition, point defence (none
   fitted yet), the air wing. Above it, a ticker of recent events.
-- **On demand:** O orbit details, J details & combat log (local velocity
+- **Attention line** (centre of the screen): the worst danger in big
+  pulsing red — incoming rounds, enemy boarders, emergency jump, fire —
+  or, with none, an amber prompt when the crew can patch damage with C.
+- **Craft markers**: small diamonds (magenta theirs, cyan ours) with range;
+  U puts the lead marker on a hostile craft.
+- **On demand:** O orbit details, P details & combat log (local velocity
   axes, Δv spent, rounds up, last hit reports), H the full controls card.
 - The **alert banner** shows the most urgent condition and what to do;
   Tab opens damage control on the system it is about.
@@ -257,6 +300,24 @@ exit holes on the hull.
   shows what went dark). The yard re-runs cut conduits.
 - **Reactors explode** at 0 %: blast damage within 15 m, falling off with
   distance.
+- **Coolant loop** (optional, shipyard "Auto-route coolant"): once piped,
+  only radiators on a loop that reaches a reactor reject heat, and hits can
+  cut pipes (the yard re-runs them). Unpiped designs cool as before.
+- **Hull breaches** are sealed by damage control one room at a time (30 s,
+  faster with a bigger workshop) when a workshop and life support work;
+  life support then refills the room with air.
+- **Fire**: a hit system may catch fire. It burns only with air
+  (smoulders in a vented room, flaring up if it is re-pressurised), damaging
+  the room's systems and crew. Automatic **foam** puts it out in 3 s — two
+  charges per room, recharged at the yard — then damage control fight it
+  by hand.
+- **Bigger rooms work harder**: each cell past the first adds 25 % (up to
+  2×) — a bigger bridge scans faster, a bigger workshop repairs and seals
+  faster, a bigger life support (the medbay) treats the wounded faster.
+- **Grappling arm** (Y, within 60 m of the arm, under 5 m/s): takes out a
+  ship's tumble, matches its velocity, and — with collars on both — turns
+  it so its collar faces yours and reels it in for V. It siphons a
+  disabled or captured hulk's propellant and rounds while it holds.
 
 ## Air wing: fighters and drones
 
@@ -264,8 +325,8 @@ The Frigate Mk I carries a **Wasp fighter** in an internal **fighter bay**
 (its hangar door is on the underside) and a **recon drone** on an external
 rack. They fly with the same physics as every ship and can be shot down.
 
-- **L** launches (the bay or rack must work and the ship must be turning
-  slowly); **K** recalls. A craft is recovered when it comes within 10 m of
+- **[** launches (the bay or rack must work and the ship must be turning
+  slowly); **]** recalls. A craft is recovered when it comes within 10 m of
   its door or rack at under 2 m/s, then rearmed and refuelled for 40 s.
 - Orders, per craft, in the tactical overview (Tab): **Strike** (gun runs
   on the target, aimed at hull, guns, engines or reactor), **Intercept**
@@ -283,14 +344,17 @@ rack. They fly with the same physics as every ship and can be shot down.
 
 ## Crew and boarding
 
-Every berth holds one crew member with a role: command (bridge), engineering,
-damage control, weapons (magazine), security, medical and general crew. They
-are not drawn; moving between rooms takes 5 s per room, through pressurised
-rooms only. A room that vents wounds or kills whoever is in it. No command
+Every berth (3 per crew-quarters cell) holds one named crew member with a
+role: command (bridge), engineering, damage control, weapons (magazine),
+security, medical and general crew. They are not drawn; moving between
+rooms takes 5 s per room. While a hostile is about the crew are at **general
+quarters in spacesuits**: they cross vented rooms and survive a room venting
+around them (otherwise venting wounds or kills whoever is in it). No command
 crew on a pressurised bridge hands the ship to the ship AI (half thrust and
-turn rate); no weapons crew able to
-reach the magazine halves the guns' rate of fire. The dead must be replaced
-at the yard (2 spare parts each); the wounded recover when you dock.
+turn rate); no weapons crew able to reach the magazine halves the guns' rate
+of fire. Tab → CREW: cover a lost role with general crew, or **reassign**
+anyone free to a new post (they walk there). The dead leave their berths
+(hire replacements at the station); the wounded recover when you dock.
 
 **Boarding** a disabled ship:
 
@@ -325,9 +389,15 @@ lines up a collar and sends its own party. **V** cuts its gangway loose.
 Tab → CREW sets your defence: hold the bridge (security fall back, doors
 ahead locked) or counter-attack (security and general crew go to meet them).
 Lose the bridge and the vessel is lost. A medic aboard treats one wounded
-crew member a minute.
+crew member every 25 s with a working life support room (faster when it is
+bigger), twice as long without one. After you cut its gangway, an enemy
+waits 20 s before trying again.
 
-Progress is saved to `user://profile.json` (versioned JSON).
+Progress is saved to `user://profile.json` (versioned JSON) — on Windows
+`%APPDATA%\Godot\app_userdata\No Safe Orbit\profile.json`, with saved designs
+in `blueprints\` beside it. Running the game (F5 or `godot --path .`) uses
+that real save; the automated checks never do (they boot with
+`-- --profile=user://check_boot_profile.json`). Copy the folder to back it up.
 
 ## Shipyard
 
@@ -337,12 +407,16 @@ ship you were flying (the Frigate Mk I template by default).
 **Hull** is built from four blocks: a 2×2×1 **pressurised block** (rooms go
 inside), 1×2×1 and 1×1×1 **sloped wedges** and a 1×2×1 **truss**. Wedges
 are angled armour: a level shot meets a 45° slope √2 × thicker, and the long
-wedge's shallow slope deflects it. **F** flips a wedge to slope down. Any
-common face attaches two blocks. (The old large sections still load and fly
-but are no longer offered.)
+wedge's shallow slope deflects it. **F** (or ⇅ Flip) turns a wedge upside
+down to slope down. Trusses are an open lattice (no rooms). Any common face
+attaches two blocks. (The old large sections still load and fly but are no
+longer offered.)
 
-**Armour** (palette → Armour): drag across cells to fit 40 mm (thin, cyan)
-or 80 mm (thick, amber) plates on their exposed faces — all, sides only, top
+**Templates**: Cutter Mk I (light, ~150 t), Corvette Mk I (medium, ~365 t)
+and Frigate Mk I (heavy) — common parts only, so any profile can fly them.
+
+**Armour** (palette → Armour): drag across cells to fit 40 mm (thin, grey)
+or 80 mm (thick, dark grey) plates on their exposed faces — all, sides only, top
 only or underside only — or strip them. Plates add mass (1.44 t / 2.88 t a
 face), cost spare parts at refit, wear when hit and are re-plated at the yard.
 
@@ -350,29 +424,41 @@ face), cost spare parts at refit, wear when hit and are re-plated at the yard.
 cells (it joins between decks too). A system or room is powered when one of
 its cells is on a network with a reactor and a **power distribution unit**.
 **Auto-route power bus** lays a tree to everything. A design with no conduit
-uses automatic distribution through its hull.
+uses automatic distribution through its hull. **Auto-route coolant** pipes
+the reactors to the radiators and heat-making systems (Clear removes it).
+
+**Engines**: aft faces always; any other face if an **engine room** is on
+the inside of that cell — it pushes the ship away from that face. Engines
+trade thrust for Isp (thrust × Isp is the budget: standard 800 kN / 900 s,
+high-Isp 620 kN / 1400 s, high-thrust 1.45 MN / 600 s; the torch drive
+1.2 MN / 1800 s). **Radiators** are 3-cell folded panels (old 2-cell ones
+still fly). Rooms of the same type side by side are one space — no hatch
+needed between them.
 
 | Action | How |
 |---|---|
 | Pick a part | Search box (/) and category: Hull, Armour, Interior, Propulsion, Power & thermal, Weapons, Sensors, Utility, Logistics |
 | Read a part | Its card: mass, power and heat, durability, cost, and what it does (gun rate of fire and penetration, thrust and burn, output…) |
 | Place | Click on the deck grid (rooms, armour, conduit: drag a rectangle). The ghost turns red and the hint bar names the problem before you click. |
-| External equipment face | Near a cell edge: that side; the middle: the top or the underside, whichever is open (Shift: the other) |
-| Rotate a module | R (while placing, or with a module selected); R also turns a 2-cell radiator across the ship |
-| Main view | TOP-DOWN ⇄ ISOMETRIC: the isometric view cuts away the decks above, shows rooms and systems, turns with ⟲ ⟳ and edits like the deck editor |
+| External equipment face | Near a cell edge: that side; the middle: the top or the underside, whichever is open — when both are, **Mount on: TOP / UNDERSIDE [V]** decides (Shift: the other) |
+| Rotate a module | R or ⟳ Rotate (while placing, or with a module selected); R also turns a radiator across the ship |
+| Main view | TOP-DOWN ⇄ ISOMETRIC: the isometric view (from the front-left) cuts away the decks above, shows rooms and systems, turns with ⟲ ⟳ and edits like the deck editor |
+| Zoom / pan | Mouse wheel / middle-drag on the deck editor |
+| Centre of mass | ◉ CoM [C]: a marker in the deck, side and front views and a sphere in 3D |
 | New ship | HANGAR → New ship: design on an empty slip, COMMISSION builds it (every part + 250 cr) as another vessel; the picker switches vessels |
 | Testing aid | HANGAR → CARGO & BANK → DEV +100 cr |
 | Loot odds | HANGAR → LOOT TABLES: crate odds, tier odds, every item |
-| Select / move / delete | Select tool (S), arrow keys, Delete; Shift-click modules to move several together, Ctrl+A for the whole hull (everything inside comes along) |
+| Select / move / delete | Select tool (S): click and drag, or arrow keys, Delete; Shift-click modules to move several together, Ctrl+A for the whole hull (everything inside comes along) |
 | Old designs | HANGAR → SERVICE → Convert to blocks: rebuilds old large sections from blocks with plates (free on your own vessel) |
 | Remove anything | Right-click |
-| Hatches | Hatch tool (H): click near an edge for a door, a cell's centre for a ladder to the deck above |
+| Hatches | Hatch tool (H): click near an edge for a door, a cell's centre for a ladder to the deck above (Shift: below) |
 | Change deck | ▲ / ▼ or PgUp / PgDn |
 | Save / load | Top bar (saved to `user://blueprints/`); "Load template" restores the Frigate Mk I |
 | Fly it | LAUNCH ▶ (disabled while the design has errors; warnings are allowed; new parts are paid for in spare parts) |
 | Bigger views | VIEWS bar: Side, Front or 3D fill the main area; Restore |
 | Repair the hangar vessel | HANGAR → SERVICE: pick a priority, then Repair |
 | Bank cargo, buy parts | HANGAR → CARGO & BANK |
+| Crew, quartermaster, upgrades | HANGAR → CREW / QUARTERMASTER / UPGRADES |
 | Vessel history, last debrief | HANGAR → HISTORY |
 
 Palette colours show rarity (grey Common, green Uncommon, teal Rare, violet

@@ -31,6 +31,13 @@ class Member:
 	var state: int = State.FIT
 	## Assigned to a task (repair, boarding) and not available elsewhere.
 	var busy: bool = false
+	## Hired crew have a name and a skill (0–2: each level works 20 % faster
+	## at repairs and treatment); the standard complement has neither.
+	var name: String = ""
+	var skill: int = 0
+
+	func label() -> String:
+		return "%s (%s)" % [name, id] if name != "" else id
 
 	func fit() -> bool:
 		return state == State.FIT
@@ -68,6 +75,30 @@ static func default_for(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats) -> 
 		roster._add(Role.GENERAL, _station(bp, grid, [&"quarters", &"access", &"command"], n))
 		n += 1
 	return roster
+
+
+## The vessel's own hired crew (ShipInstance.crew: [{name, role, skill}]),
+## at most one per berth, at the stations the standard complement uses.
+## Berths beyond the list stay empty.
+static func from_plan(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, plan: Array) -> CrewRoster:
+	var roster := CrewRoster.new()
+	if bp.rooms.is_empty():
+		return roster
+	var per_role := {}
+	for entry in plan.slice(0, stats.crew_capacity):
+		var role := clampi(int(entry.get("role", Role.GENERAL)), 0, Role.size() - 1)
+		var k: int = per_role.get(role, 0)
+		per_role[role] = k + 1
+		roster._add(role, _station(bp, grid, STATION_ROLES[role], k))
+		var m := roster.members[-1]
+		m.name = str(entry.get("name", ""))
+		m.skill = clampi(int(entry.get("skill", 0)), 0, 2)
+	return roster
+
+
+## Where each role is stationed (first room role found), as in default_for.
+const STATION_ROLES := [[&"command"], [&"engineering"], [&"workshop", &"access"], [&"magazine", &"command"],
+	[&"quarters", &"access"], [&"life_support", &"quarters"], [&"quarters", &"access", &"command"]]
 
 
 ## k-th station among the rooms of the first role in `roles` that exists

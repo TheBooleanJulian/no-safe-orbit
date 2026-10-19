@@ -15,6 +15,9 @@ extends Resource
 @export var heat_kw_per_cell: float = 0.0
 @export var crew_capacity_per_cell: int = 0
 @export var rounds_per_cell: int = 0
+## Ammunition stowage (kg per cell): shared by every gun type aboard by
+## mount count, so each calibre gets (its share ÷ its round mass) rounds.
+@export var ammo_kg_per_cell: float = 0.0
 @export var cargo_m3_per_cell: float = 0.0
 @export var color: Color = Color(0.4, 0.5, 0.6)
 @export_group("Progression")

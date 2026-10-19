@@ -79,7 +79,8 @@ func _update_scan(observer: ShipState, target: ShipState, dt: float) -> void:
 	if scanned:
 		return
 	if locked and has_active_sensors(observer):
-		scan_progress = minf(scan_progress + dt / SCAN_TIME_S, 1.0)
+		# A bigger bridge works the sensors faster.
+		scan_progress = minf(scan_progress + dt * maxf(observer.systems.room_bonus(&"command"), 1.0) / SCAN_TIME_S, 1.0)
 		if scan_progress >= 1.0:
 			scanned = true
 			just_scanned = true

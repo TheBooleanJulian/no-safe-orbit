@@ -39,7 +39,10 @@ static func load_file(path: String, errors: PackedStringArray) -> ShipBlueprint:
 	if not FileAccess.file_exists(path):
 		errors.append("No such blueprint: %s" % path)
 		return null
-	return from_json(FileAccess.get_file_as_string(path), errors)
+	var bp := from_json(FileAccess.get_file_as_string(path), errors)
+	if bp != null:
+		BlueprintFix.fit_spans(bp, ConstructionCatalog.default_catalog())
+	return bp
 
 
 ## user://blueprints/<safe name>.json for a design name.

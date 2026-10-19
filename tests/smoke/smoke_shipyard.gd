@@ -74,7 +74,10 @@ func _run() -> void:
 	var ed := yard.editor
 	_check(ed.blueprint.name == "Frigate Mk I" and ed.report.issues.is_empty(), "shipyard opens on the Frigate Mk I template with no issues")
 	_check(yard.issue_text.get_parsed_text().contains("No issues") and not yard.launch_button.disabled, "validation panel reads clean; launch enabled")
-	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   400 rounds"), "stats panel shows mass and magazine")
+	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   1.2 t · 1200 rounds"), "stats panel shows mass and magazine")
+	await process_frame
+	_check(yard._crew_tab.get_child_count() > 2 and yard._vendor_tab.get_child_count() > 1 and yard._tech_tab.get_child_count() > 2,
+		"the CREW, QUARTERMASTER and UPGRADES tabs are filled")
 
 	# Searchable, categorised palette.
 	yard.palette_search.text = "radiator"
