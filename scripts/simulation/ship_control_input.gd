@@ -22,6 +22,10 @@ var hold_velocity: Vector3 = Vector3.ZERO
 var hold_target_id: StringName = &""
 ## Trigger held for the main cannon.
 var fire: bool = false
+## Turret aim: the point the guns train on, as an offset from the ship's
+## position (world axes, m). Without one the turrets face the nose.
+var has_aim: bool = false
+var aim_offset: Vector3 = Vector3.ZERO
 
 
 static func create(p_translation: Vector3, p_rotation: Vector3, p_assist: bool) -> ShipControlInput:

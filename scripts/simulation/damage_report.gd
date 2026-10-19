@@ -22,6 +22,8 @@ var exit_pen_mm: float = 0.0
 ## Where it left the hull for good (body frame), when exit_pen_mm > 0.
 var exit_point_body: Vector3 = Vector3.ZERO
 ## Outward hull normals (body frame) where it came in and went out.
+## Power conduit cells this round severed.
+var cut_bus: Array[Vector3i] = []
 var entry_normal_body: Vector3 = Vector3.ZERO
 var exit_normal_body: Vector3 = Vector3.ZERO
 ## Deflected by the first plate it met (Penetration.RICOCHET_MIN_DEG).

@@ -8,7 +8,11 @@ extends RefCounted
 ## Cells are Vector3i(x, deck, z): +x starboard, +deck up, +z aft, so the
 ## nose is at low z, matching the body frame's −Z forward.
 
-const SCHEMA_VERSION := 1
+## v2: modules may be flipped; painted armour plates; power bus cells.
+const SCHEMA_VERSION := 2
+## Armour plate thicknesses the yard fits (mm).
+const PLATE_THIN_MM := 40
+const PLATE_THICK_MM := 80
 
 
 class PlacedModule:
@@ -18,6 +22,8 @@ class PlacedModule:
 	var position: Vector3i
 	## Quarter turns about +Y, counter-clockwise seen from above (0–3).
 	var rotation: int
+	## Upside down (a wedge's slope faces down instead of up).
+	var flip: bool = false
 
 
 class PlacedRoom:
@@ -52,15 +58,40 @@ var modules: Array[PlacedModule] = []
 var rooms: Array[PlacedRoom] = []
 var hatches: Array[Hatch] = []
 var equipment: Array[PlacedEquipment] = []
+## Armour plates on exterior hull faces: plate_key(cell, face) -> mm.
+var armor: Dictionary = {}
+## Power bus conduit cells (player-routed): cell_key(cell) -> true. Empty =
+## automatic distribution through the hull (designs from before buses).
+var bus: Dictionary = {}
 var _next_id: int = 1
 
 
-func add_module(def_id: StringName, position: Vector3i, rotation: int = 0) -> PlacedModule:
+static func plate_key(cell: Vector3i, face: StringName) -> String:
+	return "%d,%d,%d,%s" % [cell.x, cell.y, cell.z, face]
+
+
+static func cell_key(cell: Vector3i) -> String:
+	return "%d,%d,%d" % [cell.x, cell.y, cell.z]
+
+
+## [cell, face] of a plate key.
+static func parse_plate_key(key: String) -> Array:
+	var p := key.split(",")
+	return [Vector3i(int(p[0]), int(p[1]), int(p[2])), StringName(p[3])]
+
+
+static func parse_cell_key(key: String) -> Vector3i:
+	var p := key.split(",")
+	return Vector3i(int(p[0]), int(p[1]), int(p[2]))
+
+
+func add_module(def_id: StringName, position: Vector3i, rotation: int = 0, flip: bool = false) -> PlacedModule:
 	var m := PlacedModule.new()
 	m.id = _new_id("m")
 	m.def_id = def_id
 	m.position = position
 	m.rotation = posmod(rotation, 4)
+	m.flip = flip
 	modules.append(m)
 	return m
 
@@ -129,7 +160,26 @@ func to_dict() -> Dictionary:
 		"equipment": [],
 	}
 	for m in modules:
-		d.modules.append({"id": m.id, "def": String(m.def_id), "pos": _v3(m.position), "rot": m.rotation})
+		var md := {"id": m.id, "def": String(m.def_id), "pos": _v3(m.position), "rot": m.rotation}
+		if m.flip:
+			md["flip"] = true
+		d.modules.append(md)
+	if not armor.is_empty():
+		var plates := []
+		var keys := armor.keys()
+		keys.sort()
+		for key in keys:
+			var cf := parse_plate_key(key)
+			plates.append([cf[0].x, cf[0].y, cf[0].z, String(cf[1]), int(armor[key])])
+		d["armor"] = plates
+	if not bus.is_empty():
+		var cells := []
+		var keys := bus.keys()
+		keys.sort()
+		for key in keys:
+			var c := parse_cell_key(key)
+			cells.append([c.x, c.y, c.z])
+		d["bus"] = cells
 	for r in rooms:
 		d.rooms.append({"id": r.id, "def": String(r.def_id), "deck": r.deck,
 			"rect": [r.rect.position.x, r.rect.position.y, r.rect.size.x, r.rect.size.y]})
@@ -155,7 +205,7 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipBlueprint
 	if version > SCHEMA_VERSION:
 		errors.append("Blueprint schema v%d is newer than this build supports (v%d)" % [version, SCHEMA_VERSION])
 		return null
-	# Older versions would be migrated here; v1 is the first.
+	# v1 → v2: no flips, no plates, no bus (automatic distribution).
 	var bp := ShipBlueprint.new()
 	bp.name = str(d.get("name", "Unnamed design"))
 	bp.designer = str(d.get("designer", ""))
@@ -165,7 +215,18 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipBlueprint
 		m.def_id = StringName(str(md.get("def", "")))
 		m.position = _to_v3(md.get("pos"), errors, "module %s pos" % m.id)
 		m.rotation = posmod(int(md.get("rot", 0)), 4)
+		m.flip = bool(md.get("flip", false))
 		bp.modules.append(m)
+	for pd in d.get("armor", []):
+		if pd is Array and (pd as Array).size() == 5:
+			bp.armor[plate_key(Vector3i(int(pd[0]), int(pd[1]), int(pd[2])), StringName(str(pd[3])))] = int(pd[4])
+		else:
+			errors.append("armour plate entries must be [x, deck, z, face, mm]")
+	for cd in d.get("bus", []):
+		if cd is Array and (cd as Array).size() == 3:
+			bp.bus[cell_key(Vector3i(int(cd[0]), int(cd[1]), int(cd[2])))] = true
+		else:
+			errors.append("bus entries must be [x, deck, z]")
 	for rd in _list(d, "rooms", errors):
 		var r := PlacedRoom.new()
 		r.id = str(rd.get("id", ""))

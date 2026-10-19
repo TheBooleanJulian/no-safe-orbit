@@ -10,3 +10,5 @@ rate_of_fire_rpm = 600.0
 magazine_rounds = 400
 round_mass_kg = 1.0
 penetration_mm = 30.0
+traverse_deg_s = 60.0
+dispersion_deg = 0.08

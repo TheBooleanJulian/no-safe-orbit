@@ -21,6 +21,9 @@ enum Kind {
 	CRAFT_MOUNT,
 	## Sensor mast: detects and tracks other ships out to sensor_range_m.
 	SENSOR,
+	## Power distribution unit: a bus network's reactors only feed its loads
+	## through a working one (designs with a routed bus).
+	POWER_DISTRIBUTION,
 }
 
 enum Mount { INTERNAL, EXTERNAL }
@@ -35,6 +38,11 @@ enum Mount { INTERNAL, EXTERNAL }
 @export var allowed_room_roles: Array[StringName] = []
 ## External only: hull faces (body frame) this can be mounted on.
 @export var allowed_faces: Array[StringName] = []
+## External only: cells it spans along the hull from its cell — aft, or
+## across the ship (or up a flank) when turned with R.
+@export var length_cells: int = 1
+## Superseded: still loads and flies, no longer offered or dropped.
+@export var legacy: bool = false
 @export var mass_kg: float = 1000.0
 @export var power_kw: float = 0.0
 ## Waste heat generated while operating.
@@ -64,6 +72,7 @@ const DAMAGE_DEFAULTS := {
 	Kind.DOCKING_COLLAR: [20.0, 8.0],
 	Kind.CRAFT_MOUNT: [20.0, 8.0],
 	Kind.SENSOR: [12.0, 4.0],
+	Kind.POWER_DISTRIBUTION: [15.0, 6.0],
 }
 
 

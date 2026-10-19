@@ -207,8 +207,7 @@ func _update_boarding(delta: float) -> void:
 	var spin := Basis(_orbit_axis, 0.12 * _age)
 	_camera.look_at_from_position(_focus + spin * _cam_offset, _focus, _orbit_axis)
 	_title.text = "BOARDING — %s · %s · team %d/%d" % [_boarding_name, BoardingAction.PHASE_NAMES[b.phase].to_upper(), b.fit_team().size(), b.team.size()]
-	_caption.text = "
-".join(b.log.slice(maxi(b.log.size() - 3, 0)))
+	_caption.text = "\n".join(b.log.slice(maxi(b.log.size() - 3, 0)))
 	if b.finished():
 		_boarding_done_age += delta
 		if _boarding_done_age > BOARDING_HOLD_S:

@@ -292,6 +292,43 @@ bounding-box hit test.
   `set_isolated` (crew routes avoid the compartment; suited boarders still
   cut through).
 
+## Operations pass (2026-10-20)
+
+- **Turrets** (`WorldSimulation._train_turret`): each blueprint gun mount
+  keeps a barrel direction (`ShipState.turret_dirs`) and trains towards the
+  input's aim point at `KineticCannonConfig.traverse_deg_s`, limited to above
+  its face plane (`TURRET_ARC_MIN_DOT`). It fires only within 0.3° of the aim
+  and when a ray from its barrel clears its own hull (cached per ~0.3° of
+  movement). Status per mount (READY / SLEWING / BLOCKED / OUT_OF_ARC /
+  OFFLINE / LOCKED) drives the HUD reticles. Craft and fixtures keep fixed
+  nose guns. Spread: the gun's own plus the ship AI's.
+- **Collisions** (`_step_collisions`): bounding spheres, then hull-cell
+  probes; an impulse with restitution 0.2 along the centre line, a push
+  apart, and impact energy ½μv² shared by mass × local armour.
+- **Hull blocks**: `HullModuleDefinition.shape` (box / wedge), `legacy`.
+  Wedges are solid below a plane (`ShipGrid.wedge_contains`, normal
+  `wedge_normal`); `Penetration._solid_span` finds where a ray actually
+  enters a cell's solid part, so a slope is met at its own incidence.
+  `PlacedModule.flip` turns a wedge upside down.
+- **Plates**: `ShipBlueprint.armor` (plate key → mm) on exterior faces; a
+  wedge's slope plate is stored under its top / bottom face
+  (`ShipGrid.plate_face`). Penetration adds plate to skin; wear comes off
+  the plate first (`ShipSystems.plates`, persisted as fractions).
+- **Power bus**: `ShipBlueprint.bus` (cells). `ShipSystems._solve_bus_power`
+  floods conduit networks (6-neighbour, skipping cut cells and wrecked
+  modules); a network's reactors feed it only through a working
+  POWER_DISTRIBUTION unit. Passive systems need no conduit. Penetrating
+  rounds cut a conduit cell with 25 % chance from the ship's seeded
+  generator. No conduit at all = the old module-junction networks.
+- **Economy**: `Salvage.scrap_value` (build cost × condition × 2.5 cr),
+  beacon / takeover rates, `PlayerProfile.open_crates` (chance per crate),
+  cargo volumes (`ShipInstance.cargo_volume_m3`, `vent_excess`), hangar of
+  vessels (`vessels`, `active_vessel`, `commission`).
+- **Jump drive** (`Main._update_jump`): hold `open_shipyard` 5 s; blocked by
+  `in_combat()`, waits on `jump_waiting()`.
+- **Isometric view** (`ShipPreview3D`, `isometric` + `editable`): picks on the
+  edited deck's plane and emits the deck editor's signals.
+
 ## Autonomous craft (Milestone 6)
 
 - **Craft** are `ShipState`s with their own `ShipConfig` (`data/craft/`):

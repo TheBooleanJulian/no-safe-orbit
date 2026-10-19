@@ -16,14 +16,25 @@ extends Resource
 @export var connectors: Dictionary = {}
 ## Pressurised interior: rooms may only be placed in interior cells.
 @export var interior: bool = true
-## Outer armour thickness (used by the damage model from Milestone 3).
+## Outer skin thickness (mm). Players add plates on top (ShipBlueprint.armor).
 @export var armor_mm: float = 20.0
+## &"box", or &"wedge": a sloped block, solid below a plane rising from its
+## fore-bottom edge to its aft-top edge (flipped: from fore-top to
+## aft-bottom). Its slope is angled armour: rounds meet it obliquely.
+@export var shape: StringName = &"box"
+## Superseded large sections: still load and fly, but are no longer offered
+## in the palette or as loot.
+@export var legacy: bool = false
 @export var color: Color = Color(0.55, 0.6, 0.66)
 @export_group("Progression")
 ## COMMON parts are always available; rarer ones must be found as loot.
 @export var rarity: Rarity.Tier = Rarity.Tier.COMMON
 ## Relative chance of this part among loot drops of the same rarity.
 @export var drop_weight: float = 10.0
+
+
+func is_wedge() -> bool:
+	return shape == &"wedge"
 
 
 func connector(face: StringName) -> StringName:

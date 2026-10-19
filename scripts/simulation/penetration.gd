@@ -18,6 +18,11 @@ const STRUCTURE_MM_PER_CELL := 2.0
 const STRUCTURE_DAMAGE_PER_CELL := 2.0
 ## Penetration lost crossing a bulkhead between rooms.
 const BULKHEAD_MM := 8.0
+## A round with at least this much penetration left crossing a cell with
+## power conduit severs it with this chance (cable trays are a small target
+## in a 3 m cell; the draw is from the ship's own seeded generator).
+const BUS_CUT_MM := 5.0
+const BUS_CUT_CHANCE := 0.25
 ## Effective armour is capped at this multiple of its thickness (grazing hits).
 const MAX_OBLIQUITY_FACTOR := 3.0
 ## A round stopped by the first plate it meets at this incidence or steeper
@@ -30,8 +35,8 @@ const ARMOR_LOSS_STOPPED_MM := 1.0
 
 
 ## Fraction t ∈ [0, 1] along the body-frame segment a→b where it first enters
-## a hull cell, or -1 if it never does (e.g. it only crosses the empty
-## corners of the hull's bounding box).
+## solid hull, or -1 if it never does (e.g. it only crosses the empty
+## corners of the hull's bounding box, or the empty half of a wedge).
 static func first_hull_entry(systems: ShipSystems, a_body: Vector3, b_body: Vector3) -> float:
 	var c := ShipGrid.CELL_SIZE_M
 	var com := systems.stats.center_of_mass_m
@@ -40,10 +45,46 @@ static func first_hull_entry(systems: ShipSystems, a_body: Vector3, b_body: Vect
 	if length < 1e-6:
 		return 0.0 if systems.grid.is_hull(_cell_of((a_body + com) / c)) else -1.0
 	var dir := d / length
-	for step in ShipGrid.traverse((a_body + com) / c, dir, length / c):
-		if systems.grid.is_hull(step.cell):
-			return clampf(step.t * c / length, 0.0, 1.0)
+	var start := (a_body + com) / c
+	var steps := ShipGrid.traverse(start, dir, length / c)
+	for i in steps.size():
+		var t1: float = steps[i + 1].t if i + 1 < steps.size() else length / c
+		var span := _solid_span(systems.grid, steps[i].cell, start, dir, steps[i].t, t1)
+		if not span.is_empty():
+			return clampf(float(span.t) * c / length, 0.0, 1.0)
 	return -1.0
+
+
+## The part of a ray inside one cell that is solid hull. {} when the cell is
+## not hull or the ray only crosses a wedge's empty half; else {t, t_out}
+## (cell units along the ray) and whether it enters / leaves through the
+## wedge's slope (slope_in / slope_out).
+static func _solid_span(grid: ShipGrid, cell: Vector3i, start: Vector3, dir: Vector3, t0: float, t1: float) -> Dictionary:
+	if not grid.is_hull(cell):
+		return {}
+	var mi: int = grid.module_at[cell]
+	if not grid.is_wedge(mi):
+		return {"t": t0, "t_out": t1, "slope_in": false, "slope_out": false}
+	var eps := minf(1e-4, (t1 - t0) * 0.25)
+	var in0 := grid.wedge_contains(mi, start + dir * (t0 + eps))
+	var in1 := grid.wedge_contains(mi, start + dir * (t1 - eps))
+	if not in0 and not in1:
+		return {}
+	if in0 and in1:
+		return {"t": t0, "t_out": t1, "slope_in": false, "slope_out": false}
+	# Crosses the slope inside the cell: find where (bisection).
+	var lo := t0
+	var hi := t1
+	for k in 24:
+		var mid := (lo + hi) * 0.5
+		if grid.wedge_contains(mi, start + dir * mid) == in0:
+			lo = mid
+		else:
+			hi = mid
+	var tc := (lo + hi) * 0.5
+	if in1:
+		return {"t": tc, "t_out": t1, "slope_in": true, "slope_out": false}
+	return {"t": t0, "t_out": tc, "slope_in": false, "slope_out": true}
 
 
 ## Apply one round to the ship. `point_body` is where it reached the hull
@@ -60,71 +101,77 @@ static func apply(systems: ShipSystems, point_body: Vector3, dir_body: Vector3, 
 	var start := (point_body + com) / c - dir
 	var reach := grid.cell_bounds().size.length() + 4.0
 	var pen := pen_mm
-	var prev := Vector3i(1 << 20, 0, 0)
-	var first := true
 	var met_armor := false
+	var inside := false
 	var hit_rooms := {}
 	var hit_equipment := {}
 	report.entry_pen_mm = pen_mm
 	report.path_body.append(point_body)
 	report.add("Round arrives with %.0f mm penetration" % pen_mm)
-	var here := point_body
-	var in_hull := false
-	for step in ShipGrid.traverse(start, dir, reach):
-		var cell: Vector3i = step.cell
-		here = (start + dir * float(step.t)) * c - com
-		in_hull = grid.is_hull(cell)
-		var prev_in_hull := not first and grid.is_hull(prev)
-		var n: Vector3i = step.normal
-		if not first and n != Vector3i.ZERO:
-			var cos_i := absf(dir.dot(Vector3(n)))
-			# Outward hull normal at this face (against the travel when entering).
-			var outward := Vector3(n) if Vector3(n).dot(dir) > 0.0 else -Vector3(n)
-			if in_hull and not prev_in_hull:
-				pen = _strike_external(systems, systems.external_at(cell, ShipGrid.face_of(-n)), pen, report, here)
+	var steps := ShipGrid.traverse(start, dir, reach)
+	var prev := Vector3i(1 << 20, 0, 0)
+	for i in steps.size():
+		var cell: Vector3i = steps[i].cell
+		var t0: float = steps[i].t
+		var t1: float = steps[i + 1].t if i + 1 < steps.size() else reach
+		var n: Vector3i = steps[i].normal
+		var span := _solid_span(grid, cell, start, dir, t0, t1)
+		if span.is_empty():
+			if inside:
+				# Out through the face between the last solid cell and this one.
+				pen = _leave(systems, prev, ShipGrid.face_of(n), Vector3(n), dir, (start + dir * t0) * c - com, pen, report)
+				inside = false
+			if pen <= 0.0:
+				break
+			prev = cell
+			continue
+		var here := (start + dir * float(span.t)) * c - com
+		if not inside:
+			if i == 0 and not span.slope_in:
+				met_armor = true  # started inside the hull (fired from within): no armour
+			else:
+				# In through the slope, or through the face crossed from the last cell.
+				var face: StringName = grid.slope_faces(cell)[1] if span.slope_in else ShipGrid.face_of(-n)
+				var outward: Vector3 = grid.wedge_normal(grid.module_at[cell]) if span.slope_in else -Vector3(n)
+				if not span.slope_in:
+					pen = _strike_external(systems, systems.external_at(cell, face), pen, report, here)
 				if pen > 0.0:
 					var first_plate := not met_armor
 					if first_plate:
-						report.entry_normal_body = -outward
-					pen = _armor(systems, grid.module_at[cell], cos_i, pen, report, first_plate, here)
+						report.entry_normal_body = outward
+					var cos_i := absf(dir.dot(outward))
+					pen = _armor(systems, cell, face, cos_i, pen, report, first_plate, here)
 					met_armor = true
 					var incidence := rad_to_deg(acos(clampf(cos_i, 0.0, 1.0)))
 					if pen <= 0.0 and first_plate and incidence >= RICOCHET_MIN_DEG:
 						report.ricochet = true
-						report.ricochet_normal_body = -outward
+						report.ricochet_normal_body = outward
 						report.event(&"ricochet", "", here, "Deflected at %.0f° incidence — ricochets off the plate" % incidence)
-				report.exit_pen_mm = 0.0  # back inside a hull
-			elif prev_in_hull and not in_hull:
-				pen = _armor(systems, grid.module_at[prev], cos_i, pen, report, false, here, true)
-				if pen > 0.0:
-					pen = _strike_external(systems, systems.external_at(prev, ShipGrid.face_of(n)), pen, report, here)
-				if pen > 0.0:
-					report.exit_pen_mm = pen
-					report.exit_point_body = here
-					report.exit_normal_body = outward
-					report.event(&"exit", "", here, "Exits the hull with %.0f mm left" % pen)
-			elif prev_in_hull and in_hull:
-				var ra: int = grid.room_at.get(prev, -1)
-				var rb: int = grid.room_at.get(cell, -1)
-				if ra != rb and (ra >= 0 or rb >= 0):
-					var hatch := grid.hatch_between(prev, cell)
-					if hatch != "" and not systems.destroyed_hatches.has(hatch):
-						systems.destroy_hatch(hatch)
-						report.destroyed_hatches.append(hatch)
-						report.event(&"hatch", hatch, here, "Hatch %s destroyed — it can no longer seal" % hatch)
-					pen -= BULKHEAD_MM
-					if pen <= 0.0:
-						report.event(&"bulkhead_stop", "", here, "Stopped by a bulkhead")
-		elif first and in_hull:
-			# Started inside the hull (a round fired from within): no armour.
-			met_armor = true
-		first = false
-		if pen > 0.0 and in_hull:
+			report.exit_pen_mm = 0.0  # back inside a hull
+			inside = true
+		else:
+			# Between two solid cells: a bulkhead if the rooms differ.
+			var ra: int = grid.room_at.get(prev, -1)
+			var rb: int = grid.room_at.get(cell, -1)
+			if ra != rb and (ra >= 0 or rb >= 0):
+				var hatch := grid.hatch_between(prev, cell)
+				if hatch != "" and not systems.destroyed_hatches.has(hatch):
+					systems.destroy_hatch(hatch)
+					report.destroyed_hatches.append(hatch)
+					report.event(&"hatch", hatch, here, "Hatch %s destroyed — it can no longer seal" % hatch)
+				pen -= BULKHEAD_MM
+				if pen <= 0.0:
+					report.event(&"bulkhead_stop", "", here, "Stopped by a bulkhead")
+		if pen > 0.0:
 			var mi: int = grid.module_at[cell]
 			pen -= STRUCTURE_MM_PER_CELL
 			if systems.damage_module(mi, STRUCTURE_DAMAGE_PER_CELL):
 				report.wrecked_modules.append(bp.modules[mi].id)
 				report.event(&"wrecked", bp.modules[mi].id, here, "Module %s structure fails — its power junction is cut" % bp.modules[mi].id)
+			var conduit := pen >= BUS_CUT_MM and systems.blueprint.bus.has(ShipBlueprint.cell_key(cell))
+			if conduit and systems.damage_rng.randf() < BUS_CUT_CHANCE and systems.cut_bus(cell):
+				report.cut_bus.append(cell)
+				report.event(&"bus_cut", "", here, "Power conduit cut at %s" % cell)
 			var ri: int = grid.room_at.get(cell, -1)
 			if ri >= 0 and not hit_rooms.has(ri):
 				hit_rooms[ri] = true
@@ -136,10 +183,18 @@ static func apply(systems: ShipSystems, point_body: Vector3, dir_body: Vector3, 
 				hit_equipment[e.id] = true
 				pen = _strike(systems, e, pen, report, here)
 		if pen <= 0.0:
-			if in_hull and not report.lines[-1].begins_with("Stopped"):
+			if not report.lines[-1].begins_with("Stopped"):
 				report.event(&"spent", "", here, "Spent inside module %s" % bp.modules[grid.module_at[cell]].id)
 			report.exit_pen_mm = 0.0
 			break
+		if span.slope_out:
+			# Out through the wedge's slope, inside this cell.
+			var slope_face: StringName = grid.slope_faces(cell)[1]
+			pen = _leave(systems, cell, slope_face, grid.wedge_normal(grid.module_at[cell]), dir,
+				(start + dir * float(span.t_out)) * c - com, pen, report)
+			inside = false
+			if pen <= 0.0:
+				break
 		prev = cell
 	if report.exit_pen_mm > 0.0:
 		report.path_body.append(report.exit_point_body + dir * c * 3.0)
@@ -147,26 +202,53 @@ static func apply(systems: ShipSystems, point_body: Vector3, dir_body: Vector3, 
 	return report
 
 
-static func _armor(systems: ShipSystems, mi: int, cos_i: float, pen: float, report: DamageReport,
+## Leaving the hull from `cell` through `face` (outward normal `n`): the
+## plate and skin again, then any system mounted there.
+static func _leave(systems: ShipSystems, cell: Vector3i, face: StringName, n: Vector3, dir: Vector3, here: Vector3,
+		pen: float, report: DamageReport) -> float:
+	var cos_i := absf(dir.dot(n))
+	pen = _armor(systems, cell, face, cos_i, pen, report, false, here, true)
+	if pen > 0.0:
+		pen = _strike_external(systems, systems.external_at(cell, face), pen, report, here)
+	if pen > 0.0:
+		report.exit_pen_mm = pen
+		report.exit_point_body = here
+		report.exit_normal_body = n
+		report.event(&"exit", "", here, "Exits the hull with %.0f mm left" % pen)
+	return pen
+
+
+## Skin plus any plate on this face, at its effective thickness for the
+## incidence (capped for grazing hits). Wear comes off the plate first.
+static func _armor(systems: ShipSystems, cell: Vector3i, face: StringName, cos_i: float, pen: float, report: DamageReport,
 		is_first: bool, here: Vector3, exiting: bool = false) -> float:
+	var mi: int = systems.grid.module_at[cell]
 	var m := systems.modules[mi]
 	var id := systems.blueprint.modules[mi].id
-	var plate := m.armor_mm if not m.wrecked() else 0.0
-	if plate <= 0.0:
+	var key := ShipBlueprint.plate_key(cell, systems.grid.plate_face(cell, face))
+	var skin := m.armor_mm if not m.wrecked() else 0.0
+	var plate: float = systems.plates.get(key, 0.0)
+	var total := skin + plate
+	if total <= 0.0:
 		return pen
-	var effective := minf(plate / maxf(cos_i, 1e-3), plate * MAX_OBLIQUITY_FACTOR)
+	var effective := minf(total / maxf(cos_i, 1e-3), total * MAX_OBLIQUITY_FACTOR)
 	var angle := rad_to_deg(acos(clampf(cos_i, 0.0, 1.0)))
 	var side := "exit" if exiting else "outer"
-	if pen <= effective:
-		m.armor_mm = maxf(m.armor_mm - ARMOR_LOSS_STOPPED_MM, 0.0)
+	var what := "%.0f mm skin%s" % [skin, " + %.0f mm plate" % plate if plate > 0.0 else ""]
+	var stopped := pen <= effective
+	var wear := ARMOR_LOSS_STOPPED_MM if stopped else ARMOR_LOSS_PENETRATED_MM
+	if plate > 0.0:
+		systems.plates[key] = maxf(plate - wear, 0.0)
+	else:
+		m.armor_mm = maxf(m.armor_mm - wear, 0.0)
+	if stopped:
 		report.stopped_by_armor = is_first
-		report.event(&"armor_stop", id, here, "Stopped by %s %s armour: %.0f mm plate = %.0f mm effective at %.0f° vs %.0f mm" % [
-			id, side, plate, effective, angle, pen])
+		report.event(&"armor_stop", id, here, "Stopped by %s %s armour: %s = %.0f mm effective at %.0f° vs %.0f mm" % [
+			id, side, what, effective, angle, pen])
 		return 0.0
-	m.armor_mm = maxf(m.armor_mm - ARMOR_LOSS_PENETRATED_MM, 0.0)
 	report.penetrated = true
-	report.event(&"armor_pen", id, here, "Penetrates %s %s armour (%.0f mm, %.0f mm effective at %.0f°): %.0f mm left" % [
-		id, side, plate, effective, angle, pen - effective])
+	report.event(&"armor_pen", id, here, "Penetrates %s %s armour (%s, %.0f mm effective at %.0f°): %.0f mm left" % [
+		id, side, what, effective, angle, pen - effective])
 	return pen - effective
 
 

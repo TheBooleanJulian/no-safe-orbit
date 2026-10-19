@@ -11,7 +11,21 @@ const FLIGHT_SCENE := "res://scenes/main/main.tscn"
 const COLOR_ERROR := CyberTheme.RED
 const COLOR_WARNING := CyberTheme.AMBER
 ## Palette categories (the part kinds the catalog supports).
-const CATEGORIES := ["All", "Hull", "Interior", "Propulsion", "Power & thermal", "Weapons", "Sensors", "Utility", "Logistics"]
+const CATEGORIES := ["All", "Hull", "Armour", "Interior", "Propulsion", "Power & thermal", "Weapons", "Sensors", "Utility", "Logistics"]
+## Armour palette entries: id -> [mm (0 = remove), name, description].
+const ARMOR_ENTRIES := {
+	&"plate_40": [ShipBlueprint.PLATE_THIN_MM, "Thin armour plate (40 mm)",
+		"Thin armour plate — 40 mm on top of the hull skin\nMASS %.2f t per face (more on a slope) · COST %d spare parts\nDrag across cells on this deck to plate their exposed faces (filter below). Sloped wedge faces count their full angle: a 45° slope is %.0f%% thicker against a level shot."],
+	&"plate_80": [ShipBlueprint.PLATE_THICK_MM, "Thick armour plate (80 mm)",
+		"Thick armour plate — 80 mm on top of the hull skin\nMASS %.2f t per face (more on a slope) · COST %d spare parts\nDrag across cells on this deck to plate their exposed faces (filter below). Sloped wedge faces count their full angle: a 45° slope is %.0f%% thicker against a level shot."],
+	&"plate_remove": [0, "Remove armour plates", "Remove armour plates\nDrag across cells on this deck to strip their plates (filter below)."],
+}
+## Power bus palette entries: id -> [lay (true) / remove, name, description].
+const BUS_ENTRIES := {
+	&"bus_lay": [true, "Power conduit (bus)",
+		"Power conduit — routes power from reactors through a distribution unit to systems and rooms\nMASS %.1f t per cell · COST 1 spare part per %d cells\nDrag across hull cells on this deck. Conduits join face to face and between decks (▲▼). A system or room is powered when one of its cells is on a network with a reactor and a working distribution unit. Hits cut conduits: run redundant paths.\nWithout any conduit the ship uses automatic distribution through its hull."],
+	&"bus_remove": [false, "Remove power conduit", "Remove power conduit\nDrag across cells on this deck to pull out their conduit."],
+}
 
 @onready var name_edit: LineEdit = %NameEdit
 @onready var template_list: OptionButton = %TemplateList
@@ -42,10 +56,20 @@ var tool: Tool = Tool.SELECT
 var place_kind: String = ""
 var place_def: StringName = &""
 var place_rotation: int = 0
+## Hull placement upside down (wedges slope down) — F.
+var place_flip: bool = false
+## Which faces an armour stroke covers.
+var armor_faces: OptionButton
 var selected_id: String = ""
 var _hover_cell := Vector3i.ZERO
 var _hover_face: StringName = &""
 var _hangar_label: RichTextLabel
+## HANGAR → LOOT TABLES: every possible crate drop and its odds.
+var loot_tables_label: RichTextLabel
+## The hangar's vessels (pick the one to fly and edit) and "build new".
+var vessel_picker: OptionButton
+## Designing a new hull: Launch commissions it instead of refitting.
+var building_new: bool = false
 var _cargo_label: RichTextLabel
 var _history_label: RichTextLabel
 var _priority: OptionButton
@@ -59,6 +83,11 @@ var palette_search: LineEdit
 var palette_category: OptionButton
 var _figures: Dictionary = {}  # name -> value Label
 var _expanded_view := ""
+## The main editing view: "top" (deck editor) or "iso" (isometric 3D).
+var main_view := "top"
+var iso_view: ShipPreview3D
+var _iso_turns: Array[Button] = []
+var _view_toggle: Button
 
 
 func _ready() -> void:
@@ -78,6 +107,7 @@ func _ready() -> void:
 	_build_hangar_panel()
 	CyberTheme.style_button(launch_button, CyberTheme.CYAN, true)
 	launch_button.custom_minimum_size = Vector2(200, 34)
+	launch_button.clip_text = true
 	debrief = DebriefPanel.new()
 	debrief.name = "Debrief"
 	add_child(debrief)
@@ -106,6 +136,19 @@ func _ready() -> void:
 	deck_editor.cell_pressed.connect(apply_at)
 	deck_editor.room_dragged.connect(_on_room_dragged)
 	deck_editor.hover_changed.connect(_on_hover)
+	iso_view = ShipPreview3D.new()
+	iso_view.name = "IsoView"
+	iso_view.isometric = true
+	iso_view.editable = true
+	iso_view.visible = false
+	iso_view.size_flags_horizontal = deck_editor.size_flags_horizontal
+	iso_view.size_flags_vertical = deck_editor.size_flags_vertical
+	iso_view.custom_minimum_size = deck_editor.custom_minimum_size
+	deck_editor.get_parent().add_child(iso_view)
+	deck_editor.get_parent().move_child(iso_view, deck_editor.get_index() + 1)
+	iso_view.cell_pressed.connect(apply_at)
+	iso_view.room_dragged.connect(_on_room_dragged)
+	iso_view.hover_changed.connect(_on_hover)
 	issue_text.meta_clicked.connect(_on_issue_clicked)
 	_fill_file_list(template_list, BlueprintIO.list_templates())
 	_fill_file_list(design_list, BlueprintIO.list_user())
@@ -145,6 +188,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			set_tool(Tool.HATCH)
 		KEY_R:
 			rotate_current()
+		KEY_F:
+			flip_current()
 		KEY_DELETE, KEY_BACKSPACE:
 			if selected_id != "":
 				editor.remove(selected_id)
@@ -189,8 +234,20 @@ func select_palette(kind: String, def_id: StringName) -> void:
 	hatch_button.button_pressed = false
 	place_kind = kind
 	place_def = def_id
-	deck_editor.drag_rooms = kind == "room"
-	info_label.text = _describe(kind, def_id)
+	deck_editor.drag_rooms = kind == "room" or kind == "armor" or kind == "bus"
+	if iso_view != null:
+		iso_view.drag_rooms = deck_editor.drag_rooms
+	if armor_faces != null:
+		armor_faces.visible = kind == "armor"
+	if kind == "bus":
+		var entry: Array = BUS_ENTRIES[def_id]
+		info_label.text = entry[2] % [ShipStats.BUS_KG_PER_CELL / 1000.0, ServiceYard.BUS_CELLS_PER_PART] if entry[0] else entry[2]
+	elif kind == "armor":
+		var entry: Array = ARMOR_ENTRIES[def_id]
+		info_label.text = entry[2] if entry[0] == 0 else entry[2] % [ShipStats.plate_mass(entry[0]) / 1000.0,
+			ServiceYard.plate_cost(entry[0]), (sqrt(2.0) - 1.0) * 100.0]
+	else:
+		info_label.text = _describe(kind, def_id)
 	_update_ghost()
 
 
@@ -198,6 +255,15 @@ func change_deck(delta: int) -> void:
 	var b := editor.grid.cell_bounds()
 	deck_editor.deck = clampi(deck_editor.deck + delta, int(b.position.y) - 1, int(b.end.y))
 	_refresh_views()
+
+
+## F: place hull upside down, or flip the selected module.
+func flip_current() -> void:
+	if tool == Tool.PLACE and place_kind == "hull":
+		place_flip = not place_flip
+		_update_ghost()
+	elif selected_id != "":
+		editor.flip_module(selected_id)
 
 
 func rotate_current() -> void:
@@ -243,7 +309,13 @@ func apply_at(cell: Vector3i, face: StringName, button: MouseButton = MOUSE_BUTT
 		Tool.PLACE:
 			match place_kind:
 				"hull":
-					selected_id = editor.place_module(place_def, cell, place_rotation)
+					selected_id = editor.place_module(place_def, cell, place_rotation, place_flip)
+				"armor":
+					_paint_armor(cell.y, Rect2i(cell.x, cell.z, 1, 1))
+					return
+				"bus":
+					_paint_bus(cell.y, Rect2i(cell.x, cell.z, 1, 1))
+					return
 				"room":
 					selected_id = editor.place_room(place_def, cell.y, Rect2i(cell.x, cell.z, 1, 1))
 				"equipment":
@@ -255,6 +327,30 @@ func _on_room_dragged(deck: int, rect: Rect2i) -> void:
 	if tool == Tool.PLACE and place_kind == "room":
 		selected_id = editor.place_room(place_def, deck, rect)
 		_set_status("Placed %s (%d×%d)" % [selected_id, rect.size.x, rect.size.y])
+	elif tool == Tool.PLACE and place_kind == "armor":
+		_paint_armor(deck, rect)
+	elif tool == Tool.PLACE and place_kind == "bus":
+		_paint_bus(deck, rect)
+
+
+func _paint_bus(deck: int, rect: Rect2i) -> void:
+	var lay: bool = BUS_ENTRIES[place_def][0]
+	var n := editor.paint_bus(deck, rect, lay)
+	_set_status(("%s %d conduit cell%s" % ["Laid" if lay else "Removed", n, "" if n == 1 else "s"]) if n > 0 else "No hull cells to change there")
+
+
+## Replace the bus with an automatic tree from the distribution unit.
+func auto_route_bus() -> int:
+	var n := editor.auto_route_bus()
+	_set_status("Auto-routed the power bus: %d conduit cells" % n if n > 0 else "Nothing to route: fit a reactor and a power distribution unit first", n == 0)
+	return n
+
+
+func _paint_armor(deck: int, rect: Rect2i) -> void:
+	var mm: int = ARMOR_ENTRIES[place_def][0]
+	var faces := armor_faces.selected if armor_faces != null else 0
+	var n := editor.paint_armor(deck, rect, mm, faces)
+	_set_status(("%s %d plate%s" % ["Removed" if mm == 0 else "Fitted %d mm on" % mm, n, "" if n == 1 else "s"]) if n > 0 else "No exposed faces there to plate")
 
 
 # --- Files and launch -------------------------------------------------------------
@@ -289,6 +385,17 @@ func launch() -> bool:
 	if not errors.is_empty():
 		_set_status("Fix %d error%s before launch" % [errors.size(), "" if errors.size() == 1 else "s"], true)
 		return false
+	if building_new:
+		var why_new := profile.commission(editor.blueprint, editor.catalog)
+		if why_new != "":
+			_set_status(why_new + " — buy parts or bank cargo", true)
+			return false
+		building_new = false
+		profile.designing_new = false
+		_save_profile()
+		Main.launch_blueprint = editor.blueprint.duplicate_blueprint()
+		get_tree().change_scene_to_file(FLIGHT_SCENE)
+		return true
 	var why := ServiceYard.refit(profile.vessel, editor.blueprint, profile, editor.catalog)
 	if why != "":
 		_set_status(why + " — remove new parts, bank cargo or buy parts", true)
@@ -316,7 +423,58 @@ func repair(priority: int = -1) -> int:
 	return spent
 
 
-## Unload the cargo hold into the station bank.
+## Start designing a new hull: a single block on an empty slip. Launch
+## commissions it as another vessel in the hangar (every part built new,
+## plus the yard's fee); the current vessel stays in the hangar.
+func start_new_ship() -> void:
+	var bp := ShipBlueprint.new()
+	bp.name = "New ship %d" % (profile.vessels.size() + 1)
+	bp.designer = "Player"
+	bp.add_module(&"hull_block", Vector3i.ZERO)
+	building_new = true
+	profile.designing_new = true
+	selected_id = ""
+	editor.set_blueprint(bp)
+	deck_editor.deck = 0
+	_set_status("New hull laid down: build it, then COMMISSION (parts + %d cr fee)" % PlayerProfile.NEW_HULL_FEE)
+	_refresh_hangar()
+
+
+## Fly and edit vessel `index` of the hangar.
+func select_vessel(index: int) -> void:
+	if not profile.select_vessel(index):
+		return
+	building_new = false
+	profile.designing_new = false
+	selected_id = ""
+	editor.set_blueprint(profile.vessel.blueprint.duplicate_blueprint())
+	_save_profile()
+	_set_status("Now working on %s" % profile.vessel.name)
+	_refresh_hangar()
+
+
+func _fill_vessel_picker() -> void:
+	if vessel_picker == null:
+		return
+	vessel_picker.clear()
+	for i in profile.vessels.size():
+		var v := profile.vessels[i]
+		vessel_picker.add_item("%s · %d sortie%s%s" % [v.name, v.sorties, "" if v.sorties == 1 else "s", " · damaged" if v.is_damaged() else ""])
+	if building_new:
+		vessel_picker.add_item("(new hull on the slip)")
+		vessel_picker.select(vessel_picker.item_count - 1)
+	else:
+		vessel_picker.select(profile.active_vessel)
+
+
+## Testing aid: 100 free credits (saved at once).
+func dev_add_credits() -> void:
+	profile.dev_grant_credits(100)
+	_save_profile()
+	_refresh_hangar()
+
+
+## Unload the cargo hold into Earth Shipyard's bank.
 func bank_cargo() -> PackedStringArray:
 	var banked := profile.bank_cargo(editor.catalog)
 	_save_profile()
@@ -359,6 +517,8 @@ func _refresh() -> void:
 	_refresh_issues()
 	_refresh_hangar()
 	preview.show_design(editor)
+	if iso_view != null and iso_view.visible:
+		iso_view.show_design(editor)
 	_update_ghost()
 	_refresh_views()
 
@@ -369,6 +529,33 @@ func _refresh_views() -> void:
 		v.deck = deck_editor.deck
 		v.queue_redraw()
 	deck_editor.selection_cells = editor.cells_of(selected_id) if selected_id != "" else ([] as Array[Vector3i])
+	if iso_view != null and iso_view.visible and iso_view.deck != deck_editor.deck:
+		iso_view.set_deck(deck_editor.deck)
+
+
+## The deck editor's ghost changed: redraw it, and mirror it in the iso view.
+func _ghost_changed() -> void:
+	deck_editor.queue_redraw()
+	if iso_view != null and iso_view.visible:
+		iso_view.ghost_cells = deck_editor.ghost_cells
+		iso_view.ghost_ok = deck_editor.ghost_ok
+		iso_view.refresh_ghost()
+
+
+## Swap the main view between the top-down deck editor and the isometric
+## 3D view (both edit the same deck with the same tools).
+func set_main_view(mode: String) -> void:
+	main_view = mode
+	if _view_toggle != null:
+		_view_toggle.text = "%s ⇄" % ("ISOMETRIC" if mode == "iso" else "TOP-DOWN")
+	for b in _iso_turns:
+		b.visible = mode == "iso"
+	expand_view(_expanded_view)
+	if mode == "iso":
+		iso_view.drag_rooms = deck_editor.drag_rooms
+		iso_view.deck = deck_editor.deck
+		iso_view.show_design(editor)
+		_ghost_changed()
 
 
 func _refresh_stats() -> void:
@@ -416,9 +603,7 @@ func _refresh_issues() -> void:
 		if issue.subject != "":
 			text = "[url=%s]%s[/url]" % [issue.subject, text]
 		lines.append("[color=#%s]%s[/color]" % [(COLOR_ERROR if err else COLOR_WARNING).to_html(false), text])
-	issue_text.text = "
-
-".join(lines)
+	issue_text.text = "\n\n".join(lines)
 	var n_err := report.errors().size()
 	launch_button.disabled = n_err > 0
 	launch_button.tooltip_text = "Fix %d error(s) first" % n_err if n_err > 0 else "Fly this design"
@@ -450,6 +635,18 @@ func _build_palette() -> void:
 		var m: Array = palette_list.get_item_metadata(i)
 		select_palette(m[0], m[1]))
 	box.add_child(palette_list)
+	armor_faces = OptionButton.new()
+	for n in ["Plate every exposed face", "Sides only", "Top only", "Underside only"]:
+		armor_faces.add_item(n)
+	armor_faces.tooltip_text = "Which faces an armour stroke covers"
+	armor_faces.visible = false
+	box.add_child(armor_faces)
+	var route := Button.new()
+	route.text = "Auto-route power bus"
+	route.tooltip_text = "Lay conduit from the distribution unit to every powered system and room (replaces the current bus)"
+	CyberTheme.style_button(route, CyberTheme.AMBER)
+	route.pressed.connect(func() -> void: auto_route_bus())
+	box.add_child(route)
 	left.add_child(box)
 	left.move_child(box, palette.get_index())
 	_fill_palette_list()
@@ -465,7 +662,7 @@ static func category_of(kind: String, def: Resource) -> String:
 	match (def as EquipmentDefinition).kind:
 		EquipmentDefinition.Kind.MAIN_ENGINE, EquipmentDefinition.Kind.RCS:
 			return "Propulsion"
-		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR:
+		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION:
 			return "Power & thermal"
 		EquipmentDefinition.Kind.CANNON:
 			return "Weapons"
@@ -482,9 +679,26 @@ func _fill_palette_list() -> void:
 	palette_list.clear()
 	var want: String = CATEGORIES[maxi(palette_category.selected, 0)]
 	var query := palette_search.text.strip_edges().to_lower()
+	for id: StringName in BUS_ENTRIES:
+		var b_name: String = BUS_ENTRIES[id][1]
+		if (want != "All" and want != "Power & thermal") or (query != "" and not (b_name.to_lower().contains(query) or "bus".contains(query) or "power".contains(query))):
+			continue
+		var bi := palette_list.add_item(b_name if want != "All" else "%s · Power & thermal" % b_name)
+		palette_list.set_item_metadata(bi, ["bus", id])
+		palette_list.set_item_custom_fg_color(bi, CyberTheme.AMBER if BUS_ENTRIES[id][0] else CyberTheme.TEXT_DIM)
+	for id: StringName in ARMOR_ENTRIES:
+		var a_name: String = ARMOR_ENTRIES[id][1]
+		if (want != "All" and want != "Armour") or (query != "" and not (a_name.to_lower().contains(query) or "armour".contains(query))):
+			continue
+		var ai := palette_list.add_item(a_name if want == "Armour" else "%s · Armour" % a_name)
+		palette_list.set_item_metadata(ai, ["armor", id])
+		var mm: int = ARMOR_ENTRIES[id][0]
+		palette_list.set_item_custom_fg_color(ai, CyberTheme.AMBER if mm >= ShipBlueprint.PLATE_THICK_MM else (CyberTheme.CYAN if mm > 0 else CyberTheme.TEXT_DIM))
 	for entry in [["hull", editor.catalog.hull], ["room", editor.catalog.rooms], ["equipment", editor.catalog.equipment]]:
 		for id in ConstructionCatalog.sorted_ids(entry[1]):
 			var def: Resource = entry[1][id]
+			if (def is HullModuleDefinition or def is EquipmentDefinition) and def.legacy:
+				continue
 			var cat := category_of(entry[0], def)
 			if want != "All" and cat != want:
 				continue
@@ -552,7 +766,22 @@ func _build_view_bar() -> void:
 	cap.theme_type_variation = &"Caption"
 	cap.text = "VIEWS"
 	bar.add_child(cap)
-	for entry in [["side", "Expand side"], ["front", "Expand front"], ["3d", "Expand 3D"], ["", "Restore deck editor"]]:
+	_view_toggle = Button.new()
+	_view_toggle.text = "TOP-DOWN ⇄"
+	_view_toggle.tooltip_text = "Swap the main view between top-down and isometric (both edit the current deck)"
+	CyberTheme.style_button(_view_toggle, CyberTheme.CYAN, true)
+	_view_toggle.pressed.connect(func() -> void: set_main_view("top" if main_view == "iso" else "iso"))
+	bar.add_child(_view_toggle)
+	for turn in [[-1, "⟲"], [1, "⟳"]]:
+		var tb := Button.new()
+		tb.text = turn[1]
+		tb.tooltip_text = "Turn the isometric view"
+		tb.visible = false
+		var q: int = turn[0]
+		tb.pressed.connect(func() -> void: iso_view.turn_iso(q))
+		bar.add_child(tb)
+		_iso_turns.append(tb)
+	for entry in [["side", "Side"], ["front", "Front"], ["3d", "3D"], ["", "Restore"]]:
 		var b := Button.new()
 		b.text = entry[1]
 		var which: String = entry[0]
@@ -565,7 +794,9 @@ func _build_view_bar() -> void:
 func expand_view(which: String) -> void:
 	_expanded_view = which
 	var views := side_view.get_parent() as Control
-	deck_editor.visible = which == ""
+	deck_editor.visible = which == "" and main_view == "top"
+	if iso_view != null:
+		iso_view.visible = which == "" and main_view == "iso"
 	views.size_flags_vertical = Control.SIZE_EXPAND_FILL if which != "" else Control.SIZE_FILL
 	side_view.visible = which in ["", "side"]
 	front_view.visible = which in ["", "front"]
@@ -575,9 +806,28 @@ func expand_view(which: String) -> void:
 
 func _build_hangar_panel() -> void:
 	var right := stats_label.get_parent().get_parent().get_parent()
-	var title := Label.new()
-	title.theme_type_variation = &"Heading"
-	title.text = "HANGAR"
+	var title := HBoxContainer.new()
+	title.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	var heading := Label.new()
+	heading.theme_type_variation = &"Heading"
+	heading.text = "HANGAR"
+	title.add_child(heading)
+	vessel_picker = OptionButton.new()
+	vessel_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vessel_picker.clip_text = true
+	vessel_picker.fit_to_longest_item = false
+	vessel_picker.custom_minimum_size = Vector2(80, 0)
+	vessel_picker.tooltip_text = "The vessel to fly and refit"
+	vessel_picker.item_selected.connect(func(i: int) -> void:
+		if i < profile.vessels.size():
+			select_vessel(i))
+	title.add_child(vessel_picker)
+	var new_ship := Button.new()
+	new_ship.text = "New ship"
+	new_ship.tooltip_text = "Lay down a new hull on an empty slip (every part built new + %d credits)" % PlayerProfile.NEW_HULL_FEE
+	CyberTheme.style_button(new_ship, CyberTheme.AMBER)
+	new_ship.pressed.connect(start_new_ship)
+	title.add_child(new_ship)
 	var tabs := TabContainer.new()
 	tabs.custom_minimum_size = Vector2(0, 240)
 	var box := VBoxContainer.new()
@@ -589,6 +839,13 @@ func _build_hangar_panel() -> void:
 	var history_box := VBoxContainer.new()
 	history_box.name = "HISTORY"
 	_history_label = _rich_label()
+	var loot_scroll := ScrollContainer.new()
+	loot_scroll.name = "LOOT TABLES"
+	loot_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	loot_tables_label = _rich_label()
+	loot_tables_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	loot_tables_label.text = LootRoller.table_text(editor.catalog)
+	loot_scroll.add_child(loot_tables_label)
 	var row := HBoxContainer.new()
 	_priority = OptionButton.new()
 	for n in ServiceYard.PRIORITY_NAMES:
@@ -603,7 +860,7 @@ func _build_hangar_panel() -> void:
 	var row2 := HFlowContainer.new()
 	_bank_button = Button.new()
 	_bank_button.text = "Bank cargo"
-	_bank_button.tooltip_text = "Unload the hold into the station bank: safe from loss"
+	_bank_button.tooltip_text = "Unload the hold into Earth Shipyard's bank: safe from loss"
 	_bank_button.pressed.connect(func() -> void: bank_cargo())
 	_buy_button = Button.new()
 	_buy_button.text = "Buy %d parts (%d cr)" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE]
@@ -611,17 +868,22 @@ func _build_hangar_panel() -> void:
 	var debrief_button := Button.new()
 	debrief_button.text = "Last debrief"
 	debrief_button.pressed.connect(func() -> void: debrief.show_debrief(profile.last_debrief))
-	for b in [_bank_button, _buy_button]:
+	var dev_button := Button.new()
+	dev_button.text = "DEV +100 cr"
+	dev_button.tooltip_text = "Testing aid: 100 free credits"
+	dev_button.pressed.connect(func() -> void: dev_add_credits())
+	for b in [_bank_button, _buy_button, dev_button]:
 		row2.add_child(b)
 	for b in [_repair_button, _bank_button, _buy_button, debrief_button]:
 		CyberTheme.style_button(b)
+	CyberTheme.style_button(dev_button, CyberTheme.AMBER)
 	box.add_child(_hangar_label)
 	box.add_child(row)
 	cargo_box.add_child(_cargo_label)
 	cargo_box.add_child(row2)
 	history_box.add_child(_history_label)
 	history_box.add_child(debrief_button)
-	for b in [box, cargo_box, history_box]:
+	for b in [box, cargo_box, history_box, loot_scroll]:
 		tabs.add_child(b)
 	right.add_child(title)
 	right.move_child(title, 1)
@@ -655,12 +917,17 @@ func _refresh_hangar() -> void:
 		lines.append(CyberTheme.tint("✔ Vessel in full repair", CyberTheme.CYAN))
 	else:
 		lines.append("DAMAGE  %d jobs · %d parts for everything" % [jobs.size(), ServiceYard.total_cost(jobs)])
-		for j in jobs.slice(0, 5):
+		# Lost craft first: they ground the wing until replaced.
+		var listed: Array = jobs.filter(func(j: ServiceYard.Job) -> bool: return j.label.begins_with("Replace lost")) 			+ jobs.filter(func(j: ServiceYard.Job) -> bool: return not j.label.begins_with("Replace lost"))
+		for j in listed.slice(0, 5):
 			var blocked := "" if ServiceYard.available(j, v, profile) else "  [color=#ff7766](no unit)[/color]"
 			lines.append("  • %s — %d%s" % [j.label, j.cost, blocked])
 		if jobs.size() > 5:
 			lines.append("  … %d more" % (jobs.size() - 5))
-	if not refit.is_empty():
+	if building_new:
+		var hull := profile.new_hull_cost(editor.blueprint, editor.catalog)
+		lines.append(CyberTheme.tint("NEW HULL on the slip: %d spare parts + %d credits at commissioning" % [hull.x, hull.y], CyberTheme.AMBER))
+	elif not refit.is_empty():
 		var cost := ServiceYard.total_cost(refit)
 		lines.append("REFIT   %d new part%s · %d spare parts at launch%s" % [refit.size(), "" if refit.size() == 1 else "s", cost,
 			"  [color=#ff7766]short by %d[/color]" % (cost - profile.spare_parts) if cost > profile.spare_parts else ""])
@@ -669,7 +936,7 @@ func _refresh_hangar() -> void:
 	_cargo_label.text = "\n".join([
 		"CREDITS [color=#%s]%d[/color] · respawn fee %d cr" % [gold, profile.credits, profile.respawn_fee(catalog)],
 		"BANKED  %d spare parts" % profile.spare_parts,
-		"HOLD    %s%s" % [CyberTheme.tint(v.cargo_summary(), CyberTheme.MAGENTA),
+		"HOLD    %.1f / %.0f m³ · %s%s" % [v.cargo_volume_m3(catalog), editor.stats.cargo_m3, CyberTheme.tint(v.cargo_summary(), CyberTheme.MAGENTA),
 			CyberTheme.tint("  ▲ at risk until banked", CyberTheme.AMBER) if not v.cargo_is_empty() else ""],
 		"FOUND   %s" % _found_text(),
 		"LOOT    %d crates opened · Rare+ in %d · Legendary in %d" % [profile.total_pulls, pity.x, pity.y],
@@ -680,6 +947,10 @@ func _refresh_hangar() -> void:
 	_history_label.text = "\n".join(history)
 	var refit_cost := ServiceYard.total_cost(refit)
 	launch_button.text = "LAUNCH ▶" if refit.is_empty() else "LAUNCH ▶ · refit %d parts" % refit_cost
+	if building_new:
+		var cost := profile.new_hull_cost(editor.blueprint, editor.catalog)
+		launch_button.text = "COMMISSION ▶ · %d parts + %d cr" % [cost.x, cost.y]
+	_fill_vessel_picker()
 	var plan := ServiceYard.plan(jobs, _priority.selected, profile.spare_parts, v, profile)
 	_repair_button.disabled = plan.is_empty()
 	_bank_button.disabled = v.cargo_is_empty()
@@ -734,8 +1005,23 @@ func _update_ghost() -> void:
 				for x in size.x:
 					for z in size.z:
 						deck_editor.ghost_cells.append(cell + Vector3i(x, 0, z))
-				edit = func(bp: ShipBlueprint) -> void: bp.add_module(place_def, cell, place_rotation)
-				hint = "%s — rotation %d° [R]" % [def.display_name, place_rotation * 90]
+				edit = func(bp: ShipBlueprint) -> void: bp.add_module(place_def, cell, place_rotation, place_flip)
+				hint = "%s — rotation %d° [R]%s" % [def.display_name, place_rotation * 90,
+					("  ·  slope %s [F]" % ("down" if place_flip else "up")) if def.is_wedge() else ("  ·  upside down [F]" if place_flip else "")]
+			"bus":
+				deck_editor.ghost_cells.append(cell)
+				hint = "%s — drag across hull cells on this deck" % BUS_ENTRIES[place_def][1]
+				hint_label.text = hint
+				deck_editor.ghost_ok = editor.grid.is_hull(cell)
+				_ghost_changed()
+				return
+			"armor":
+				deck_editor.ghost_cells.append(cell)
+				hint = "%s — drag across cells; %s" % [ARMOR_ENTRIES[place_def][1], armor_faces.get_item_text(armor_faces.selected).to_lower()]
+				hint_label.text = hint
+				deck_editor.ghost_ok = editor.grid.is_hull(cell)
+				_ghost_changed()
+				return
 			"room":
 				deck_editor.ghost_cells.append(cell)
 				edit = func(bp: ShipBlueprint) -> void: bp.add_room(place_def, cell.y, Rect2i(cell.x, cell.z, 1, 1))
@@ -743,9 +1029,11 @@ func _update_ghost() -> void:
 			"equipment":
 				var def: EquipmentDefinition = editor.catalog.equipment[place_def]
 				if def.is_external():
-					deck_editor.ghost_cells.append(cell)
+					var step := ShipGrid.external_step(_hover_face, place_rotation)
+					for k in maxi(def.length_cells, 1):
+						deck_editor.ghost_cells.append(cell + step * k)
 					deck_editor.ghost_face = _hover_face
-					hint = "%s — %s face (edges: fore/aft/port/starboard, centre: dorsal, Shift: ventral)" % [def.display_name, _hover_face]
+					hint = "%s — %s face (near an edge: that side; middle: top or underside, whichever is open — Shift: the other)" % [def.display_name, _hover_face]
 				else:
 					var fp := def.footprint_cells
 					if place_rotation % 2 == 1:
@@ -755,7 +1043,7 @@ func _update_ghost() -> void:
 							deck_editor.ghost_cells.append(cell + Vector3i(x, 0, z))
 					hint = "%s — %d×%d [R rotates]" % [def.display_name, fp.x, fp.y]
 				var face := _hover_face if def.is_external() else &""
-				var rot := 0 if def.is_external() else place_rotation
+				var rot := 0 if def.is_external() and def.length_cells <= 1 else place_rotation
 				edit = func(bp: ShipBlueprint) -> void: bp.add_equipment(place_def, cell, face, rot)
 		var new_errors := editor.preview_new_errors(edit)
 		deck_editor.ghost_ok = new_errors.is_empty()
@@ -767,7 +1055,7 @@ func _update_ghost() -> void:
 		var id := editor.item_at(cell, _hover_face)
 		hint = "%s at %s" % [_name_of(id), cell] if id != "" else "%s" % cell
 	hint_label.text = hint
-	deck_editor.queue_redraw()
+	_ghost_changed()
 
 
 # --- Helpers ------------------------------------------------------------------
@@ -817,36 +1105,84 @@ func _describe(kind: String, def_id: StringName) -> String:
 
 
 func _describe_def(kind: String, def_id: StringName) -> String:
+	return describe_definition(kind, editor.catalog, def_id)
+
+
+## Full engineering card for a palette entry: what it is, what it costs,
+## what it consumes and produces, and how it fights or breaks.
+static func describe_definition(kind: String, catalog: ConstructionCatalog, def_id: StringName) -> String:
 	match kind:
 		"hull":
-			var d: HullModuleDefinition = editor.catalog.hull[def_id]
-			var con := PackedStringArray()
-			for face in d.connectors:
-				con.append("%s: %s" % [face, d.connectors[face]])
-			return "%s\n%d×%d×%d cells, %d decks, %.0f t, armour %.0f mm\n%s\nConnectors — %s\nClick to place (base on this deck). R rotates." % [
-				d.display_name, d.size_cells.x, d.size_cells.z, d.size_cells.y, d.size_cells.y, d.structure_mass_kg / 1000.0,
-				d.armor_mm, "Pressurised" if d.interior else "Unpressurised (no rooms)", ", ".join(con)]
+			var d: HullModuleDefinition = catalog.hull[def_id]
+			var cells := d.size_cells.x * d.size_cells.y * d.size_cells.z
+			return "\n".join(PackedStringArray([
+				d.display_name,
+				"%d×%d×%d cells (%d decks) · %s" % [d.size_cells.x, d.size_cells.z, d.size_cells.y, d.size_cells.y,
+					"pressurised: rooms fit inside" if d.interior else "unpressurised: no rooms"],
+				"MASS %.1f t (%.1f t per cell) · STRUCTURE %.0f pts" % [d.structure_mass_kg / 1000.0, d.structure_mass_kg / 1000.0 / cells,
+					d.structure_mass_kg * ShipSystems.STRUCTURE_POINTS_PER_KG],
+				"SKIN ARMOUR %.0f mm · PASSIVE COOLING %.2f kW per exposed face" % [d.armor_mm, ShipStats.PASSIVE_REJECTION_KW_PER_FACE],
+				"COST %d spare parts" % ServiceYard.module_cost(d),
+				"Click to place (base on this deck) · R rotates",
+			]))
 		"room":
-			var d: RoomDefinition = editor.catalog.rooms[def_id]
-			return "%s (role: %s)\nPer cell: %.1f t, %+.0f kW%s%s%s\nDrag on the deck to place." % [
-				d.display_name, d.role, d.mass_per_cell_kg / 1000.0, d.power_kw_per_cell,
-				", %d berths" % d.crew_capacity_per_cell if d.crew_capacity_per_cell > 0 else "",
-				", %d rounds" % d.rounds_per_cell if d.rounds_per_cell > 0 else "",
-				", %.0f m³ cargo" % d.cargo_m3_per_cell if d.cargo_m3_per_cell > 0 else ""]
-		_:
-			var d: EquipmentDefinition = editor.catalog.equipment[def_id]
-			var where := "Internal %d×%d, rooms: %s" % [d.footprint_cells.x, d.footprint_cells.y,
-				", ".join(d.allowed_room_roles.map(func(r: StringName) -> String: return String(r)))] if not d.is_external() \
-				else "External, faces: %s" % ", ".join(d.allowed_faces.map(func(f: StringName) -> String: return String(f)))
-			var extra := PackedStringArray()
-			if d.thrust_n > 0.0:
-				extra.append("thrust %.0f kN" % (d.thrust_n / 1000.0))
-			if d.heat_rejection_kw > 0.0:
-				extra.append("rejects %.0f kW" % d.heat_rejection_kw)
-			if d.heat_kw > 0.0:
-				extra.append("heat %.0f kW" % d.heat_kw)
-			return "%s\n%s\n%.1f t, %+.0f kW%s" % [d.display_name, where, d.mass_kg / 1000.0, d.power_kw,
-				(", " + ", ".join(extra)) if not extra.is_empty() else ""]
+			var d: RoomDefinition = catalog.rooms[def_id]
+			var per := PackedStringArray(["%.1f t" % (d.mass_per_cell_kg / 1000.0)])
+			if d.power_kw_per_cell != 0.0:
+				per.append("%s %.0f kW" % ["uses" if d.power_kw_per_cell < 0.0 else "makes", absf(d.power_kw_per_cell)])
+			if d.heat_kw_per_cell > 0.0:
+				per.append("heat %.0f kW" % d.heat_kw_per_cell)
+			if d.crew_capacity_per_cell > 0:
+				per.append("%d berth%s" % [d.crew_capacity_per_cell, "" if d.crew_capacity_per_cell == 1 else "s"])
+			if d.rounds_per_cell > 0:
+				per.append("%d rounds" % d.rounds_per_cell)
+			if d.cargo_m3_per_cell > 0.0:
+				per.append("%.0f m³ cargo" % d.cargo_m3_per_cell)
+			return "\n".join(PackedStringArray([
+				"%s — role: %s" % [d.display_name, d.role],
+				"PER CELL  " + " · ".join(per),
+				"COST %d spare parts per cell" % ServiceYard.room_cost(d, 1),
+				"Drag on the deck to place",
+			]))
+	var e: EquipmentDefinition = catalog.equipment[def_id]
+	var lines := PackedStringArray([
+		"%s — %s" % [e.display_name, "external" if e.is_external() else "internal, %d×%d cells" % [e.footprint_cells.x, e.footprint_cells.y]],
+		"MASS %.1f t · POWER %s · HEAT %.0f kW" % [e.mass_kg / 1000.0,
+			"makes %.0f kW" % e.power_kw if e.power_kw > 0.0 else ("uses %.0f kW" % -e.power_kw if e.power_kw < 0.0 else "none"), e.heat_kw],
+		"DURABILITY %.0f hp · stops %.0f mm of a round passing through" % [e.max_hit_points(), e.shielding_mm()],
+		"COST %d spare parts%s" % [ServiceYard.equipment_cost(e), " (fitting an owned unit)" if e.rarity != Rarity.Tier.COMMON else ""],
+	])
+	match e.kind:
+		EquipmentDefinition.Kind.CANNON:
+			var g := e.cannon
+			lines.append("GUN %.0f rpm · %.0f m/s · %.1f kg rounds · %.0f mm penetration at the muzzle (%.0f mm at 500 m/s)" % [
+				g.rate_of_fire_rpm, g.muzzle_velocity_mps, g.round_mass_kg, g.penetration_mm, g.penetration_at(500.0)])
+			lines.append("TURRET %s · spread %.2f° · energy %.1f MJ a round · fed from magazines" % [
+				"trains %.0f°/s" % g.traverse_deg_s if g.traverse_deg_s > 0.0 else "fixed, fires along the nose", g.dispersion_deg,
+				0.5 * g.round_mass_kg * g.muzzle_velocity_mps * g.muzzle_velocity_mps / 1.0e6])
+		EquipmentDefinition.Kind.MAIN_ENGINE:
+			lines.append("THRUST %.0f kN · Isp %.0f s · burns %.1f kg/s · aft faces only" % [e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
+		EquipmentDefinition.Kind.RCS:
+			lines.append("THRUST %.0f kN each way · Isp %.0f s · burns %.2f kg/s at full · torque grows with distance from the centre of mass" % [
+				e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
+		EquipmentDefinition.Kind.REACTOR:
+			lines.append("OUTPUT %.0f kW · throttles at %.0f K, scrams at %.0f K · explodes when destroyed (%.0f m blast)" % [
+				e.power_kw, ShipSystems.THROTTLE_TEMP_K, ShipSystems.SCRAM_TEMP_K, ShipSystems.REACTOR_BLAST_RADIUS_M])
+		EquipmentDefinition.Kind.RADIATOR:
+			lines.append("REJECTS %.0f kW at nominal temperature (more when hot)" % e.heat_rejection_kw)
+		EquipmentDefinition.Kind.PROPELLANT_TANK:
+			lines.append("HOLDS %.0f t of propellant · a destroyed tank loses its share" % (e.propellant_capacity_kg / 1000.0))
+		EquipmentDefinition.Kind.SENSOR:
+			lines.append("SENSOR RANGE %.0f km (without one: %.0f km visual) · needed to scan" % [e.sensor_range_m / 1000.0, ShipSystems.VISUAL_RANGE_M / 1000.0])
+		EquipmentDefinition.Kind.CRAFT_MOUNT:
+			var c := e.craft
+			lines.append("CARRIES %s · %.0f t · %s · hull %.0f" % [c.display_name, c.mass_kg / 1000.0,
+				"gun %s" % c.cannon.display_name if c.cannon != null else "unarmed (recon)", c.hull_hp])
+		EquipmentDefinition.Kind.DOCKING_COLLAR:
+			lines.append("GANGWAY up to %.0f m · seals in %.0f s · opens into the room behind it" % [Docking.GANGWAY_MAX_M, Docking.COLLAR_SEAL_S])
+	if e.rarity != Rarity.Tier.COMMON:
+		lines.append("%s — found in salvage" % Rarity.name_of(e.rarity).to_upper())
+	return "\n".join(lines)
 
 
 func _name_of(id: String) -> String:

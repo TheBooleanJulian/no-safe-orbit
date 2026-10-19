@@ -85,7 +85,7 @@ theme_override_constants/separation = 8
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.17, 0.84, 1)
 theme_override_font_sizes/font_size = 17
-text = "STATION // SHIPYARD"
+text = "EARTH SHIPYARD"
 
 [node name="NameEdit" type="LineEdit" parent="Margin/VBox/TopBar"]
 unique_name_in_owner = true

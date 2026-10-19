@@ -8,16 +8,24 @@ const LIFETIME_S := 0.6
 const EXPLOSION_LIFETIME_S := 2.5
 
 var _flashes: Array[Dictionary] = []  # {ship_id, point_body, age, life, grow, node, material, light}
+var _explosions: Array[ReactorExplosion] = []
 
 
 func add(ev: HitEvent) -> void:
 	_add(ev.target_id, ev.point_body, 1.5, 5.0, LIFETIME_S, Color(1.0, 0.85, 0.55, 1.0), false)
 
 
-## Reactor containment failure: a fireball the size of the blast, and light.
-func add_explosion(ship_id: StringName, point_body: Vector3, radius: float) -> void:
-	_add(ship_id, point_body, radius * 0.25, 4.0, EXPLOSION_LIFETIME_S, Color(1.0, 0.55, 0.2, 1.0), true)
-	_add(ship_id, point_body, radius * 0.12, 3.0, EXPLOSION_LIFETIME_S * 0.5, Color(1.0, 0.95, 0.85, 1.0), false)
+## Reactor containment failure: flash, fireball, shockwaves, debris, glow.
+func add_explosion(ship_id: StringName, point_body: Vector3, radius: float) -> ReactorExplosion:
+	var boom := ReactorExplosion.new()
+	add_child(boom)
+	boom.setup(ship_id, point_body, radius, hash(String(ship_id)) + int(point_body.x * 31.0 + point_body.z * 17.0))
+	_explosions.append(boom)
+	return boom
+
+
+func explosion_count() -> int:
+	return _explosions.size()
 
 
 func _add(ship_id: StringName, point_body: Vector3, radius: float, grow: float, life: float, color: Color, light: bool) -> void:
@@ -51,9 +59,20 @@ func clear() -> void:
 	for f in _flashes:
 		(f.node as Node).queue_free()
 	_flashes.clear()
+	for e in _explosions:
+		e.queue_free()
+	_explosions.clear()
 
 
 func update(world: WorldSimulation, alpha: float, render_origin: Vector3, delta: float) -> void:
+	var booming: Array[ReactorExplosion] = []
+	for e in _explosions:
+		e.step(world, alpha, render_origin, delta)
+		if e.finished():
+			e.queue_free()
+		else:
+			booming.append(e)
+	_explosions = booming
 	var alive: Array[Dictionary] = []
 	for f in _flashes:
 		f.age += delta

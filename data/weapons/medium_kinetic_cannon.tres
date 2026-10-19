@@ -6,7 +6,9 @@
 script = ExtResource("1_gun")
 display_name = "Medium kinetic cannon"
 muzzle_velocity_mps = 1000.0
-rate_of_fire_rpm = 120.0
+rate_of_fire_rpm = 50.0
 magazine_rounds = 400
 round_mass_kg = 4.0
-penetration_mm = 60.0
+penetration_mm = 48.0
+traverse_deg_s = 30.0
+dispersion_deg = 0.03

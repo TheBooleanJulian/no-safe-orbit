@@ -55,6 +55,12 @@ extends Resource
 @export var cannon_muzzles_body: PackedVector3Array = PackedVector3Array([Vector3(0, 0, -34)])
 ## Blueprint equipment id of each mount (same order), for damage tracking.
 @export var cannon_mount_ids: PackedStringArray = PackedStringArray()
+## Outward normal of each mount's hull face (same order); empty = fixed guns.
+## A turret trains anywhere above its face plane (see WorldSimulation).
+@export var cannon_mount_normals_body: PackedVector3Array = PackedVector3Array()
+## Extra spread (radians, standard deviation) on top of the gun's own, e.g.
+## the ship AI laying the guns without a bridge crew.
+@export var cannon_extra_dispersion_rad: float = 0.0
 
 @export_group("Damage")
 ## Craft without a systems model: hit points of the whole hull (mm of
@@ -70,6 +76,11 @@ func wet_mass_kg() -> float:
 ## Muzzle used for fire-control solutions.
 func primary_muzzle() -> Vector3:
 	return cannon_muzzles_body[0] if not cannon_muzzles_body.is_empty() else Vector3.ZERO
+
+
+## Whether mount k is a trainable turret (else it fires along the nose).
+func is_turret(k: int) -> bool:
+	return cannon != null and cannon.traverse_deg_s > 0.0 and k < cannon_mount_normals_body.size()
 
 
 ## Maximum thrust (N) that can push the ship along `axis` (0=X, 1=Y, 2=Z)

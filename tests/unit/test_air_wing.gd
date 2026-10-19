@@ -179,12 +179,10 @@ func test_risk_tolerance_decides_when_to_break_off() -> void:
 		wing.launch(world, f)
 		world.get_ship(f.id).hull_damage = 0.5 * f.config.hull_hp
 		_run(world, 1.0)
-		var broke_off := "
-".join(wing.log).contains("disengaging")
+		var broke_off := "\n".join(wing.log).contains("disengaging")
 		if risk == CraftAI.Risk.CONSERVATIVE:
 			assert_true(broke_off, "conservative: half a hull is enough — it breaks off:
-%s" % "
-".join(wing.log))
+%s" % "\n".join(wing.log))
 		else:
 			assert_true(not broke_off and f.status == AirWing.Status.FLYING, "aggressive: it fights on at half a hull")
 

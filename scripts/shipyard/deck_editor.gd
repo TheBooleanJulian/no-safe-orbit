@@ -72,7 +72,8 @@ func cell_at(pos: Vector2) -> Vector3i:
 
 
 ## Face of the hovered cell the pointer is nearest to: an edge face when
-## close to an edge, otherwise dorsal (ventral with Shift).
+## close to an edge; in the middle, whichever of top (dorsal) and underside
+## (ventral) is open to space — Shift picks the other one.
 func face_at(pos: Vector2, shift: bool) -> StringName:
 	var r := cell_rect(cell_at(pos))
 	var u := (pos.x - r.position.x) / _px  # 0 = aft edge, 1 = fore edge
@@ -85,8 +86,19 @@ func face_at(pos: Vector2, shift: bool) -> StringName:
 			best = face
 			best_d = d[face]
 	if best == &"":
-		return &"ventral" if shift else &"dorsal"
+		return vertical_face(cell_at(pos), shift)
 	return best
+
+
+## Top or underside of a cell: the one open to space (top if both or
+## neither are); `other` picks the opposite.
+func vertical_face(cell: Vector3i, other: bool) -> StringName:
+	var up := editor != null and editor.grid.is_exterior_face(cell, &"dorsal")
+	var down := editor != null and editor.grid.is_exterior_face(cell, &"ventral")
+	var face: StringName = &"ventral" if down and not up else &"dorsal"
+	if other:
+		face = &"dorsal" if face == &"ventral" else &"ventral"
+	return face
 
 
 ## Cell on the other side of `face` (dorsal/ventral = deck above/below).
@@ -190,7 +202,10 @@ func _draw() -> void:
 		draw_rect(er, def.color.lightened(0.4), false, 1.5)
 		_label(font, er, def.display_name, Color.BLACK)
 
+	_draw_slopes()
 	_draw_module_outlines()
+	_draw_bus()
+	_draw_plates()
 	_draw_hatches()
 	_draw_external_equipment()
 
@@ -248,6 +263,73 @@ func _draw_module_outlines() -> void:
 				draw_line(mid + inward * 0.05, mid + inward * 0.3, CONNECTOR_COLORS.get(conn, Color.WHITE), 3.0)
 
 
+## Wedge cells: contour lines across the slope, and a chevron pointing to
+## its low edge (dimmer when the slope faces down).
+func _draw_slopes() -> void:
+	var grid := editor.grid
+	for cell: Vector3i in grid.module_at:
+		if cell.y != deck or not grid.is_wedge_cell(cell):
+			continue
+		var faces := grid.slope_faces(cell)
+		var low := _edge(cell, faces[0])
+		var r := cell_rect(cell)
+		var inward: Vector2 = r.get_center() - (low[0] + low[1]) * 0.5
+		var col := Color(0.82, 0.9, 1.0, 0.55 if faces[1] == &"dorsal" else 0.28)
+		for k in [0.25, 0.5, 0.75]:
+			var off: Vector2 = inward * 2.0 * k
+			draw_line(low[0] + off, low[1] + off, col, 1.0)
+		var mid: Vector2 = (low[0] + low[1]) * 0.5 + inward * 0.35
+		var side: Vector2 = (low[1] - low[0]) * 0.18
+		draw_polyline(PackedVector2Array([mid - side + inward * 0.25, mid, mid + side + inward * 0.25]), col, 2.0)
+
+
+## Power bus: gold conduit through cell centres; ▲/▼ where it rises to the
+## deck above / drops to the one below.
+func _draw_bus() -> void:
+	var bus := editor.blueprint.bus
+	if bus.is_empty():
+		return
+	var col := Color(CyberTheme.AMBER, 0.85)
+	var w := maxf(_px * 0.1, 2.0)
+	for key: String in bus:
+		var cell := ShipBlueprint.parse_cell_key(key)
+		if cell.y != deck:
+			continue
+		var c := cell_rect(cell).get_center()
+		draw_rect(Rect2(c - Vector2.ONE * w, Vector2.ONE * w * 2.0), col)
+		for face in [&"fore", &"starboard"]:
+			var other := across(cell, face)
+			if bus.has(ShipBlueprint.cell_key(other)):
+				draw_line(c, cell_rect(other).get_center(), col, w)
+		if bus.has(ShipBlueprint.cell_key(cell + Vector3i.UP)):
+			draw_string(get_theme_default_font(), c + Vector2(w + 1, -w), "▲", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, col)
+		if bus.has(ShipBlueprint.cell_key(cell + Vector3i.DOWN)):
+			draw_string(get_theme_default_font(), c + Vector2(w + 1, w + 8), "▼", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, col)
+
+
+## Armour plates: a bar inside the edge for side plates, a corner tab for
+## top (filled) and underside (outline) plates. Cyan = 40 mm, amber = 80 mm.
+func _draw_plates() -> void:
+	for key: String in editor.blueprint.armor:
+		var cf := ShipBlueprint.parse_plate_key(key)
+		var cell: Vector3i = cf[0]
+		if cell.y != deck:
+			continue
+		var mm := int(editor.blueprint.armor[key])
+		var col := Color(CyberTheme.AMBER if mm >= ShipBlueprint.PLATE_THICK_MM else CyberTheme.CYAN, 0.9)
+		var r := cell_rect(cell)
+		var tab := Vector2.ONE * maxf(_px * 0.24, 4.0)
+		match cf[1]:
+			&"dorsal":
+				draw_rect(Rect2(r.position + Vector2(2, 2), tab), col)
+			&"ventral":
+				draw_rect(Rect2(Vector2(r.position.x + 2, r.end.y - 2 - tab.y), tab), col, false, 1.5)
+			_:
+				var seg := _edge(cell, cf[1])
+				var inward: Vector2 = (r.get_center() - (seg[0] + seg[1]) * 0.5).normalized() * _px * 0.1
+				draw_line(seg[0] + inward, seg[1] + inward, col, maxf(_px * (0.16 if mm >= ShipBlueprint.PLATE_THICK_MM else 0.09), 2.0))
+
+
 func _draw_hatches() -> void:
 	for h in editor.blueprint.hatches:
 		if h.a.y == h.b.y:
@@ -275,8 +357,11 @@ func _draw_external_equipment() -> void:
 	for i in bp.equipment.size():
 		var def := editor.grid.equipment_def(i)
 		var e := bp.equipment[i]
-		if def != null and def.is_external() and e.cell.y == deck:
-			_draw_face_marker(e.cell, e.face, def.color, 1.0)
+		if def == null or not def.is_external():
+			continue
+		for cell in editor.grid.external_cells(i):
+			if cell.y == deck:
+				_draw_face_marker(cell, e.face, def.color, 1.0)
 
 
 ## Edge faces: a bar just outside the edge. Dorsal: filled dot; ventral: ring.

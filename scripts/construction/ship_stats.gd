@@ -13,8 +13,14 @@ extends RefCounted
 ## - Power and heat totals here are the design budget; the running ship
 ##   resolves them through its power and thermal networks (ShipSystems).
 
-## Passive heat rejection of bare hull, per module (kW).
-const PASSIVE_REJECTION_KW_PER_MODULE := 30.0
+## Passive heat rejection of bare hull, per exposed cell face (kW): it
+## radiates from its outer surface.
+const PASSIVE_REJECTION_KW_PER_FACE := 0.65
+## Armour plate density (t/m³: steel–ceramic composite). One cell face is
+## 9 m², so a 40 mm plate is 1.44 t and an 80 mm plate 2.88 t.
+const PLATE_DENSITY_KG_M3 := 4000.0
+## Power bus conduit (cabling, breakers, trays) per cell.
+const BUS_KG_PER_CELL := 200.0
 ## Assist turn rate = angular acceleration × this (s), clamped below.
 const ASSIST_RATE_SECONDS := 1.5
 const ASSIST_RATE_MIN := 0.05
@@ -52,7 +58,16 @@ var hull_bounds_m: AABB = AABB()
 ## Every cannon mount: equipment ids and grid-metre positions (same order).
 var cannon_ids: PackedStringArray = PackedStringArray()
 var cannon_positions_m: PackedVector3Array = PackedVector3Array()
+var cannon_normals: PackedVector3Array = PackedVector3Array()
 var cannon_config: KineticCannonConfig
+## Armour plates: total mass and count.
+var plate_mass_kg: float = 0.0
+var plate_count: int = 0
+
+
+## Mass of one plate (kg) of `mm` over `area_factor` cell faces.
+static func plate_mass(mm: float, area_factor: float = 1.0) -> float:
+	return mm / 1000.0 * ShipGrid.CELL_SIZE_M * ShipGrid.CELL_SIZE_M * area_factor * PLATE_DENSITY_KG_M3
 
 
 static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
@@ -65,7 +80,7 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 			continue
 		var size_m := Vector3(grid.module_size(i)) * c
 		elements.append({"mass": def.structure_mass_kg, "center": Vector3(bp.modules[i].position) * c + size_m * 0.5, "size": size_m})
-		s.heat_rejection_kw += PASSIVE_REJECTION_KW_PER_MODULE
+		s.heat_rejection_kw += PASSIVE_REJECTION_KW_PER_FACE * grid.exterior_face_count(i)
 	for r in bp.rooms:
 		var def: RoomDefinition = grid.catalog.rooms.get(r.def_id)
 		if def == null:
@@ -78,7 +93,24 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 		s.heat_generation_kw += def.heat_kw_per_cell * cells
 		s.crew_capacity += def.crew_capacity_per_cell * cells
 		s.rounds_capacity += def.rounds_per_cell * cells
-		s.cargo_m3 += def.cargo_m3_per_cell * cells
+		# Hold space is what internal equipment (tanks…) leaves free.
+		var free := 0
+		for cell in ShipGrid.room_cells(r):
+			if not grid.equipment_at.has(cell):
+				free += 1
+		s.cargo_m3 += def.cargo_m3_per_cell * free
+	for key: String in bp.armor:
+		var cf := ShipBlueprint.parse_plate_key(key)
+		var cell: Vector3i = cf[0]
+		var face: StringName = cf[1]
+		var kg := plate_mass(float(bp.armor[key]), grid.plate_area_factor(cell, face))
+		var n := Vector3(ShipGrid.FACE_NORMALS.get(face, Vector3i.ZERO))
+		elements.append({"mass": kg, "center": ShipGrid.cell_center_m(cell) + n * c * 0.5, "size": Vector3.ZERO})
+		s.plate_mass_kg += kg
+		s.plate_count += 1
+	for key: String in bp.bus:
+		var bus_cell := ShipBlueprint.parse_cell_key(key)
+		elements.append({"mass": BUS_KG_PER_CELL, "center": ShipGrid.cell_center_m(bus_cell), "size": Vector3.ZERO})
 	var engines: Array[Vector3] = []
 	var engine_thrust: Array[float] = []
 	var rcs: Array[Vector3] = []
@@ -113,6 +145,7 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 			EquipmentDefinition.Kind.CANNON:
 				s.cannon_ids.append(bp.equipment[i].id)
 				s.cannon_positions_m.append(pos)
+				s.cannon_normals.append(Vector3(ShipGrid.FACE_NORMALS.get(bp.equipment[i].face, Vector3i(0, 0, -1))))
 				s.cannon_config = def.cannon
 			EquipmentDefinition.Kind.PROPELLANT_TANK:
 				s.propellant_capacity_kg += def.propellant_capacity_kg
@@ -201,6 +234,7 @@ func to_ship_config(display_name: String) -> ShipConfig:
 			muzzles.append(p - center_of_mass_m)
 		cfg.cannon_muzzles_body = muzzles
 		cfg.cannon_mount_ids = cannon_ids
+		cfg.cannon_mount_normals_body = cannon_normals
 	else:
 		cfg.cannon_muzzles_body = PackedVector3Array()
 	return cfg

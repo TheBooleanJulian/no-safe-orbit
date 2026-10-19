@@ -5,15 +5,16 @@
 [resource]
 script = ExtResource("1_def")
 id = &"radiator"
-display_name = "Radiator panel"
+display_name = "Radiator panel (2 cells)"
 kind = 4
 mount = 1
 footprint_cells = Vector2i(1, 1)
 allowed_room_roles = Array[StringName]([])
 allowed_faces = Array[StringName]([&"port", &"starboard", &"dorsal", &"ventral"])
-mass_kg = 2500.0
+mass_kg = 5000.0
 power_kw = 0.0
 heat_kw = 0.0
-heat_rejection_kw = 600.0
+heat_rejection_kw = 1200.0
 thrust_n = 0.0
 color = Color(0.9, 0.9, 0.95, 1)
+length_cells = 2

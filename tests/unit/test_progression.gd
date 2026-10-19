@@ -188,12 +188,12 @@ func test_locked_blueprints_and_unowned_parts_are_errors() -> void:
 	var p := PlayerProfile.new(1)
 	assert_true(not _report(_template(), p).has_errors(), "the all-common template needs nothing found")
 	var bp := _template()
-	(bp.find("m2") as ShipBlueprint.PlacedModule).def_id = &"armored_fuselage_section"
+	(bp.find("r12") as ShipBlueprint.PlacedRoom).def_id = &"dense_magazine"
 	for id in ["e29", "e30", "e31", "e32"]:
 		(bp.find(id) as ShipBlueprint.PlacedEquipment).def_id = &"main_engine_high_isp"
 	var r := _report(bp, p)
 	assert_true(r.has_code(&"blueprint_locked") and r.has_code(&"part_not_owned"), "locked module and unowned engines are errors:\n%s" % r.summary())
-	p.unlocks["armored_fuselage_section"] = true
+	p.unlocks["dense_magazine"] = true
 	p.inventory["main_engine_high_isp"] = 2
 	r = _report(bp, p)
 	assert_true(not r.has_code(&"blueprint_locked"), "unlocking the blueprint clears its error")
@@ -378,10 +378,10 @@ func test_refit_is_paid_up_front_and_keeps_wear_on_kept_parts() -> void:
 	var bp2 := p.vessel.blueprint.duplicate_blueprint()
 	bp2.add_equipment(&"radiator", Vector3i(3, 2, 6), &"dorsal")
 	var why := ServiceYard.refit(p.vessel, bp2, p, _catalog())
-	assert_true(why.contains("needs 3 spare parts"), "unaffordable refit refused: '%s'" % why)
+	assert_true(why.contains("needs 5 spare parts"), "unaffordable refit refused: '%s'" % why)
 	assert_true(p.vessel.blueprint.equipment.size() == bp.equipment.size(), "refused refit leaves the vessel unchanged")
 	p.spare_parts = 10
-	assert_true(ServiceYard.refit(p.vessel, bp2, p, _catalog()) == "" and p.spare_parts == 7, "paid refit: 10 → %d parts" % p.spare_parts)
+	assert_true(ServiceYard.refit(p.vessel, bp2, p, _catalog()) == "" and p.spare_parts == 5, "paid refit: 10 → %d parts" % p.spare_parts)
 
 
 func test_a_destroyed_rare_part_is_rebuilt_not_written_off() -> void:
@@ -444,6 +444,9 @@ func test_cargo_and_credits_survive_save_and_load_and_old_saves_migrate() -> voi
 	var v1 := p.to_dict()
 	v1.schema_version = 1
 	v1.erase("credits")
+	# v1/v2 kept a single "vessel".
+	v1["vessel"] = (v1.vessels as Array)[0]
+	v1.erase("vessels")
 	(v1.vessel as Dictionary).erase("cargo")
 	var old := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(v1)), errors)
 	assert_true(old != null and old.credits == PlayerProfile.STARTING_CREDITS and old.vessel.cargo_is_empty(), "a v1 profile migrates with defaults")
@@ -467,8 +470,7 @@ func test_debrief_says_where_the_hits_came_from() -> void:
 		log.hits_taken += 1
 		log.hits_by_side[side] = int(log.hits_by_side.get(side, 0)) + 1
 	log.systems_lost.append({"id": "e28", "name": "Fusion reactor", "side": "port", "t": 1.0})
-	var lessons := "
-".join(CombatLog.insights(log.to_dict()))
+	var lessons := "\n".join(CombatLog.insights(log.to_dict()))
 	assert_true(lessons.contains("through the port (2 of 3)") and lessons.contains("second reactor") and lessons.contains("workshop"),
 		"lessons name the side, the reactor and the missing workshop:
 %s" % lessons)
@@ -487,19 +489,34 @@ func test_disabled_means_it_cannot_fight() -> void:
 	assert_true(dark.systems.disabled_reason() == "no power", "losing the only reactor disables it")
 
 
-func test_salvage_needs_a_disabled_wreck_close_and_slow() -> void:
+func test_salvage_beacon_needs_a_disabled_wreck_in_range() -> void:
 	var me := _ship(_template(), &"me")
 	var wreck := _ship(_template(), &"wreck")
 	wreck.position = Vector3(0, 0, -300)
-	wreck.velocity = Vector3(1, 0, 0)
+	wreck.velocity = Vector3(10, 0, 0)
 	assert_true(Salvage.block_reason(me, wreck).contains("disable"), "a fighting ship cannot be salvaged")
 	wreck.systems.damage_equipment(wreck.systems.equipment_by_id("e41"), 1000.0)
-	assert_true(Salvage.block_reason(me, wreck) == "", "disabled, 300 m, 1 m/s: salvageable")
-	wreck.position = Vector3(0, 0, -2000)
-	assert_true(Salvage.block_reason(me, wreck).contains("close to"), "2 km is too far")
+	assert_true(Salvage.block_reason(me, wreck) == "", "disabled, 300 m, 10 m/s: a beacon can be dropped (no velocity match needed)")
+	wreck.position = Vector3(0, 0, -2500)
+	assert_true(Salvage.block_reason(me, wreck).contains("close to"), "2.5 km is too far for a beacon")
 	wreck.position = Vector3(0, 0, -300)
-	wreck.velocity = Vector3(10, 0, 0)
-	assert_true(Salvage.block_reason(me, wreck).contains("match velocity"), "10 m/s is too fast")
+	wreck.systems.captured = true
+	assert_true(Salvage.block_reason(me, wreck).contains("already taken"), "a captured ship is a prize, not a beacon job")
+
+
+func test_takeover_pays_more_than_a_beacon() -> void:
+	var wreck := _ship(_template())
+	wreck.systems.damage_equipment(wreck.systems.equipment_by_id("e41"), 1000.0)
+	var scrap := Salvage.scrap_value(wreck.systems)
+	assert_true(scrap > 100, "an intact frigate is worth scrap (%d cr)" % scrap)
+	assert_true(Salvage.TAKEOVER_SCRAP_RATE > Salvage.BEACON_SCRAP_RATE and Salvage.TAKEOVER_LOOT_CHANCE > Salvage.BEACON_LOOT_CHANCE,
+		"takeover: higher scrap credit and crate odds than a beacon")
+	var p := PlayerProfile.new(7)
+	var beacon := p.open_crates(400, Salvage.BEACON_LOOT_CHANCE, _catalog())
+	var prize := p.open_crates(400, Salvage.TAKEOVER_LOOT_CHANCE, _catalog())
+	var full := func(a: Array) -> int: return a.filter(func(d: Variant) -> bool: return d != null).size()
+	assert_near(full.call(beacon) / 400.0, Salvage.BEACON_LOOT_CHANCE, 0.07, "beacon crates holding loot")
+	assert_near(full.call(prize) / 400.0, Salvage.TAKEOVER_LOOT_CHANCE, 0.07, "prize crates holding loot")
 
 
 func test_salvage_pays_more_for_a_cleaner_kill() -> void:
@@ -589,3 +606,58 @@ func test_salvage_strips_the_best_intact_rare_part() -> void:
 	wreck.systems.damage_equipment(wreck.systems.equipment_by_id("e41"), 30.0)
 	assert_true(EnemyFactory.recoverable_part(wreck.systems).def.id == &"rcs_block_heavy", "a wrecked railgun is not worth stripping")
 	assert_true(EnemyFactory.recoverable_part(_ship(_template()).systems) == null, "an all-common wreck has nothing rare")
+
+
+func test_cargo_hold_capacity_and_venting_the_excess() -> void:
+	var bp := _template()
+	var grid := ShipGrid.build(bp, _catalog())
+	var stats := ShipStats.compute(bp, grid)
+	assert_true(stats.cargo_m3 > 0.0 and stats.cargo_m3 < 24 * 27.0,
+		"hold space is what the tanks leave free (%.0f m³ of %.0f)" % [stats.cargo_m3, 24 * 27.0])
+	var v := ShipInstance.fresh(bp)
+	v.cargo = {"spare_parts": 100, "equipment": {"railgun": 1}}
+	var rail_m3 := ShipInstance.equipment_m3(_catalog().equipment[&"railgun"])
+	assert_near(v.cargo_volume_m3(_catalog()), 100 * ShipInstance.SPARE_PART_M3 + rail_m3, 1e-6, "volume of 100 parts and a railgun (m³)")
+	var went := v.vent_excess(10.0, _catalog())
+	assert_true(v.cargo_volume_m3(_catalog()) <= 10.0 + 1e-6 and int(v.cargo.equipment.railgun) == 1,
+		"venting the excess drops cheap spare parts first and keeps the railgun (%s)" % ", ".join(went))
+	assert_true(v.vent("equipment", "railgun") != "" and not v.cargo.has("equipment"), "a whole line can be vented")
+
+
+func test_a_new_hull_is_commissioned_into_the_hangar() -> void:
+	var p := PlayerProfile.new(9)
+	p.ensure_vessel(_template())
+	var first := p.vessel
+	var small := ShipBlueprint.new()
+	small.name = "Cutter"
+	small.add_module(&"hull_block", Vector3i.ZERO)
+	var cost := p.new_hull_cost(small, _catalog())
+	assert_true(cost.x == ServiceYard.module_cost(_catalog().hull[&"hull_block"]) and cost.y == PlayerProfile.NEW_HULL_FEE,
+		"a one-block hull costs its block and the fee (%s)" % cost)
+	p.credits = 0
+	assert_true(p.commission(small, _catalog()).contains("fee"), "no credits, no new hull")
+	p.credits = 1000
+	p.spare_parts = 100
+	assert_true(p.commission(small, _catalog()) == "" and p.vessels.size() == 2 and p.vessel.name == "Cutter",
+		"commissioned: the cutter is the active vessel")
+	assert_true(p.credits == 1000 - PlayerProfile.NEW_HULL_FEE and p.spare_parts == 100 - cost.x, "paid in parts and credits")
+	assert_true(p.select_vessel(0) and p.vessel == first, "the frigate is still in the hangar")
+	# Saved and loaded with both vessels; old single-vessel profiles migrate.
+	var q := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())), PackedStringArray())
+	assert_true(q.vessels.size() == 2 and q.active_vessel == 0 and q.vessels[1].name == "Cutter", "the hangar round-trips")
+	var old := p.to_dict()
+	old.erase("vessels")
+	old["vessel"] = first.to_dict()
+	old.schema_version = 2
+	var r := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(old)), PackedStringArray())
+	assert_true(r.vessels.size() == 1 and r.vessel.name == first.name, "a v2 profile's vessel becomes the hangar's only vessel")
+	# Rare parts fitted to one vessel are not free for another.
+	p.inventory["railgun"] = 1
+	p.vessels[0].blueprint = _with_gun(&"railgun")
+	p.select_vessel(1)
+	var with_rail := ShipBlueprint.new()
+	with_rail.add_module(&"hull_block", Vector3i.ZERO)
+	with_rail.add_equipment(&"railgun", Vector3i(0, 0, 0), &"dorsal")
+	var rep := ShipValidator.Report.new()
+	p.check_design(with_rail, _catalog(), rep)
+	assert_true(rep.has_code(&"part_not_owned"), "the railgun on the frigate cannot also go on the cutter")

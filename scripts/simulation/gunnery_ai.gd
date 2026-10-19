@@ -1,7 +1,8 @@
 class_name GunneryAI
 extends RefCounted
 ## Minimal enemy gunner: turn the nose onto the fire-control lead point with
-## flight assist, fire when aligned and in range. It flies the same physics,
+## flight assist; turrets train on the lead point and fire when they are on
+## it (fixed guns: when the nose is aligned), in range. It flies the same physics,
 ## thrust, torque and ammunition limits as the player (spec §11: the
 ## controller differs, the physical rules do not). No evasion or
 ## manoeuvring yet — directives and tactics arrive with Milestone 6.
@@ -38,6 +39,11 @@ static func command(shooter: ShipState, target: ShipState) -> ShipControlInput:
 		clampf((AIM_GAIN * pitch_error + los_rate.x) / maxf(rates.x, 1e-3), -1.0, 1.0),
 		clampf((AIM_GAIN * yaw_error + los_rate.y) / maxf(rates.y, 1e-3), -1.0, 1.0),
 		0.0)
+	input.has_aim = true
+	input.aim_offset = muzzle - shooter.position + FireControl.lead_point(rel_pos, rel_vel, t)
+	if cfg.is_turret(0):
+		input.fire = rel_pos.length() < MAX_RANGE_M  # each turret fires when it is on
+		return input
 	var error_deg := rad_to_deg(acos(clampf(-d.z, -1.0, 1.0)))
 	input.fire = error_deg < FIRE_CONE_DEG and rel_pos.length() < MAX_RANGE_M
 	return input

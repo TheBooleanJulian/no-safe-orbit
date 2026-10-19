@@ -100,15 +100,9 @@ static func _check_structure(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 		_add(report, Severity.ERROR, &"module_overlap", "Modules %s and %s overlap at %s." % [
 			bp.modules[o[1]].id, bp.modules[o[2]].id, _cell_text(o[0])], bp.modules[o[2]].id)
 
-	# Attachment graph: modules that touch with matching connectors.
+	# Attachment graph: modules that share at least one face.
 	var n := bp.modules.size()
-	var contacts := {}  # module index -> [other, mine, theirs] for a mismatched contact
-	var attached := grid.attachments(contacts)
-	var mismatched := {}
-	for i in contacts:
-		var c: Array = contacts[i]
-		mismatched[i] = "touches %s but the connectors there don't match (%s vs %s)" % [
-			bp.modules[c[0]].id, _connector_text(c[1]), _connector_text(c[2])]
+	var attached := grid.attachments()
 	# Everything must be attached, directly or indirectly, to the first module.
 	var seen := {0: true}
 	var queue := [0]
@@ -121,14 +115,9 @@ static func _check_structure(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 	for i in n:
 		if seen.has(i) or grid.module_def(i) == null:
 			continue
-		var why: String = mismatched.get(i, "does not touch any other module")
 		_add(report, Severity.ERROR, &"module_detached",
-			"Module %s (%s) is not structurally attached: it %s. Move it against a matching connector." % [
-				bp.modules[i].id, grid.module_def(i).display_name, why], bp.modules[i].id)
-
-
-static func _connector_text(c: StringName) -> String:
-	return "none" if c == &"" else String(c)
+			"Module %s (%s) is not structurally attached: it shares no face with the rest of the hull. Move it so one of its faces touches another module." % [
+				bp.modules[i].id, grid.module_def(i).display_name], bp.modules[i].id)
 
 
 # --- Rooms and hatches ------------------------------------------------------
@@ -223,15 +212,24 @@ static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 				_add(report, Severity.ERROR, &"equipment_bad_face",
 					"%s %s cannot mount on a %s face (allowed: %s)." % [def.display_name, e.id, e.face,
 						", ".join(def.allowed_faces.map(func(f: StringName) -> String: return String(f)))], e.id)
-			elif not grid.is_exterior_face(e.cell, e.face):
-				_add(report, Severity.ERROR, &"equipment_not_exterior",
-					"%s %s must sit on an exterior hull face; the %s face of %s is %s." % [def.display_name, e.id,
-						e.face, _cell_text(e.cell), "not hull" if not grid.is_hull(e.cell) else "covered by another module"], e.id)
-			var key := "%s|%s" % [e.cell, e.face]
-			if mounts.has(key):
-				_add(report, Severity.ERROR, &"equipment_overlap",
-					"%s and %s are mounted on the same face." % [mounts[key], e.id], e.id)
-			mounts[key] = e.id
+			else:
+				for cell in grid.external_cells(i):
+					if not grid.is_exterior_face(cell, e.face):
+						_add(report, Severity.ERROR, &"equipment_not_exterior",
+							"%s %s must sit on an exterior hull face; the %s face of %s is %s." % [def.display_name, e.id,
+								e.face, _cell_text(cell), "not hull" if not grid.is_hull(cell) else "covered by another module"], e.id)
+						break
+					if grid.slope_faces(cell).has(e.face):
+						_add(report, Severity.ERROR, &"equipment_on_slope",
+							"%s %s is on the sloped face of a wedge at %s: systems need a flat face. Put it on a block." % [
+								def.display_name, e.id, _cell_text(cell)], e.id)
+						break
+			for cell in grid.external_cells(i):
+				var key := "%s|%s" % [cell, e.face]
+				if mounts.has(key):
+					_add(report, Severity.ERROR, &"equipment_overlap",
+						"%s and %s are mounted on the same face." % [mounts[key], e.id], e.id)
+				mounts[key] = e.id
 			continue
 		# Internal: whole footprint inside one room of an allowed role.
 		var room_index := -2
@@ -306,11 +304,85 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 				"%s %s has no magazine to feed it: 0 rounds. Add a magazine room." % [def.display_name, e.id], e.id)
 
 
+	if not bp.bus.is_empty():
+		_check_bus(bp, grid, report)
+	var buried := 0
+	for key: String in bp.armor:
+		var cf := ShipBlueprint.parse_plate_key(key)
+		if not grid.plateable_faces(cf[0]).has(cf[1]):
+			buried += 1
+	if buried > 0:
+		_add(report, Severity.WARNING, &"armor_buried",
+			"%d armour plate%s on faces that are covered or not hull: dead weight. Repaint the armour." % [buried, "" if buried == 1 else "s"], "")
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
 		if def != null and def.kind == EquipmentDefinition.Kind.DOCKING_COLLAR and grid.room_at.get(bp.equipment[i].cell, -1) < 0:
 			_add(report, Severity.WARNING, &"collar_leads_nowhere",
 				"%s %s opens into no room: nobody can use it. Put a room behind it." % [def.display_name, bp.equipment[i].id], bp.equipment[i].id)
+
+
+## Routed power: conduits only run through hull; every network with a
+## reactor needs a distribution unit; every powered system should be on a
+## network that has both.
+static func _check_bus(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	var outside := 0
+	for key: String in bp.bus:
+		if not grid.is_hull(ShipBlueprint.parse_cell_key(key)):
+			outside += 1
+	if outside > 0:
+		_add(report, Severity.WARNING, &"bus_outside_hull",
+			"%d power conduit cell%s outside the hull carry nothing." % [outside, "" if outside == 1 else "s"], "")
+	var net_of := {}
+	var nets := 0
+	for key: String in bp.bus:
+		if net_of.has(key) or not grid.is_hull(ShipBlueprint.parse_cell_key(key)):
+			continue
+		net_of[key] = nets
+		var queue := [key]
+		while not queue.is_empty():
+			var cell := ShipBlueprint.parse_cell_key(queue.pop_front())
+			for face: StringName in ShipGrid.FACE_NORMALS:
+				var nk := ShipBlueprint.cell_key(cell + ShipGrid.FACE_NORMALS[face])
+				if bp.bus.has(nk) and not net_of.has(nk):
+					net_of[nk] = nets
+					queue.append(nk)
+		nets += 1
+	var net_for := func(i: int) -> int:
+		var def := grid.equipment_def(i)
+		var cells: Array = [bp.equipment[i].cell] if def.is_external() else grid.equipment_cells(i)
+		for c in cells:
+			if net_of.has(ShipBlueprint.cell_key(c)):
+				return net_of[ShipBlueprint.cell_key(c)]
+		return -1
+	var reactor_nets := {}
+	var pdu_nets := {}
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def == null:
+			continue
+		var net: int = net_for.call(i)
+		if def.kind == EquipmentDefinition.Kind.REACTOR and net >= 0:
+			reactor_nets[net] = true
+		elif def.kind == EquipmentDefinition.Kind.POWER_DISTRIBUTION and net >= 0:
+			pdu_nets[net] = true
+	for net in reactor_nets:
+		if not pdu_nets.has(net):
+			_add(report, Severity.WARNING, &"bus_no_distribution",
+				"A bus network with a reactor has no power distribution unit: its reactor feeds nothing. Put a distribution unit on it.", "")
+			break
+	var unpowered := PackedStringArray()
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def == null or def.power_kw >= 0.0:
+			continue
+		var net: int = net_for.call(i)
+		if net < 0 or not reactor_nets.has(net) or not pdu_nets.has(net):
+			unpowered.append(bp.equipment[i].id)
+	if not unpowered.is_empty():
+		_add(report, Severity.WARNING, &"power_unrouted",
+			"%d system%s not on a powered bus network (%s%s): route a conduit to %s, or use Auto-route." % [unpowered.size(),
+				"" if unpowered.size() == 1 else "s", ", ".join(unpowered.slice(0, 6)), "…" if unpowered.size() > 6 else "",
+				"it" if unpowered.size() == 1 else "them"], unpowered[0])
 
 
 ## Fixed forward-firing mounts: anything in the hull straight ahead (−z) of
