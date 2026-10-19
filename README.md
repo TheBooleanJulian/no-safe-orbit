@@ -75,7 +75,8 @@ target panel and the HIT TAKEN lines explain every hit.
 **Turrets:** guns train on the point under your aim cursor (at the target's
 range) at their own traverse rate — 30°/s for the kinetic cannon, 60°/s for
 the autocannon, 12°/s for the railgun — and each fires only once it is on
-the aim. Every gun has its own small reticle: cyan when on target, dim while
+the aim. Guns of different kinds can share a ship: with a lock, each corrects
+its own lead (put the cursor on the primary gun's ◇). Every gun has its own small reticle: cyan when on target, dim while
 training, grey with a slash when it holds fire (its own hull in the line of
 fire, the aim below its face, offline, or locked). Put the cursor on the gold
 ◇ lead marker. The ship AI (bridge crew lost) still lays the guns, at half
@@ -175,6 +176,11 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
    rebuilds and rearms the same design — rare parts fitted to it included —
    for a respawn fee in credits (50 + 5 per berth). Backspace respawns in
    orbit; B returns to the station. The debrief shows either way.
+   **Stores carry over:** the propellant and rounds you come back with are
+   what you leave with, unless the yard tops them up at launch — 1 credit a
+   tonne of propellant, 1 credit per 10 rounds (propellant first when credits
+   are short; HANGAR → SERVICE shows the bill). Craft refuel and rearm from
+   the carrier's own tanks and magazine.
 6. **Repair** at the shipyard's HANGAR & SERVICE panel, paid in spare parts
    (a part's repair costs its new price × how damaged it is). Short of parts?
    Choose what comes first: full restoration, combat readiness, mobility or

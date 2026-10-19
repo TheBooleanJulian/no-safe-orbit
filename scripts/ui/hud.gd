@@ -802,8 +802,8 @@ func _update_weapon_strip(player: ShipState) -> void:
 	else:
 		var frac := float(player.cannon_rounds) / maxf(cannon.magazine_rounds, 1.0)
 		var bars := roundi(frac * 10.0)
-		parts.append("GUN ▸ %s ×%d  %s %d/%d  %.0f rpm%s" % [cannon.display_name, player.turret_status.size(), "▮".repeat(bars) + "▯".repeat(10 - bars),
-			player.cannon_rounds, cannon.magazine_rounds, cannon.rate_of_fire_rpm, "  EMPTY" if player.cannon_rounds == 0 else ""])
+		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config), "▮".repeat(bars) + "▯".repeat(10 - bars),
+			player.cannon_rounds, cannon.magazine_rounds, "  EMPTY" if player.cannon_rounds == 0 else ""])
 	parts.append("PD  %s none fitted" % CyberTheme.GLYPH_OFFLINE)
 	var lines := PackedStringArray(["   ·   ".join(parts)])
 	if cannon != null:
@@ -811,6 +811,21 @@ func _update_weapon_strip(player: ShipState) -> void:
 	if player_wing != null and not player_wing.crafts.is_empty():
 		lines.append("WING  %s   [L] launch [K] recall" % wing_text(player_wing))
 	weapon_label.text = "\n".join(lines)
+
+
+## "Medium kinetic cannon ×1 50 rpm · Railgun ×1 60 rpm" — the battery.
+static func battery_text(cfg: ShipConfig) -> String:
+	var counts := {}
+	var order: Array[KineticCannonConfig] = []
+	for k in cfg.cannon_muzzles_body.size():
+		var gun := cfg.mount_cannon(k)
+		if not counts.has(gun.display_name):
+			order.append(gun)
+		counts[gun.display_name] = int(counts.get(gun.display_name, 0)) + 1
+	var parts := PackedStringArray()
+	for gun in order:
+		parts.append("%s ×%d %.0f rpm" % [gun.display_name, counts[gun.display_name], gun.rate_of_fire_rpm])
+	return " · ".join(parts)
 
 
 ## "● 2 on · ▲ 1 training · ✕ 1 blocked" — what the guns are doing.

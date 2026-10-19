@@ -4,6 +4,14 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Fixed
+- Propellant and rounds carry over between sorties and are bought back at
+  launch (credits); craft refuel and rearm from their carrier's stores.
+- The enemy keeps a fighting range, jinks, holds fire when hot and flees
+  when beaten (escapes beyond 40 km).
+- Mixed gun batteries: each mount keeps its own gun and, with a lock, its
+  own lead.
+
 ## [0.10.0] — 2026-10-20 — Operations pass: turrets, blocks and armour, power bus, jump drive
 
 ### Added

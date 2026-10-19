@@ -303,14 +303,14 @@ func weapons_locked(id: StringName) -> bool:
 
 
 func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[ProjectileState]) -> void:
-	var cannon := ship.config.cannon
-	if cannon == null:
+	if ship.config.cannon == null:
 		return
 	var cfg := ship.config
 	var muzzles := cfg.cannon_muzzles_body
 	var locked := weapons_locked(ship.id)
 	var inv := ship.orientation.inverse()
 	for k in muzzles.size():
+		var cannon := cfg.mount_cannon(k)
 		ship.cannon_cooldowns[k] = maxf(ship.cannon_cooldowns[k] - fixed_dt, 0.0)
 		var status := _train_turret(ship, input, k, inv)
 		if ship.systems != null and not ship.systems.mount_working(k):
@@ -357,22 +357,46 @@ func _train_turret(ship: ShipState, input: ShipControlInput, k: int, inv: Quater
 		return ShipState.Turret.READY
 	var n := cfg.cannon_mount_normals_body[k]
 	var muzzle := cfg.cannon_muzzles_body[k] + n * TURRET_HEIGHT_M
+	var gun := cfg.mount_cannon(k)
 	var want := Vector3.FORWARD
 	if input.has_aim:
-		var rel := inv * input.aim_offset - muzzle
+		var aim := input.aim_offset + _lead_correction(ship, input, k)
+		var rel := inv * aim - muzzle
 		if rel.length() > 1.0:
 			want = rel.normalized()
 	var status := ShipState.Turret.READY
 	if want.dot(n) < TURRET_ARC_MIN_DOT:
 		want = _clamp_to_arc(want, n)
 		status = ShipState.Turret.OUT_OF_ARC
-	var dir := _rotate_toward(ship.turret_dirs[k], want, deg_to_rad(cfg.cannon.traverse_deg_s) * fixed_dt)
+	var dir := _rotate_toward(ship.turret_dirs[k], want, deg_to_rad(gun.traverse_deg_s) * fixed_dt)
 	ship.turret_dirs[k] = dir
 	if ship.systems != null and ship.blocked_cached(k, dir, func() -> bool: return _hull_in_the_way(ship, muzzle, dir)):
 		return ShipState.Turret.BLOCKED
 	if status == ShipState.Turret.READY and rad_to_deg(dir.angle_to(want)) > TURRET_READY_DEG:
 		status = ShipState.Turret.SLEWING
 	return status
+
+
+## With a fire-control lock and a gun slower or faster than the primary:
+## its own lead on the locked ship minus the primary's (world, m).
+func _lead_correction(ship: ShipState, input: ShipControlInput, k: int) -> Vector3:
+	var cfg := ship.config
+	var gun := cfg.mount_cannon(k)
+	if input.lead_target_id == &"" or gun == cfg.cannon or is_equal_approx(gun.muzzle_velocity_mps, cfg.cannon.muzzle_velocity_mps):
+		return Vector3.ZERO
+	var target := get_ship(input.lead_target_id)
+	if target == null or not target.is_active():
+		return Vector3.ZERO
+	var leads := []
+	for g in [cfg.cannon, gun]:
+		var muzzle := ship.position + ship.orientation * cfg.cannon_muzzles_body[0 if g == cfg.cannon else k]
+		var rel := target.position + target.orientation * target.config.hit_box_center - muzzle
+		var rel_v := target.velocity - ship.velocity
+		var t := FireControl.intercept_time(rel, rel_v, (g as KineticCannonConfig).muzzle_velocity_mps)
+		if t < 0.0:
+			return Vector3.ZERO
+		leads.append(muzzle + FireControl.lead_point(rel, rel_v, t))
+	return (leads[1] as Vector3) - (leads[0] as Vector3)
 
 
 ## Whether a round leaving `muzzle` (body) along `dir` would enter its own hull.

@@ -400,6 +400,9 @@ func launch() -> bool:
 	if why != "":
 		_set_status(why + " — remove new parts, bank cargo or buy parts", true)
 		return false
+	var supplied := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
+	if supplied != "":
+		GameLog.info("shipyard", supplied)
 	if not profile.vessel.cargo_is_empty():
 		GameLog.info("shipyard", "Launching with cargo still in the hold: %s" % profile.vessel.cargo_summary())
 	_save_profile()
@@ -924,6 +927,10 @@ func _refresh_hangar() -> void:
 			lines.append("  • %s — %d%s" % [j.label, j.cost, blocked])
 		if jobs.size() > 5:
 			lines.append("  … %d more" % (jobs.size() - 5))
+	var supply := ServiceYard.resupply_needs(v, catalog)
+	if int(supply.credits) > 0 and not building_new:
+		lines.append("RESUPPLY  %.1f t propellant · %d rounds — %d cr at launch%s" % [supply.propellant_kg / 1000.0, supply.rounds, supply.credits,
+			"  [color=#ff7766](credits short: partial)[/color]" if int(supply.credits) > profile.credits else ""])
 	if building_new:
 		var hull := profile.new_hull_cost(editor.blueprint, editor.catalog)
 		lines.append(CyberTheme.tint("NEW HULL on the slip: %d spare parts + %d credits at commissioning" % [hull.x, hull.y], CyberTheme.AMBER))

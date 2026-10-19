@@ -49,8 +49,12 @@ extends Resource
 @export var hit_box_half_extents: Vector3 = Vector3(10, 6, 30)
 
 @export_group("Armament")
-## Weapon type shared by every mount; null means unarmed.
+## The primary gun (mount 0; the HUD's lead marker); null means unarmed.
 @export var cannon: KineticCannonConfig
+## Each mount's own gun (same order as the muzzles); empty = every mount
+## fires `cannon`. Batteries may mix guns: each mount has its own fire
+## control (WorldSimulation trains each on its own lead).
+@export var mount_cannons: Array[KineticCannonConfig] = []
 ## One muzzle per mount, body frame. All fire along the nose (-Z).
 @export var cannon_muzzles_body: PackedVector3Array = PackedVector3Array([Vector3(0, 0, -34)])
 ## Blueprint equipment id of each mount (same order), for damage tracking.
@@ -78,9 +82,31 @@ func primary_muzzle() -> Vector3:
 	return cannon_muzzles_body[0] if not cannon_muzzles_body.is_empty() else Vector3.ZERO
 
 
+## The gun on mount k.
+func mount_cannon(k: int) -> KineticCannonConfig:
+	return mount_cannons[k] if k < mount_cannons.size() and mount_cannons[k] != null else cannon
+
+
 ## Whether mount k is a trainable turret (else it fires along the nose).
 func is_turret(k: int) -> bool:
-	return cannon != null and cannon.traverse_deg_s > 0.0 and k < cannon_mount_normals_body.size()
+	var gun := mount_cannon(k)
+	return gun != null and gun.traverse_deg_s > 0.0 and k < cannon_mount_normals_body.size()
+
+
+## Every gun's rate of fire × `factor` (copies; the shared resources stay).
+func scale_rate_of_fire(factor: float) -> void:
+	if cannon == null:
+		return
+	var scaled := {}
+	for gun in [cannon] + mount_cannons:
+		if gun != null and not scaled.has(gun):
+			var copy: KineticCannonConfig = gun.duplicate()
+			copy.rate_of_fire_rpm *= factor
+			scaled[gun] = copy
+	cannon = scaled[cannon]
+	for k in mount_cannons.size():
+		if mount_cannons[k] != null:
+			mount_cannons[k] = scaled[mount_cannons[k]]
 
 
 ## Maximum thrust (N) that can push the ship along `axis` (0=X, 1=Y, 2=Z)
