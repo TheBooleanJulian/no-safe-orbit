@@ -77,6 +77,8 @@ const ROLE_STATIONS := {
 	CrewRoster.Role.DAMAGE_CONTROL: [&"workshop", &"access"],
 	CrewRoster.Role.WEAPONS: [&"magazine", &"command"],
 }
+## Without a working sensor mast: eyeballs and backup optics (m).
+const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
 const SHIP_AI_FACTOR := 0.5
 const REACTOR_BLAST_RADIUS_M := 15.0
@@ -840,6 +842,15 @@ func disabled_reason() -> String:
 	if count(EquipmentDefinition.Kind.CANNON, false) > 0 and count(EquipmentDefinition.Kind.CANNON, true) == 0:
 		return "all guns out"
 	return ""
+
+
+## Detection range: the best working (powered) sensor mast, else visual.
+func sensor_range_m() -> float:
+	var best := VISUAL_RANGE_M
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.SENSOR and e.working():
+			best = maxf(best, e.def.sensor_range_m)
+	return best
 
 
 func is_disabled() -> bool:

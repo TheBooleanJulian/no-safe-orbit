@@ -21,6 +21,12 @@ var entry_pen_mm: float = 0.0
 var exit_pen_mm: float = 0.0
 ## Where it left the hull for good (body frame), when exit_pen_mm > 0.
 var exit_point_body: Vector3 = Vector3.ZERO
+## Outward hull normals (body frame) where it came in and went out.
+var entry_normal_body: Vector3 = Vector3.ZERO
+var exit_normal_body: Vector3 = Vector3.ZERO
+## Deflected by the first plate it met (Penetration.RICOCHET_MIN_DEG).
+var ricochet: bool = false
+var ricochet_normal_body: Vector3 = Vector3.ZERO
 ## Body-frame points along the round's path (first = where it reached the hull).
 var path_body: PackedVector3Array = PackedVector3Array()
 ## [{pos: Vector3 (body), kind: StringName, id: String, text: String}] in order.
@@ -42,6 +48,8 @@ func event(kind: StringName, id: String, pos: Vector3, text: String) -> void:
 
 ## Short headline for HUD panels.
 func headline() -> String:
+	if ricochet:
+		return "deflected — ricochet"
 	if stopped_by_armor:
 		return "stopped by armour"
 	var parts := PackedStringArray()

@@ -365,7 +365,8 @@ bounding-box hit test.
 ## Propellant
 
 Main engines and RCS have their own specific impulse (Frigate Mk I: 900 s /
-300 s). Mass flow = F / (Isp · g₀); RCS rotation uses the thrust the torque
+900 s — the RCS shares the mains' propellant feed, so manoeuvring costs no
+more per m/s than the main engines). Mass flow = F / (Isp · g₀); RCS rotation uses the thrust the torque
 needs at the RCS's effective lever arm. Mass and inertia fall as propellant
 burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_dry).
 

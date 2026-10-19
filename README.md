@@ -56,7 +56,8 @@ godot --path .
 | Controls panel (rebinding) | F1 | Guide |
 
 **Propellant:** the Frigate Mk I carries 80 t — about 1.6 km/s of main-engine
-Δv; RCS burns three times as much per m/s. Flight assist's target-matching and
+Δv; the RCS shares the main engines' propellant feed and exhaust velocity
+(Isp 900 s), so manoeuvring costs no more per m/s than the mains. Flight assist's target-matching and
 every manoeuvre spend it. Empty tanks mean no thrust and no RCS.
 
 **Combat:** T makes the target shoot back. Rounds penetrate armour (thicker at

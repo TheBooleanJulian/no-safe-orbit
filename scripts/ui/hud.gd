@@ -135,7 +135,11 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	overlay.camera = camera
 	overlay.ship_render_pos = player.interpolated_position(alpha) - render_origin
 	overlay.ship_forward = player.interpolated_orientation(alpha) * Vector3.FORWARD
-	overlay.ship_velocity = orbit.velocity.to_vector3() if orbit != null else player.velocity
+	overlay.velocity_relative_to_target = has_target and input.flight_assist and input.velocity_hold == PlayerInput.VelocityHold.TARGET
+	if overlay.velocity_relative_to_target:
+		overlay.ship_velocity = player.velocity - target.velocity
+	else:
+		overlay.ship_velocity = orbit.velocity.to_vector3() if orbit != null else player.velocity
 	overlay.mouse_stick = input.mouse_stick
 	overlay.has_target = has_target
 	overlay.has_lead = false

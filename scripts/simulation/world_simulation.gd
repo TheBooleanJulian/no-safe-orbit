@@ -29,6 +29,8 @@ const ESCAPE_RADII := 30.0
 const INERTIAL_MAX_RANGE_M := 200_000.0
 ## A round cannot hit its own ship until it has flown this long (s).
 const ARM_TIME_S := 1.0
+## A ricochet keeps this fraction of its speed relative to the ship it hit.
+const RICOCHET_KEEP := 0.55
 
 var fixed_dt: float = DEFAULT_FIXED_DT
 var tick: int = 0
@@ -443,6 +445,24 @@ func _resolve_round_hits(shot: ProjectileState) -> bool:
 			out.prev_position = out.position
 			out.velocity = best_ship.velocity + rel_v * keep
 			_continuing.append(out)
+		elif ev.report.ricochet:
+			# Deflected: mirrored about the plate, slower, off the surface.
+			var n := best_ship.orientation * ev.report.ricochet_normal_body
+			var bounced := (rel_v - 2.0 * rel_v.dot(n) * n) * RICOCHET_KEEP
+			var out := ProjectileState.new()
+			out.id = _next_round_id
+			_next_round_id += 1
+			out.shooter_id = shot.shooter_id
+			out.weapon = shot.weapon
+			out.age_s = shot.age_s
+			out.ricochet = true
+			out.position = best_ship.position + best_ship.orientation * ev.point_body + n * 1.0
+			out.prev_position = out.position
+			out.velocity = best_ship.velocity + bounced
+			_continuing.append(out)
+			# The plate took the change of momentum.
+			absorbed = 0.0
+			_apply_impulse(best_ship, ev.point_body, (rel_v - bounced) * shot.mass_kg())
 	elif best_ship.systems == null and best_ship.config.hull_hp > 0.0 and shot.weapon != null:
 		# A craft: its hull absorbs the round's penetration as damage.
 		best_ship.hull_damage += shot.weapon.penetration_at(ev.relative_speed)

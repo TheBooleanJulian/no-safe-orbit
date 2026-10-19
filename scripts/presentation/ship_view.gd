@@ -27,6 +27,14 @@ var _clock := 0.0
 const JET_MIN_FRACTION := 0.04
 const JET_LENGTH_M := 4.0
 const BEACON_PERIOD_S := 1.2
+## Shell holes kept on the hull (oldest go first).
+const MAX_HOLES := 80
+const ENTRY_HOLE_RADIUS_M := 0.55
+const EXIT_HOLE_RADIUS_M := 0.9
+
+var _holes: Array[Node3D] = []
+var _hole_material: StandardMaterial3D
+var _scorch_material: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -59,6 +67,46 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 	var on := fmod(_clock, BEACON_PERIOD_S) < 0.25
 	for b in _beacons:
 		b.visible = on and b.get_parent().visible
+
+
+## A black shell hole where a round pierced the hull (body frame point and
+## outward normal); exit holes are wider and ragged-edged.
+func add_hole(point_body: Vector3, normal_body: Vector3, exit_hole: bool) -> void:
+	if normal_body.length_squared() < 0.5:
+		return
+	if _hole_material == null:
+		_hole_material = StandardMaterial3D.new()
+		_hole_material.albedo_color = Color(0.0, 0.0, 0.0)
+		_hole_material.roughness = 1.0
+		_scorch_material = StandardMaterial3D.new()
+		_scorch_material.albedo_color = Color(0.09, 0.08, 0.07)
+		_scorch_material.roughness = 1.0
+	var n := normal_body.normalized()
+	var x := (Vector3.UP if absf(n.dot(Vector3.UP)) < 0.9 else Vector3.FORWARD).cross(n).normalized()
+	var basis := Basis(x, n, x.cross(n))
+	var r := EXIT_HOLE_RADIUS_M if exit_hole else ENTRY_HOLE_RADIUS_M
+	var hole := Node3D.new()
+	hole.transform = Transform3D(basis, point_body + n * 0.02)
+	add_child(hole)
+	for layer in [[r * 1.7, 0.0, _scorch_material], [r, 0.02, _hole_material]]:
+		var disc := CylinderMesh.new()
+		disc.top_radius = layer[0]
+		disc.bottom_radius = layer[0]
+		disc.height = 0.02
+		disc.radial_segments = 7 if exit_hole else 16  # exit: ragged
+		var mi := MeshInstance3D.new()
+		mi.mesh = disc
+		mi.material_override = layer[2]
+		mi.position = Vector3(0, layer[1], 0)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		hole.add_child(mi)
+	_holes.append(hole)
+	if _holes.size() > MAX_HOLES:
+		_holes.pop_front().queue_free()
+
+
+func hole_count() -> int:
+	return _holes.size()
 
 
 ## White conical RCS jets. Each block's share of the commanded thrust and
