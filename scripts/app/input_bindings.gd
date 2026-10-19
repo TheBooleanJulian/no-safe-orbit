@@ -48,6 +48,7 @@ const ACTIONS := [
 	[&"cycle_target", "Next target (ship, enemy craft)"],
 	[&"grapple", "Grappling arm: grab / release"],
 	[&"fire_missile", "Launch missile (at the target)"],
+	[&"tutorial", "Guided first sortie: start / skip"],
 	[&"release_mouse", "Release mouse"],
 	[&"toggle_controls", "Controls panel"],
 ]

@@ -197,4 +197,5 @@ func _run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	print("smoke_shipyard: %d failure(s)" % _failures.size())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + PlayerProfile.BACKUP_SUFFIX))
 	quit(1 if not _failures.is_empty() else 0)

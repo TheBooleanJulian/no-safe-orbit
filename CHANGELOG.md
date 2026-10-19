@@ -4,6 +4,29 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 8 — vertical-slice polish (2026-10-20)
+
+#### Added
+- Mission chain with stated goals and rewards: disable, capture, escort a
+  courier, survive two waves, then patrols. Shown on the HUD (gold, top
+  centre), in the hangar and in the debrief.
+- Opt-in guided first sortie (F2): fly, aim, fire, disable, salvage, jump,
+  repair — prompts advance on what the player does; skippable; saved.
+- Debrief opens with a sortie summary (goal, dealt, taken and from where,
+  systems lost, crew); hit-cam caption says how the round got in and lists
+  what it broke with state glyphs.
+- `tools/bench_sim.gd`: simulation frame-time profile under load (two
+  frigates, every gun, 12 missiles; ~1 ms a tick with 200+ rounds).
+
+#### Changed
+- Save hardening: profile schema 5 (tutorial and mission progress); a save
+  is read back before it replaces the profile, the previous save is kept as
+  `.bak`, a damaged profile is replaced by its backup with a clear message,
+  an interrupted save is finished on the next start, and an older schema is
+  copied aside before migrating.
+- Design tokens follow the design system: void #050508, surface #0A0E14,
+  teal #00D4C8, gold #F5C842 (magenta and red stay as hostile/danger states).
+
 ### Milestone 7 — EMP and advanced weapons (2026-10-20)
 
 #### Added

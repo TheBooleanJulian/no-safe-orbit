@@ -59,10 +59,20 @@ func _run() -> void:
 	_check(main.hud.orbit_label.text.contains("PERIAPSIS") and main.hud.orbit_label.text.contains("ENTRY IF   100 km"),
 		"HUD orbit panel shows apsides and the 100 km entry interface")
 
+	# The mission goal and the tutorial offer at the top; F2 starts it.
+	_check(main.hud.guide_label.visible and main.hud.guide_label.get_parsed_text().contains("MISSION 1/4")
+		and main.hud.guide_label.get_parsed_text().contains("[F2]"), "HUD shows the first goal and offers the tutorial")
+	_press_action("tutorial")
+	await process_frame
+	await process_frame
+	_check(main.tutorial.running() and main.hud.guide_label.get_parsed_text().contains("TUTORIAL 1/7"), "F2 starts the guided first sortie")
+
 	# Hold W for 1 s of simulation time.
 	Input.action_press("thrust_forward")
 	await _run_until_sim_time(main, 1.0)
 	Input.action_release("thrust_forward")
+	await process_frame
+	_check(main.tutorial.step >= 1, "burning the engine completes the tutorial's FLY step (now %s)" % main.tutorial.current_id())
 	var fwd := -player.body_velocity().z
 	var expected := player.config.thrust_forward_n / player.mass_kg() * 1.0
 	_check(fwd > expected * 0.8 and fwd < expected * 1.3,
@@ -211,6 +221,7 @@ func _run() -> void:
 
 	print("smoke: %d failure(s)" % _failures.size())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + PlayerProfile.BACKUP_SUFFIX))
 	quit(1 if not _failures.is_empty() else 0)
 
 

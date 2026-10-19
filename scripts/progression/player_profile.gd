@@ -18,7 +18,11 @@ extends RefCounted
 
 ## v3: a hangar of vessels (one active) instead of a single vessel.
 ## v4: parts that stopped being common are granted to the saves using them.
-const SCHEMA_VERSION := 4
+## v5: the tutorial's and the mission chain's progress (an existing player
+##     is not offered the tutorial again; [F2] still starts it).
+const SCHEMA_VERSION := 5
+## The last good save, kept beside the profile (rolling, one deep).
+const BACKUP_SUFFIX := ".bak"
 ## Equipment that was common before v4: owners get as many units as their
 ## designs already use.
 const NO_LONGER_COMMON_V4 := ["kinetic_cannon"]
@@ -40,6 +44,9 @@ const LOOT_LOG_LIMIT := 40
 
 ## Where load_or_new()/save() read and write (tests point this elsewhere).
 static var path := DEFAULT_PATH
+## What load_or_new() had to do to get a profile (restored a backup, kept a
+## damaged file aside…), for the player to read; "" when the load was clean.
+static var load_notice := ""
 
 var spare_parts: int = STARTING_SPARE_PARTS
 var credits: int = STARTING_CREDITS
@@ -55,6 +62,11 @@ var loot_log: PackedStringArray = PackedStringArray()
 ## Every vessel in the hangar, and which one is flown and edited.
 var vessels: Array[ShipInstance] = []
 var active_vessel: int = 0
+## Tutorial.to_dict() and MissionChain.to_dict().
+var tutorial: Dictionary = {"state": "offer", "step": 0}
+var campaign: Dictionary = {"step": 0}
+## The schema the profile was read from (SCHEMA_VERSION for a new one).
+var loaded_schema: int = SCHEMA_VERSION
 ## Set by the shipyard while a new hull is on the slip (not saved): every
 ## vessel's rarer parts are then spoken for, the active one's included.
 var designing_new: bool = false
@@ -476,6 +488,8 @@ func to_dict() -> Dictionary:
 		"hire_pool": hire_pool.duplicate(true),
 		"vendor_stock": vendor_stock.duplicate(true),
 		"tech": tech.duplicate(),
+		"tutorial": tutorial.duplicate(),
+		"campaign": campaign.duplicate(),
 	}
 
 
@@ -490,6 +504,7 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 	# Migrations, oldest first. v1 → v2: credits and cargo added (defaults).
 	# v2 → v3: the single "vessel" becomes the hangar's only vessel.
 	var p := PlayerProfile.new(1)
+	p.loaded_schema = int(version)
 	p.spare_parts = int(d.get("spare_parts", STARTING_SPARE_PARTS))
 	p.credits = int(d.get("credits", STARTING_CREDITS))
 	var debrief: Variant = d.get("last_debrief", {})
@@ -535,6 +550,7 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 	if tk is Dictionary:
 		for id in tk:
 			p.tech[str(id)] = clampi(int(tk[id]), 0, TechTree.MAX_LEVEL)
+	_read_v5_progress(p, d)
 	if int(version) < 4:
 		var designs: Array[ShipBlueprint] = []
 		for v in p.vessels:
@@ -562,20 +578,45 @@ func grant_used(ids: Array, designs: Array[ShipBlueprint]) -> void:
 			inventory[id] = most
 
 
+## Atomic, with a rolling backup: the new profile is written to a temporary
+## file and read back; only then does the current save become the backup
+## (`.bak`, the last good save) and the new file take its place. A crash at
+## any point leaves a whole profile or a whole backup, never a half-written
+## file.
 func save(file_path: String = "") -> Error:
 	var target := file_path if file_path != "" else path
 	DirAccess.make_dir_recursive_absolute(target.get_base_dir())
 	var tmp := target + ".tmp"
+	var text := JSON.stringify(to_dict(), "\t", false)
 	var file := FileAccess.open(tmp, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
-	file.store_string(JSON.stringify(to_dict(), "\t", false))
+	file.store_string(text)
 	file.close()
-	# Write, then swap in: a crash mid-write never leaves a half-written profile.
+	if FileAccess.get_file_as_string(tmp) != text:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
+		return ERR_FILE_CORRUPT
 	var abs_target := ProjectSettings.globalize_path(target)
 	if FileAccess.file_exists(target):
-		DirAccess.remove_absolute(abs_target)
+		var bak := ProjectSettings.globalize_path(target + BACKUP_SUFFIX)
+		DirAccess.remove_absolute(bak)
+		var err := DirAccess.rename_absolute(abs_target, bak)
+		if err != OK:
+			return err
 	return DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), abs_target)
+
+
+## v4 → v5: tutorial and mission-chain progress. A pilot who has flown
+## already isn't offered the tutorial; the chain starts at its first goal.
+static func _read_v5_progress(p: PlayerProfile, d: Dictionary) -> void:
+	var t: Variant = d.get("tutorial")
+	if t is Dictionary:
+		p.tutorial = Tutorial.from_dict(t).to_dict()
+	else:
+		var veteran := p.missions_completed > 0 or p.vessels_lost > 0 or not p.vessels.is_empty()
+		p.tutorial = {"state": "skipped" if veteran else "offer", "step": 0}
+	var c: Variant = d.get("campaign")
+	p.campaign = MissionChain.from_dict(c if c is Dictionary else {}).to_dict()
 
 
 static func load_file(file_path: String, errors: PackedStringArray) -> PlayerProfile:
@@ -590,9 +631,25 @@ static func load_file(file_path: String, errors: PackedStringArray) -> PlayerPro
 
 
 ## The saved profile, or a new one when there is none. An unreadable
-## profile is kept aside (never overwritten) and a new one started.
+## profile is kept aside (never overwritten) and the backup — the save
+## before it — is loaded instead; only with no usable backup does a new
+## profile start. A missing profile with a whole `.tmp` beside it (a save
+## cut off between its renames) is finished from that. `load_notice` says which, for the player. Loading an
+## older schema first copies the file to `<path>.v<old>` (the migration
+## never touches the only copy).
 static func load_or_new() -> PlayerProfile:
+	load_notice = ""
+	var bak := path + BACKUP_SUFFIX
 	if not FileAccess.file_exists(path):
+		# A save interrupted between its two renames left its new file, read
+		# back whole, as .tmp. (A profile deleted on purpose stays deleted.)
+		var tmp := path + ".tmp"
+		var finished := load_file(tmp, PackedStringArray()) if FileAccess.file_exists(tmp) else null
+		if finished != null:
+			DirAccess.rename_absolute(ProjectSettings.globalize_path(tmp), ProjectSettings.globalize_path(path))
+			load_notice = "PROFILE RECOVERED — the last save was interrupted; it has been finished"
+			GameLog.warn("profile", "%s missing; finished the interrupted save from %s" % [path, tmp])
+			return finished
 		return PlayerProfile.new()
 	var errors := PackedStringArray()
 	var p := load_file(path, errors)
@@ -600,8 +657,21 @@ static func load_or_new() -> PlayerProfile:
 		var aside := path + ".unreadable"
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(aside))
 		DirAccess.rename_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(aside))
-		GameLog.warn("profile", "Could not read %s (%s); kept it as %s and started a new profile" % [path, "; ".join(errors), aside])
+		var why := "; ".join(errors)
+		var backup_errors := PackedStringArray()
+		var restored := load_file(bak, backup_errors) if FileAccess.file_exists(bak) else null
+		if restored != null:
+			load_notice = "PROFILE DAMAGED (%s) — restored the previous save from its backup; the damaged file is kept as %s" % [why, aside.get_file()]
+			GameLog.warn("profile", "Could not read %s (%s); kept it as %s and restored %s" % [path, why, aside, bak])
+			return restored
+		load_notice = "PROFILE DAMAGED (%s) and no usable backup — started a new profile; the damaged file is kept as %s" % [why, aside.get_file()]
+		GameLog.warn("profile", "Could not read %s (%s); kept it as %s and started a new profile" % [path, why, aside])
 		return PlayerProfile.new()
 	for e in errors:
 		GameLog.warn("profile", e)
+	if p.loaded_schema < SCHEMA_VERSION:
+		var keep := "%s.v%d" % [path, p.loaded_schema]
+		if not FileAccess.file_exists(keep):
+			DirAccess.copy_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(keep))
+		GameLog.info("profile", "Profile schema %d → %d; the original is kept as %s" % [p.loaded_schema, SCHEMA_VERSION, keep])
 	return p

@@ -124,6 +124,10 @@ func _ready() -> void:
 	if Main.debrief_pending and not profile.last_debrief.is_empty():
 		Main.debrief_pending = false
 		debrief.show_debrief(profile.last_debrief, "Bank your cargo before the next sortie: what's in the hold is lost with the ship.")
+	if PlayerProfile.load_notice != "":
+		_set_status(PlayerProfile.load_notice, true)
+		PlayerProfile.load_notice = ""
+	tutorial_repair_check()
 	for v in [deck_editor, side_view, front_view]:
 		v.editor = editor
 	_fill_palette(hull_list, catalog.hull)
@@ -528,6 +532,7 @@ func repair(priority: int = -1) -> int:
 	var pr: int = _priority.selected if priority < 0 else priority
 	var jobs := ServiceYard.plan(ServiceYard.repair_jobs(profile.vessel, editor.catalog), pr, profile.spare_parts, profile.vessel, profile)
 	var spent := ServiceYard.perform(jobs, profile.vessel, profile)
+	tutorial_repair_check()
 	_save_profile()
 	if jobs.is_empty():
 		_set_status("Nothing repairable with %d spare parts" % profile.spare_parts, true)
@@ -535,6 +540,14 @@ func repair(priority: int = -1) -> int:
 		_set_status("%s: %d repair%s for %d spare parts" % [ServiceYard.PRIORITY_NAMES[pr], jobs.size(), "" if jobs.size() == 1 else "s", spent])
 	_refresh_hangar()
 	return spent
+
+
+## The tutorial's last step: done once the vessel needs no repairs.
+func tutorial_repair_check() -> void:
+	var t := Tutorial.from_dict(profile.tutorial)
+	if t.current_id() == "repair" and t.observe({"repair": ServiceYard.repair_jobs(profile.vessel, editor.catalog).is_empty()}):
+		profile.tutorial = t.to_dict()
+		_set_status("Tutorial complete — the ship is yours. LAUNCH ▶ when ready.")
 
 
 ## Start designing a new hull: a single block on an empty slip. Launch
@@ -1183,7 +1196,11 @@ func _refresh_hangar() -> void:
 	var gold := Rarity.color_of(Rarity.Tier.LEGENDARY).to_html(false)
 	var lines := PackedStringArray([
 		"[b]%s[/b] · SPARE PARTS [color=#%s]%d[/color]" % [v.name, gold, profile.spare_parts],
+		CyberTheme.tint("NEXT  " + MissionChain.from_dict(profile.campaign).hud_line(), CyberTheme.AMBER),
 	])
+	var guide := Tutorial.from_dict(profile.tutorial)
+	if guide.current_id() == "repair":
+		lines.append(CyberTheme.tint(guide.prompt(), CyberTheme.CYAN))
 	if jobs.is_empty():
 		lines.append(CyberTheme.tint("✔ Vessel in full repair", CyberTheme.CYAN))
 	else:
