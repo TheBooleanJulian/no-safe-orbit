@@ -184,9 +184,7 @@ func update(world: WorldSimulation, dt: float) -> void:
 				if c.service_left_s > 0.0:
 					c.service_left_s = maxf(c.service_left_s - dt, 0.0)
 					if c.service_left_s <= 0.0:
-						c.propellant_fraction = 1.0
-						c.ammo = c.config.cannon.magazine_rounds if c.config.cannon != null else 0
-						_note("%s rearmed and refuelled" % c.label)
+						_note("%s %s" % [c.label, _resupply_from(carrier, c)])
 			Status.FLYING:
 				_fly(world, c, carrier, target, hostiles, dt)
 
@@ -229,6 +227,33 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 			and s.position.distance_to(rack_point) < RECOVER_RADIUS_M \
 			and (s.velocity - carrier.velocity).length() < RECOVER_SPEED_MPS:
 		_recover(world, c)
+
+
+## Refuel and rearm a docked craft from the carrier's own stores: its
+## propellant from the carrier's tanks, its rounds from the carrier's
+## magazine by mass. Returns what happened.
+func _resupply_from(carrier: ShipState, c: Craft) -> String:
+	var cap := c.config.propellant_capacity_kg
+	var need_kg := (1.0 - c.propellant_fraction) * cap
+	var take := need_kg
+	if carrier != null and not carrier.config.unlimited_propellant:
+		take = minf(need_kg, carrier.propellant_kg)
+		carrier.propellant_kg -= take
+	c.propellant_fraction = clampf(c.propellant_fraction + take / maxf(cap, 1.0), 0.0, 1.0)
+	var short := take < need_kg - 1e-3
+	if c.config.cannon != null:
+		var need_rounds := c.config.cannon.magazine_rounds - c.ammo
+		var got := need_rounds
+		if carrier != null and carrier.config.cannon != null and need_rounds > 0:
+			var per_round := c.config.cannon.round_mass_kg / maxf(carrier.config.cannon.round_mass_kg, 1e-3)
+			var cost := ceili(need_rounds * per_round - 1e-9)
+			if cost > carrier.cannon_rounds:
+				got = floori(carrier.cannon_rounds / maxf(per_round, 1e-6))
+				cost = carrier.cannon_rounds
+			carrier.cannon_rounds -= cost
+		c.ammo += got
+		short = short or got < need_rounds
+	return "refuelled and rearmed from the carrier" if not short else "only partly refuelled / rearmed — the carrier is short"
 
 
 func _recover(world: WorldSimulation, c: Craft) -> void:

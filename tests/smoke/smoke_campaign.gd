@@ -143,7 +143,10 @@ func _run() -> void:
 	if yard == null:
 		return _finish()
 	var vessel := yard.profile.vessel
-	_check(vessel.sorties == 1 and vessel.is_damaged() and JSON.stringify(vessel.condition) == JSON.stringify(flown_condition),
+	var docked_condition := vessel.condition.duplicate(true)
+	_check(docked_condition.has("stores"), "the stores it came back with are recorded (%s)" % str(docked_condition.get("stores")))
+	docked_condition.erase("stores")
+	_check(vessel.sorties == 1 and vessel.is_damaged() and JSON.stringify(docked_condition) == JSON.stringify(flown_condition),
 		"the docked vessel keeps exactly the damage it flew back with (the wounded recover)")
 	_check(yard._hangar_label.get_parsed_text().contains("DAMAGE"), "the hangar panel lists the damage")
 	_check(yard.debrief.visible and yard.debrief.text().contains("LESSONS FOR THE SHIPYARD") and yard.debrief.text().contains("Hit from the"),

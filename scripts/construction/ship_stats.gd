@@ -60,6 +60,8 @@ var cannon_ids: PackedStringArray = PackedStringArray()
 var cannon_positions_m: PackedVector3Array = PackedVector3Array()
 var cannon_normals: PackedVector3Array = PackedVector3Array()
 var cannon_config: KineticCannonConfig
+## Each mount's gun (same order as cannon_ids).
+var cannon_configs: Array[KineticCannonConfig] = []
 ## Armour plates: total mass and count.
 var plate_mass_kg: float = 0.0
 var plate_count: int = 0
@@ -146,7 +148,9 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 				s.cannon_ids.append(bp.equipment[i].id)
 				s.cannon_positions_m.append(pos)
 				s.cannon_normals.append(Vector3(ShipGrid.FACE_NORMALS.get(bp.equipment[i].face, Vector3i(0, 0, -1))))
-				s.cannon_config = def.cannon
+				s.cannon_configs.append(def.cannon)
+				if s.cannon_config == null:
+					s.cannon_config = def.cannon
 			EquipmentDefinition.Kind.PROPELLANT_TANK:
 				s.propellant_capacity_kg += def.propellant_capacity_kg
 				propellant.append({"mass": def.propellant_capacity_kg, "center": pos, "size": size_m})
@@ -226,9 +230,18 @@ func to_ship_config(display_name: String) -> ShipConfig:
 	cfg.hit_box_center = hull_bounds_m.get_center() - center_of_mass_m
 	cfg.hit_box_half_extents = hull_bounds_m.size * 0.5
 	if cannon_config != null:
-		var gun: KineticCannonConfig = cannon_config.duplicate()
-		gun.magazine_rounds = rounds_capacity
-		cfg.cannon = gun
+		# One magazine feeds every mount; each mount keeps its own gun.
+		var copies := {}
+		for g in cannon_configs:
+			if not copies.has(g):
+				var copy: KineticCannonConfig = g.duplicate()
+				copy.magazine_rounds = rounds_capacity
+				copies[g] = copy
+		cfg.cannon = copies[cannon_config]
+		var per_mount: Array[KineticCannonConfig] = []
+		for g in cannon_configs:
+			per_mount.append(copies[g])
+		cfg.mount_cannons = per_mount
 		var muzzles := PackedVector3Array()
 		for p in cannon_positions_m:
 			muzzles.append(p - center_of_mass_m)

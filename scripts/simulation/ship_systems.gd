@@ -780,9 +780,7 @@ func effective_config() -> ShipConfig:
 	cfg.max_torque_nm *= sys
 	cfg.assist_max_rate_rad_s *= sys
 	if cfg.cannon != null and channel_factor(Channel.WEP) != 1.0:
-		var boosted: KineticCannonConfig = cfg.cannon.duplicate()
-		boosted.rate_of_fire_rpm *= channel_factor(Channel.WEP)
-		cfg.cannon = boosted
+		cfg.scale_rate_of_fire(channel_factor(Channel.WEP))
 	if not has_command():
 		# Ship AI in control: limited mobility.
 		cfg.assist_max_rate_rad_s *= SHIP_AI_FACTOR
@@ -792,14 +790,10 @@ func effective_config() -> ShipConfig:
 		cfg.thrust_vertical_n *= SHIP_AI_FACTOR
 		cfg.thrust_torque_body *= SHIP_AI_FACTOR
 		if cfg.cannon != null:
-			var laid: KineticCannonConfig = cfg.cannon.duplicate()
-			laid.rate_of_fire_rpm *= SHIP_AI_GUN_RATE_FACTOR
-			cfg.cannon = laid
+			cfg.scale_rate_of_fire(SHIP_AI_GUN_RATE_FACTOR)
 			cfg.cannon_extra_dispersion_rad += deg_to_rad(SHIP_AI_DISPERSION_DEG)
 	if cfg.cannon != null and not has_gun_crew():
-		var gun: KineticCannonConfig = cfg.cannon.duplicate()
-		gun.rate_of_fire_rpm *= NO_GUN_CREW_RATE_FACTOR
-		cfg.cannon = gun
+		cfg.scale_rate_of_fire(NO_GUN_CREW_RATE_FACTOR)
 	_config = cfg
 	return cfg
 

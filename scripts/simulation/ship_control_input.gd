@@ -26,6 +26,10 @@ var fire: bool = false
 ## position (world axes, m). Without one the turrets face the nose.
 var has_aim: bool = false
 var aim_offset: Vector3 = Vector3.ZERO
+## Fire-control lock: with mixed guns, each turret adds the difference
+## between its own lead on this ship and the primary gun's lead, so one aim
+## point serves guns of different muzzle velocities.
+var lead_target_id: StringName = &""
 
 
 static func create(p_translation: Vector3, p_rotation: Vector3, p_assist: bool) -> ShipControlInput:

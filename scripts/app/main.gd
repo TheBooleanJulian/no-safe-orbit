@@ -68,6 +68,8 @@ const ENGAGE_GRACE_S := 5.0
 const DEFAULT_AIM_RANGE_M := 2000.0
 ## Dimensional jump drive: hold [B] this long (s) to jump to Earth Shipyard.
 const JUMP_HOLD_S := 5.0
+## A beaten enemy that runs this far is gone: no payout, the next contact comes.
+const ESCAPE_RANGE_M := 40_000.0
 const STATION_NAME := "Earth Shipyard"
 var _jump_hold := 0.0
 ## The current target surrendered to our boarders and has been paid out;
@@ -124,7 +126,11 @@ func _start_scenario() -> void:
 	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
 		# The vessel flies as it was left: damage persists between sorties.
 		systems.apply_condition(vessel.condition)
+		# Stores as left (the yard tops them up at launch, for credits).
+		var stores: Dictionary = vessel.condition.get("stores", {})
+		player.propellant_kg = minf(float(stores.get("propellant_kg", player.propellant_kg)), player.propellant_kg)
 		player.propellant_kg = minf(player.propellant_kg, _intact_tank_capacity(systems))
+		player.cannon_rounds = mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds)
 	player.attach_systems(systems)
 	world.add_ship(player)
 	player_wing = AirWing.for_ship(player)
@@ -338,6 +344,8 @@ func _aim(input: ShipControlInput, player: ShipState, target: ShipState) -> void
 	player_input.aim_range_m = range_m
 	input.has_aim = true
 	input.aim_offset = origin + dir * range_m
+	# With a lock, the fire-control computer corrects other guns' leads.
+	input.lead_target_id = TARGET_ID if target.is_active() and track.locked else &""
 
 
 ## Zooming in: swing the camera to look at the aim point and put the cursor
@@ -418,7 +426,9 @@ func close_sortie() -> void:
 		lines = p.lose_vessel(catalog)
 		GameLog.info("main", "Vessel lost — the hold is gone; the station rebuilds the same design")
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
-		lines.append_array(p.dock(player.systems.condition(), catalog))
+		var after := player.systems.condition()
+		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds}
+		lines.append_array(p.dock(after, catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	for line in lines:
 		GameLog.info("main", line)
@@ -789,6 +799,13 @@ func _process(delta: float) -> void:
 	if _update_jump(player, delta):
 		return
 	_update_tracks(player, target, delta)
+	# A beaten enemy that got away.
+	if target.is_active() and GunneryAI.should_flee(target) and target.position.distance_to(player.position) > ESCAPE_RANGE_M:
+		var line := "%s escaped — out of reach" % target.display_name
+		hud.notice(line, world.sim_time)
+		combat_log.record(world.sim_time, "contact", line)
+		_next_contact()
+		target = world.get_ship(TARGET_ID)
 	# A takeover pays out at once; the prize leaves once the boarders are home.
 	if target.is_active() and target.systems != null and target.systems.captured and not _prize_taken:
 		take_prize()
@@ -821,7 +838,7 @@ func _process(delta: float) -> void:
 		if target.position.distance_to(player.position) < ENGAGE_STANDOFF_M + 150.0:
 			_target_arriving = false
 	elif engaging:
-		world.set_input(TARGET_ID, GunneryAI.command(target, player))
+		world.set_input(TARGET_ID, GunneryAI.combat(target, player, world.sim_time))
 		if get_profile().missions_completed + 1 >= ENEMY_WING_FROM_MISSION and not target.systems.is_disabled():
 			for c in target_wing.crafts:
 				if c.status == AirWing.Status.DOCKED and not c.is_drone() and c.service_left_s <= 0.0 and c.hull_fraction > 0.0:

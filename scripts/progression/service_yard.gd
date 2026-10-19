@@ -71,6 +71,52 @@ static func room_cost(def: RoomDefinition, cells: int) -> int:
 	return maxi(ceili(def.mass_per_cell_kg * cells / 2000.0), 1)
 
 
+## Resupply at launch, in credits: propellant per tonne, rounds per credit.
+const PROPELLANT_CREDITS_PER_T := 1.0
+const ROUNDS_PER_CREDIT := 10
+
+
+## Propellant (kg) and rounds the vessel used last sortie, and what topping
+## them up costs: {propellant_kg, rounds, credits}.
+static func resupply_needs(vessel: ShipInstance, catalog: ConstructionCatalog) -> Dictionary:
+	var stores: Dictionary = vessel.condition.get("stores", {})
+	if stores.is_empty():
+		return {"propellant_kg": 0.0, "rounds": 0, "credits": 0}
+	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
+	var prop := maxf(stats.propellant_capacity_kg - float(stores.get("propellant_kg", stats.propellant_capacity_kg)), 0.0)
+	var rounds := maxi(stats.rounds_capacity - int(stores.get("rounds", stats.rounds_capacity)), 0)
+	return {"propellant_kg": prop, "rounds": rounds,
+		"credits": ceili(prop / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds) / ROUNDS_PER_CREDIT - 1e-9)}
+
+
+## Top up propellant (first) and rounds with what the credits allow. Returns
+## what was bought ("" if nothing was needed).
+static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: ConstructionCatalog) -> String:
+	var need := resupply_needs(vessel, catalog)
+	if need.credits == 0:
+		vessel.condition.erase("stores")
+		return ""
+	var stores: Dictionary = vessel.condition.stores
+	if profile.credits >= int(need.credits):
+		profile.credits -= int(need.credits)
+		vessel.condition.erase("stores")
+		var line := "Resupplied %.1f t propellant and %d rounds for %d credits" % [need.propellant_kg / 1000.0, need.rounds, need.credits]
+		vessel.record(line)
+		return line
+	# Short of credits: as much propellant, then as many rounds, as they buy.
+	var budget := float(profile.credits)
+	var kg := minf(float(need.propellant_kg), budget / PROPELLANT_CREDITS_PER_T * 1000.0)
+	budget -= ceilf(kg / 1000.0 * PROPELLANT_CREDITS_PER_T)
+	var rounds := mini(int(need.rounds), int(maxf(budget, 0.0)) * ROUNDS_PER_CREDIT)
+	budget -= ceilf(float(rounds) / ROUNDS_PER_CREDIT)
+	profile.credits = maxi(int(budget), 0)
+	stores["propellant_kg"] = float(stores.get("propellant_kg", 0.0)) + kg
+	stores["rounds"] = int(stores.get("rounds", 0)) + rounds
+	var line := "Partly resupplied (credits short): %.1f t propellant, %d rounds" % [kg / 1000.0, rounds]
+	vessel.record(line)
+	return line
+
+
 ## Power bus conduit: a part per BUS_CELLS_PER_PART cells.
 const BUS_CELLS_PER_PART := 2
 
