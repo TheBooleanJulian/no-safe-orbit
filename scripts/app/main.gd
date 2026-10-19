@@ -168,6 +168,7 @@ func _spawn_view(id: StringName, tint: Color) -> void:
 	view.grid = _designs[id].grid
 	view.stats = _designs[id].stats
 	view.tint = tint
+	view.hull_name = get_profile().vessel.name if id == PLAYER_ID and get_profile().vessel != null else world.get_ship(id).display_name
 	add_child(view)
 	_views[id] = view
 
@@ -328,6 +329,9 @@ func salvage_target() -> Array[LootRoller.Drop]:
 	world.remove_ship(TARGET_ID)
 	hud.reset()
 	_spawn_target()
+	# New contact, new hull (and its own name on it).
+	(_views[TARGET_ID] as Node).queue_free()
+	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
 	return drops
 
 
