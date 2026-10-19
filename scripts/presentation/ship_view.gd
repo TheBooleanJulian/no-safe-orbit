@@ -75,6 +75,7 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 	_plume_material.albedo_color.a = 0.15 + 0.4 * fwd_fraction
 	if state.systems != null:
 		_show_damage(state.systems)
+	_drift_pieces(get_process_delta_time())
 	_train_turrets(state)
 	_update_jets(state)
 	_clock += get_process_delta_time()
@@ -195,24 +196,76 @@ static func _snap_exhaust(dir: Vector3, normal: Vector3) -> Vector3:
 func _train_turrets(state: ShipState) -> void:
 	var ids := state.config.cannon_mount_ids
 	for t in _turrets:
-		var k := ids.find(t.id)
-		if k < 0 or k >= state.turret_dirs.size():
+		var pd: bool = t.get("pd", false)
+		var k := (state.config.pd_mount_ids if pd else ids).find(t.id)
+		var dirs := state.pd_dirs if pd else state.turret_dirs
+		if k < 0 or k >= dirs.size():
 			continue
-		var dir := state.turret_dirs[k]
+		var dir := dirs[k]
 		var pivot: Node3D = t.pivot
 		var up := Vector3.UP if absf(dir.y) < 0.95 else Vector3.BACK
 		pivot.basis = Basis.looking_at(dir, up)
 
 
-## Destroyed external systems disappear; wrecked modules turn charred.
+## Destroyed external systems disappear; a wrecked module breaks up: its
+## plating shears off in tumbling pieces that drift away from the hull,
+## leaving a charred, shrunken frame.
 func _show_damage(systems: ShipSystems) -> void:
 	for e in systems.equipment:
 		if e.destroyed() and _parts.has(e.id):
 			(_parts[e.id] as Node3D).visible = false
 	for i in systems.modules.size():
 		var id := systems.blueprint.modules[i].id
-		if systems.modules[i].wrecked() and _parts.has(id):
-			(_parts[id] as MeshInstance3D).material_override = _wreck_material
+		if systems.modules[i].wrecked() and _parts.has(id) and not _broken.has(id):
+			_broken[id] = true
+			var mi := _parts[id] as MeshInstance3D
+			_break_off(mi)
+			mi.material_override = _wreck_material
+			mi.scale = Vector3.ONE * 0.72
+
+
+func _break_off(mi: MeshInstance3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(mi.name) + _broken.size()
+	var size := mi.get_aabb().size
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.32, 0.33, 0.35)
+	mat.metallic = 0.6
+	mat.roughness = 0.7
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	for k in BREAK_PIECES:
+		var box := BoxMesh.new()
+		box.size = Vector3(size.x * rng.randf_range(0.25, 0.5), maxf(size.y * 0.08, 0.12), size.z * rng.randf_range(0.25, 0.5))
+		var piece := MeshInstance3D.new()
+		piece.mesh = box
+		piece.material_override = mat
+		var out := (mi.position + Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1))).normalized()
+		piece.position = mi.position + out * size.length() * 0.3
+		add_child(piece)
+		_pieces.append({"node": piece, "mat": mat, "velocity": out * rng.randf_range(1.5, 5.0),
+			"spin": Vector3(rng.randf_range(-2, 2), rng.randf_range(-2, 2), rng.randf_range(-2, 2)), "age": 0.0})
+
+
+func _drift_pieces(delta: float) -> void:
+	var alive: Array[Dictionary] = []
+	for p in _pieces:
+		p.age += delta
+		var node: MeshInstance3D = p.node
+		if p.age >= BREAK_LIFETIME_S:
+			node.queue_free()
+			continue
+		node.position += (p.velocity as Vector3) * delta
+		node.rotation += (p.spin as Vector3) * delta
+		(p.mat as StandardMaterial3D).albedo_color.a = clampf((BREAK_LIFETIME_S - p.age) / 3.0, 0.0, 1.0)
+		alive.append(p)
+	_pieces = alive
+
+
+## Pieces a wrecked module sheds, and how long they stay in view (s).
+const BREAK_PIECES := 4
+const BREAK_LIFETIME_S := 12.0
+var _broken := {}
+var _pieces: Array[Dictionary] = []
 
 
 ## One additive cone per main engine, pointing aft; length ∝ main thrust.

@@ -27,6 +27,9 @@ const SUN_ENERGY := 1.4
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 var gangways := GangwayView.new()
+var audio := ShipAudio.new()
+var _rounds_heard := 0
+var _alert_heard := ""
 
 ## Design the player flies; set by the shipyard before it switches to this
 ## scene. Null = the default template. Only used to commission the first
@@ -70,6 +73,10 @@ const DEFAULT_AIM_RANGE_M := 2000.0
 const JUMP_HOLD_S := 5.0
 ## A beaten enemy that runs this far is gone: no payout, the next contact comes.
 const ESCAPE_RANGE_M := 40_000.0
+## Enemies try to board a disabled player from this mission on.
+const ENEMY_BOARD_FROM_MISSION := 2
+## How our crew defends against boarders (chosen in Tab → CREW).
+var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
 const STATION_NAME := "Earth Shipyard"
 var _jump_hold := 0.0
 ## The current target surrendered to our boarders and has been paid out;
@@ -93,6 +100,8 @@ func _ready() -> void:
 	InputBindings.apply_saved()
 	gangways.name = "Gangways"
 	add_child(gangways)
+	audio.name = "Audio"
+	add_child(audio)
 	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
 	stars.build(celestial)
 	hud.celestial = celestial
@@ -130,7 +139,7 @@ func _start_scenario() -> void:
 		var stores: Dictionary = vessel.condition.get("stores", {})
 		player.propellant_kg = minf(float(stores.get("propellant_kg", player.propellant_kg)), player.propellant_kg)
 		player.propellant_kg = minf(player.propellant_kg, _intact_tank_capacity(systems))
-		player.cannon_rounds = mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds)
+		player.set_rounds(mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds))
 	player.attach_systems(systems)
 	world.add_ship(player)
 	player_wing = AirWing.for_ship(player)
@@ -358,6 +367,45 @@ func _center_view_on_aim(player: ShipState) -> void:
 	player_input.aim_offset = Vector2.ZERO
 
 
+## Boarders took our bridge.
+func player_captured() -> bool:
+	var player := world.get_ship(PLAYER_ID) if world != null else null
+	return player != null and player.systems != null and player.systems.captured
+
+
+## The enemy boards a beaten player: it lines its collar up with one of our
+## ports, extends a gangway (V cuts it loose) and sends its party across.
+func _enemy_board(target: ShipState, player: ShipState) -> void:
+	var link := world.link_for(TARGET_ID)
+	if link == null:
+		var found := Docking.best(target, player)
+		if not found.is_empty() and found.assessment.ok:
+			world.dock(TARGET_ID, PLAYER_ID)
+			var line := "ENEMY GANGWAY — %s is coming aboard! [V] cut it loose" % target.display_name
+			hud.notice(line, world.sim_time)
+			combat_log.record(world.sim_time, "boarding", line)
+			world.set_input(TARGET_ID, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
+		else:
+			world.set_input(TARGET_ID, GunneryAI.dock_approach(target, player))
+		return
+	world.set_input(TARGET_ID, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
+	if link.sealed() and world.boarding_for(link) == null:
+		var party := world.start_boarding(link, BoardingAction.MAX_TEAM)
+		if party != null:
+			party.set_defence(player_defence)
+			var line := "ENEMY BOARDERS crossing (%d) — Tab → CREW: defence policy" % party.team.size()
+			hud.notice(line, world.sim_time)
+			combat_log.record(world.sim_time, "boarding", line)
+
+
+## The enemy boarding us right now, or null.
+func enemy_boarding() -> BoardingAction:
+	for b in world.boardings:
+		if b.link.target_id == PLAYER_ID and not b.finished():
+			return b
+	return null
+
+
 ## Put the aim cursor over a point (offset from the player, world axes).
 func aim_cursor_at(offset: Vector3) -> void:
 	if player_input.zoomed:
@@ -422,9 +470,9 @@ func close_sortie() -> void:
 				if m.location < 0 and m.state != CrewRoster.State.DEAD:
 					m.state = CrewRoster.State.DEAD
 					lines.append("Boarder %s (%s) left behind" % [m.id, CrewRoster.ROLE_NAMES[m.role]])
-	if not player.is_active():
+	if not player.is_active() or player_captured():
 		lines = p.lose_vessel(catalog)
-		GameLog.info("main", "Vessel lost — the hold is gone; the station rebuilds the same design")
+		GameLog.info("main", "Vessel %s — the hold is gone; the station rebuilds the same design" % ("captured" if player_captured() else "lost"))
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
 		var after := player.systems.condition()
 		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds}
@@ -433,7 +481,7 @@ func close_sortie() -> void:
 	for line in lines:
 		GameLog.info("main", line)
 	if combat_log != null:
-		var outcome := "vessel lost" if not player.is_active() else "jumped home to %s" % STATION_NAME
+		var outcome := "vessel captured by boarders" if player_captured() else ("vessel lost" if not player.is_active() else "jumped home to %s" % STATION_NAME)
 		combat_log.finish(player, outcome, world.sim_time, lines)
 		p.last_debrief = combat_log.to_dict()
 		var path := combat_log.save()
@@ -655,6 +703,12 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			player_wing.by_id(arg[0]).risk = arg[1]
 		&"craft_priority":
 			player_wing.by_id(arg[0]).priority = arg[1]
+		&"defence":
+			player_defence = int(arg)
+			var b := enemy_boarding()
+			if b != null:
+				b.set_defence(player_defence)
+			hud.notice("Crew defence: %s" % BoardingAction.DEFENCE_NAMES[player_defence], world.sim_time)
 		&"vent":
 			var went := get_profile().vessel.vent(str(arg[0]), str(arg[1]))
 			if went != "":
@@ -745,6 +799,9 @@ func toggle_dock() -> void:
 	if link != null:
 		var b := world.boarding_for(link)
 		link.release()
+		if link.attacker_id != PLAYER_ID:
+			hud.notice("Enemy gangway cut loose%s" % (" — their boarders aboard are cut off!" if b != null and not b.finished() and b.room >= 0 else ""), world.sim_time)
+			return
 		hud.notice("Gangway released%s" % (" — the boarding party is cut off!" if b != null and not b.finished() and b.room >= 0 else ""), world.sim_time)
 		return
 	var found := world.dock(PLAYER_ID, TARGET_ID)
@@ -757,6 +814,9 @@ func toggle_dock() -> void:
 ## N: send a boarding party over a sealed gangway, or order it home.
 func toggle_boarding() -> void:
 	var link := world.link_for(PLAYER_ID)
+	if link != null and link.attacker_id != PLAYER_ID:
+		hud.notice("BOARD: that gangway is theirs — [V] cuts it loose; Tab → CREW sets your defence", world.sim_time)
+		return
 	var b := world.boarding_for(link) if link != null else null
 	if b != null and not b.finished():
 		b.withdraw()
@@ -825,8 +885,10 @@ func _process(delta: float) -> void:
 		and world.sim_time - track.detected_time >= ENGAGE_GRACE_S and enemy_track.in_contact
 	if target.is_active() and target.systems != null and target.systems.captured:
 		world.set_input(TARGET_ID, ShipControlInput.neutral())
-	elif world.link_for(TARGET_ID) != null and GunneryAI.can_break_contact(target):
+	elif world.link_for(TARGET_ID) != null and world.link_for(TARGET_ID).attacker_id != TARGET_ID and GunneryAI.can_break_contact(target):
 		world.set_input(TARGET_ID, GunneryAI.break_contact(target, player))
+	elif engaging and get_profile().missions_completed + 1 >= ENEMY_BOARD_FROM_MISSION and GunneryAI.wants_to_board(target, player):
+		_enemy_board(target, player)
 	elif _target_arriving and target.is_active() and not target.systems.is_disabled():
 		# Inbound: close to the standoff, nose on the player; guns only once engaging.
 		var input := GunneryAI.command(target, player) if engaging else ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
@@ -846,20 +908,26 @@ func _process(delta: float) -> void:
 	_link_wings()
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
-	if not player.is_active() and not _sortie_closed:
+	if (not player.is_active() or player_captured()) and not _sortie_closed:
 		close_sortie()
 		var p := get_profile()
 		hud.debrief.show_debrief(p.last_debrief, "[BACKSPACE] respawn the %s here  ·  [B] back to %s" % [p.vessel.name, STATION_NAME])
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	var running := player.is_active() and not hud.controls.visible
+	var running := player.is_active() and not player_captured() and not hud.controls.visible
 	var alpha := world.advance(delta) if running else 1.0
 	for line in world.take_link_events():
+		if line.contains("sealed") or line.contains("SEALED"):
+			audio.play("dock")
+		elif line.begins_with("COLLISION"):
+			audio.play("hit", 4.0)
 		hud.notice(line, world.sim_time)
 		GameLog.info("boarding", line)
 		combat_log.record(world.sim_time, "boarding", line)
 	var hits := world.take_hit_events()
 	for ev in hits:
 		combat_log.note_hit(ev, PLAYER_ID, world.sim_time, world)
+		if ev.target_id == PLAYER_ID:
+			audio.play("ricochet" if ev.report != null and ev.report.ricochet else "hit")
 		# A passive contact fired upon by us (or our craft) fights back.
 		if ev.target_id == TARGET_ID and not target_hostile and (ev.shooter_id == PLAYER_ID or player_wing.by_id(ev.shooter_id) != null):
 			set_target_hostile(true, "fired upon")
@@ -869,6 +937,7 @@ func _process(delta: float) -> void:
 			continue
 		for blast in s.take_explosions():
 			hit_flashes.add_explosion(id, blast.pos_body, blast.radius)
+			audio.play("explosion", 0.0 if id == PLAYER_ID else -14.0)
 			# The camera feels it: hard on our own ship, less with distance.
 			var dist := world.get_ship(id).position.distance_to(player.position)
 			camera.shake(2.5 * clampf(1.0 - dist / 800.0, 0.0, 1.0))
@@ -915,7 +984,7 @@ func _process(delta: float) -> void:
 	camera.follow(_views[PLAYER_ID], delta)
 	_update_docking_cam(player, target, alpha, render_origin)
 	var link := world.link_for(PLAYER_ID)
-	var boarding := world.boarding_for(link) if link != null else null
+	var boarding := world.boarding_for(link) if link != null and link.attacker_id == PLAYER_ID else null
 	if boarding != null and not hud.hit_cam.showing_boarding():
 		hud.hit_cam.show_boarding(boarding, _designs[TARGET_ID], target.systems, target.display_name)
 	var continuous := world.continuous_position(render_origin)
@@ -930,6 +999,23 @@ func _process(delta: float) -> void:
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track
 	hud.update_display(world, PLAYER_ID, TARGET_ID, alpha, render_origin, camera, player_input)
+	_update_audio(player)
+
+
+## Our guns, engines, the jump drive and new danger alerts, heard aboard.
+func _update_audio(player: ShipState) -> void:
+	if player.rounds_fired > _rounds_heard:
+		audio.play("gun")
+	_rounds_heard = player.rounds_fired
+	var fwd := 0.0
+	if player.config.thrust_forward_n > 0.0:
+		fwd = clampf(-player.last_thrust_body.z / player.config.thrust_forward_n, 0.0, 1.0)
+	audio.set_engine(fwd if player.is_active() else 0.0)
+	audio.set_jump(float(hud.jump_state.progress) if hud.jump_state.has("progress") else -1.0)
+	var danger := hud.warning_label.text if hud.warning_label.visible and hud.top_alert_level == "danger" else ""
+	if danger != "" and danger.get_slice(" ", 1) != _alert_heard.get_slice(" ", 1):
+		audio.play("alert")
+	_alert_heard = danger
 
 
 ## Real Sun direction for the scenario date; dark while the player is in

@@ -4,7 +4,19 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Added
+- Enemies board a disabled player (from mission 2); crew defence policy
+  (hold the bridge / counter-attack); V cuts their gangway.
+- Point-defence turrets (two on the Frigate Mk I) engage hostile craft.
+- Shipboard sound, synthesised at startup.
+- Shipyard: move groups of modules (Shift-click, Ctrl+A); convert old
+  sections to blocks.
+- Medics treat the wounded in flight; craft fly in formation.
+
 ### Fixed
+- The drawer keeps the target card in view; collisions respect wedges;
+  a magazine and lead marker per gun type; wrecked modules break up.
+- The enemy uses its power pips and works round to your stern.
 - Propellant and rounds carry over between sorties and are bought back at
   launch (credits); craft refuel and rearm from their carrier's stores.
 - The enemy keeps a fighting range, jinks, holds fire when hot and flees

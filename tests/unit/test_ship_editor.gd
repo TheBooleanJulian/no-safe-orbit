@@ -142,3 +142,26 @@ func test_middle_of_a_bottom_cell_picks_the_underside() -> void:
 	assert_true(ed.item_at(Vector3i(2, 0, 13), &"dorsal") == id, "the underside RCS is found from the middle of its cell")
 	assert_true(ed.remove(id) and ed.blueprint.find(id) == null, "and removed")
 	deck.free()
+
+
+func test_a_group_of_blocks_moves_with_rooms_spanning_them() -> void:
+	var ed := ShipEditor.new(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()), ConstructionCatalog.default_catalog())
+	# The whole hull: every room, system, plate and conduit comes along.
+	var ids: Array = ed.blueprint.modules.map(func(m: ShipBlueprint.PlacedModule) -> String: return m.id)
+	var bridge := ed.blueprint.find("r7") as ShipBlueprint.PlacedRoom
+	var was := bridge.rect.position
+	var plates := ed.blueprint.armor.size()
+	assert_true(ed.move_group(ids, Vector3i(0, 0, 3)), "the group moves")
+	assert_true(bridge.rect.position == was + Vector2i(0, 3), "the bridge (spanning several blocks) came with it")
+	assert_true(ed.blueprint.armor.size() == plates and not ed.report.has_errors(), "plates kept, still valid:\n%s" % ed.report.summary())
+
+
+func test_old_sections_convert_to_blocks() -> void:
+	var ed := _editor()  # the section-built frigate
+	(ed.blueprint.find("m2") as ShipBlueprint.PlacedModule).def_id = &"armored_fuselage_section"
+	ed.revalidate()
+	assert_true(ed.has_legacy(), "the old frigate has large sections")
+	var result := ed.convert_legacy()
+	assert_true(result.converted == 5 and result.kept.size() == 1, "nose, fuselages and pods convert; the 3-long engine section stays (%s)" % str(result))
+	assert_true(not ed.report.has_errors(), "the converted design is valid:\n%s" % ed.report.summary())
+	assert_true(not ed.blueprint.armor.is_empty(), "the armoured section's thicker skin becomes plates")

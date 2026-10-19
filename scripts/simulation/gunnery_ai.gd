@@ -56,6 +56,8 @@ const KEEP_MAX_M := 3500.0
 const FLEE_INTACT_FRACTION := 0.35
 ## Holds fire this close to the reactor's throttle temperature (K).
 const HOLD_FIRE_MARGIN_K := 15.0
+## How hard it works round to your stern while in your bow arc (thrust fraction).
+const FLANK_BIAS := 0.5
 
 
 ## A fighting ship's whole command: the gun laying above, plus keeping to a
@@ -63,8 +65,12 @@ const HOLD_FIRE_MARGIN_K := 15.0
 ## it was miss, holding fire to cool down before the reactor throttles,
 ## and running when beaten (`fleeing`).
 static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipControlInput:
+	var sys := shooter.systems
 	if should_flee(shooter):
+		_set_pips(sys, [2, 4, 0])  # everything into the engines
 		return flee(shooter, target)
+	# Power: guns while healthy, back to balanced when hurt.
+	_set_pips(sys, [1, 2, 3] if sys == null or sys.intact_fraction() > 0.6 else [2, 2, 2])
 	var input := command(shooter, target)
 	if target == null or not target.is_active():
 		return input
@@ -84,12 +90,25 @@ static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipCon
 	var up := side.cross(los).normalized()
 	var phase := float(hash(String(shooter.id)) % 100) * 0.1
 	t += side * sin(now * 0.7 + phase) * 0.8 + up * sin(now * 0.45 + phase * 2.0) * 0.5
+	# Flank: work round towards the target's stern, out of its bow arc.
+	var stern := target.position - target.forward() * (KEEP_MIN_M + KEEP_MAX_M) * 0.5
+	var to_stern := inv * (stern - shooter.position)
+	var across := to_stern - los * to_stern.dot(los)
+	if target.forward().dot(shooter.position - target.position) > 0.0 and across.length() > 1.0:
+		t += across.normalized() * FLANK_BIAS
 	input.translation = t.clamp(-Vector3.ONE, Vector3.ONE)
 	input.hold_translation = false
-	var sys := shooter.systems
 	if sys != null and sys.temperature_k >= ShipSystems.THROTTLE_TEMP_K - HOLD_FIRE_MARGIN_K:
 		input.fire = false
 	return input
+
+
+## Set power pips [SYS, ENG, WEP] (only when they change).
+static func _set_pips(sys: ShipSystems, want: Array) -> void:
+	if sys == null or (sys.pips[0] == want[0] and sys.pips[1] == want[1] and sys.pips[2] == want[2]):
+		return
+	sys.pips.assign(want)
+	sys.invalidate()
 
 
 ## Beaten but still able to run: most of its systems are gone.
@@ -106,6 +125,38 @@ static func flee(ship: ShipState, threat: ShipState) -> ShipControlInput:
 	if threat != null:
 		CraftAI.point(ship, ship.position - threat.position, input)
 	return input
+
+
+## Port gap a boarding approach closes to (m): inside the gangway's reach.
+const DOCK_STANDOFF_M := 12.0
+
+
+## Close in to board a beaten ship: our best collar turned square to its
+## best port, held DOCK_STANDOFF_M off it at its velocity.
+static func dock_approach(ship: ShipState, target: ShipState) -> ShipControlInput:
+	var input := ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
+	input.hold_translation = false
+	var found := Docking.best(ship, target)
+	if found.is_empty():
+		return input
+	var pa: Docking.Port = found.a_port
+	var pb: Docking.Port = found.b_port
+	CraftAI.point_axis(ship, pa.normal_body, -pb.world_normal(target), input)
+	var goal_port := pb.world_position(target) + pb.world_normal(target) * DOCK_STANDOFF_M
+	var gap := goal_port.distance_to(pa.world_position(ship))
+	CraftAI.steer(ship, ship.position + (goal_port - pa.world_position(ship)), target.velocity, input, clampf(gap * 0.12, 0.3, 40.0))
+	return input
+
+
+## Whether `ship` would board `prey` now: the prey is beaten (disabled, not
+## already taken), and we have a working collar and fit boarders.
+static func wants_to_board(ship: ShipState, prey: ShipState) -> bool:
+	if ship.systems == null or prey.systems == null or ship.systems.is_disabled() or ship.systems.captured:
+		return false
+	if not prey.systems.is_disabled() or prey.systems.captured or Docking.collars(ship.systems).is_empty():
+		return false
+	return ship.systems.crew != null and ship.systems.crew.members.any(func(m: CrewRoster.Member) -> bool:
+		return m.available() and (m.role == CrewRoster.Role.SECURITY or m.role == CrewRoster.Role.GENERAL))
 
 
 ## A ship grappled by a gangway it didn't ask for thrusts straight away from

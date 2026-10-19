@@ -65,7 +65,19 @@ var systems: ShipSystems
 ## Cannon state (unused when config.cannon is null). Rounds are shared by
 ## every mount; each mount has its own cooldown.
 var cannon_rounds: int = 0
+## Rounds per gun type (display name): a ship mixing guns keeps a separate
+## magazine for each calibre, sharing the magazine space by mount count.
+## `cannon_rounds` is always their sum.
+var magazines: Dictionary = {}
+## Each gun type's share of the magazine space (0..1).
+var _magazine_share: Dictionary = {}
 var cannon_cooldowns: PackedFloat32Array = PackedFloat32Array()
+## Point defence per mount: barrel direction (body), cooldown, rounds left,
+## and the craft it is engaging ("" = none).
+var pd_dirs: PackedVector3Array = PackedVector3Array()
+var pd_cooldowns: PackedFloat32Array = PackedFloat32Array()
+var pd_rounds: PackedInt32Array = PackedInt32Array()
+var pd_targets: PackedStringArray = PackedStringArray()
 ## Each mount's barrel direction (body frame) and what it is doing.
 var turret_dirs: PackedVector3Array = PackedVector3Array()
 var turret_status: PackedInt32Array = PackedInt32Array()
@@ -100,8 +112,14 @@ static func create(
 	state.velocity = p_velocity
 	state.orientation = p_orientation.normalized()
 	if p_config.cannon != null:
-		state.cannon_rounds = p_config.cannon.magazine_rounds
 		var n := p_config.cannon_muzzles_body.size()
+		var counts := {}
+		for k in maxi(n, 1):
+			var gun_name := p_config.mount_cannon(k).display_name
+			counts[gun_name] = int(counts.get(gun_name, 0)) + 1
+		for gun_name in counts:
+			state._magazine_share[gun_name] = float(counts[gun_name]) / maxi(n, 1)
+		state.set_rounds(p_config.cannon.magazine_rounds)
 		state.cannon_cooldowns.resize(n)
 		state.cannon_cooldowns.fill(0.0)
 		state.turret_dirs.resize(n)
@@ -112,6 +130,16 @@ static func create(
 		state._block_checked.fill(Vector3.ZERO)
 		state.turret_blocked.resize(n)
 		state.turret_blocked.fill(0)
+	if p_config.pd_gun != null:
+		var n := p_config.pd_mounts_body.size()
+		state.pd_dirs.resize(n)
+		for k in n:
+			state.pd_dirs[k] = p_config.pd_normals_body[k]
+		state.pd_cooldowns.resize(n)
+		state.pd_cooldowns.fill(0.0)
+		state.pd_rounds.resize(n)
+		state.pd_rounds.fill(p_config.pd_gun.magazine_rounds)
+		state.pd_targets.resize(n)
 	if not p_config.unlimited_propellant:
 		state.propellant_kg = p_config.propellant_capacity_kg
 	state.snapshot_previous()
@@ -171,6 +199,49 @@ func interpolated_position(alpha: float) -> Vector3:
 
 func interpolated_orientation(alpha: float) -> Quaternion:
 	return prev_orientation.slerp(orientation, clampf(alpha, 0.0, 1.0))
+
+
+## Rounds left for one gun type.
+func rounds_for(gun: KineticCannonConfig) -> int:
+	return int(magazines.get(gun.display_name, 0)) if gun != null else 0
+
+
+## Take one round for `gun`. False if its magazine is empty.
+func spend_round(gun: KineticCannonConfig) -> bool:
+	if rounds_for(gun) <= 0:
+		return false
+	magazines[gun.display_name] = rounds_for(gun) - 1
+	cannon_rounds -= 1
+	return true
+
+
+## Set the total, shared out by each gun type's share of the space.
+func set_rounds(total: int) -> void:
+	total = maxi(total, 0)
+	var left := total
+	var names := _magazine_share.keys()
+	for i in names.size():
+		var n: int = left if i == names.size() - 1 else floori(total * float(_magazine_share[names[i]]))
+		magazines[names[i]] = n
+		left -= n
+	cannon_rounds = total
+
+
+## Draw up to `n` rounds from the fullest magazines (a carrier rearming its
+## craft). Returns how many were taken.
+func draw_rounds(n: int) -> int:
+	var taken := 0
+	while taken < n and cannon_rounds > 0:
+		var best := ""
+		for gun_name in magazines:
+			if best == "" or int(magazines[gun_name]) > int(magazines[best]):
+				best = gun_name
+		if int(magazines[best]) <= 0:
+			break
+		magazines[best] = int(magazines[best]) - 1
+		cannon_rounds -= 1
+		taken += 1
+	return taken
 
 
 ## Cached own-hull blocking for mount k: recomputed by `check` only when the

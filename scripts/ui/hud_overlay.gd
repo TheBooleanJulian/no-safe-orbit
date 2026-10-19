@@ -30,6 +30,8 @@ var target_render_pos := Vector3.ZERO
 var target_label := ""
 ## The bracket marks a dead-reckoned estimate, not a measurement: dashed, dim.
 var target_estimated := false
+## Lead markers for the ship's other gun types: {pos (render space), label}.
+var extra_leads: Array[Dictionary] = []
 var has_lead := false
 var lead_render_pos := Vector3.ZERO
 var lead_label := ""
@@ -110,6 +112,16 @@ func _draw() -> void:
 			_draw_edge_arrow(center, font)
 
 	# Lead pip: where to point the nose so rounds meet the target.
+	if has_lead:
+		for extra in extra_leads:
+			var ep: Vector3 = extra.pos
+			if camera.is_position_behind(ep):
+				continue
+			var xp := camera.unproject_position(ep)
+			var d2 := 5.0
+			draw_polyline(PackedVector2Array([xp + Vector2(0, -d2), xp + Vector2(d2, 0), xp + Vector2(0, d2),
+				xp + Vector2(-d2, 0), xp + Vector2(0, -d2)]), COLOR_LEAD * Color(1, 1, 1, 0.75), 1.5)
+			draw_string(font, xp + Vector2(7, 4), str(extra.label), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, COLOR_LEAD)
 	if has_lead and not camera.is_position_behind(lead_render_pos):
 		var lp := camera.unproject_position(lead_render_pos)
 		if _inner_rect().has_point(lp):

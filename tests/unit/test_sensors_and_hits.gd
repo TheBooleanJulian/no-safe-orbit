@@ -137,3 +137,17 @@ func test_a_reactor_explosion_plays_out_and_its_debris_flies_free() -> void:
 		boom.step(world, 1.0, Vector3.ZERO, 0.25)
 	assert_true(boom.age >= ReactorExplosion.LIFETIME_S, "it ends after %.1f s" % ReactorExplosion.LIFETIME_S)
 	boom.free()
+
+
+func test_shipboard_sounds_are_synthesised() -> void:
+	var audio := ShipAudio.new()
+	audio._ready()
+	for sound in ["gun", "hit", "ricochet", "explosion", "alert", "dock"]:
+		assert_true(audio.has_sound(sound), "%s is made" % sound)
+	var wav: AudioStreamWAV = audio._streams["explosion"]
+	assert_true(wav.data.size() > ShipAudio.MIX_RATE * 2 * 2, "the explosion lasts over 2 s")
+	var loud := 0
+	for i in range(0, wav.data.size(), 2):
+		loud = maxi(loud, absi(wav.data.decode_s16(i)))
+	assert_true(loud > 5000, "and it is not silent (peak %d)" % loud)
+	audio.free()

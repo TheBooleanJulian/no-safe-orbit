@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+[ext_resource type="Resource" path="res://data/weapons/pd_gun.tres" id="2_gun"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"point_defence"
+display_name = "Point-defence turret"
+kind = 10
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"fore", &"aft", &"port", &"starboard", &"dorsal", &"ventral"])
+mass_kg = 1500.0
+power_kw = -30.0
+heat_kw = 15.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+cannon = ExtResource("2_gun")
+color = Color(0.85, 0.85, 0.6, 1)

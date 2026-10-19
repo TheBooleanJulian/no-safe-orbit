@@ -23,6 +23,10 @@ extends RefCounted
 ##   the team is stranded.
 
 enum Phase { MUSTER, CROSSING, ABOARD, WITHDRAWING, CAPTURED, REPELLED, STRANDED, RETURNED, ABORTED }
+## How the defenders fight: fall back to hold the bridge (and lock doors), or
+## go and meet the boarders wherever they are.
+enum Defence { HOLD_BRIDGE, COUNTERATTACK }
+const DEFENCE_NAMES := ["hold the bridge", "counter-attack"]
 
 const PHASE_NAMES := ["mustering", "crossing", "aboard", "withdrawing", "CAPTURED", "REPELLED", "STRANDED", "returned", "aborted"]
 const GANGWAY_CROSS_S := 5.0
@@ -52,6 +56,7 @@ var log_count: int = 0
 var captured_rooms: Dictionary = {}
 ## The target surrendered to this boarding (the team then comes home).
 var prize: bool = false
+var defence: int = Defence.HOLD_BRIDGE
 
 var _locked: Dictionary = {}  # hatch id -> true: locked by defenders
 var _cut: Dictionary = {}     # hatch id -> true: cut open by the boarders
@@ -134,6 +139,16 @@ func room_control() -> Dictionary:
 	return out
 
 
+## The defenders' policy (the side being boarded chooses).
+func set_defence(d: int) -> void:
+	defence = d
+	_note("Defenders: %s" % DEFENCE_NAMES[d])
+	if d == Defence.COUNTERATTACK and room >= 0:
+		_rally_to(room)
+	elif d == Defence.HOLD_BRIDGE:
+		_rally_defenders()
+
+
 ## Order the team home.
 func withdraw() -> void:
 	if phase == Phase.ABOARD:
@@ -180,6 +195,8 @@ func step(dt: float) -> void:
 				action = &""
 				_lock_ahead()
 				_note("Aboard: %s" % _room_name(room))
+				if defence == Defence.COUNTERATTACK:
+					_rally_to(room)
 		Phase.ABOARD:
 			if _fight(dt):
 				return
@@ -236,6 +253,8 @@ func _advance(dt: float, goal: int) -> void:
 	_note("Into %s" % _room_name(room))
 	if phase == Phase.ABOARD:
 		_lock_ahead()
+		if defence == Defence.COUNTERATTACK:
+			_rally_to(room)
 
 
 ## Resolve combat in the team's room for one tick. True while fighting.
@@ -276,6 +295,20 @@ func _lock_ahead() -> void:
 		var rb: int = defender.grid.room_at.get(h.b, -1)
 		if (ra == room or rb == room) and not defender.destroyed_hatches.has(h.id) and not _cut.has(h.id):
 			_locked[h.id] = true
+
+
+## Counter-attack: fit security and general crew walk to the boarders' room.
+func _rally_to(r: int) -> void:
+	if defender.crew == null:
+		return
+	for m in defender.crew.members:
+		if not (m.role == CrewRoster.Role.SECURITY or m.role == CrewRoster.Role.GENERAL) or not m.fit() or m.busy or m.location == r or m.location < 0:
+			continue
+		var path := defender.route(m.location, r)
+		if path.is_empty():
+			continue
+		m.location = r
+		_arrive_in[m.id] = (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S
 
 
 ## Security fall back to the bridge; it takes them the walk to get there.

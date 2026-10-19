@@ -83,6 +83,13 @@ fire, the aim below its face, offline, or locked). Put the cursor on the gold
 the rate of fire and with extra spread. With a gangway attached, both
 ships' primary weapons are locked; craft still fight.
 
+**Point defence:** PD turrets engage hostile craft within 2 km on their own
+(their own rounds, gangway or not) and never your own craft.
+
+**Sound:** what you hear is your own ship through the hull — guns, engines,
+hits taken, alarms, the jump drive spooling; an enemy's reactor going up is
+a faint thud.
+
 **Scans:** hold a lock (inside 10 km) with a working sensor mast for 4 s to
 read a contact's cargo — spare parts and crates aboard — its scrap value and
 the bounty on it, ±15 %.
@@ -313,6 +320,13 @@ every ship's docking collar is hazard-striped with a blinking beacon.
    amber alert reminds you while a party is across); if the gangway is gone,
    they are stranded. The jump drive waits for them.
 
+**Being boarded:** from mission 2, an enemy that has disabled you closes in,
+lines up a collar and sends its own party. **V** cuts its gangway loose.
+Tab → CREW sets your defence: hold the bridge (security fall back, doors
+ahead locked) or counter-attack (security and general crew go to meet them).
+Lose the bridge and the vessel is lost. A medic aboard treats one wounded
+crew member a minute.
+
 Progress is saved to `user://profile.json` (versioned JSON).
 
 ## Shipyard
@@ -349,7 +363,8 @@ uses automatic distribution through its hull.
 | New ship | HANGAR → New ship: design on an empty slip, COMMISSION builds it (every part + 250 cr) as another vessel; the picker switches vessels |
 | Testing aid | HANGAR → CARGO & BANK → DEV +100 cr |
 | Loot odds | HANGAR → LOOT TABLES: crate odds, tier odds, every item |
-| Select / move / delete | Select tool (S), arrow keys, Delete |
+| Select / move / delete | Select tool (S), arrow keys, Delete; Shift-click modules to move several together, Ctrl+A for the whole hull (everything inside comes along) |
+| Old designs | HANGAR → SERVICE → Convert to blocks: rebuilds old large sections from blocks with plates (free on your own vessel) |
 | Remove anything | Right-click |
 | Hatches | Hatch tool (H): click near an edge for a door, a cell's centre for a ladder to the deck above |
 | Change deck | ▲ / ▼ or PgUp / PgDn |
