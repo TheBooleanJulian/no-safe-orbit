@@ -248,7 +248,7 @@ func test_outcome_depends_on_who_is_defending_not_on_instant_kills() -> void:
 	var soft := _board(soft_setup[0])
 	_run(soft_setup[0], 600.0, func() -> bool: return soft.finished())
 	var lost := func(b: BoardingAction) -> int: return b.team.filter(func(m: CrewRoster.Member) -> bool: return not m.fit()).size()
-	assert_true(soft.phase == BoardingAction.Phase.CAPTURED, "without its security team the target is captured (%s)\n%s" % [BoardingAction.PHASE_NAMES[soft.phase], "\n".join(soft.log)])
+	assert_true(soft.prize and soft.phase == BoardingAction.Phase.RETURNED, "without its security team the target is captured and the team comes home on its own (%s)" % BoardingAction.PHASE_NAMES[soft.phase])
 	assert_true(soft_target.systems.captured and soft_target.systems.is_disabled(), "a captured ship is out of the fight")
 	assert_true(lost.call(hard) > lost.call(soft), "the full crew costs the boarders more: %d vs %d down\n%s" % [lost.call(hard), lost.call(soft), "\n".join(hard.log)])
 	assert_true(hard.elapsed > 30.0 and soft.elapsed > 30.0, "boarding takes time, not one tick (%.0f s / %.0f s)" % [hard.elapsed, soft.elapsed])
@@ -266,7 +266,7 @@ func test_layout_decides_how_long_it_takes() -> void:
 		_kill(b.systems, CrewRoster.Role.SECURITY)
 		var boarding := _board(setup[0])
 		_run(setup[0], 600.0, func() -> bool: return boarding.finished())
-		assert_true(boarding.phase == BoardingAction.Phase.CAPTURED, "captured (%s)" % BoardingAction.PHASE_NAMES[boarding.phase])
+		assert_true(boarding.prize, "captured (%s)" % BoardingAction.PHASE_NAMES[boarding.phase])
 		times.append(boarding.elapsed)
 	assert_true(times[0] > times[1] + 2.0 * BoardingAction.HATCH_CUT_S,
 		"two locked hatches and two rooms more: %.0f s vs %.0f s" % [times[0], times[1]])

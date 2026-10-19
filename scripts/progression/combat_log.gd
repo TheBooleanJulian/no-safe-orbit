@@ -32,6 +32,8 @@ var dv_spent: float = 0.0
 var outcome: String = ""
 var aftermath: PackedStringArray = PackedStringArray()
 var has_workshop: bool = false
+## Loot gained this sortie: "Rare: Railgun (1 unit) — in the hold" etc.
+var loot: PackedStringArray = PackedStringArray()
 
 
 static func begin(ship: ShipState, sim_time: float) -> CombatLog:
@@ -104,7 +106,7 @@ func finish(ship: ShipState, p_outcome: String, t: float, p_aftermath: PackedStr
 func to_dict() -> Dictionary:
 	return {
 		"ship_name": ship_name, "design": design, "started_utc": started_utc,
-		"duration_s": sim_end - sim_start, "outcome": outcome, "aftermath": Array(aftermath),
+		"duration_s": sim_end - sim_start, "outcome": outcome, "aftermath": Array(aftermath), "loot": Array(loot),
 		"shots_fired": shots_fired, "hits_scored": hits_scored, "systems_destroyed": systems_destroyed,
 		"hits_taken": hits_taken, "stopped_by_armor": stopped_by_armor, "hits_by_side": hits_by_side.duplicate(),
 		"systems_lost": systems_lost.duplicate(true), "crew_lost": crew_lost, "crew_wounded": crew_wounded,
@@ -182,6 +184,12 @@ static func render(d: Dictionary) -> String:
 		lines.append("Incoming by side: " + " · ".join(parts))
 	for line in d.get("aftermath", []):
 		lines.append("» %s" % line)
+	var gained: Array = d.get("loot", [])
+	if not gained.is_empty():
+		lines.append("")
+		lines.append("[b]LOOT GAINED[/b]")
+		for line in gained:
+			lines.append("◆ %s" % line)
 	lines.append("")
 	lines.append("[b]LESSONS FOR THE SHIPYARD[/b]")
 	for line in insights(d):

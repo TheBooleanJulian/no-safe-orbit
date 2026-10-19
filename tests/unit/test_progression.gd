@@ -487,19 +487,34 @@ func test_disabled_means_it_cannot_fight() -> void:
 	assert_true(dark.systems.disabled_reason() == "no power", "losing the only reactor disables it")
 
 
-func test_salvage_needs_a_disabled_wreck_close_and_slow() -> void:
+func test_salvage_beacon_needs_a_disabled_wreck_in_range() -> void:
 	var me := _ship(_template(), &"me")
 	var wreck := _ship(_template(), &"wreck")
 	wreck.position = Vector3(0, 0, -300)
-	wreck.velocity = Vector3(1, 0, 0)
+	wreck.velocity = Vector3(10, 0, 0)
 	assert_true(Salvage.block_reason(me, wreck).contains("disable"), "a fighting ship cannot be salvaged")
 	wreck.systems.damage_equipment(wreck.systems.equipment_by_id("e41"), 1000.0)
-	assert_true(Salvage.block_reason(me, wreck) == "", "disabled, 300 m, 1 m/s: salvageable")
-	wreck.position = Vector3(0, 0, -2000)
-	assert_true(Salvage.block_reason(me, wreck).contains("close to"), "2 km is too far")
+	assert_true(Salvage.block_reason(me, wreck) == "", "disabled, 300 m, 10 m/s: a beacon can be dropped (no velocity match needed)")
+	wreck.position = Vector3(0, 0, -2500)
+	assert_true(Salvage.block_reason(me, wreck).contains("close to"), "2.5 km is too far for a beacon")
 	wreck.position = Vector3(0, 0, -300)
-	wreck.velocity = Vector3(10, 0, 0)
-	assert_true(Salvage.block_reason(me, wreck).contains("match velocity"), "10 m/s is too fast")
+	wreck.systems.captured = true
+	assert_true(Salvage.block_reason(me, wreck).contains("already taken"), "a captured ship is a prize, not a beacon job")
+
+
+func test_takeover_pays_more_than_a_beacon() -> void:
+	var wreck := _ship(_template())
+	wreck.systems.damage_equipment(wreck.systems.equipment_by_id("e41"), 1000.0)
+	var scrap := Salvage.scrap_value(wreck.systems)
+	assert_true(scrap > 100, "an intact frigate is worth scrap (%d cr)" % scrap)
+	assert_true(Salvage.TAKEOVER_SCRAP_RATE > Salvage.BEACON_SCRAP_RATE and Salvage.TAKEOVER_LOOT_CHANCE > Salvage.BEACON_LOOT_CHANCE,
+		"takeover: higher scrap credit and crate odds than a beacon")
+	var p := PlayerProfile.new(7)
+	var beacon := p.open_crates(400, Salvage.BEACON_LOOT_CHANCE, _catalog())
+	var prize := p.open_crates(400, Salvage.TAKEOVER_LOOT_CHANCE, _catalog())
+	var full := func(a: Array) -> int: return a.filter(func(d: Variant) -> bool: return d != null).size()
+	assert_near(full.call(beacon) / 400.0, Salvage.BEACON_LOOT_CHANCE, 0.07, "beacon crates holding loot")
+	assert_near(full.call(prize) / 400.0, Salvage.TAKEOVER_LOOT_CHANCE, 0.07, "prize crates holding loot")
 
 
 func test_salvage_pays_more_for_a_cleaner_kill() -> void:
@@ -589,3 +604,19 @@ func test_salvage_strips_the_best_intact_rare_part() -> void:
 	wreck.systems.damage_equipment(wreck.systems.equipment_by_id("e41"), 30.0)
 	assert_true(EnemyFactory.recoverable_part(wreck.systems).def.id == &"rcs_block_heavy", "a wrecked railgun is not worth stripping")
 	assert_true(EnemyFactory.recoverable_part(_ship(_template()).systems) == null, "an all-common wreck has nothing rare")
+
+
+func test_cargo_hold_capacity_and_venting_the_excess() -> void:
+	var bp := _template()
+	var grid := ShipGrid.build(bp, _catalog())
+	var stats := ShipStats.compute(bp, grid)
+	assert_true(stats.cargo_m3 > 0.0 and stats.cargo_m3 < 24 * 27.0,
+		"hold space is what the tanks leave free (%.0f m³ of %.0f)" % [stats.cargo_m3, 24 * 27.0])
+	var v := ShipInstance.fresh(bp)
+	v.cargo = {"spare_parts": 100, "equipment": {"railgun": 1}}
+	var rail_m3 := ShipInstance.equipment_m3(_catalog().equipment[&"railgun"])
+	assert_near(v.cargo_volume_m3(_catalog()), 100 * ShipInstance.SPARE_PART_M3 + rail_m3, 1e-6, "volume of 100 parts and a railgun (m³)")
+	var went := v.vent_excess(10.0, _catalog())
+	assert_true(v.cargo_volume_m3(_catalog()) <= 10.0 + 1e-6 and int(v.cargo.equipment.railgun) == 1,
+		"venting the excess drops cheap spare parts first and keeps the railgun (%s)" % ", ".join(went))
+	assert_true(v.vent("equipment", "railgun") != "" and not v.cargo.has("equipment"), "a whole line can be vented")

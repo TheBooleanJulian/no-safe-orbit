@@ -79,7 +79,12 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 		s.heat_generation_kw += def.heat_kw_per_cell * cells
 		s.crew_capacity += def.crew_capacity_per_cell * cells
 		s.rounds_capacity += def.rounds_per_cell * cells
-		s.cargo_m3 += def.cargo_m3_per_cell * cells
+		# Hold space is what internal equipment (tanks…) leaves free.
+		var free := 0
+		for cell in ShipGrid.room_cells(r):
+			if not grid.equipment_at.has(cell):
+				free += 1
+		s.cargo_m3 += def.cargo_m3_per_cell * free
 	var engines: Array[Vector3] = []
 	var engine_thrust: Array[float] = []
 	var rcs: Array[Vector3] = []

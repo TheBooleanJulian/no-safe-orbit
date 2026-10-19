@@ -130,6 +130,34 @@ static func pull(rng: RandomNumberGenerator, pool: Array[Drop], pity: Dictionary
 	return d
 
 
+## The full loot tables (BBCode) for the shipyard: what a crate can hold,
+## how likely each tier is and each item within its tier, how often a crate
+## holds anything (beacon vs takeover) and the pity rules.
+static func table_text(catalog: ConstructionCatalog) -> String:
+	var pool := build_pool(catalog)
+	var p := Rarity.tier_probabilities()
+	var lines := PackedStringArray([
+		"[b]CRATES[/b]  salvage beacon: %d%% hold loot · boarding takeover: %d%% (+%d bonus crates)" % [
+			roundi(Salvage.BEACON_LOOT_CHANCE * 100.0), roundi(Salvage.TAKEOVER_LOOT_CHANCE * 100.0), Salvage.CAPTURE_BONUS_PULLS],
+		"Crates per wreck: 1 + ⌊4 × intact⌋ (1–5). Pity: Rare+ at least every %d crates with loot, Legendary every %d." % [RARE_PITY, LEGENDARY_PITY],
+		"",
+	])
+	for t in range(p.size() - 1, -1, -1):
+		var entries := pool.filter(func(d: Drop) -> bool: return d.rarity == t and d.weight > 0.0)
+		var total := 0.0
+		for d in entries:
+			total += d.weight
+		lines.append("[color=#%s][b]%s[/b]  %s%% of loot[/color]" % [Rarity.color_of(t).to_html(false), Rarity.name_of(t).to_upper(),
+			String.num(p[t] * 100.0, 2)])
+		if entries.is_empty():
+			lines.append("   (nothing in this tier yet — rolls fall to the tier below)")
+		for d in entries:
+			var what := "%d spare parts" % d.amount if d.kind == &"spares" else "%s%s" % [d.display_name,
+				" (blueprint)" if d.kind == &"room" or d.kind == &"hull" else ""]
+			lines.append("   %s — %s%% of the tier" % [what, String.num(d.weight / total * 100.0, 1)])
+	return "\n".join(lines)
+
+
 ## Drop-rate disclosure for the loot panel: "C 70% · U 21% · …".
 static func rates_text() -> String:
 	var parts := PackedStringArray()

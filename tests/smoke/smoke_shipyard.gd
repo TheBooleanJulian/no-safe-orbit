@@ -157,10 +157,15 @@ func _run() -> void:
 		_check(player.config.display_name == "Smoke Test Frigate" and absf(player.config.mass_kg - expected_mass) < 1e-3,
 			"player flies the launched design (%s, %.1f t)" % [player.config.display_name, player.config.mass_kg / 1000.0])
 		# B returns to the shipyard with the same design.
-		var ev := InputEventAction.new()
-		ev.action = "open_shipyard"
-		ev.pressed = true
-		Input.parse_input_event(ev)
+		# Hold B: the jump drive charges for 5 s (sped up here).
+		Engine.time_scale = 8.0
+		Input.action_press("open_shipyard")
+		for i in 900:
+			if current_scene is Shipyard:
+				break
+			await process_frame
+		Input.action_release("open_shipyard")
+		Engine.time_scale = 1.0
 		await _frames(4)
 		var back := current_scene as Shipyard
 		_check(back != null and back.editor.blueprint.name == "Smoke Test Frigate", "B in flight reopens the shipyard with the flown design")

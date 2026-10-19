@@ -18,8 +18,9 @@ extends RefCounted
 ##   alternately wounded and killed. Numbers, roles, where the defenders are
 ##   and how far the boarders must go decide it — no room kills outright.
 ## - Capture: boarders hold the bridge with no fit defender in it → the
-##   target surrenders. Withdraw: walk back and cross home — only while the
-##   gangway is sealed; otherwise the team is stranded.
+##   target surrenders (`prize`) and the team withdraws on its own. Withdraw:
+##   walk back and cross home — only while the gangway is sealed; otherwise
+##   the team is stranded.
 
 enum Phase { MUSTER, CROSSING, ABOARD, WITHDRAWING, CAPTURED, REPELLED, STRANDED, RETURNED, ABORTED }
 
@@ -49,6 +50,8 @@ var log: PackedStringArray = PackedStringArray()
 var log_count: int = 0
 ## Target rooms the boarders have cleared and hold (room index -> true).
 var captured_rooms: Dictionary = {}
+## The target surrendered to this boarding (the team then comes home).
+var prize: bool = false
 
 var _locked: Dictionary = {}  # hatch id -> true: locked by defenders
 var _cut: Dictionary = {}     # hatch id -> true: cut open by the boarders
@@ -125,7 +128,7 @@ func room_control() -> Dictionary:
 			out[i] = &"held"
 		elif not defenders.is_empty():
 			out[i] = &"defended"
-	if phase == Phase.CAPTURED:
+	if prize:
 		for i in defender.blueprint.rooms.size():
 			out[i] = &"held"
 	return out
@@ -292,7 +295,10 @@ func _rally_defenders() -> void:
 func _capture() -> void:
 	defender.captured = true
 	defender.invalidate()
-	_end(Phase.CAPTURED, "Bridge taken — %s surrenders" % defender.blueprint.name)
+	prize = true
+	_note("Bridge taken — %s surrenders; boarding party withdrawing" % defender.blueprint.name)
+	phase = Phase.WITHDRAWING
+	action = &""
 
 
 func _end(p: Phase, text: String) -> void:

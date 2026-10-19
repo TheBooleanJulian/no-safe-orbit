@@ -35,6 +35,19 @@ func _frames(n: int) -> void:
 		await process_frame
 
 
+## Hold B until the jump drive takes us to the shipyard (sped up).
+func _jump() -> void:
+	Engine.time_scale = 8.0
+	Input.action_press("open_shipyard")
+	for i in 900:
+		if current_scene is Shipyard:
+			break
+		await process_frame
+	Input.action_release("open_shipyard")
+	Engine.time_scale = 1.0
+	await _frames(3)
+
+
 func _press(action: String) -> void:
 	var ev := InputEventAction.new()
 	ev.action = action
@@ -55,7 +68,6 @@ func _run() -> void:
 	current_scene = main
 	await _frames(2)
 	var profile := Main.get_profile()
-	var parts_at_start := profile.spare_parts
 	var credits_at_start := profile.credits
 	var player := main.world.get_ship(Main.PLAYER_ID)
 	var target := main.world.get_ship(Main.TARGET_ID)
@@ -90,14 +102,17 @@ func _run() -> void:
 	_check(main.hud.target_label.text.contains("DISABLED") and main.hud.target_label.text.contains("READY — press [G]"),
 		"HUD reports the target disabled and ready to salvage")
 
-	# 3. Salvage with G.
+	# 3. Salvage beacon with G: half the scrap value and the bounty in
+	# credits; the crates are opened on the carousel and banked.
 	var old_target := target
+	var scrap := Salvage.scrap_value(target.systems)
+	var bounty := Salvage.bounty_for(target.systems)
 	await _press("salvage")
 	_check(main.hud.loot.visible and profile.missions_completed == 1 and profile.total_pulls >= 1,
-		"G salvages: loot panel open, %d crates opened, mission 1 complete" % profile.total_pulls)
-	_check(profile.spare_parts == parts_at_start and int(profile.vessel.cargo.get("spare_parts", 0)) > 0,
-		"salvaged parts go into the hold, not the bank (%s)" % profile.vessel.cargo_summary())
-	_check(profile.credits > credits_at_start, "the bounty is paid in credits (%d → %d)" % [credits_at_start, profile.credits])
+		"G drops a beacon: carousel open, %d crates opened, mission 1 complete" % profile.total_pulls)
+	_check(profile.vessel.cargo_is_empty(), "beacon loot goes to the station bank, not the hold (%s)" % profile.vessel.cargo_summary())
+	_check(profile.credits == credits_at_start + roundi(scrap * Salvage.BEACON_SCRAP_RATE) + bounty,
+		"50%% of %d cr scrap and %d cr bounty paid (%d → %d)" % [scrap, bounty, credits_at_start, profile.credits])
 	var next := main.world.get_ship(Main.TARGET_ID)
 	_check(next != old_target and next.display_name.begins_with("TGT-02"), "the next contact arrives (%s)" % next.display_name)
 	_check(next.position.distance_to(player.position) > 25000.0 and not main.track.detected,
@@ -108,10 +123,12 @@ func _run() -> void:
 	_check(next.rounds_fired == fired_before, "undetected, it does not open fire even when hostile")
 	main.target_hostile = false
 	_check(FileAccess.file_exists(PlayerProfile.path), "salvage saved the profile")
-	await create_timer(LootPanel.REVEAL_INTERVAL_S * (profile.total_pulls + 2)).timeout
-	_check(main.hud.loot.revealed_all() and main.hud.loot.text().contains("Rates"), "every drop revealed, with the drop rates")
+	await create_timer((LootCarousel.SPIN_S + LootCarousel.HOLD_S) * (profile.total_pulls + 2)).timeout
+	_check(main.hud.loot.revealed_all() and main.hud.loot.text().contains("Rates"), "every crate opened on the carousel, with the drop rates")
 	await _press("salvage")
-	_check(not main.hud.loot.visible, "G again closes the loot panel")
+	_check(not main.hud.loot.visible, "G again closes the carousel")
+	# Stores carried home (a takeover would have filled the hold).
+	profile.vessel.cargo["spare_parts"] = 12
 
 	# 4. Return damaged: B docks.
 	var flown_condition := player.systems.condition()
@@ -120,10 +137,9 @@ func _run() -> void:
 		flown_condition.crew.erase("wounded")
 		if flown_condition.crew.is_empty():
 			flown_condition.erase("crew")
-	await _press("open_shipyard")
-	await _frames(3)
+	await _jump()
 	var yard := current_scene as Shipyard
-	_check(yard != null, "B docks at the shipyard")
+	_check(yard != null, "holding B jumps to Earth Shipyard")
 	if yard == null:
 		return _finish()
 	var vessel := yard.profile.vessel
@@ -137,6 +153,11 @@ func _run() -> void:
 	var banked_from := profile.spare_parts
 	_check(not yard.bank_cargo().is_empty() and vessel.cargo_is_empty() and profile.spare_parts >= banked_from + hold_parts,
 		"Bank cargo moves the hold into the station bank")
+	_check(yard.loot_tables_label.get_parsed_text().contains("LEGENDARY") and yard.loot_tables_label.get_parsed_text().contains("takeover"),
+		"the shipyard lists the loot tables")
+	var credits_dev := profile.credits
+	yard.dev_add_credits()
+	_check(profile.credits == credits_dev + 100, "DEV +100 cr adds 100 credits")
 
 	# 5. Repair and reconfigure.
 	var before_repair := profile.spare_parts

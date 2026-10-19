@@ -122,6 +122,25 @@ func pull(n: int, catalog: ConstructionCatalog) -> Array[LootRoller.Drop]:
 	return out
 
 
+## Open `n` salvage crates: each holds loot with `chance`, else it is empty
+## (null in the result). Pity only counts crates that hold loot.
+func open_crates(n: int, chance: float, catalog: ConstructionCatalog) -> Array:
+	var pool := LootRoller.build_pool(catalog)
+	var out := []
+	for i in n:
+		total_pulls += 1
+		if _rng.randf() >= chance:
+			out.append(null)
+			continue
+		out.append(LootRoller.pull(_rng, pool, pity))
+	return out
+
+
+## Developer aid (shipyard button): free credits for testing.
+func dev_grant_credits(amount: int) -> void:
+	credits += amount
+
+
 ## Put a drop in the vessel's cargo hold (at risk until banked).
 func stow(d: LootRoller.Drop) -> void:
 	var cargo := vessel.cargo

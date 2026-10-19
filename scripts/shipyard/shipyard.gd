@@ -46,6 +46,8 @@ var selected_id: String = ""
 var _hover_cell := Vector3i.ZERO
 var _hover_face: StringName = &""
 var _hangar_label: RichTextLabel
+## HANGAR → LOOT TABLES: every possible crate drop and its odds.
+var loot_tables_label: RichTextLabel
 var _cargo_label: RichTextLabel
 var _history_label: RichTextLabel
 var _priority: OptionButton
@@ -316,7 +318,14 @@ func repair(priority: int = -1) -> int:
 	return spent
 
 
-## Unload the cargo hold into the station bank.
+## Testing aid: 100 free credits (saved at once).
+func dev_add_credits() -> void:
+	profile.dev_grant_credits(100)
+	_save_profile()
+	_refresh_hangar()
+
+
+## Unload the cargo hold into Earth Shipyard's bank.
 func bank_cargo() -> PackedStringArray:
 	var banked := profile.bank_cargo(editor.catalog)
 	_save_profile()
@@ -589,6 +598,13 @@ func _build_hangar_panel() -> void:
 	var history_box := VBoxContainer.new()
 	history_box.name = "HISTORY"
 	_history_label = _rich_label()
+	var loot_scroll := ScrollContainer.new()
+	loot_scroll.name = "LOOT TABLES"
+	loot_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	loot_tables_label = _rich_label()
+	loot_tables_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	loot_tables_label.text = LootRoller.table_text(editor.catalog)
+	loot_scroll.add_child(loot_tables_label)
 	var row := HBoxContainer.new()
 	_priority = OptionButton.new()
 	for n in ServiceYard.PRIORITY_NAMES:
@@ -603,7 +619,7 @@ func _build_hangar_panel() -> void:
 	var row2 := HFlowContainer.new()
 	_bank_button = Button.new()
 	_bank_button.text = "Bank cargo"
-	_bank_button.tooltip_text = "Unload the hold into the station bank: safe from loss"
+	_bank_button.tooltip_text = "Unload the hold into Earth Shipyard's bank: safe from loss"
 	_bank_button.pressed.connect(func() -> void: bank_cargo())
 	_buy_button = Button.new()
 	_buy_button.text = "Buy %d parts (%d cr)" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE]
@@ -611,17 +627,22 @@ func _build_hangar_panel() -> void:
 	var debrief_button := Button.new()
 	debrief_button.text = "Last debrief"
 	debrief_button.pressed.connect(func() -> void: debrief.show_debrief(profile.last_debrief))
-	for b in [_bank_button, _buy_button]:
+	var dev_button := Button.new()
+	dev_button.text = "DEV +100 cr"
+	dev_button.tooltip_text = "Testing aid: 100 free credits"
+	dev_button.pressed.connect(func() -> void: dev_add_credits())
+	for b in [_bank_button, _buy_button, dev_button]:
 		row2.add_child(b)
 	for b in [_repair_button, _bank_button, _buy_button, debrief_button]:
 		CyberTheme.style_button(b)
+	CyberTheme.style_button(dev_button, CyberTheme.AMBER)
 	box.add_child(_hangar_label)
 	box.add_child(row)
 	cargo_box.add_child(_cargo_label)
 	cargo_box.add_child(row2)
 	history_box.add_child(_history_label)
 	history_box.add_child(debrief_button)
-	for b in [box, cargo_box, history_box]:
+	for b in [box, cargo_box, history_box, loot_scroll]:
 		tabs.add_child(b)
 	right.add_child(title)
 	right.move_child(title, 1)
@@ -671,7 +692,7 @@ func _refresh_hangar() -> void:
 	_cargo_label.text = "\n".join([
 		"CREDITS [color=#%s]%d[/color] · respawn fee %d cr" % [gold, profile.credits, profile.respawn_fee(catalog)],
 		"BANKED  %d spare parts" % profile.spare_parts,
-		"HOLD    %s%s" % [CyberTheme.tint(v.cargo_summary(), CyberTheme.MAGENTA),
+		"HOLD    %.1f / %.0f m³ · %s%s" % [v.cargo_volume_m3(catalog), editor.stats.cargo_m3, CyberTheme.tint(v.cargo_summary(), CyberTheme.MAGENTA),
 			CyberTheme.tint("  ▲ at risk until banked", CyberTheme.AMBER) if not v.cargo_is_empty() else ""],
 		"FOUND   %s" % _found_text(),
 		"LOOT    %d crates opened · Rare+ in %d · Legendary in %d" % [profile.total_pulls, pity.x, pity.y],
