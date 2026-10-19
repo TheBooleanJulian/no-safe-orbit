@@ -172,6 +172,9 @@ static func apply(systems: ShipSystems, point_body: Vector3, dir_body: Vector3, 
 			if conduit and systems.damage_rng.randf() < BUS_CUT_CHANCE and systems.cut_bus(cell):
 				report.cut_bus.append(cell)
 				report.event(&"bus_cut", "", here, "Power conduit cut at %s" % cell)
+			var pipe := pen >= BUS_CUT_MM and systems.blueprint.coolant.has(ShipBlueprint.cell_key(cell))
+			if pipe and systems.damage_rng.randf() < BUS_CUT_CHANCE and systems.cut_coolant(cell):
+				report.event(&"coolant_cut", "", here, "Coolant pipe cut at %s — radiators beyond it go cold" % cell)
 			var ri: int = grid.room_at.get(cell, -1)
 			if ri >= 0 and not hit_rooms.has(ri):
 				hit_rooms[ri] = true

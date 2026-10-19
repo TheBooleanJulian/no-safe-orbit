@@ -1035,7 +1035,7 @@
 		},
 		{
 			"id": "e41",
-			"def": "kinetic_cannon",
+			"def": "autocannon",
 			"cell": [
 				3,
 				2,
@@ -1045,17 +1045,17 @@
 		},
 		{
 			"id": "e42",
-			"def": "radiator",
+			"def": "radiator_long",
 			"cell": [
 				2,
 				2,
-				10
+				9
 			],
 			"face": "dorsal"
 		},
 		{
 			"id": "e44",
-			"def": "radiator",
+			"def": "radiator_long",
 			"cell": [
 				2,
 				0,
@@ -1166,6 +1166,16 @@
 				2
 			],
 			"face": "ventral"
+		},
+		{
+			"id": "e121",
+			"def": "grapple_arm",
+			"cell": [
+				2,
+				0,
+				3
+			],
+			"face": "port"
 		}
 	],
 	"armor": [
@@ -1395,6 +1405,11 @@
 		]
 	],
 	"bus": [
+		[
+			2,
+			0,
+			3
+		],
 		[
 			2,
 			1,

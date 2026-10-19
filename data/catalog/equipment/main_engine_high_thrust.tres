@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"main_engine_high_thrust"
+display_name = "Main engine (high-thrust)"
+kind = 1
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"aft", &"fore", &"port", &"starboard", &"dorsal", &"ventral"])
+mass_kg = 11000.0
+power_kw = -200.0
+heat_kw = 450.0
+heat_rejection_kw = 0.0
+thrust_n = 1450000.0
+isp_s = 600.0
+color = Color(0.45, 0.8, 1.0, 1)
+rarity = 1
+drop_weight = 10.0

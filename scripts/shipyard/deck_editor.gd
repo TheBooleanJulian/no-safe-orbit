@@ -8,6 +8,8 @@ extends Control
 signal cell_pressed(cell: Vector3i, face: StringName, button: MouseButton, shift: bool)
 signal room_dragged(deck: int, rect: Rect2i)
 signal hover_changed(cell: Vector3i, face: StringName, shift: bool)
+## Left button held on a cell and dragged to another (Select tool: move).
+signal drag_moved(from: Vector3i, to: Vector3i)
 
 const COLOR_BG := Color(0.02, 0.03, 0.05)
 const COLOR_GRID := Color(0.35, 0.65, 0.9, 0.08)
@@ -17,6 +19,11 @@ const COLOR_SELECT := Color(1, 1, 1, 0.95)
 const COLOR_ISSUE := Color(1.0, 0.35, 0.3, 0.95)
 const COLOR_GHOST_OK := Color(0.4, 1.0, 0.55, 0.45)
 const COLOR_GHOST_BAD := Color(1.0, 0.35, 0.3, 0.45)
+## Armour plates: dark grey, darker for thick.
+const COLOR_PLATE_THIN := Color(0.52, 0.55, 0.6, 0.95)
+const COLOR_PLATE_THICK := Color(0.3, 0.32, 0.36, 1.0)
+const ZOOM_MIN := 0.6
+const ZOOM_MAX := 4.0
 const CONNECTOR_COLORS := {&"spine": Color(0.3, 0.9, 1.0), &"pod": Color(1.0, 0.4, 0.9)}
 const MARGIN_CELLS := 3
 ## Pointer within this fraction of a cell edge selects that edge's face.
@@ -30,8 +37,19 @@ var ghost_cells: Array[Vector3i] = []
 var ghost_ok: bool = true
 ## External-equipment ghost: the face being targeted.
 var ghost_face: StringName = &""
+## Middle of a cell open both ways picks the underside (shipyard [V]).
+var prefer_underside: bool = false
 var selection_cells: Array[Vector3i] = []
 var issue_cells: Array[Vector3i] = []
+## Centre-of-mass marker (shipyard [C]).
+var show_com: bool = false
+## Wheel zoom (1 = fit the hull) and middle-drag pan (pixels).
+var zoom: float = 1.0
+var pan: Vector2 = Vector2.ZERO
+## Left-drag in the Select tool moves what was pressed (Shipyard sets it).
+var drag_moves: bool = false
+var _press_cell: Variant = null  # Vector3i while left is held (drag_moves)
+var _panning := false
 
 var _x_min := 0
 var _z_max := 0
@@ -58,8 +76,8 @@ func _update_mapping() -> void:
 	_z_max = int(b.end.z) - 1 + MARGIN_CELLS
 	var cols := _z_max - z_min + 1
 	var rows := x_max - _x_min + 1
-	_px = floorf(minf(size.x / cols, size.y / rows))
-	_origin = ((size - Vector2(cols, rows) * _px) * 0.5).floor()
+	_px = maxf(floorf(minf(size.x / cols, size.y / rows) * zoom), 4.0)
+	_origin = ((size - Vector2(cols, rows) * _px) * 0.5 + pan).floor()
 
 
 func cell_rect(cell: Vector3i) -> Rect2:
@@ -90,12 +108,17 @@ func face_at(pos: Vector2, shift: bool) -> StringName:
 	return best
 
 
-## Top or underside of a cell: the one open to space (top if both or
-## neither are); `other` picks the opposite.
+## Top or underside of a cell: the one open to space; if both or neither
+## are, the top — or the underside with `prefer_underside` (the shipyard's
+## [V] toggle). `other` (Shift) picks the opposite.
 func vertical_face(cell: Vector3i, other: bool) -> StringName:
-	var up := editor != null and editor.grid.is_exterior_face(cell, &"dorsal")
-	var down := editor != null and editor.grid.is_exterior_face(cell, &"ventral")
-	var face: StringName = &"ventral" if down and not up else &"dorsal"
+	return pick_vertical(editor, cell, other, prefer_underside)
+
+
+static func pick_vertical(ed: ShipEditor, cell: Vector3i, other: bool, underside: bool) -> StringName:
+	var up := ed != null and ed.grid.is_exterior_face(cell, &"dorsal")
+	var down := ed != null and ed.grid.is_exterior_face(cell, &"ventral")
+	var face: StringName = &"ventral" if (down and not up) or (up == down and underside) else &"dorsal"
 	if other:
 		face = &"dorsal" if face == &"ventral" else &"ventral"
 	return face
@@ -108,10 +131,42 @@ static func across(cell: Vector3i, face: StringName) -> Vector3i:
 
 # --- Input -------------------------------------------------------------------
 
+## Zoom about a point of the view (keeps the cell under it in place).
+func zoom_at(pos: Vector2, factor: float) -> void:
+	var before := zoom
+	zoom = clampf(zoom * factor, ZOOM_MIN, ZOOM_MAX)
+	var k := zoom / before
+	# Keep `pos` fixed: the view's centre-relative offset scales with the zoom.
+	pan = (pan - (pos - size * 0.5)) * k + (pos - size * 0.5)
+	if is_equal_approx(zoom, 1.0):
+		pan = Vector2.ZERO
+	queue_redraw()
+
+
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var wb := event as InputEventMouseButton
+		if wb.pressed and (wb.button_index == MOUSE_BUTTON_WHEEL_UP or wb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+			zoom_at(wb.position, 1.15 if wb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.15)
+			accept_event()
+			return
+		if wb.button_index == MOUSE_BUTTON_MIDDLE:
+			_panning = wb.pressed
+			accept_event()
+			return
+		if wb.button_index == MOUSE_BUTTON_LEFT and not wb.pressed:
+			_press_cell = null
+	if event is InputEventMouseMotion and _panning:
+		pan += (event as InputEventMouseMotion).relative
+		queue_redraw()
+		accept_event()
+		return
 	if event is InputEventMouseMotion:
 		var mm := event as InputEventMouseMotion
 		var cell := cell_at(mm.position)
+		if _press_cell != null and mm.button_mask & MOUSE_BUTTON_MASK_LEFT and cell != _press_cell:
+			drag_moved.emit(_press_cell, cell)
+			_press_cell = cell
 		var face := face_at(mm.position, mm.shift_pressed)
 		if cell != _hover_cell or face != _hover_face:
 			_hover_cell = cell
@@ -135,7 +190,23 @@ func _gui_input(event: InputEvent) -> void:
 		elif mb.pressed and (mb.button_index == MOUSE_BUTTON_LEFT or mb.button_index == MOUSE_BUTTON_RIGHT):
 			grab_focus()
 			cell_pressed.emit(cell, face, mb.button_index, mb.shift_pressed)
+			if mb.button_index == MOUSE_BUTTON_LEFT and drag_moves:
+				_press_cell = cell
 			accept_event()
+
+
+## Centre-of-mass symbol: a quartered disc (gold); dimmer off this deck.
+static func draw_com(canvas: CanvasItem, p: Vector2, r: float, here: bool) -> void:
+	var gold := Color(CyberTheme.AMBER, 1.0 if here else 0.45)
+	var dark := Color(0.02, 0.03, 0.05, 0.9 if here else 0.4)
+	canvas.draw_circle(p, r, dark)
+	for q in [0, 2]:
+		var pts := PackedVector2Array([p])
+		for k in 9:
+			var a: float = (q + k / 8.0) * PI * 0.5
+			pts.append(p + Vector2(cos(a), sin(a)) * r)
+		canvas.draw_colored_polygon(pts, gold)
+	canvas.draw_arc(p, r, 0.0, TAU, 24, gold, 1.5)
 
 
 ## Cells of the rectangle being dragged (for the room ghost), or [].
@@ -190,8 +261,6 @@ func _draw() -> void:
 		var rr := _cells_rect(ShipGrid.room_cells(room)).grow(-2)
 		draw_rect(rr, Color(def.color, 0.55))
 		draw_rect(rr, def.color.lightened(0.3), false, 1.5)
-		# Top-left, so equipment labels drawn over the room centre stay readable.
-		_label(font, rr, def.display_name, Color(1, 1, 1, 0.9), true)
 
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
@@ -205,9 +274,16 @@ func _draw() -> void:
 	_draw_slopes()
 	_draw_module_outlines()
 	_draw_bus()
+	_draw_coolant()
 	_draw_plates()
 	_draw_hatches()
 	_draw_external_equipment()
+	# Room names last, over the conduit and plates. Top-left, so equipment
+	# labels drawn over the room centre stay readable.
+	for room in bp.rooms:
+		var rdef: RoomDefinition = grid.catalog.rooms.get(room.def_id)
+		if room.deck == deck and rdef != null:
+			_label(font, _cells_rect(ShipGrid.room_cells(room)).grow(-2), rdef.display_name, Color(1, 1, 1, 0.95), true)
 
 	for cell in issue_cells:
 		if cell.y == deck:
@@ -216,6 +292,10 @@ func _draw() -> void:
 		if cell.y == deck:
 			draw_rect(cell_rect(cell).grow(-1), COLOR_SELECT, false, 2.0)
 
+	if show_com and editor.stats != null and editor.stats.mass_kg > 0.0:
+		var g := editor.stats.center_of_mass_m / ShipGrid.CELL_SIZE_M
+		var p := _origin + Vector2(_z_max + 1.0 - g.z, g.x - _x_min) * _px
+		DeckEditor.draw_com(self, p, maxf(_px * 0.4, 6.0), floori(g.y) == deck)
 	var ghost := drag_cells() if is_dragging() else ghost_cells
 	for cell in ghost:
 		if cell.y == deck:
@@ -289,8 +369,8 @@ func _draw_bus() -> void:
 	var bus := editor.blueprint.bus
 	if bus.is_empty():
 		return
-	var col := Color(CyberTheme.AMBER, 0.85)
-	var w := maxf(_px * 0.1, 2.0)
+	var col := Color(CyberTheme.AMBER, 0.6)
+	var w := maxf(_px * 0.04, 1.0)
 	for key: String in bus:
 		var cell := ShipBlueprint.parse_cell_key(key)
 		if cell.y != deck:
@@ -307,8 +387,29 @@ func _draw_bus() -> void:
 			draw_string(get_theme_default_font(), c + Vector2(w + 1, w + 8), "▼", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, col)
 
 
-## Armour plates: a bar inside the edge for side plates, a corner tab for
-## top (filled) and underside (outline) plates. Cyan = 40 mm, amber = 80 mm.
+## Coolant pipes: thin teal lines, set off the conduit so both read.
+func _draw_coolant() -> void:
+	var pipes := editor.blueprint.coolant
+	if pipes.is_empty():
+		return
+	var col := Color(CyberTheme.CYAN, 0.55)
+	var w := maxf(_px * 0.04, 1.0)
+	var off := Vector2(_px * 0.18, _px * 0.18)
+	for key: String in pipes:
+		var cell := ShipBlueprint.parse_cell_key(key)
+		if cell.y != deck:
+			continue
+		var c := cell_rect(cell).get_center() + off
+		draw_circle(c, w * 1.5, col)
+		for face in [&"fore", &"starboard"]:
+			var other := across(cell, face)
+			if pipes.has(ShipBlueprint.cell_key(other)):
+				draw_line(c, cell_rect(other).get_center() + off, col, w)
+
+
+## Armour plates: a thin bar inside the edge for side plates, a corner tab
+## for top (filled) and underside (outline) plates. Grey = 40 mm, dark grey
+## (and a little thicker) = 80 mm.
 func _draw_plates() -> void:
 	for key: String in editor.blueprint.armor:
 		var cf := ShipBlueprint.parse_plate_key(key)
@@ -316,9 +417,9 @@ func _draw_plates() -> void:
 		if cell.y != deck:
 			continue
 		var mm := int(editor.blueprint.armor[key])
-		var col := Color(CyberTheme.AMBER if mm >= ShipBlueprint.PLATE_THICK_MM else CyberTheme.CYAN, 0.9)
+		var col := COLOR_PLATE_THICK if mm >= ShipBlueprint.PLATE_THICK_MM else COLOR_PLATE_THIN
 		var r := cell_rect(cell)
-		var tab := Vector2.ONE * maxf(_px * 0.24, 4.0)
+		var tab := Vector2.ONE * maxf(_px * 0.16, 3.0)
 		match cf[1]:
 			&"dorsal":
 				draw_rect(Rect2(r.position + Vector2(2, 2), tab), col)
@@ -327,7 +428,7 @@ func _draw_plates() -> void:
 			_:
 				var seg := _edge(cell, cf[1])
 				var inward: Vector2 = (r.get_center() - (seg[0] + seg[1]) * 0.5).normalized() * _px * 0.1
-				draw_line(seg[0] + inward, seg[1] + inward, col, maxf(_px * (0.16 if mm >= ShipBlueprint.PLATE_THICK_MM else 0.09), 2.0))
+				draw_line(seg[0] + inward * 0.5, seg[1] + inward * 0.5, col, maxf(_px * (0.07 if mm >= ShipBlueprint.PLATE_THICK_MM else 0.04), 1.5))
 
 
 func _draw_hatches() -> void:

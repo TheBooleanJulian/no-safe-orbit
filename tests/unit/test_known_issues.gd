@@ -30,7 +30,8 @@ func _ship(id: StringName, pos: Vector3 = Vector3.ZERO, bp: ShipBlueprint = null
 func test_stores_are_bought_back_at_the_yard() -> void:
 	var p := PlayerProfile.new(2)
 	p.ensure_vessel(_template())
-	p.vessel.condition = {"stores": {"propellant_kg": 30_000.0, "rounds": 200}}
+	var cap := ShipStats.compute(p.vessel.blueprint, ShipGrid.build(p.vessel.blueprint, _catalog())).rounds_capacity
+	p.vessel.condition = {"stores": {"propellant_kg": 30_000.0, "rounds": cap - 200}}
 	var need := ServiceYard.resupply_needs(p.vessel, _catalog())
 	assert_near(need.propellant_kg, 50_000.0, 1.0, "50 t of propellant to top up")
 	assert_true(need.rounds == 200 and need.credits == 50 + 20, "200 rounds; 70 credits (%d)" % need.credits)
@@ -145,7 +146,7 @@ func test_the_enemy_spends_its_power_like_a_fighter() -> void:
 	var me := _ship(&"me")
 	var them := _ship(&"them", Vector3(0, 0, -2000))
 	GunneryAI.combat(them, me, 0.0)
-	assert_true(them.systems.pips[2] == 3, "healthy and fighting: weapons pips up (%s)" % str(them.systems.pips))
+	assert_true(them.systems.pips == [2, 2, 2], "fighting: balanced, its guns at the rated rate like ours (%s)" % str(them.systems.pips))
 
 
 func _alongside(a: ShipState, b: ShipState, gap: float) -> void:

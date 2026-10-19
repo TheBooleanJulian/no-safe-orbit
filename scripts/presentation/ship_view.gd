@@ -55,7 +55,11 @@ func _ready() -> void:
 	_beacons = model.beacons
 	_turrets = model.turrets
 	_docked_craft = model.docked_craft
-	_build_plumes(model.engine_nozzles)
+	_build_plumes(model.engine_nozzles, model.engine_normals)
+	_plates = model.plates
+	_spinners = model.spinners
+	_windows = model.windows
+	_nav_lights = model.nav_lights
 	_build_jets(model.rcs_blocks)
 	_wreck_material = StandardMaterial3D.new()
 	_wreck_material.albedo_color = Color(0.12, 0.1, 0.09)
@@ -69,12 +73,20 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 	var fwd_fraction := 0.0
 	if state.config.thrust_forward_n > 0.0:
 		fwd_fraction = clampf(-state.last_thrust_body.z / state.config.thrust_forward_n, 0.0, 1.0)
-	for pivot in _plumes:
-		pivot.visible = fwd_fraction > 0.01
-		pivot.scale = Vector3(1.0, 1.0, lerpf(0.2, 1.0, fwd_fraction))
+	for k in _plumes.size():
+		# Each plume: how hard the ship is pushing away from its face.
+		var n: Vector3 = _plume_normals[k]
+		var f := fwd_fraction
+		if n.z < 0.9:
+			var axis := 0 if absf(n.x) > 0.5 else (1 if absf(n.y) > 0.5 else 2)
+			var cap := state.config.max_thrust(axis, n[axis] < 0.0)
+			f = clampf(state.last_thrust_body.dot(-n) / cap, 0.0, 1.0) if cap > 0.0 else 0.0
+		_plumes[k].visible = f > 0.01
+		_plumes[k].scale = Vector3(1.0, 1.0, lerpf(0.2, 1.0, f))
 	_plume_material.albedo_color.a = 0.15 + 0.4 * fwd_fraction
 	if state.systems != null:
 		_show_damage(state.systems)
+		_update_lights_and_radar(state.systems, get_process_delta_time())
 	_drift_pieces(get_process_delta_time())
 	_train_turrets(state)
 	_update_jets(state)
@@ -207,10 +219,71 @@ func _train_turrets(state: ShipState) -> void:
 		pivot.basis = Basis.looking_at(dir, up)
 
 
+## Radar turntables spin while their mast works; windows go dark when their
+## room loses power, running lights when the ship has none (they blink).
+func _update_lights_and_radar(systems: ShipSystems, delta: float) -> void:
+	for s in _spinners:
+		var e := systems.equipment_by_id(s.id)
+		if e != null and e.working():
+			(s.node as Node3D).rotate_object_local(Vector3.UP, RADAR_RPM / 60.0 * TAU * delta)
+	_lights_check -= delta
+	if _lights_check > 0.0:
+		return
+	_lights_check = 0.3
+	for w in _windows:
+		var room: int = w.room
+		(w.node as Node3D).visible = room < systems.rooms.size() and systems.rooms[room].powered and systems.rooms[room].pressurized
+	var on := systems.power_supply_kw > 0.0 and fmod(_clock, 1.6) < 1.2
+	for n in _nav_lights:
+		n.visible = on
+
+
+## Worn armour darkens with scorching; a plate shot through (or on a wrecked
+## module) is charred black and crumpled. Checked twice a second.
+func _show_plate_wear(systems: ShipSystems) -> void:
+	_wear_check -= get_process_delta_time()
+	if _wear_check > 0.0 or _plates.is_empty():
+		return
+	_wear_check = 0.5
+	for key: String in _plates:
+		var full := float(systems.blueprint.armor.get(key, 0.0))
+		if full <= 0.0:
+			continue
+		var left: float = systems.plates.get(key, full)
+		var cf := ShipBlueprint.parse_plate_key(key)
+		var mi: int = systems.grid.module_at.get(cf[0], -1)
+		var dead := left <= 0.0 or (mi >= 0 and systems.modules[mi].wrecked())
+		var level := 3 if dead else (2 if left < full * 0.5 else (1 if left < full * 0.9 else 0))
+		if int(_plate_level.get(key, 0)) == level:
+			continue
+		_plate_level[key] = level
+		var node := _plates[key] as MeshInstance3D
+		node.material_override = _char_material(level, node.material_override)
+		if dead:
+			# Buckled: squashed, twisted a little, sagging off the hull.
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash(key)
+			node.basis = node.basis * Basis.from_euler(Vector3(rng.randf_range(-0.2, 0.2), rng.randf_range(-0.25, 0.25), rng.randf_range(-0.2, 0.2))) \
+				* Basis.from_scale(Vector3(rng.randf_range(0.7, 0.9), rng.randf_range(0.5, 0.8), rng.randf_range(0.7, 0.9)))
+
+
+func _char_material(level: int, current: Material) -> Material:
+	if level == 0:
+		return current
+	if not _char_mats.has(level):
+		var m := StandardMaterial3D.new()
+		m.albedo_color = [Color.WHITE, Color(0.3, 0.29, 0.27), Color(0.17, 0.15, 0.13), Color(0.06, 0.05, 0.045)][level]
+		m.roughness = 0.95
+		m.metallic = 0.2
+		_char_mats[level] = m
+	return _char_mats[level]
+
+
 ## Destroyed external systems disappear; a wrecked module breaks up: its
 ## plating shears off in tumbling pieces that drift away from the hull,
 ## leaving a charred, shrunken frame.
 func _show_damage(systems: ShipSystems) -> void:
+	_show_plate_wear(systems)
 	for e in systems.equipment:
 		if e.destroyed() and _parts.has(e.id):
 			(_parts[e.id] as Node3D).visible = false
@@ -266,10 +339,21 @@ const BREAK_PIECES := 4
 const BREAK_LIFETIME_S := 12.0
 var _broken := {}
 var _pieces: Array[Dictionary] = []
+var _plume_normals: Array[Vector3] = []
+var _spinners: Array[Dictionary] = []
+var _windows: Array[Dictionary] = []
+var _nav_lights: Array[Node3D] = []
+var _lights_check := 0.0
+const RADAR_RPM := 12.0
+var _plates: Dictionary = {}
+var _plate_level: Dictionary = {}
+var _char_mats: Dictionary = {}
+var _wear_check := 0.0
 
 
-## One additive cone per main engine, pointing aft; length ∝ main thrust.
-func _build_plumes(nozzles: Array[Vector3]) -> void:
+## One additive cone per main engine, out along its face; length ∝ thrust.
+func _build_plumes(nozzles: Array[Vector3], normals: Array[Vector3]) -> void:
+	_plume_normals = normals
 	_plume_material = StandardMaterial3D.new()
 	_plume_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_plume_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -282,10 +366,15 @@ func _build_plumes(nozzles: Array[Vector3]) -> void:
 	cone.height = 14.0
 	cone.cap_top = false
 	cone.cap_bottom = false
-	for nozzle in nozzles:
-		# Pivot at the nozzle so scaling along Z keeps the plume attached.
+	for k in nozzles.size():
+		var nozzle := nozzles[k]
+		# Pivot at the nozzle so scaling along Z keeps the plume attached;
+		# its +Z runs out along the engine's face.
 		var pivot := Node3D.new()
 		pivot.position = nozzle
+		var out := normals[k] if k < normals.size() else Vector3.BACK
+		if out.z < 0.99:
+			pivot.basis = Basis.looking_at(-out, Vector3.UP if absf(out.y) < 0.9 else Vector3.BACK)
 		pivot.visible = false
 		add_child(pivot)
 		var plume := MeshInstance3D.new()

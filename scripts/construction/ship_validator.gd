@@ -72,7 +72,24 @@ static func validate(bp: ShipBlueprint, catalog: ConstructionCatalog,
 	if stats == null:
 		stats = ShipStats.compute(bp, grid)
 	_check_systems(bp, grid, stats, report)
+	_check_coolant(bp, grid, report)
 	return report
+
+
+## Routed coolant: radiators off a reactor's loop reject nothing.
+static func _check_coolant(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	if not CoolantLoop.routed(bp):
+		return
+	var cooled := CoolantLoop.cooled_radiators(bp, grid)
+	var cold := PackedStringArray()
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def != null and def.kind == EquipmentDefinition.Kind.RADIATOR and not cooled.has(i):
+			cold.append(bp.equipment[i].id)
+	if not cold.is_empty():
+		_add(report, Severity.WARNING, &"radiator_uncooled",
+			"%d radiator%s not piped to a reactor (%s): no heat goes there. Auto-route the coolant loop." % [
+				cold.size(), "" if cold.size() == 1 else "s", ", ".join(cold)], cold[0])
 
 
 static func _add(report: Report, severity: Severity, code: StringName, message: String, subject: String) -> void:
@@ -183,6 +200,10 @@ static func _check_access(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> 
 		if ra >= 0 and rb >= 0 and ra != rb:
 			links.get_or_add(ra, []).append(rb)
 			links.get_or_add(rb, []).append(ra)
+	# Same-type rooms side by side are one space.
+	for ra in grid.open_rooms:
+		for rb in grid.open_rooms[ra]:
+			links.get_or_add(ra, []).append(rb)
 	var seen := {start: true}
 	var queue := [start]
 	while not queue.is_empty():
@@ -199,6 +220,10 @@ static func _check_access(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> 
 
 
 # --- Equipment ----------------------------------------------------------------
+
+## A main engine off the aft face is fed from an engine room behind it.
+const ENGINE_ROOM_ID := &"engine_room"
+
 
 static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
 	var mounts := {}  # "cell|face" -> equipment id
@@ -224,6 +249,12 @@ static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 							"%s %s is on the sloped face of a wedge at %s: systems need a flat face. Put it on a block." % [
 								def.display_name, e.id, _cell_text(cell)], e.id)
 						break
+				if def.kind == EquipmentDefinition.Kind.MAIN_ENGINE and e.face != &"aft":
+					var room: int = grid.room_at.get(e.cell, -1)
+					if room < 0 or bp.rooms[room].def_id != ENGINE_ROOM_ID:
+						_add(report, Severity.ERROR, &"engine_needs_engine_room",
+							"%s %s on a %s face needs an engine room on the inside of that cell (aft faces don't)." % [
+								def.display_name, e.id, e.face], e.id)
 			for cell in grid.external_cells(i):
 				var key := "%s|%s" % [cell, e.face]
 				if mounts.has(key):

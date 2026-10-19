@@ -66,8 +66,9 @@ var systems: ShipSystems
 ## every mount; each mount has its own cooldown.
 var cannon_rounds: int = 0
 ## Rounds per gun type (display name): a ship mixing guns keeps a separate
-## magazine for each calibre, sharing the magazine space by mount count.
-## `cannon_rounds` is always their sum.
+## magazine for each calibre, sharing the magazine's stowage mass by mount
+## count (so a heavier round means fewer of them). `cannon_rounds` is
+## always their sum.
 var magazines: Dictionary = {}
 ## Each gun type's share of the magazine space (0..1).
 var _magazine_share: Dictionary = {}
@@ -113,12 +114,15 @@ static func create(
 	state.orientation = p_orientation.normalized()
 	if p_config.cannon != null:
 		var n := p_config.cannon_muzzles_body.size()
-		var counts := {}
+		var weights := {}
+		var sum := 0.0
 		for k in maxi(n, 1):
-			var gun_name := p_config.mount_cannon(k).display_name
-			counts[gun_name] = int(counts.get(gun_name, 0)) + 1
-		for gun_name in counts:
-			state._magazine_share[gun_name] = float(counts[gun_name]) / maxi(n, 1)
+			var gun := p_config.mount_cannon(k)
+			var w := 1.0 / maxf(gun.round_mass_kg, 1e-3)
+			weights[gun.display_name] = float(weights.get(gun.display_name, 0.0)) + w
+			sum += w
+		for gun_name in weights:
+			state._magazine_share[gun_name] = float(weights[gun_name]) / sum
 		state.set_rounds(p_config.cannon.magazine_rounds)
 		state.cannon_cooldowns.resize(n)
 		state.cannon_cooldowns.fill(0.0)

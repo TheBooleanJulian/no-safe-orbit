@@ -33,6 +33,10 @@ extends Resource
 @export var thrust_lateral_n: float = 5.0e5
 ## RCS thrust available in each vertical direction (up or down).
 @export var thrust_vertical_n: float = 5.0e5
+## Main engines on faces other than aft, by the body direction they push:
+## index axis × 2 + (0 for +, 1 for −); [4] is reverse (+Z). Added to the
+## RCS thrust on that side. (Aft engines are thrust_forward_n.)
+@export var engine_thrust_n: PackedFloat64Array = PackedFloat64Array([0, 0, 0, 0, 0, 0])
 
 @export_group("Rotation")
 ## Maximum RCS torque magnitude about body X, Y and Z (symmetric).
@@ -104,6 +108,9 @@ func scale_rate_of_fire(factor: float) -> void:
 	if cannon == null:
 		return
 	var scaled := {}
+	# A fresh array: `duplicate()` of a config shares this one with the base
+	# config, and scaling it in place compounded on every recompute.
+	mount_cannons = mount_cannons.duplicate()
 	for gun in [cannon] + mount_cannons:
 		if gun != null and not scaled.has(gun):
 			var copy: KineticCannonConfig = gun.duplicate()
@@ -118,14 +125,15 @@ func scale_rate_of_fire(factor: float) -> void:
 ## Maximum thrust (N) that can push the ship along `axis` (0=X, 1=Y, 2=Z)
 ## in the positive or negative body direction.
 func max_thrust(axis: int, positive: bool) -> float:
+	var extra := engine_thrust_n[axis * 2 + (0 if positive else 1)] if engine_thrust_n.size() == 6 else 0.0
 	match axis:
 		0:
-			return thrust_lateral_n
+			return thrust_lateral_n + extra
 		1:
-			return thrust_vertical_n
+			return thrust_vertical_n + extra
 		2:
 			# Body +Z is aft, so positive Z thrust comes from reverse thrusters.
-			return thrust_reverse_n if positive else thrust_forward_n
+			return thrust_reverse_n + extra if positive else thrust_forward_n
 	push_error("ShipConfig.max_thrust: invalid axis %d" % axis)
 	return 0.0
 

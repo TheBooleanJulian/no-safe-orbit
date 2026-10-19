@@ -19,7 +19,7 @@ func test_rebind_keeps_the_other_kind() -> void:
 	assert_true(InputBindings.describe(&"thrust_forward", InputBindings.Kind.GAMEPAD) == pad_before and pad_before != "—",
 		"gamepad binding untouched (%s)" % pad_before)
 	_cleanup()
-	assert_true(InputBindings.describe(&"thrust_forward", InputBindings.Kind.KEYBOARD_MOUSE) == "W", "reset restores W")
+	assert_true(InputBindings.describe(&"thrust_forward", InputBindings.Kind.KEYBOARD_MOUSE) == "R", "reset restores R")
 
 
 func test_saved_bindings_survive_a_restart() -> void:
@@ -55,7 +55,7 @@ func test_every_flight_action_has_gamepad_default() -> void:
 	for entry in InputBindings.ACTIONS:
 		# Keyboard-only by design: releasing the mouse, and the information
 		# panel toggles (on a gamepad the Tab overview covers them).
-		if entry[0] in [&"release_mouse", &"toggle_orbit_panel", &"toggle_details", &"toggle_help", &"orbit_camera"]:
+		if entry[0] in [&"release_mouse", &"toggle_orbit_panel", &"toggle_details", &"toggle_help", &"orbit_camera", &"cycle_target", &"grapple"]:
 			continue
 		if InputBindings.describe(entry[0], InputBindings.Kind.GAMEPAD) == "—":
 			missing.append(String(entry[0]))

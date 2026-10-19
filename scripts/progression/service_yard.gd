@@ -38,6 +38,7 @@ const CATEGORY := {
 	EquipmentDefinition.Kind.RCS: &"mobility",
 	EquipmentDefinition.Kind.PROPELLANT_TANK: &"mobility",
 	EquipmentDefinition.Kind.DOCKING_COLLAR: &"hull",
+	EquipmentDefinition.Kind.GRAPPLE: &"hull",
 	EquipmentDefinition.Kind.CRAFT_MOUNT: &"combat",
 }
 
@@ -190,14 +191,32 @@ static func repair_jobs(vessel: ShipInstance, catalog: ConstructionCatalog) -> A
 		j.order = 1.5
 		jobs.append(j)
 	var cuts: Array = vessel.condition.get("bus_cut", [])
-	if not cuts.is_empty():
+	var pipes: Array = vessel.condition.get("coolant_cut", [])
+	if not cuts.is_empty() or not pipes.is_empty():
 		var j := Job.new()
 		j.kind = &"bus"
 		j.subject = "bus"
 		j.category = &"combat"
-		j.cost = bus_cost(cuts.size())
-		j.label = "Re-run %d cut power conduit%s" % [cuts.size(), "" if cuts.size() == 1 else "s"]
+		j.cost = bus_cost(cuts.size() + pipes.size())
+		var what := PackedStringArray()
+		if not cuts.is_empty():
+			what.append("%d cut power conduit%s" % [cuts.size(), "" if cuts.size() == 1 else "s"])
+		if not pipes.is_empty():
+			what.append("%d cut coolant pipe%s" % [pipes.size(), "" if pipes.size() == 1 else "s"])
+		j.label = "Re-run %s" % " and ".join(what)
 		j.order = 0.5
+		jobs.append(j)
+	var foam: Dictionary = vessel.condition.get("foam_used", {})
+	if not foam.is_empty():
+		var charges := 0
+		for id in foam:
+			charges += int(foam[id])
+		var j := Job.new()
+		j.kind = &"foam"
+		j.subject = "foam"
+		j.cost = charges
+		j.label = "Recharge %d foam suppression charge%s" % [charges, "" if charges == 1 else "s"]
+		j.order = 2.5
 		jobs.append(j)
 	for id in vessel.condition.get("breached", []):
 		var j := Job.new()
@@ -354,6 +373,9 @@ static func perform(jobs: Array[Job], vessel: ShipInstance, profile: PlayerProfi
 				c.erase("plates")
 			&"bus":
 				c.erase("bus_cut")
+				c.erase("coolant_cut")
+			&"foam":
+				c.erase("foam_used")
 			&"breach":
 				(c.get("breached", []) as Array).erase(j.subject)
 			&"hatch":
@@ -397,6 +419,9 @@ static func refit(vessel: ShipInstance, new_bp: ShipBlueprint, profile: PlayerPr
 	c["bus_cut"] = (c.get("bus_cut", []) as Array).filter(func(k: Variant) -> bool: return new_bp.bus.has(str(k)))
 	if (c.bus_cut as Array).is_empty():
 		c.erase("bus_cut")
+	c["coolant_cut"] = (c.get("coolant_cut", []) as Array).filter(func(k: Variant) -> bool: return new_bp.coolant.has(str(k)))
+	if (c.coolant_cut as Array).is_empty():
+		c.erase("coolant_cut")
 	var worn: Dictionary = c.get("plates", {})
 	for key in worn.keys():
 		if int(new_bp.armor.get(key, 0)) != int(vessel.blueprint.armor.get(key, 0)):

@@ -130,7 +130,7 @@ func test_switching_a_load_off_reroutes_its_power() -> void:
 	var demand := s.power_demand_kw
 	assert_true(s.set_switched_off("e41", true), "the gun can be switched off")
 	assert_true(not s.equipment_by_id("e41").powered and not s.equipment_by_id("e41").working(), "a switched-off gun is unpowered")
-	assert_near(demand - s.power_demand_kw, 120.0, 1e-3, "its 120 kW freed (kW)")
+	assert_near(demand - s.power_demand_kw, 60.0, 1e-3, "its 60 kW freed (kW)")
 	assert_true(not s.set_switched_off("e28", true), "reactors make power: they can't be switched off as loads")
 	s.set_switched_off("e41", false)
 	assert_true(s.equipment_by_id("e41").working(), "switched back on")

@@ -6,9 +6,9 @@
 script = ExtResource("1_gun")
 display_name = "Railgun"
 muzzle_velocity_mps = 4000.0
-rate_of_fire_rpm = 60.0
+rate_of_fire_rpm = 24.0
 magazine_rounds = 400
 round_mass_kg = 2.5
-penetration_mm = 140.0
+penetration_mm = 220.0
 traverse_deg_s = 12.0
 dispersion_deg = 0.01

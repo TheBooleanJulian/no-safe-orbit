@@ -37,12 +37,12 @@ run_step shipyard  "$GODOT" --headless --path . -s res://tests/smoke/smoke_shipy
 run_step campaign  "$GODOT" --headless --path . -s res://tests/smoke/smoke_campaign.gd
 run_step boarding  "$GODOT" --headless --path . -s res://tests/smoke/smoke_boarding.gd
 run_step wing      "$GODOT" --headless --path . -s res://tests/smoke/smoke_wing.gd
-run_step boot_main "$GODOT" --headless --path . --quit-after 600
+run_step boot_main "$GODOT" --headless --path . --quit-after 600 -- --profile=user://check_boot_profile.json
 # Exported data: pack the project with the export preset (no templates
 # needed) and boot from the pack, so missing include filters fail here.
 mkdir -p build/export
 run_step export    "$GODOT" --headless --path . --export-pack "Windows Desktop" build/export/NoSafeOrbit.pck
-run_step pck_boot  "$GODOT" --headless --main-pack build/export/NoSafeOrbit.pck --quit-after 300
+run_step pck_boot  "$GODOT" --headless --main-pack build/export/NoSafeOrbit.pck --quit-after 300 -- --profile=user://check_boot_profile.json
 if ! grep -q "Orbital sandbox ready" "$LOG_DIR/pck_boot.log"; then
 	echo "✗ pck_boot did not reach the flight scene"
 	status=1

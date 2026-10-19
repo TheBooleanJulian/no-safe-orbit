@@ -95,7 +95,9 @@ func test_scans_need_a_held_lock_and_an_active_sensor_mast() -> void:
 	var b := _ship(&"b", Vector3(0, 0, -3000))
 	var tr := SensorTrack.new()
 	var t := 0.0
-	while t < SensorTrack.SCAN_TIME_S * 0.5:
+	# A bigger bridge scans faster.
+	var scan_s := SensorTrack.SCAN_TIME_S / a.systems.room_bonus(&"command")
+	while t < scan_s * 0.5:
 		tr.update(a, b, t, 0.1)
 		t += 0.1
 	assert_true(not tr.scanned and tr.scan_progress > 0.4, "half way after half the time (%.2f)" % tr.scan_progress)

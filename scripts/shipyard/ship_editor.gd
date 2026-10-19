@@ -160,6 +160,44 @@ func auto_route_bus() -> int:
 				break
 	if root.is_empty() or terminals.is_empty():
 		return 0
+	var tree := _route_tree(root, terminals)
+	_checkpoint()
+	blueprint.bus.clear()
+	for c in tree:
+		blueprint.bus[ShipBlueprint.cell_key(c)] = true
+	_refresh()
+	return blueprint.bus.size()
+
+
+## Pipe a coolant loop from the reactors to every radiator and heat-making
+## system (replaces the current one). Returns the pipe cells (0 = nothing
+## to route).
+func auto_route_coolant() -> int:
+	var ends := CoolantLoop.route_ends(blueprint, grid)
+	if (ends.root as Array).is_empty() or (ends.terminals as Array).is_empty():
+		return 0
+	var tree := _route_tree(ends.root, ends.terminals)
+	_checkpoint()
+	blueprint.coolant.clear()
+	for c in tree:
+		blueprint.coolant[ShipBlueprint.cell_key(c)] = true
+	_refresh()
+	return blueprint.coolant.size()
+
+
+## Take the coolant pipes out (every radiator then works, as before loops).
+func clear_coolant() -> int:
+	var n := blueprint.coolant.size()
+	if n > 0:
+		_checkpoint()
+		blueprint.coolant.clear()
+		_refresh()
+	return n
+
+
+## Shortest-path tree through hull cells from `root` (cells) to touch every
+## terminal (an Array of cell Arrays). Returns its cells (cell -> true).
+func _route_tree(root: Array, terminals: Array) -> Dictionary:
 	var tree := {}
 	for c in root:
 		tree[c] = true
@@ -195,12 +233,7 @@ func auto_route_bus() -> int:
 		while not tree.has(c2):
 			tree[c2] = true
 			c2 = came[c2]
-	_checkpoint()
-	blueprint.bus.clear()
-	for c in tree:
-		blueprint.bus[ShipBlueprint.cell_key(c)] = true
-	_refresh()
-	return blueprint.bus.size()
+	return tree
 
 
 ## Turn a module upside down (a wedge's slope then faces down).
