@@ -109,8 +109,8 @@ func flying() -> Array[Craft]:
 func rack_frame(world: WorldSimulation, c: Craft) -> Array:
 	var carrier := world.get_ship(carrier_id)
 	var e := carrier.systems.equipment_by_id(c.rack_id)
-	var normal := Vector3(ShipGrid.FACE_NORMALS[carrier.systems.blueprint.equipment[e.index].face])
-	return [carrier.position + carrier.orientation * e.body_position, carrier.orientation * normal]
+	var door := carrier.systems.launch_door(e)
+	return [carrier.position + carrier.orientation * (door[0] as Vector3), carrier.orientation * (door[1] as Vector3)]
 
 
 ## Why `c` cannot launch now ("" = it can).

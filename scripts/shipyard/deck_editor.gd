@@ -357,8 +357,11 @@ func _draw_external_equipment() -> void:
 	for i in bp.equipment.size():
 		var def := editor.grid.equipment_def(i)
 		var e := bp.equipment[i]
-		if def != null and def.is_external() and e.cell.y == deck:
-			_draw_face_marker(e.cell, e.face, def.color, 1.0)
+		if def == null or not def.is_external():
+			continue
+		for cell in editor.grid.external_cells(i):
+			if cell.y == deck:
+				_draw_face_marker(cell, e.face, def.color, 1.0)
 
 
 ## Edge faces: a bar just outside the edge. Dorsal: filled dot; ventral: ring.

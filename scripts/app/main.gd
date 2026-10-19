@@ -689,6 +689,10 @@ func _link_wings() -> void:
 func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
 	var alive := {}
 	for wing in [player_wing, target_wing]:
+		var carrier_view: ShipView = _views.get(wing.carrier_id)
+		if carrier_view != null:
+			for c in wing.crafts:
+				carrier_view.show_docked_craft(c.rack_id, c.status == AirWing.Status.DOCKED)
 		for c in wing.flying():
 			var ship := world.get_ship(c.id)
 			if ship == null:

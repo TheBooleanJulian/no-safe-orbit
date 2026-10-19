@@ -193,6 +193,13 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipInstance:
 	v.name = str(d.get("name", bp.name))
 	var c: Variant = d.get("condition", {})
 	v.condition = (c as Dictionary).duplicate(true) if c is Dictionary else {}
+	# JSON reads every number back as a float: crew counts are whole people.
+	var crew: Variant = v.condition.get("crew", {})
+	if crew is Dictionary:
+		for kind in crew:
+			if crew[kind] is Dictionary:
+				for role in crew[kind]:
+					crew[kind][role] = int(crew[kind][role])
 	var wg: Variant = d.get("wing", {})
 	v.wing = (wg as Dictionary).duplicate(true) if wg is Dictionary else {}
 	var cg: Variant = d.get("cargo", {})

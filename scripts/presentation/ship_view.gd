@@ -35,6 +35,15 @@ const EXIT_HOLE_RADIUS_M := 0.9
 var _holes: Array[Node3D] = []
 ## Gun turrets {id, pivot}, trained from the ship's turret directions.
 var _turrets: Array[Dictionary] = []
+## Craft drawn sitting on their external racks, by rack id.
+var _docked_craft: Dictionary = {}
+
+
+## Show or hide the craft sitting on rack `rack_id` (Main: hidden while out).
+func show_docked_craft(rack_id: String, docked: bool) -> void:
+	var node: Node3D = _docked_craft.get(rack_id)
+	if node != null:
+		node.visible = docked
 var _hole_material: StandardMaterial3D
 var _scorch_material: StandardMaterial3D
 
@@ -45,6 +54,7 @@ func _ready() -> void:
 	_parts = model.parts
 	_beacons = model.beacons
 	_turrets = model.turrets
+	_docked_craft = model.docked_craft
 	_build_plumes(model.engine_nozzles)
 	_build_jets(model.rcs_blocks)
 	_wreck_material = StandardMaterial3D.new()

@@ -38,6 +38,11 @@ enum Mount { INTERNAL, EXTERNAL }
 @export var allowed_room_roles: Array[StringName] = []
 ## External only: hull faces (body frame) this can be mounted on.
 @export var allowed_faces: Array[StringName] = []
+## External only: cells it spans along the hull from its cell — aft, or
+## across the ship (or up a flank) when turned with R.
+@export var length_cells: int = 1
+## Superseded: still loads and flies, no longer offered or dropped.
+@export var legacy: bool = false
 @export var mass_kg: float = 1000.0
 @export var power_kw: float = 0.0
 ## Waste heat generated while operating.

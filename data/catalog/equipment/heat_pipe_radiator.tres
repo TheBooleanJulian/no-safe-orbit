@@ -5,17 +5,18 @@
 [resource]
 script = ExtResource("1_def")
 id = &"heat_pipe_radiator"
-display_name = "Heat-pipe radiator"
+display_name = "Heat-pipe radiator (2 cells)"
 kind = 4
 mount = 1
 footprint_cells = Vector2i(1, 1)
 allowed_room_roles = Array[StringName]([])
 allowed_faces = Array[StringName]([&"port", &"starboard", &"dorsal", &"ventral"])
-mass_kg = 3500.0
+mass_kg = 7000.0
 power_kw = 0.0
 heat_kw = 0.0
-heat_rejection_kw = 1400.0
+heat_rejection_kw = 2800.0
 thrust_n = 0.0
 color = Color(1.0, 0.95, 0.85, 1)
 rarity = 2
 drop_weight = 10.0
+length_cells = 2

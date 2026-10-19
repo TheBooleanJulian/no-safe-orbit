@@ -60,7 +60,7 @@ static func build_pool(catalog: ConstructionCatalog) -> Array[Drop]:
 	for entry in [[&"equipment", catalog.equipment], [&"room", catalog.rooms], [&"hull", catalog.hull]]:
 		for id in ConstructionCatalog.sorted_ids(entry[1]):
 			var def: Resource = entry[1][id]
-			if def.rarity == Rarity.Tier.COMMON or def.drop_weight <= 0.0 or (def is HullModuleDefinition and def.legacy):
+			if def.rarity == Rarity.Tier.COMMON or def.drop_weight <= 0.0 or ((def is HullModuleDefinition or def is EquipmentDefinition) and def.legacy):
 				continue
 			var d := Drop.new()
 			d.kind = entry[0]

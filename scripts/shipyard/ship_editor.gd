@@ -225,7 +225,8 @@ func place_equipment(def_id: StringName, cell: Vector3i, face: StringName = &"",
 	_checkpoint()
 	var def: EquipmentDefinition = catalog.equipment.get(def_id)
 	var external := def != null and def.is_external()
-	var e := blueprint.add_equipment(def_id, cell, face if external else &"", 0 if external else rotation)
+	var turnable := not external or def.length_cells > 1
+	var e := blueprint.add_equipment(def_id, cell, face if external else &"", rotation if turnable else 0)
 	_refresh()
 	return e.id
 
@@ -314,8 +315,18 @@ func rotate_module(id: String) -> bool:
 		var i := blueprint.equipment.find(e)
 		var def := grid.equipment_def(i)
 		if def.is_external():
-			e.cell = turn.call(e.cell)
+			var span := grid.external_cells(i).map(func(c: Vector3i) -> Vector3i: return turn.call(c))
 			e.face = ShipGrid.face_of(ShipGrid.rotate_dir(ShipGrid.FACE_NORMALS[e.face], 1))
+			e.cell = span[0]
+			if span.size() > 1:
+				# Restart the span from its lowest cell, along whichever axis it now runs.
+				var lo: Vector3i = span[0]
+				for c: Vector3i in span:
+					if c.x + c.y + c.z < lo.x + lo.y + lo.z:
+						lo = c
+				e.cell = lo
+				var d: Vector3i = (span[1] - span[0]).abs()
+				e.rotation = 0 if ShipGrid.external_step(e.face, 0) == d else 1
 		else:
 			var lo := Vector3i(1 << 20, 0, 1 << 20)
 			for c in grid.equipment_cells(i):
@@ -436,7 +447,7 @@ func _contents_of(m: ShipBlueprint.PlacedModule) -> Dictionary:
 		var def := grid.equipment_def(i)
 		if def == null:
 			continue
-		var cells: Array = [e.cell] if def.is_external() else grid.equipment_cells(i)
+		var cells: Array = grid.external_cells(i) if def.is_external() else grid.equipment_cells(i)
 		if all_inside.call(cells):
 			out.equipment.append(e)
 	for h in blueprint.hatches:

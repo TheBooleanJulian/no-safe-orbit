@@ -30,6 +30,8 @@ class Model:
 	var parts: Dictionary = {}
 	## Gun turrets: {id, pivot} — views point each pivot's −Z along its barrel.
 	var turrets: Array[Dictionary] = []
+	## Craft shown docked on their external racks, by rack id.
+	var docked_craft: Dictionary = {}
 
 
 ## `origin_m`: grid-metre point placed at the model origin (normally the
@@ -59,7 +61,11 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 		_paint_name(model.root, flank, origin_m, hull_name)
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
-		if def == null or not def.is_external():
+		if def == null:
+			continue
+		if not def.is_external():
+			if def.kind == EquipmentDefinition.Kind.CRAFT_MOUNT:
+				_hangar_door(model, bp, grid, i, origin_m, mats, tint)
 			continue
 		var normal := Vector3(ShipGrid.FACE_NORMALS.get(bp.equipment[i].face, Vector3i.ZERO))
 		var mount := grid.equipment_position_m(i) - origin_m
@@ -92,11 +98,72 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				barrel.rotation_degrees = Vector3(90, 0, 0)
 				model.turrets.append({"id": bp.equipment[i].id, "pivot": pivot})
 			EquipmentDefinition.Kind.RADIATOR:
-				var fin := Vector3(0.12, 3.0, 2.8) if normal.y != 0.0 else Vector3(3.0, 0.12, 2.8)
+				# A fin standing off the face, as long as the cells it spans.
+				var cells := grid.external_cells(i)
+				var along := Vector3(cells[1] - cells[0]).abs() if cells.size() > 1 else Vector3(0, 0, 1)
+				var long_m := cells.size() * c - 0.2
+				# Long along the span, 3 m off the face, thin across.
+				var fin := Vector3.ONE * 0.12
+				for axis in 3:
+					if along[axis] > 0.5:
+						fin[axis] = long_m
+					elif absf(normal[axis]) > 0.5:
+						fin[axis] = 3.0
 				_box(part, fin, mount + normal * 1.5, mat)
+				_box(part, Vector3.ONE * 0.5 + along * (long_m - 0.5), mount + normal * 0.15, _mat(mats, Color(0.3, 0.32, 0.35) * tint))
 			EquipmentDefinition.Kind.DOCKING_COLLAR:
 				model.beacons.append(_collar(part, mount, normal))
+			EquipmentDefinition.Kind.SENSOR:
+				_sensor_mast(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))
+			EquipmentDefinition.Kind.CRAFT_MOUNT:
+				# A cradle on the hull; the docked craft sits in it (views hide it
+				# while the craft is out).
+				_box(part, Vector3(2.4, 0.3, 2.4), mount + normal * 0.15, _mat(mats, Color(0.25, 0.27, 0.3) * tint))
+				var craft := Node3D.new()
+				craft.name = "DockedCraft"
+				part.add_child(craft)
+				craft.transform = Transform3D(_basis_y_along(normal), mount + normal * 0.9)
+				CraftView.build_model(craft, def.craft, def.craft.cannon != null, false)
+				model.docked_craft[bp.equipment[i].id] = craft
 	return model
+
+
+## Sensor mast: a lattice pole with a dish and a sensor head on top.
+static func _sensor_mast(part: Node3D, mount: Vector3, normal: Vector3, mat: Material, dark: Material) -> void:
+	var b := _basis_y_along(normal)
+	var pole := _cylinder(part, 0.18, 0.28, 4.0, Vector3.ZERO, dark)
+	pole.transform = Transform3D(b, mount + normal * 2.0)
+	var head := _box(part, Vector3(1.0, 0.6, 1.0), Vector3.ZERO, mat)
+	head.transform = Transform3D(b, mount + normal * 4.2)
+	var dish := _cylinder(part, 1.3, 0.4, 0.35, Vector3.ZERO, mat)
+	# Tilted dish beside the head.
+	dish.transform = Transform3D(b * Basis(Vector3.RIGHT, deg_to_rad(55)), mount + normal * 3.5 + b.z * 0.9)
+	for k in 3:
+		var arm := _box(part, Vector3(0.08, 0.08, 1.6), Vector3.ZERO, dark)
+		arm.transform = Transform3D(b * Basis(Vector3.UP, TAU * k / 3.0), mount + normal * (1.0 + k * 0.9))
+
+
+## An internal craft bay's hangar door: a framed dark panel on the room's
+## open face where its craft come and go.
+static func _hangar_door(model: Model, bp: ShipBlueprint, grid: ShipGrid, i: int, origin_m: Vector3, mats: Dictionary, tint: Color) -> void:
+	var e := bp.equipment[i]
+	var cells: Array = grid.equipment_cells(i)
+	for face: StringName in [&"ventral", &"port", &"starboard", &"dorsal", &"aft", &"fore"]:
+		for cell: Vector3i in cells:
+			if not grid.is_exterior_face(cell, face):
+				continue
+			var n := Vector3(ShipGrid.FACE_NORMALS[face])
+			var part := Node3D.new()
+			part.name = e.id
+			model.root.add_child(part)
+			model.parts[e.id] = part
+			var pos := ShipGrid.cell_center_m(cell) + n * ShipGrid.CELL_SIZE_M * 0.5 - origin_m
+			var b := _basis_y_along(n)
+			var frame := _box(part, Vector3(2.8, 0.1, 2.8), Vector3.ZERO, _mat(mats, Color(0.95, 0.75, 0.15) * tint))
+			frame.transform = Transform3D(b, pos + n * 0.05)
+			var door := _box(part, Vector3(2.4, 0.12, 2.4), Vector3.ZERO, _mat(mats, Color(0.06, 0.07, 0.08)))
+			door.transform = Transform3D(b, pos + n * 0.08)
+			return
 
 
 ## Hazard-striped collar ring around a dark hatch, and a blinking beacon.

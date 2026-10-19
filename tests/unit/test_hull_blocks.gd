@@ -138,3 +138,28 @@ func test_the_block_built_template_flies() -> void:
 	assert_true(not report.has_errors(), "validates:\n%s" % report.summary())
 	var pool := LootRoller.build_pool(catalog)
 	assert_true(pool.all(func(d: LootRoller.Drop) -> bool: return d.kind != &"hull" or not catalog.hull[d.def_id].legacy), "legacy sections no longer drop")
+
+
+func test_radiators_span_two_cells_and_fighters_launch_from_a_hangar() -> void:
+	var errors := PackedStringArray()
+	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	var catalog := _catalog()
+	var grid := ShipGrid.build(bp, catalog)
+	var rad := bp.equipment.find(bp.find("e42"))
+	assert_true(grid.external_cells(rad).size() == 2, "a radiator panel spans two cells")
+	# A second radiator overlapping its aft cell is refused.
+	var clash := bp.duplicate_blueprint()
+	clash.add_equipment(&"radiator", Vector3i(2, 2, 11), &"dorsal")
+	assert_true(ShipValidator.validate(clash, catalog).has_code(&"equipment_overlap"), "overlapping spans are refused")
+	# Turned, it runs across the ship.
+	var turned := bp.duplicate_blueprint()
+	var e := turned.add_equipment(&"radiator", Vector3i(3, 2, 6), &"dorsal", 1)
+	var tg := ShipGrid.build(turned, catalog)
+	assert_true(tg.external_cells(turned.equipment.find(e)) == [Vector3i(3, 2, 6), Vector3i(4, 2, 6)], "turned: across the ship")
+	# The fighter lives in an internal bay; it leaves through the hangar's underside.
+	var bay := bp.find("e51") as ShipBlueprint.PlacedEquipment
+	assert_true(bay.def_id == &"fighter_bay" and not catalog.equipment[bay.def_id].is_external(), "the fighter bay is internal")
+	var s := _systems(bp)
+	var door := s.launch_door(s.equipment_by_id("e51"))
+	assert_vec_near(door[1], Vector3.DOWN, 1e-6, "its door opens downwards")
+	assert_true(not catalog.equipment[&"fighter_rack"].is_external() or catalog.equipment[&"fighter_rack"].legacy, "the old external rack is legacy")

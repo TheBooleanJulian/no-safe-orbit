@@ -590,7 +590,7 @@ func _fill_palette_list() -> void:
 	for entry in [["hull", editor.catalog.hull], ["room", editor.catalog.rooms], ["equipment", editor.catalog.equipment]]:
 		for id in ConstructionCatalog.sorted_ids(entry[1]):
 			var def: Resource = entry[1][id]
-			if def is HullModuleDefinition and def.legacy:
+			if (def is HullModuleDefinition or def is EquipmentDefinition) and def.legacy:
 				continue
 			var cat := category_of(entry[0], def)
 			if want != "All" and cat != want:
@@ -879,7 +879,9 @@ func _update_ghost() -> void:
 			"equipment":
 				var def: EquipmentDefinition = editor.catalog.equipment[place_def]
 				if def.is_external():
-					deck_editor.ghost_cells.append(cell)
+					var step := ShipGrid.external_step(_hover_face, place_rotation)
+					for k in maxi(def.length_cells, 1):
+						deck_editor.ghost_cells.append(cell + step * k)
 					deck_editor.ghost_face = _hover_face
 					hint = "%s — %s face (near an edge: that side; middle: top or underside, whichever is open — Shift: the other)" % [def.display_name, _hover_face]
 				else:
@@ -891,7 +893,7 @@ func _update_ghost() -> void:
 							deck_editor.ghost_cells.append(cell + Vector3i(x, 0, z))
 					hint = "%s — %d×%d [R rotates]" % [def.display_name, fp.x, fp.y]
 				var face := _hover_face if def.is_external() else &""
-				var rot := 0 if def.is_external() else place_rotation
+				var rot := 0 if def.is_external() and def.length_cells <= 1 else place_rotation
 				edit = func(bp: ShipBlueprint) -> void: bp.add_equipment(place_def, cell, face, rot)
 		var new_errors := editor.preview_new_errors(edit)
 		deck_editor.ghost_ok = new_errors.is_empty()

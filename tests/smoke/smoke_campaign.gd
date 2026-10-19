@@ -181,7 +181,7 @@ func _run() -> void:
 	var flown_radiators := player.systems.blueprint.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool: return e.def_id == &"radiator").size()
 	_check(whole and player.systems.condition().modules.is_empty(), "relaunched ship is repaired")
 	_check(flown_radiators == radiators + 1, "relaunched ship carries the refit (%d radiators)" % flown_radiators)
-	_check(profile.spare_parts == parts_before_launch - 3, "the refit was paid for: 3 parts for the radiator")
+	_check(profile.spare_parts == parts_before_launch - 5, "the refit was paid for: 5 parts for the 2-cell radiator")
 
 	# 7. What is on disk agrees.
 	var errors := PackedStringArray()

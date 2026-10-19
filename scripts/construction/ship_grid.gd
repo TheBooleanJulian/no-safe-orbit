@@ -240,13 +240,40 @@ func equipment_cells(index: int) -> Array[Vector3i]:
 	return cells
 
 
+## Step from one cell of a long external system to the next: aft, or
+## (turned) across the ship; never along the face normal (then sideways or up).
+static func external_step(face: StringName, rotation: int) -> Vector3i:
+	var n: Vector3i = FACE_NORMALS.get(face, Vector3i.ZERO)
+	if posmod(rotation, 2) == 0:
+		return Vector3i(1, 0, 0) if n.z != 0 else Vector3i(0, 0, 1)
+	return Vector3i(0, 1, 0) if n.x != 0 else Vector3i(1, 0, 0)
+
+
+## Hull cells an external system's face spans (one for most systems).
+func external_cells(index: int) -> Array[Vector3i]:
+	var e := blueprint.equipment[index]
+	var def := equipment_def(index)
+	var out: Array[Vector3i] = [e.cell]
+	if def == null:
+		return out
+	var step := external_step(e.face, e.rotation)
+	for k in range(1, maxi(def.length_cells, 1)):
+		out.append(e.cell + step * k)
+	return out
+
+
 ## Where equipment sits, in grid metres: footprint centre (internal) or the
-## centre of the hull face it is mounted on (external).
+## centre of the hull face it is mounted on (external; the middle of the
+## span for a long one).
 func equipment_position_m(index: int) -> Vector3:
 	var e := blueprint.equipment[index]
 	var def := equipment_def(index)
 	if def != null and def.is_external():
-		return cell_center_m(e.cell) + Vector3(FACE_NORMALS.get(e.face, Vector3i.ZERO)) * CELL_SIZE_M * 0.5
+		var cells := external_cells(index)
+		var mid := Vector3.ZERO
+		for c in cells:
+			mid += cell_center_m(c)
+		return mid / cells.size() + Vector3(FACE_NORMALS.get(e.face, Vector3i.ZERO)) * CELL_SIZE_M * 0.5
 	var fp := equipment_footprint(index)
 	return (Vector3(e.cell) + Vector3(fp.x, 1, fp.y) * 0.5) * CELL_SIZE_M
 

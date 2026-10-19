@@ -212,19 +212,24 @@ static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 				_add(report, Severity.ERROR, &"equipment_bad_face",
 					"%s %s cannot mount on a %s face (allowed: %s)." % [def.display_name, e.id, e.face,
 						", ".join(def.allowed_faces.map(func(f: StringName) -> String: return String(f)))], e.id)
-			elif not grid.is_exterior_face(e.cell, e.face):
-				_add(report, Severity.ERROR, &"equipment_not_exterior",
-					"%s %s must sit on an exterior hull face; the %s face of %s is %s." % [def.display_name, e.id,
-						e.face, _cell_text(e.cell), "not hull" if not grid.is_hull(e.cell) else "covered by another module"], e.id)
-			elif grid.slope_faces(e.cell).has(e.face):
-				_add(report, Severity.ERROR, &"equipment_on_slope",
-					"%s %s is on the sloped face of a wedge at %s: systems need a flat face. Put it on a block." % [
-						def.display_name, e.id, _cell_text(e.cell)], e.id)
-			var key := "%s|%s" % [e.cell, e.face]
-			if mounts.has(key):
-				_add(report, Severity.ERROR, &"equipment_overlap",
-					"%s and %s are mounted on the same face." % [mounts[key], e.id], e.id)
-			mounts[key] = e.id
+			else:
+				for cell in grid.external_cells(i):
+					if not grid.is_exterior_face(cell, e.face):
+						_add(report, Severity.ERROR, &"equipment_not_exterior",
+							"%s %s must sit on an exterior hull face; the %s face of %s is %s." % [def.display_name, e.id,
+								e.face, _cell_text(cell), "not hull" if not grid.is_hull(cell) else "covered by another module"], e.id)
+						break
+					if grid.slope_faces(cell).has(e.face):
+						_add(report, Severity.ERROR, &"equipment_on_slope",
+							"%s %s is on the sloped face of a wedge at %s: systems need a flat face. Put it on a block." % [
+								def.display_name, e.id, _cell_text(cell)], e.id)
+						break
+			for cell in grid.external_cells(i):
+				var key := "%s|%s" % [cell, e.face]
+				if mounts.has(key):
+					_add(report, Severity.ERROR, &"equipment_overlap",
+						"%s and %s are mounted on the same face." % [mounts[key], e.id], e.id)
+				mounts[key] = e.id
 			continue
 		# Internal: whole footprint inside one room of an allowed role.
 		var room_index := -2

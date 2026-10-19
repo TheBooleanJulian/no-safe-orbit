@@ -113,8 +113,8 @@ func _run() -> void:
 	await _click(yard.deck_editor, center)
 	var placed := ed.item_at(target_cell, &"dorsal")
 	_check(placed != "", "mouse click placed a radiator on the dorsal face of %s" % target_cell)
-	_check(absf(ed.stats.mass_kg - mass_before - 2500.0) < 1.0 and absf(ed.stats.heat_rejection_kw - rejection_before - 600.0) < 1e-6,
-		"stats follow the edit: +2.5 t, +600 kW rejection (got %+.0f kg, %+.0f kW)" % [ed.stats.mass_kg - mass_before, ed.stats.heat_rejection_kw - rejection_before])
+	_check(absf(ed.stats.mass_kg - mass_before - 5000.0) < 1.0 and absf(ed.stats.heat_rejection_kw - rejection_before - 1200.0) < 1e-6,
+		"stats follow the edit: +5 t, +1200 kW rejection (2-cell panel) (got %+.0f kg, %+.0f kW)" % [ed.stats.mass_kg - mass_before, ed.stats.heat_rejection_kw - rejection_before])
 
 	# Right-click the reactor away: a warning, but launch is still allowed.
 	yard.apply_at(Vector3i(3, 0, 8), &"dorsal", MOUSE_BUTTON_RIGHT)

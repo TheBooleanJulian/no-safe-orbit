@@ -239,14 +239,15 @@ func test_every_cannon_mount_compiles() -> void:
 
 func test_mass_and_center_of_mass_hand_computed() -> void:
 	# Fuselage 12×9×12 m (52 t, centre 6, 4.5, 6), a 1-cell corridor (400 kg,
-	# centre 1.5, 1.5, 1.5), a radiator on top of cell (0, 2, 0) (2.5 t at 1.5, 9, 1.5).
+	# centre 1.5, 1.5, 1.5), a 2-cell radiator on top of cells (0, 2, 0–1)
+	# (5 t at 1.5, 9, 3).
 	var bp := ShipBlueprint.new()
 	bp.add_module(&"fuselage_section", Vector3i.ZERO)
 	bp.add_room(&"corridor", 0, Rect2i(0, 0, 1, 1))
 	bp.add_equipment(&"radiator", Vector3i(0, 2, 0), &"dorsal")
 	var s := _stats(bp)
-	assert_near(s.mass_kg, 54_900.0, 1e-6, "total mass (kg)")
-	assert_vec_near(s.center_of_mass_m, Vector3(316_350.0, 257_100.0, 316_350.0) / 54_900.0, 1e-4, "centre of mass (m)")
+	assert_near(s.mass_kg, 57_400.0, 1e-6, "total mass (kg)")
+	assert_vec_near(s.center_of_mass_m, Vector3(320_100.0, 279_600.0, 327_600.0) / 57_400.0, 1e-4, "centre of mass (m)")
 
 
 func test_inertia_uses_parallel_axis() -> void:

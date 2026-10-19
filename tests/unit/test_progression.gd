@@ -378,10 +378,10 @@ func test_refit_is_paid_up_front_and_keeps_wear_on_kept_parts() -> void:
 	var bp2 := p.vessel.blueprint.duplicate_blueprint()
 	bp2.add_equipment(&"radiator", Vector3i(3, 2, 6), &"dorsal")
 	var why := ServiceYard.refit(p.vessel, bp2, p, _catalog())
-	assert_true(why.contains("needs 3 spare parts"), "unaffordable refit refused: '%s'" % why)
+	assert_true(why.contains("needs 5 spare parts"), "unaffordable refit refused: '%s'" % why)
 	assert_true(p.vessel.blueprint.equipment.size() == bp.equipment.size(), "refused refit leaves the vessel unchanged")
 	p.spare_parts = 10
-	assert_true(ServiceYard.refit(p.vessel, bp2, p, _catalog()) == "" and p.spare_parts == 7, "paid refit: 10 → %d parts" % p.spare_parts)
+	assert_true(ServiceYard.refit(p.vessel, bp2, p, _catalog()) == "" and p.spare_parts == 5, "paid refit: 10 → %d parts" % p.spare_parts)
 
 
 func test_a_destroyed_rare_part_is_rebuilt_not_written_off() -> void:
