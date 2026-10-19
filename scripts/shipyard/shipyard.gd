@@ -93,6 +93,9 @@ var iso_view: ShipPreview3D
 var _iso_turns: Array[Button] = []
 var _view_toggle: Button
 var com_button: Button
+var _crew_tab: VBoxContainer
+var _vendor_tab: VBoxContainer
+var _tech_tab: VBoxContainer
 
 
 func _ready() -> void:
@@ -1040,10 +1043,115 @@ func _build_hangar_panel() -> void:
 	history_box.add_child(debrief_button)
 	for b in [box, cargo_box, history_box, loot_scroll]:
 		tabs.add_child(b)
+	for spec in [["CREW", "_crew_tab"], ["QUARTERMASTER", "_vendor_tab"], ["UPGRADES", "_tech_tab"]]:
+		var scroll := ScrollContainer.new()
+		scroll.name = spec[0]
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		var inner := VBoxContainer.new()
+		inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(inner)
+		tabs.add_child(scroll)
+		set(spec[1], inner)
 	right.add_child(title)
 	right.move_child(title, 1)
 	right.add_child(tabs)
 	right.move_child(tabs, 2)
+
+
+## The station's people and shelves: the vessel's crew (roles, dismiss),
+## who is for hire, the quartermaster's stock and the upgrades.
+func _refresh_station_tabs() -> void:
+	if _crew_tab == null:
+		return
+	var catalog := editor.catalog
+	if profile.hire_pool.is_empty() and profile.vendor_stock.is_empty():
+		profile.refresh_station(catalog)
+	var v := profile.vessel
+	v.ensure_crew(catalog)
+	for tab in [_crew_tab, _vendor_tab, _tech_tab]:
+		for c in tab.get_children():
+			c.queue_free()
+	var berths := profile.berths(catalog)
+	_crew_tab.add_child(_station_label("[b]%s[/b] · %d / %d berths · roles change here for free; in flight Tab › CREW sends someone to a new post" % [
+		v.name, v.crew.size(), berths]))
+	for i in v.crew.size():
+		var c: Dictionary = v.crew[i]
+		var row := HBoxContainer.new()
+		var who := Label.new()
+		who.text = "%s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
+		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		who.clip_text = true
+		row.add_child(who)
+		var role := OptionButton.new()
+		for n in CrewRoster.ROLE_NAMES:
+			role.add_item(n)
+		role.select(int(c.role))
+		role.item_selected.connect(func(r: int) -> void:
+			profile.set_crew_role(i, r)
+			_save_profile())
+		row.add_child(role)
+		var out := Button.new()
+		out.text = "Dismiss"
+		out.pressed.connect(func() -> void:
+			profile.dismiss(i)
+			_save_profile()
+			_refresh_hangar())
+		row.add_child(out)
+		_crew_tab.add_child(row)
+	_crew_tab.add_child(_station_label("[b]FOR HIRE[/b] · credits %d · ★ = skill (faster repairs and treatment)" % profile.credits))
+	for i in profile.hire_pool.size():
+		var c: Dictionary = profile.hire_pool[i]
+		_crew_tab.add_child(_station_row("%s — %s %s" % [c.name, CrewRoster.ROLE_NAMES[int(c.role)], "★".repeat(int(c.skill))],
+			"Hire (%d cr)" % int(c.fee), func() -> void: _station_result(profile.hire(i, catalog)), v.crew.size() < berths and profile.credits >= int(c.fee)))
+	_vendor_tab.add_child(_station_label("[b]QUARTERMASTER OKAFOR[/b] — \"Fresh off the freighters. Cash only, no questions.\" · credits %d · new stock after every sortie" % profile.credits))
+	for i in profile.vendor_stock.size():
+		var item: Dictionary = profile.vendor_stock[i]
+		var def: EquipmentDefinition = catalog.equipment.get(StringName(item.id))
+		if def == null:
+			continue
+		_vendor_tab.add_child(_station_row("[color=#%s]%s[/color] %s (own %d)" % [Rarity.color_of(def.rarity).to_html(false), Rarity.name_of(def.rarity), def.display_name, profile.owned(def.id)],
+			"Buy (%d cr)" % int(item.price), func() -> void: _station_result(profile.buy_stock(i, catalog)), profile.credits >= int(item.price)))
+	if profile.vendor_stock.is_empty():
+		_vendor_tab.add_child(_station_label("Sold out until the next sortie."))
+	_vendor_tab.add_child(_station_row("Spare parts ×%d" % PlayerProfile.PARTS_LOT, "Buy (%d cr)" % PlayerProfile.PARTS_LOT_PRICE,
+		func() -> void: buy_spare_parts(), profile.credits >= PlayerProfile.PARTS_LOT_PRICE))
+	for branch in ["SHIP", "CAPTAIN"]:
+		_tech_tab.add_child(_station_label("[b]%s[/b] · credits %d" % ["SHIP TECHNOLOGY — every vessel" if branch == "SHIP" else "CAPTAIN'S TRAINING", profile.credits]))
+		for n in TechTree.NODES:
+			if n.branch != branch:
+				continue
+			var level := profile.tech_level(n.id)
+			var cost := TechTree.next_cost(level)
+			var id: String = n.id
+			_tech_tab.add_child(_station_row("%s %s — %s per level" % [n.name, "■".repeat(level) + "□".repeat(TechTree.MAX_LEVEL - level), n.text],
+				"Upgrade (%d cr)" % cost if cost > 0 else "Max", func() -> void: _station_result(profile.buy_tech(id)), cost > 0 and profile.credits >= cost))
+
+
+func _station_label(text: String) -> RichTextLabel:
+	var r := _rich_label()
+	r.text = text
+	return r
+
+
+func _station_row(text: String, action: String, on_press: Callable, enabled: bool) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	var r := _rich_label()
+	r.text = text
+	r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(r)
+	var b := Button.new()
+	b.text = action
+	b.disabled = not enabled
+	CyberTheme.style_button(b)
+	b.pressed.connect(on_press)
+	row.add_child(b)
+	return row
+
+
+func _station_result(why: String) -> void:
+	_set_status(why if why != "" else "Done", why != "")
+	_save_profile()
+	_refresh_hangar()
 
 
 func _rich_label() -> RichTextLabel:
@@ -1073,7 +1181,7 @@ func _refresh_hangar() -> void:
 	else:
 		lines.append("DAMAGE  %d jobs · %d parts for everything" % [jobs.size(), ServiceYard.total_cost(jobs)])
 		# Lost craft first: they ground the wing until replaced.
-		var listed: Array = jobs.filter(func(j: ServiceYard.Job) -> bool: return j.label.begins_with("Replace lost")) 			+ jobs.filter(func(j: ServiceYard.Job) -> bool: return not j.label.begins_with("Replace lost"))
+		var listed: Array = jobs.filter(func(j: ServiceYard.Job) -> bool: return j.label.begins_with("Replace lost")) + jobs.filter(func(j: ServiceYard.Job) -> bool: return not j.label.begins_with("Replace lost"))
 		for j in listed.slice(0, 5):
 			var blocked := "" if ServiceYard.available(j, v, profile) else "  [color=#ff7766](no unit)[/color]"
 			lines.append("  • %s — %d%s" % [j.label, j.cost, blocked])
@@ -1117,6 +1225,7 @@ func _refresh_hangar() -> void:
 	_bank_button.disabled = v.cargo_is_empty()
 	_buy_button.disabled = profile.credits < PlayerProfile.PARTS_LOT_PRICE
 	_repair_button.text = "Repair (%d)" % ServiceYard.total_cost(plan) if not plan.is_empty() else "Repair"
+	_refresh_station_tabs()
 
 
 func _found_text() -> String:

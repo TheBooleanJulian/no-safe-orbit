@@ -137,6 +137,7 @@ func _start_scenario() -> void:
 	var p := get_profile()
 	hud.profile = p
 	var vessel := p.ensure_vessel(launch_blueprint if launch_blueprint != null else template)
+	vessel.ensure_crew(ConstructionCatalog.default_catalog())
 	_designs[PLAYER_ID] = _compile(vessel.blueprint, template)
 
 	world = WorldSimulation.new()
@@ -145,8 +146,10 @@ func _start_scenario() -> void:
 	world.anchor_id = PLAYER_ID
 	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
 	var systems := _new_systems(PLAYER_ID)
+	systems.tech = p.tech.duplicate()
 	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
-		# The vessel flies as it was left: damage persists between sorties.
+		# The vessel's own crew; the damage it was left with.
+		systems.use_crew_plan(vessel.crew)
 		systems.apply_condition(vessel.condition)
 		# Stores as left (the yard tops them up at launch, for credits).
 		var stores: Dictionary = vessel.condition.get("stores", {})
@@ -547,7 +550,7 @@ func drop_beacon() -> Array:
 	var p := get_profile()
 	var catalog := ConstructionCatalog.default_catalog()
 	var intact := target.systems.intact_fraction()
-	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.BEACON_SCRAP_RATE)
+	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.BEACON_SCRAP_RATE * TechTree.factor("salvage", p.tech_level("salvage")))
 	var bounty := Salvage.bounty_for(target.systems)
 	var crates := p.open_crates(Salvage.pulls_for(target.systems), Salvage.BEACON_LOOT_CHANCE, catalog)
 	var stripped := _stripped_part(target)
@@ -579,7 +582,7 @@ func take_prize() -> Array:
 	var target := world.get_ship(TARGET_ID)
 	var p := get_profile()
 	var catalog := ConstructionCatalog.default_catalog()
-	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.TAKEOVER_SCRAP_RATE)
+	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.TAKEOVER_SCRAP_RATE * TechTree.factor("salvage", p.tech_level("salvage")))
 	var bounty := Salvage.bounty_for(target.systems)
 	var parts := Salvage.spare_parts_for(target.systems)
 	p.vessel.cargo["spare_parts"] = int(p.vessel.cargo.get("spare_parts", 0)) + parts
@@ -726,6 +729,10 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			sys.divert(arg)
 		&"balance":
 			sys.balance_power()
+		&"reassign":
+			var why := sys.reassign(str(arg[0]), int(arg[1]))
+			if why != "":
+				hud.notice("CREW: " + why, world.sim_time)
 		&"cover":
 			var why := sys.cover_role(arg)
 			hud.notice("CREW: " + why if why != "" else "Crew: sending a general crew member to cover %s" % CrewRoster.ROLE_NAMES[arg], world.sim_time)

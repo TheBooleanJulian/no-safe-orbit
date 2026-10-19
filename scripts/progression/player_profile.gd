@@ -71,8 +71,24 @@ var vessel: ShipInstance:
 		else:
 			vessels[active_vessel] = v
 
+## Crew for hire at the station: [{name, role, skill, fee}], refreshed each
+## sortie.
+var hire_pool: Array = []
+## The quartermaster's stock: [{id (equipment), price}], refreshed each sortie.
+var vendor_stock: Array = []
+## Earth Shipyard upgrades bought: TechTree id -> level.
+var tech: Dictionary = {}
+
 ## Loot RNG, persisted so reloading cannot re-roll a pull.
 var _rng := RandomNumberGenerator.new()
+
+const HIRE_POOL_SIZE := 4
+## Hiring fee: base plus per skill level (credits).
+const HIRE_FEE := 40
+const HIRE_FEE_PER_SKILL := 40
+const VENDOR_STOCK_SIZE := 3
+## Quartermaster prices by rarity (credits).
+const VENDOR_PRICES := [0, 450, 1200, 3000, 8000]
 
 
 func _init(seed_value: int = 0) -> void:
@@ -252,6 +268,96 @@ func pity_countdown() -> Vector2i:
 	return Vector2i(LootRoller.RARE_PITY - int(pity.since_rare), LootRoller.LEGENDARY_PITY - int(pity.since_legendary))
 
 
+# --- Crew, quartermaster, upgrades ------------------------------------------------
+
+## New faces at the station and new stock on the quartermaster's shelves.
+func refresh_station(catalog: ConstructionCatalog) -> void:
+	hire_pool.clear()
+	for i in HIRE_POOL_SIZE:
+		var skill := 0 if _rng.randf() < 0.55 else (1 if _rng.randf() < 0.75 else 2)
+		hire_pool.append({"name": CrewNames.pick(_rng), "role": _rng.randi() % CrewRoster.Role.size(), "skill": skill,
+			"fee": HIRE_FEE + HIRE_FEE_PER_SKILL * skill})
+	vendor_stock.clear()
+	var ids: Array = []
+	for id in ConstructionCatalog.sorted_ids(catalog.equipment):
+		var def: EquipmentDefinition = catalog.equipment[id]
+		if def.rarity != Rarity.Tier.COMMON and def.rarity <= Rarity.Tier.EPIC and not def.legacy:
+			ids.append(id)
+	for i in mini(VENDOR_STOCK_SIZE, ids.size()):
+		var id: StringName = ids.pop_at(_rng.randi() % ids.size())
+		vendor_stock.append({"id": String(id), "price": VENDOR_PRICES[catalog.equipment[id].rarity]})
+
+
+## Berths on the active vessel's design.
+func berths(catalog: ConstructionCatalog) -> int:
+	var grid := ShipGrid.build(vessel.blueprint, catalog)
+	return ShipStats.compute(vessel.blueprint, grid).crew_capacity
+
+
+## Hire candidate `i` onto the active vessel. "" or why not.
+func hire(i: int, catalog: ConstructionCatalog) -> String:
+	if i < 0 or i >= hire_pool.size():
+		return "no such candidate"
+	vessel.ensure_crew(catalog)
+	if vessel.crew.size() >= berths(catalog):
+		return "no free berth — dismiss someone or build more quarters"
+	var c: Dictionary = hire_pool[i]
+	if credits < int(c.fee):
+		return "%s's fee is %d credits; you have %d" % [c.name, c.fee, credits]
+	credits -= int(c.fee)
+	vessel.crew.append({"name": c.name, "role": c.role, "skill": c.skill})
+	hire_pool.remove_at(i)
+	vessel.record("Hired %s (%s)" % [c.name, CrewRoster.ROLE_NAMES[c.role]])
+	return ""
+
+
+func dismiss(i: int) -> String:
+	if i < 0 or i >= vessel.crew.size():
+		return "no such crew member"
+	var c: Dictionary = vessel.crew.pop_at(i)
+	vessel.record("Dismissed %s" % c.name)
+	return ""
+
+
+## Give crew member `i` a new role (at the station: no walking).
+func set_crew_role(i: int, role: int) -> void:
+	if i >= 0 and i < vessel.crew.size():
+		vessel.crew[i].role = clampi(role, 0, CrewRoster.Role.size() - 1)
+
+
+## Buy the quartermaster's item `i`: one unit into the station bank.
+func buy_stock(i: int, catalog: ConstructionCatalog) -> String:
+	if i < 0 or i >= vendor_stock.size():
+		return "sold out"
+	var item: Dictionary = vendor_stock[i]
+	if credits < int(item.price):
+		return "%d credits needed; you have %d" % [item.price, credits]
+	credits -= int(item.price)
+	inventory[str(item.id)] = owned(StringName(item.id)) + 1
+	vendor_stock.remove_at(i)
+	var def: EquipmentDefinition = catalog.equipment.get(StringName(item.id))
+	loot_log.append("Bought: %s" % (def.display_name if def != null else str(item.id)))
+	return ""
+
+
+func tech_level(id: String) -> int:
+	return int(tech.get(id, 0))
+
+
+## Buy the next level of upgrade `id`. "" or why not.
+func buy_tech(id: String) -> String:
+	if TechTree.node(id).is_empty():
+		return "no such upgrade"
+	var cost := TechTree.next_cost(tech_level(id))
+	if cost < 0:
+		return "already at the top level"
+	if credits < cost:
+		return "%d credits needed; you have %d" % [cost, credits]
+	credits -= cost
+	tech[id] = tech_level(id) + 1
+	return ""
+
+
 # --- Vessel ------------------------------------------------------------------------
 
 ## The hangar vessel, created from `bp` the first time.
@@ -305,7 +411,10 @@ func dock(after: Dictionary, _catalog: ConstructionCatalog) -> PackedStringArray
 	crew.erase("wounded")
 	if crew.is_empty():
 		vessel.condition.erase("crew")
+	for n in vessel.bury_dead():
+		lost.append("%s killed in action" % n)
 	vessel.sorties += 1
+	refresh_station(ConstructionCatalog.default_catalog())
 	vessel.record("Sortie %d: docked%s" % [vessel.sorties, " damaged" if vessel.is_damaged() else ""])
 	for line in lost:
 		vessel.record(line)
@@ -364,6 +473,9 @@ func to_dict() -> Dictionary:
 		"rng": {"seed": str(_rng.seed), "state": str(_rng.state)},
 		"vessels": vessels.map(func(v: ShipInstance) -> Dictionary: return v.to_dict()),
 		"active_vessel": active_vessel,
+		"hire_pool": hire_pool.duplicate(true),
+		"vendor_stock": vendor_stock.duplicate(true),
+		"tech": tech.duplicate(),
 	}
 
 
@@ -412,6 +524,16 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 	for v in p.vessels:
 		BlueprintFix.fit_spans(v.blueprint, ConstructionCatalog.default_catalog())
 	p.active_vessel = clampi(int(d.get("active_vessel", 0)), 0, maxi(p.vessels.size() - 1, 0))
+	for c in d.get("hire_pool", []):
+		if c is Dictionary:
+			p.hire_pool.append({"name": str(c.get("name", "")), "role": int(c.get("role", 6)), "skill": int(c.get("skill", 0)), "fee": int(c.get("fee", HIRE_FEE))})
+	for s in d.get("vendor_stock", []):
+		if s is Dictionary:
+			p.vendor_stock.append({"id": str(s.get("id", "")), "price": int(s.get("price", 0))})
+	var tk: Variant = d.get("tech", {})
+	if tk is Dictionary:
+		for id in tk:
+			p.tech[str(id)] = clampi(int(tk[id]), 0, TechTree.MAX_LEVEL)
 	if int(version) < 4:
 		var designs: Array[ShipBlueprint] = []
 		for v in p.vessels:

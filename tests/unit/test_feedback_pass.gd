@@ -312,3 +312,61 @@ func test_templates_of_every_size_use_only_standard_parts() -> void:
 		masses.append(ShipStats.compute(bp, ShipGrid.build(bp, cat)).wet_mass_kg())
 	masses.sort()
 	assert_true(masses.size() >= 3 and masses[-1] > masses[0] * 2.0, "light to heavy (%s t)" % [masses.map(func(m: float) -> int: return roundi(m / 1000.0))])
+
+
+func test_named_crew_are_hired_and_the_dead_leave_their_berths() -> void:
+	var cat := _catalog()
+	var p := PlayerProfile.new(5)
+	p.ensure_vessel(_template())
+	p.vessel.ensure_crew(cat)
+	var berths := p.berths(cat)
+	assert_true(p.vessel.crew.size() == berths and str(p.vessel.crew[0].name) != "", "the standard complement, named (%d)" % berths)
+	p.refresh_station(cat)
+	assert_true(p.hire(0, cat).contains("no free berth"), "full ship: no hiring")
+	p.dismiss(berths - 1)
+	p.credits = 1000
+	var name: String = p.hire_pool[0].name
+	assert_true(p.hire(0, cat) == "" and p.vessel.crew[-1].name == name, "hired %s into the free berth" % name)
+	var roster := CrewRoster.from_plan(p.vessel.blueprint, ShipGrid.build(p.vessel.blueprint, cat),
+		ShipStats.compute(p.vessel.blueprint, ShipGrid.build(p.vessel.blueprint, cat)), p.vessel.crew)
+	assert_true(roster.members.size() == berths and roster.members[-1].name == name, "flies with them aboard")
+	# Killed in action: they leave the roster at the station.
+	var first: String = p.vessel.crew[0].name
+	var role: int = p.vessel.crew[0].role
+	var lost := p.dock({"crew": {"dead": {CrewRoster.ROLE_NAMES[role]: 1}}}, cat)
+	assert_true(p.vessel.crew.size() == berths - 1 and not p.vessel.condition.has("crew"), "a berth is free again")
+	assert_true(", ".join(lost).contains(first), "the debrief names them (%s)" % ", ".join(lost))
+	assert_true(ServiceYard.repair_jobs(p.vessel, cat).filter(func(j: ServiceYard.Job) -> bool: return j.kind == &"recruit").is_empty(),
+		"no anonymous recruits: hire from the station")
+
+
+func test_crew_can_be_reassigned_mid_fight() -> void:
+	var s := _ship(&"s").systems
+	var gunner: CrewRoster.Member
+	for m in s.crew.members:
+		if m.role == CrewRoster.Role.SECURITY:
+			gunner = m
+	assert_true(s.reassign(gunner.id, CrewRoster.Role.WEAPONS) == "", "sent to the guns")
+	for i in 60:
+		s._advance_crew_orders(1.0)
+	assert_true(gunner.role == CrewRoster.Role.WEAPONS and s.room_role(gunner.location) == &"magazine", "now a gunner, at the magazine")
+
+
+func test_the_quartermaster_and_the_upgrades() -> void:
+	var cat := _catalog()
+	var p := PlayerProfile.new(8)
+	p.ensure_vessel(_template())
+	p.refresh_station(cat)
+	assert_true(p.vendor_stock.size() == PlayerProfile.VENDOR_STOCK_SIZE, "stock on the shelves")
+	var item: Dictionary = p.vendor_stock[0]
+	p.credits = int(item.price)
+	assert_true(p.buy_stock(0, cat) == "" and p.owned(StringName(item.id)) == 1 and p.credits == 0, "bought one %s" % item.id)
+	p.credits = 300
+	assert_true(p.buy_tech("thrusters") == "" and p.tech_level("thrusters") == 1, "an upgrade level")
+	var q := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())), PackedStringArray())
+	assert_true(q.tech_level("thrusters") == 1 and q.hire_pool.size() == p.hire_pool.size(), "kept in the save")
+	var ship := _ship(&"s")
+	var base := ship.systems.effective_config().thrust_forward_n
+	ship.systems.tech = q.tech
+	ship.systems.invalidate()
+	assert_near(ship.systems.effective_config().thrust_forward_n / base, 1.05, 1e-6, "+5 % thrust")

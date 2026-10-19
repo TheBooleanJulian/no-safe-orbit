@@ -195,6 +195,8 @@ var destroyed_hatches: Dictionary = {}  # hatch id -> true
 var suited: bool = false
 ## Seconds damage control has spent sealing each breached room.
 var _seal_s: Dictionary = {}
+## Earth Shipyard upgrades (TechTree id -> level); player ships only.
+var tech: Dictionary = {}
 ## Fires by room index: seconds burning (with air) and smouldering.
 var fires: Dictionary = {}
 ## Foam charges used per room (index).
@@ -731,10 +733,49 @@ func cut_bus(cell: Vector3i) -> bool:
 func reactor_output() -> float:
 	match reactor_state:
 		Reactor.THROTTLED:
-			return THROTTLE_OUTPUT
+			return THROTTLE_OUTPUT * tech_factor("reactor")
 		Reactor.SCRAM:
 			return 0.0
-	return 1.0
+	return tech_factor("reactor")
+
+
+## Multiplier from an Earth Shipyard upgrade (1 without it).
+func tech_factor(id: String) -> float:
+	return TechTree.factor(id, int(tech.get(id, 0)))
+
+
+## The member on the field repair works faster with skill.
+func _repairer_skill() -> float:
+	var m: CrewRoster.Member = crew.by_id(repair_task.member_id) if crew != null and repair_task != null else null
+	return 1.0 + 0.2 * m.skill if m != null else 1.0
+
+
+## Use the vessel's hired crew instead of the standard complement.
+func use_crew_plan(plan: Array) -> void:
+	if plan.is_empty():
+		return
+	crew = CrewRoster.from_plan(blueprint, grid, stats, plan)
+	_config = null
+
+
+## FTL-style: send crew member `id` to take on `role` at its station (they
+## walk there; the role changes when they arrive). "" or why not.
+func reassign(id: String, role: int) -> String:
+	var m: CrewRoster.Member = crew.by_id(id) if crew != null else null
+	if m == null or not m.available() or m.location < 0:
+		return "%s is not free" % id
+	if m.role == role:
+		return "%s already is %s" % [m.label(), CrewRoster.ROLE_NAMES[role]]
+	var dest := station_for(role) if ROLE_STATIONS.has(role) else m.location
+	if dest < 0:
+		return "no pressurised %s station" % CrewRoster.ROLE_NAMES[role]
+	var path := route(m.location, dest)
+	if path.is_empty():
+		return "%s can't get to the %s station" % [m.label(), CrewRoster.ROLE_NAMES[role]]
+	m.busy = true
+	crew_orders[m.id] = {"role": role, "room": dest, "left_s": (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S}
+	_note("%s heading off to %s — %.0f s" % [m.label(), CrewRoster.ROLE_NAMES[role], crew_orders[m.id].left_s])
+	return ""
 
 
 # --- Heat ------------------------------------------------------------------------
@@ -772,7 +813,7 @@ func tick(ship: ShipState, dt: float) -> bool:
 				gen += e.def.heat_kw * rcs_fraction if e.powered else 0.0
 			EquipmentDefinition.Kind.RADIATOR:
 				if radiator_cooled(e):
-					rejection += e.def.heat_rejection_kw
+					rejection += e.def.heat_rejection_kw * tech_factor("radiators")
 	if shots > 0 and cfg.cannon != null:
 		var per_shot_kj := 0.0
 		for e in equipment:
@@ -790,7 +831,7 @@ func tick(ship: ShipState, dt: float) -> bool:
 		for e in equipment:
 			if not e.def.is_external() and damage_equipment(e, OVERHEAT_DAMAGE_PER_S * dt):
 				changed = true
-	if repair_task != null and _advance_repair(dt * channel_factor(Channel.SYS)):
+	if repair_task != null and _advance_repair(dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * _repairer_skill()):
 		changed = true
 	if _advance_crew_orders(dt):
 		changed = true
@@ -882,7 +923,7 @@ func _advance_hull_sealing(dt: float) -> bool:
 	if not crew.members.any(func(m: CrewRoster.Member) -> bool:
 			return m.fit() and m.location >= 0 and (m.role == CrewRoster.Role.DAMAGE_CONTROL or m.role == CrewRoster.Role.ENGINEERING)):
 		return false
-	_seal_s[room] = float(_seal_s.get(room, 0.0)) + dt * room_bonus(&"workshop")
+	_seal_s[room] = float(_seal_s.get(room, 0.0)) + dt * room_bonus(&"workshop") * tech_factor("damage_control")
 	if _seal_s[room] < HULL_SEAL_S:
 		return false
 	_seal_s.erase(room)
@@ -957,6 +998,7 @@ func effective_config() -> ShipConfig:
 			cfg.assist_max_rate_rad_s[axis] = 0.0
 	var eng := channel_factor(Channel.ENG)
 	var sys := channel_factor(Channel.SYS)
+	eng *= tech_factor("thrusters")
 	cfg.thrust_forward_n *= eng
 	for k in 6:
 		cfg.engine_thrust_n[k] *= eng * (SHIP_AI_FACTOR if not has_command() else 1.0)
@@ -966,8 +1008,8 @@ func effective_config() -> ShipConfig:
 	cfg.thrust_torque_body *= eng
 	cfg.max_torque_nm *= sys
 	cfg.assist_max_rate_rad_s *= sys
-	if cfg.cannon != null and channel_factor(Channel.WEP) != 1.0:
-		cfg.scale_rate_of_fire(channel_factor(Channel.WEP))
+	if cfg.cannon != null and channel_factor(Channel.WEP) * tech_factor("gunnery") != 1.0:
+		cfg.scale_rate_of_fire(channel_factor(Channel.WEP) * tech_factor("gunnery"))
 	if not has_command():
 		# Ship AI in control: limited mobility.
 		cfg.assist_max_rate_rad_s *= SHIP_AI_FACTOR
@@ -1078,7 +1120,7 @@ func _advance_medical(dt: float) -> bool:
 	if patient == null:
 		_treatment_s = 0.0
 		return false
-	_treatment_s += dt * maxf(room_bonus(&"life_support"), 0.5)
+	_treatment_s += dt * maxf(room_bonus(&"life_support"), 0.5) * tech_factor("medicine") * (1.0 + 0.2 * medic.skill)
 	if _treatment_s < MEDICAL_TREATMENT_S:
 		return false
 	_treatment_s = 0.0
