@@ -40,6 +40,8 @@ var main_isp_s: float = 0.0
 var rcs_isp_s: float = 0.0
 ## RCS thrust available in each direction.
 var thrust_rcs_n: float = 0.0
+## Main engines on other faces (ShipConfig.engine_thrust_n layout).
+var engine_thrust_n: PackedFloat64Array = PackedFloat64Array([0, 0, 0, 0, 0, 0])
 var rcs_count: int = 0
 var torque_nm: Vector3 = Vector3.ZERO
 ## Torque the main engines exert about the CoM at full thrust (signed, body).
@@ -147,6 +149,8 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 					main_flow += def.thrust_n / def.isp_s
 					engines.append(pos)
 					engine_thrust.append(def.thrust_n)
+				else:
+					s.engine_thrust_n[engine_slot(bp.equipment[i].face)] += def.thrust_n
 			EquipmentDefinition.Kind.RCS:
 				s.thrust_rcs_n += def.thrust_n
 				rcs_flow += def.thrust_n / def.isp_s
@@ -234,6 +238,7 @@ func to_ship_config(display_name: String) -> ShipConfig:
 	cfg.thrust_reverse_n = thrust_rcs_n
 	cfg.thrust_lateral_n = thrust_rcs_n
 	cfg.thrust_vertical_n = thrust_rcs_n
+	cfg.engine_thrust_n = engine_thrust_n.duplicate()
 	cfg.max_torque_nm = torque_nm
 	cfg.thrust_torque_body = thrust_torque_body
 	var rates := Vector3.ZERO
@@ -273,6 +278,16 @@ func to_ship_config(display_name: String) -> ShipConfig:
 		cfg.pd_normals_body = pd_normals
 		cfg.pd_mount_ids = pd_ids
 	return cfg
+
+
+## ShipConfig.engine_thrust_n slot for an engine on `face`: it pushes the
+## ship away from the face (opposite its normal).
+static func engine_slot(face: StringName) -> int:
+	var push: Vector3i = -ShipGrid.FACE_NORMALS.get(face, Vector3i(0, 0, 1))
+	for axis in 3:
+		if push[axis] != 0:
+			return axis * 2 + (0 if push[axis] > 0 else 1)
+	return 4
 
 
 ## Rounds `kg` of stowage holds for these mounts: shared by mount count,

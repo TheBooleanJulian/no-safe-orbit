@@ -1045,17 +1045,17 @@
 		},
 		{
 			"id": "e42",
-			"def": "radiator",
+			"def": "radiator_long",
 			"cell": [
 				2,
 				2,
-				10
+				9
 			],
 			"face": "dorsal"
 		},
 		{
 			"id": "e44",
-			"def": "radiator",
+			"def": "radiator_long",
 			"cell": [
 				2,
 				0,

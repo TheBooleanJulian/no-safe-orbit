@@ -5,7 +5,7 @@ extends Control
 ## well as colours (CyberTheme glyphs):
 ##   systems  ■ functional (cyan) · ▲ degraded (amber) · ◆ critical (red)
 ##            · ✕ destroyed (red) · ○ unpowered / switched off (grey)
-##   rooms    faint cyan pressurised · hatched magenta vented · dashed
+##   rooms    tinted in their shipyard colour · hatched magenta vented · dashed
 ##            border isolated · or `room_overlay` (boarding control)
 ##   modules  outline; fill from cyan (intact) to magenta (structure gone),
 ##            dark when wrecked
@@ -167,7 +167,9 @@ func _draw() -> void:
 		var r: Rect2 = cell_rect.call(rr.position.x, rr.position.y, rr.position.x + rr.size.x, rr.position.y + rr.size.y)
 		room_rects[i] = r
 		var vented := not systems.rooms[i].pressurized
-		var col: Color = room_overlay.get(i, CyberTheme.MAGENTA * Color(1, 1, 1, 0.3) if vented else CyberTheme.CYAN * Color(1, 1, 1, 0.1))
+		var rdef: RoomDefinition = systems.grid.catalog.rooms.get(bp.rooms[i].def_id)
+		var tint := Color(rdef.color, 0.22) if rdef != null else CyberTheme.CYAN * Color(1, 1, 1, 0.1)
+		var col: Color = room_overlay.get(i, CyberTheme.MAGENTA * Color(1, 1, 1, 0.3) if vented else tint)
 		draw_rect(r.grow(-1.0), col)
 		if vented and not room_overlay.has(i):
 			# Hatching: vented reads without colour.

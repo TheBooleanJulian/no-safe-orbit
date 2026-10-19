@@ -184,7 +184,7 @@ func test_external_equipment_needs_an_exterior_face() -> void:
 	_expect(bp, &"equipment_not_exterior", ShipValidator.Severity.ERROR, "engine on an inner face")
 	var bp2 := _template()
 	bp2.add_equipment(&"main_engine", Vector3i(2, 1, 0), &"fore")
-	_expect(bp2, &"equipment_bad_face", ShipValidator.Severity.ERROR, "main engine facing forward")
+	_expect(bp2, &"engine_needs_engine_room", ShipValidator.Severity.ERROR, "main engine facing forward, no engine room behind it")
 
 
 func test_obstructed_weapon_arc_reported() -> void:

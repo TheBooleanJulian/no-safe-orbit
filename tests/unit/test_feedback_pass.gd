@@ -190,3 +190,50 @@ func test_bigger_rooms_work_faster() -> void:
 	assert_near(s.room_bonus(&"command"), minf(1.0 + ShipSystems.ROOM_BONUS_PER_CELL * (cells - 1), ShipSystems.ROOM_BONUS_MAX), 1e-6,
 		"a %d-cell bridge" % cells)
 	assert_near(s.room_bonus(&"workshop"), 0.0, 1e-9, "no workshop: no bonus")
+
+
+func test_engines_on_any_face_with_an_engine_room_inside() -> void:
+	var cat := _catalog()
+	var bp := _template()
+	var room := -1
+	for i in bp.rooms.size():
+		if bp.rooms[i].def_id == &"engine_room":
+			room = i
+	var grid := ShipGrid.build(bp, cat)
+	var placed := false
+	for cell in ShipGrid.room_cells(bp.rooms[room]):
+		for face in [&"ventral", &"dorsal", &"port", &"starboard"]:
+			if placed or not grid.is_exterior_face(cell, face) or grid.slope_faces(cell).has(face):
+				continue
+			var t := ShipBlueprint.from_dict(bp.to_dict(), PackedStringArray())
+			t.add_equipment(&"main_engine", cell, face)
+			t.bus[ShipBlueprint.cell_key(cell)] = true
+			var r := ShipValidator.validate(t, cat)
+			if r.has_code(&"engine_needs_engine_room") or r.has_code(&"equipment_overlap"):
+				continue
+			placed = true
+			var before := ShipStats.compute(bp, grid).to_ship_config("a")
+			var after := ShipStats.compute(t, ShipGrid.build(t, cat)).to_ship_config("b")
+			var push: Vector3i = -ShipGrid.FACE_NORMALS[face]
+			var axis := 0 if push.x != 0 else (1 if push.y != 0 else 2)
+			var positive: bool = push[axis] > 0
+			var thrust: float = cat.equipment[&"main_engine"].thrust_n
+			assert_near(after.max_thrust(axis, positive) - before.max_thrust(axis, positive), thrust, 1.0,
+				"an engine on the %s face pushes the other way" % face)
+			assert_near(after.max_thrust(axis, not positive), before.max_thrust(axis, not positive), 1.0, "and only that way")
+	assert_true(placed, "a free face on the engine room")
+
+
+func test_same_type_rooms_side_by_side_need_no_hatch() -> void:
+	var bp := ShipBlueprint.new()
+	bp.add_module(&"hull_block", Vector3i.ZERO)
+	bp.add_module(&"hull_block", Vector3i(0, 0, 2))
+	var a := bp.add_room(&"corridor", 0, Rect2i(0, 0, 1, 2))
+	var b := bp.add_room(&"corridor", 0, Rect2i(0, 2, 1, 2))
+	var c := bp.add_room(&"cargo_hold", 0, Rect2i(1, 0, 1, 2))
+	var grid := ShipGrid.build(bp, _catalog())
+	var ia := bp.rooms.find(a)
+	var ib := bp.rooms.find(b)
+	var ic := bp.rooms.find(c)
+	assert_true((grid.open_rooms.get(ia, []) as Array).has(ib), "two corridors touching are one space")
+	assert_true(not (grid.open_rooms.get(ia, []) as Array).has(ic), "a corridor and a hold still need a hatch")

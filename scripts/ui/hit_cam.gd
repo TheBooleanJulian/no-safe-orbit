@@ -265,6 +265,14 @@ func _build_hull(design: Dictionary, systems: ShipSystems, report: DamageReport)
 	var edge_node := MeshInstance3D.new()
 	edge_node.mesh = edges
 	_root.add_child(edge_node)
+	# Rooms in their shipyard colours, faint, so a hit reads by compartment.
+	for r in bp.rooms:
+		var rdef: RoomDefinition = grid.catalog.rooms.get(r.def_id)
+		if rdef == null:
+			continue
+		var rsize := Vector3(r.rect.size.x, 1, r.rect.size.y) * c
+		var corner := Vector3(r.rect.position.x, r.deck, r.rect.position.y) * c
+		_box(rsize * 0.94, corner + rsize * 0.5 - com, _flat(Color(rdef.color, 0.16), true))
 	# Systems coloured by condition.
 	for e in systems.equipment:
 		var color := COLOR_INTACT

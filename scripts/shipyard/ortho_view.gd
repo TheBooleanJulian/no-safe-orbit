@@ -11,6 +11,8 @@ enum Mode { SIDE, FRONT }
 
 var editor: ShipEditor
 var deck: int = 0
+## Centre-of-mass marker (shipyard [C]).
+var show_com: bool = false
 
 
 func _ready() -> void:
@@ -53,8 +55,8 @@ func _draw() -> void:
 		var cf := ShipBlueprint.parse_plate_key(key)
 		var cell: Vector3i = cf[0]
 		var r: Rect2 = to_screen.call(cell)
-		var col := Color(CyberTheme.AMBER if int(editor.blueprint.armor[key]) >= ShipBlueprint.PLATE_THICK_MM else CyberTheme.CYAN, 0.8)
-		var w := maxf(px * 0.12, 1.5)
+		var col := DeckEditor.COLOR_PLATE_THICK if int(editor.blueprint.armor[key]) >= ShipBlueprint.PLATE_THICK_MM else DeckEditor.COLOR_PLATE_THIN
+		var w := maxf(px * 0.06, 1.5)
 		match cf[1]:
 			&"dorsal":
 				draw_line(r.position, Vector2(r.end.x, r.position.y), col, w)
@@ -77,6 +79,10 @@ func _draw() -> void:
 		var n := Vector3(ShipGrid.FACE_NORMALS.get(e.face, Vector3i.ZERO))
 		var dir := Vector2(-n.z, -n.y) if mode == Mode.SIDE else Vector2(-n.x, -n.y)
 		draw_circle(r.get_center() + dir * px * 0.55, maxf(px * 0.18, 2.0), def.color)
+	if show_com and editor.stats != null and editor.stats.mass_kg > 0.0:
+		var g := editor.stats.center_of_mass_m / ShipGrid.CELL_SIZE_M
+		var col := (b.end.z - g.z + 1.0) if mode == Mode.SIDE else (b.end.x - g.x + 1.0)
+		DeckEditor.draw_com(self, origin + Vector2(col, top_deck + 2.0 - g.y) * px, maxf(px * 0.35, 5.0), true)
 
 
 ## Silhouette of a wedge cell in this view: the cell square clipped to where

@@ -22,6 +22,9 @@ var blueprint: ShipBlueprint
 var catalog: ConstructionCatalog
 var module_at: Dictionary = {}     # Vector3i -> module index
 var room_at: Dictionary = {}       # Vector3i -> room index
+## Rooms of the same type side by side on a deck are one space: no hatch
+## between them is needed. Room index -> the indices it opens into.
+var open_rooms: Dictionary = {}
 var equipment_at: Dictionary = {}  # Vector3i -> equipment index (internal only)
 ## [cell, first index, second index] for each double-booked cell.
 var module_overlaps: Array = []
@@ -55,6 +58,14 @@ static func build(p_blueprint: ShipBlueprint, p_catalog: ConstructionCatalog) ->
 				g.room_overlaps.append([cell, g.room_at[cell], i])
 			else:
 				g.room_at[cell] = i
+	for cell: Vector3i in g.room_at:
+		var ra: int = g.room_at[cell]
+		for d in [Vector3i(1, 0, 0), Vector3i(0, 0, 1)]:
+			var rb: int = g.room_at.get(cell + d, -1)
+			if rb >= 0 and rb != ra and p_blueprint.rooms[ra].def_id == p_blueprint.rooms[rb].def_id:
+				if not (g.open_rooms.get_or_add(ra, []) as Array).has(rb):
+					g.open_rooms[ra].append(rb)
+					g.open_rooms.get_or_add(rb, []).append(ra)
 	for i in p_blueprint.equipment.size():
 		var e := p_blueprint.equipment[i]
 		var def: EquipmentDefinition = p_catalog.equipment.get(e.def_id)

@@ -60,6 +60,7 @@ var place_rotation: int = 0
 var place_flip: bool = false
 ## Which faces an armour stroke covers.
 var armor_faces: OptionButton
+var underside_button: Button
 var selected_id: String = ""
 var _hover_cell := Vector3i.ZERO
 var _hover_face: StringName = &""
@@ -91,6 +92,7 @@ var main_view := "top"
 var iso_view: ShipPreview3D
 var _iso_turns: Array[Button] = []
 var _view_toggle: Button
+var com_button: Button
 
 
 func _ready() -> void:
@@ -139,6 +141,7 @@ func _ready() -> void:
 	deck_editor.cell_pressed.connect(apply_at)
 	deck_editor.room_dragged.connect(_on_room_dragged)
 	deck_editor.hover_changed.connect(_on_hover)
+	deck_editor.drag_moved.connect(_on_drag_moved)
 	iso_view = ShipPreview3D.new()
 	iso_view.name = "IsoView"
 	iso_view.isometric = true
@@ -195,6 +198,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			rotate_current()
 		KEY_F:
 			flip_current()
+		KEY_V:
+			set_underside(not deck_editor.prefer_underside)
+		KEY_C:
+			set_show_com(not deck_editor.show_com)
 		KEY_DELETE, KEY_BACKSPACE:
 			if selected_id != "":
 				editor.remove(selected_id)
@@ -228,10 +235,11 @@ func set_tool(t: Tool) -> void:
 		place_kind = ""
 		place_def = &""
 		info_label.text = {
-			Tool.SELECT: "SELECT — click a part to select it. Arrow keys move it (a module carries its rooms and equipment), R turns a module in place, Delete removes. Right-click removes anything. Ctrl+Z / Ctrl+Y undo / redo.",
-			Tool.HATCH: "HATCH — click near an edge between two rooms to add/remove a door; click a cell's centre for a ladder to the deck above.",
+			Tool.SELECT: "SELECT — click a part to select it; hold and drag, or arrow keys, to move it (a module carries its rooms and equipment). R turns a module in place, Delete removes. Right-click removes anything. Wheel zooms, middle-drag pans. Ctrl+Z / Ctrl+Y undo / redo.",
+			Tool.HATCH: "HATCH — click near an edge between two rooms to add/remove a door; click a cell's centre for a ladder to the deck above (Shift: below).",
 		}[t]
 	deck_editor.drag_rooms = t == Tool.PLACE and place_kind == "room"
+	deck_editor.drag_moves = t == Tool.SELECT
 	_update_ghost()
 
 
@@ -243,6 +251,7 @@ func select_palette(kind: String, def_id: StringName) -> void:
 	place_kind = kind
 	place_def = def_id
 	deck_editor.drag_rooms = kind == "room" or kind == "armor" or kind == "bus"
+	deck_editor.drag_moves = false
 	if iso_view != null:
 		iso_view.drag_rooms = deck_editor.drag_rooms
 	if armor_faces != null:
@@ -326,6 +335,49 @@ func redo() -> void:
 		_set_status("Nothing to redo")
 
 
+## Select tool: dragging what was pressed moves it (and a group with it).
+func _on_drag_moved(from: Vector3i, to: Vector3i) -> void:
+	if tool != Tool.SELECT or (selected_id == "" and group_ids.size() <= 1):
+		return
+	var d := Vector3i(to.x - from.x, 0, to.z - from.z)
+	if group_ids.size() > 1:
+		editor.move_group(group_ids, d)
+	else:
+		editor.move(selected_id, d)
+
+
+## [C]: the centre of mass as a marker in the deck, side and front views and
+## a sphere in the 3D ones.
+func set_show_com(on: bool) -> void:
+	for v in [deck_editor, side_view, front_view]:
+		v.show_com = on
+		v.queue_redraw()
+	for v in [preview, iso_view]:
+		if v != null:
+			v.set_show_com(on)
+	if com_button != null:
+		com_button.set_pressed_no_signal(on)
+
+
+## [V]: parts in the middle of a cell go on its underside instead of its top.
+func set_underside(on: bool) -> void:
+	deck_editor.prefer_underside = on
+	if iso_view != null:
+		iso_view.prefer_underside = on
+	if underside_button != null:
+		underside_button.set_pressed_no_signal(on)
+		underside_button.text = "Mount on: %s  [V]" % ("UNDERSIDE" if on else "TOP")
+	_set_status("Middle of a cell: %s (Shift for the other)" % ("underside" if on else "top"))
+	_update_ghost()
+
+
+## A hatch in the middle of a cell is a ladder up; Shift: down.
+static func hatch_face(face: StringName, shift: bool) -> StringName:
+	if face == &"dorsal" or face == &"ventral":
+		return &"ventral" if shift else &"dorsal"
+	return face
+
+
 ## Apply the current tool at a cell (deck editor click, or tests).
 func apply_at(cell: Vector3i, face: StringName, button: MouseButton = MOUSE_BUTTON_LEFT, shift: bool = false) -> void:
 	if button == MOUSE_BUTTON_RIGHT:
@@ -356,6 +408,7 @@ func apply_at(cell: Vector3i, face: StringName, button: MouseButton = MOUSE_BUTT
 				selected_id = picked
 			_refresh_views()
 		Tool.HATCH:
+			face = hatch_face(face, shift)
 			var other := DeckEditor.across(cell, face)
 			var added := editor.toggle_hatch(cell, other)
 			_set_status("%s hatch %s ↔ %s" % ["Added" if added else "Removed", cell, other])
@@ -632,7 +685,6 @@ func _refresh_stats() -> void:
 	_set_figure("HEAT", "%s %+.0f kW" % [CyberTheme.GLYPH_OK if heat >= 0.0 else CyberTheme.GLYPH_DEGRADED, heat], CyberTheme.CYAN if heat >= 0.0 else CyberTheme.AMBER)
 	stats_label.text = "\n".join([
 		"MASS       %.1f t dry · %.1f t wet" % [s.mass_kg / 1000.0, s.wet_mass_kg() / 1000.0],
-		"CoM        x %.1f  y %.1f  z %.1f m" % [s.center_of_mass_m.x, s.center_of_mass_m.y, s.center_of_mass_m.z],
 		"MAIN       %.2f MN  %.2f m/s² (%.2f g) wet" % [s.thrust_forward_n / 1e6, s.thrust_forward_n / s.wet_mass_kg(), s.thrust_forward_n / s.wet_mass_kg() / g],
 		"RCS        %.0f kN  %.2f m/s²  (%d blocks)" % [s.thrust_rcs_n / 1000.0, s.thrust_rcs_n / s.wet_mass_kg(), s.rcs_count],
 		"PROPELLANT %.0f t  Δv %.0f m/s  (Isp %.0f / %.0f s)" % [s.propellant_capacity_kg / 1000.0, s.delta_v_m_s(), s.main_isp_s, s.rcs_isp_s],
@@ -699,6 +751,22 @@ func _build_palette() -> void:
 	armor_faces.tooltip_text = "Which faces an armour stroke covers"
 	armor_faces.visible = false
 	box.add_child(armor_faces)
+	var turn_row := HBoxContainer.new()
+	for spec in [["⟳ Rotate [R]", "Turn the part being placed, or the selected module", rotate_current],
+			["⇅ Flip [F]", "Upside down: a wedge's slope faces down instead of up", flip_current]]:
+		var tb := Button.new()
+		tb.text = spec[0]
+		tb.tooltip_text = spec[1]
+		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tb.pressed.connect(spec[2])
+		turn_row.add_child(tb)
+	box.add_child(turn_row)
+	underside_button = Button.new()
+	underside_button.toggle_mode = true
+	underside_button.text = "Mount on: TOP  [V]"
+	underside_button.tooltip_text = "Where parts go in the middle of a cell open both ways: the top or the underside (Shift: the other one)"
+	underside_button.toggled.connect(func(on: bool) -> void: set_underside(on))
+	box.add_child(underside_button)
 	var route := Button.new()
 	route.text = "Auto-route power bus"
 	route.tooltip_text = "Lay conduit from the distribution unit to every powered system and room (replaces the current bus)"
@@ -751,7 +819,7 @@ func _fill_palette_list() -> void:
 		var ai := palette_list.add_item(a_name if want == "Armour" else "%s · Armour" % a_name)
 		palette_list.set_item_metadata(ai, ["armor", id])
 		var mm: int = ARMOR_ENTRIES[id][0]
-		palette_list.set_item_custom_fg_color(ai, CyberTheme.AMBER if mm >= ShipBlueprint.PLATE_THICK_MM else (CyberTheme.CYAN if mm > 0 else CyberTheme.TEXT_DIM))
+		palette_list.set_item_custom_fg_color(ai, DeckEditor.COLOR_PLATE_THIN.lightened(0.3) if mm > 0 else CyberTheme.TEXT_DIM)
 	for entry in [["hull", editor.catalog.hull], ["room", editor.catalog.rooms], ["equipment", editor.catalog.equipment]]:
 		for id in ConstructionCatalog.sorted_ids(entry[1]):
 			var def: Resource = entry[1][id]
@@ -839,6 +907,13 @@ func _build_view_bar() -> void:
 		tb.pressed.connect(func() -> void: iso_view.turn_iso(q))
 		bar.add_child(tb)
 		_iso_turns.append(tb)
+	com_button = Button.new()
+	com_button.toggle_mode = true
+	com_button.text = "◉ CoM [C]"
+	com_button.tooltip_text = "Show the centre of mass (full tanks) in every view"
+	CyberTheme.style_button(com_button, CyberTheme.AMBER)
+	com_button.toggled.connect(func(on: bool) -> void: set_show_com(on))
+	bar.add_child(com_button)
 	for entry in [["side", "Side"], ["front", "Front"], ["3d", "3D"], ["", "Restore"]]:
 		var b := Button.new()
 		b.text = entry[1]
@@ -1054,9 +1129,9 @@ func _on_issue_clicked(meta: Variant) -> void:
 	_refresh_views()
 
 
-func _on_hover(cell: Vector3i, face: StringName, _shift: bool) -> void:
+func _on_hover(cell: Vector3i, face: StringName, shift: bool) -> void:
 	_hover_cell = cell
-	_hover_face = face
+	_hover_face = hatch_face(face, shift) if tool == Tool.HATCH else face
 	_update_ghost()
 
 
@@ -1103,7 +1178,8 @@ func _update_ghost() -> void:
 					for k in maxi(def.length_cells, 1):
 						deck_editor.ghost_cells.append(cell + step * k)
 					deck_editor.ghost_face = _hover_face
-					hint = "%s — %s face (near an edge: that side; middle: top or underside, whichever is open — Shift: the other)" % [def.display_name, _hover_face]
+					hint = "%s — %s face (near an edge: that side; middle: %s — [V] switches, Shift: the other)" % [
+						def.display_name, _hover_face, "underside" if deck_editor.prefer_underside else "top"]
 				else:
 					var fp := def.footprint_cells
 					if place_rotation % 2 == 1:
@@ -1120,7 +1196,7 @@ func _update_ghost() -> void:
 		if not new_errors.is_empty():
 			hint += "   ✖ " + new_errors[0].message
 	elif tool == Tool.HATCH:
-		hint = "Hatch: %s ↔ %s" % [cell, DeckEditor.across(cell, _hover_face)]
+		hint = "Hatch: %s ↔ %s  (edge: that side · middle: ladder up · Shift: ladder down)" % [cell, DeckEditor.across(cell, _hover_face)]
 	else:
 		var id := editor.item_at(cell, _hover_face)
 		hint = "%s at %s" % [_name_of(id), cell] if id != "" else "%s" % cell
@@ -1237,7 +1313,7 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 			lines.append("POINT DEFENCE engages hostile craft within %.1f km on its own · %.0f rpm · %d rounds of its own · trains %.0f°/s · works with a gangway attached" % [
 				WorldSimulation.PD_RANGE_M / 1000.0, pg.rate_of_fire_rpm, pg.magazine_rounds, pg.traverse_deg_s])
 		EquipmentDefinition.Kind.MAIN_ENGINE:
-			lines.append("THRUST %.0f kN · Isp %.0f s · burns %.1f kg/s · aft faces only" % [e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
+			lines.append("THRUST %.0f kN · Isp %.0f s · burns %.1f kg/s · any aft face; other faces with an engine room on the inside (pushes away from that face)" % [e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
 		EquipmentDefinition.Kind.RCS:
 			lines.append("THRUST %.0f kN each way · Isp %.0f s · burns %.2f kg/s at full · torque grows with distance from the centre of mass" % [
 				e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])

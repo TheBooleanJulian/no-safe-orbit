@@ -19,8 +19,18 @@ static var _hazard_texture: ImageTexture
 
 class Model:
 	var root: Node3D
-	## Main-engine nozzle positions (body frame), for plumes.
+	## Main-engine nozzle positions (body frame), for plumes, and the outward
+	## normal of the face each sits on (the plume's direction).
 	var engine_nozzles: Array[Vector3] = []
+	var engine_normals: Array[Vector3] = []
+	## Armour plate meshes by plate key (views char and crumple worn ones).
+	var plates: Dictionary = {}
+	## Radar arrays that turn while their sensor mast works: {id, node}.
+	var spinners: Array[Dictionary] = []
+	## Lit windows {room (index), node}, and running lights {node}: dark
+	## when their room / the ship has no power.
+	var windows: Array[Dictionary] = []
+	var nav_lights: Array[Node3D] = []
 	## RCS blocks: {id, position, normal} (body frame), for thruster jets.
 	var rcs_blocks: Array[Dictionary] = []
 	## Docking collar beacons (for blinking).
@@ -52,10 +62,13 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 		var part: MeshInstance3D
 		if def.is_wedge():
 			part = _wedge(model.root, def, bp.modules[i], center, _hull_mat(mats, def.color * tint))
+		elif not def.interior:
+			part = _truss(model.root, size_m - Vector3.ONE * 0.15, center, _hull_mat(mats, def.color * tint))
 		else:
 			part = _box(model.root, size_m - Vector3.ONE * 0.15, center, _hull_mat(mats, def.color * tint))
 		model.parts[bp.modules[i].id] = part
 	_add_plates(model, bp, grid, origin_m, mats, tint)
+	_add_lights(model, bp, grid, origin_m)
 	var flank := _best_flank(bp, grid)
 	if hull_name != "" and not flank.is_empty():
 		_paint_name(model.root, flank, origin_m, hull_name)
@@ -78,8 +91,9 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 			EquipmentDefinition.Kind.MAIN_ENGINE:
 				# Cylinder +Y is rotated to +Z (aft): top = aft end = wide mouth.
 				var bell := _cylinder(part, 1.4, 0.7, 2.4, mount + normal * 1.2, mat)
-				bell.rotation_degrees = Vector3(90, 0, 0)
+				bell.basis = _basis_y_along(normal)
 				model.engine_nozzles.append(mount + normal * 2.4)
+				model.engine_normals.append(normal)
 			EquipmentDefinition.Kind.RCS:
 				_box(part, Vector3.ONE * 0.9, mount + normal * 0.45, mat)
 				model.rcs_blocks.append({"id": bp.equipment[i].id, "position": mount + normal * 0.45, "normal": normal})
@@ -98,18 +112,24 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				barrel.rotation_degrees = Vector3(90, 0, 0)
 				model.turrets.append({"id": bp.equipment[i].id, "pivot": pivot})
 			EquipmentDefinition.Kind.RADIATOR:
-				# A fin standing off the face, as long as the cells it spans.
+				# A folded (accordion) fin standing 3 m off the face, as long
+				# as the cells it spans: thin panels zigzagging along the span.
 				var cells := grid.external_cells(i)
 				var along := Vector3(cells[1] - cells[0]).abs() if cells.size() > 1 else Vector3(0, 0, 1)
 				var long_m := cells.size() * c - 0.2
-				# Long along the span, 3 m off the face, thin across.
-				var fin := Vector3.ONE * 0.12
-				for axis in 3:
-					if along[axis] > 0.5:
-						fin[axis] = long_m
-					elif absf(normal[axis]) > 0.5:
-						fin[axis] = 3.0
-				_box(part, fin, mount + normal * 1.5, mat)
+				var side := along.cross(normal).normalized()
+				var folds := cells.size() * 4
+				var seg := long_m / folds
+				var start := mount - along * long_m * 0.5
+				for k in folds:
+					var a0 := 0.35 if k % 2 == 0 else -0.35
+					var p0 := start + along * (seg * k) + side * a0
+					var p1 := start + along * (seg * (k + 1)) - side * a0
+					var dir := (p1 - p0).normalized()
+					var panel := _box(part, Vector3((p1 - p0).length() + 0.04, 3.0, 0.06), (p0 + p1) * 0.5 + normal * 1.5, mat)
+					panel.basis = Basis(dir, normal, dir.cross(normal))
+				# Header pipe along the top edge, and the root fairing on the hull.
+				_box(part, Vector3.ONE * 0.16 + along * (long_m - 0.16), mount + normal * 3.0, _mat(mats, Color(0.55, 0.57, 0.6) * tint))
 				_box(part, Vector3.ONE * 0.5 + along * (long_m - 0.5), mount + normal * 0.15, _mat(mats, Color(0.3, 0.32, 0.35) * tint))
 			EquipmentDefinition.Kind.DOCKING_COLLAR:
 				model.beacons.append(_collar(part, mount, normal))
@@ -126,7 +146,8 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 					tube.rotation_degrees = Vector3(90, 0, 0)
 				model.turrets.append({"id": bp.equipment[i].id, "pivot": pd_pivot, "pd": true})
 			EquipmentDefinition.Kind.SENSOR:
-				_sensor_mast(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))
+				model.spinners.append({"id": bp.equipment[i].id,
+					"node": _sensor_mast(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))})
 			EquipmentDefinition.Kind.GRAPPLE:
 				_grapple_arm(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))
 			EquipmentDefinition.Kind.CRAFT_MOUNT:
@@ -159,18 +180,86 @@ static func _grapple_arm(part: Node3D, mount: Vector3, normal: Vector3, mat: Mat
 
 
 ## Sensor mast: a lattice pole with a dish and a sensor head on top.
-static func _sensor_mast(part: Node3D, mount: Vector3, normal: Vector3, mat: Material, dark: Material) -> void:
+## Sensor mast: a lattice pole carrying a turntable with a back-to-back
+## radar array (a long flat antenna and a dish). Returns the turntable,
+## which views spin about the pole while the mast works.
+static func _sensor_mast(part: Node3D, mount: Vector3, normal: Vector3, mat: Material, dark: Material) -> Node3D:
 	var b := _basis_y_along(normal)
 	var pole := _cylinder(part, 0.18, 0.28, 4.0, Vector3.ZERO, dark)
 	pole.transform = Transform3D(b, mount + normal * 2.0)
-	var head := _box(part, Vector3(1.0, 0.6, 1.0), Vector3.ZERO, mat)
-	head.transform = Transform3D(b, mount + normal * 4.2)
-	var dish := _cylinder(part, 1.3, 0.4, 0.35, Vector3.ZERO, mat)
-	# Tilted dish beside the head.
-	dish.transform = Transform3D(b * Basis(Vector3.RIGHT, deg_to_rad(55)), mount + normal * 3.5 + b.z * 0.9)
 	for k in 3:
 		var arm := _box(part, Vector3(0.08, 0.08, 1.6), Vector3.ZERO, dark)
 		arm.transform = Transform3D(b * Basis(Vector3.UP, TAU * k / 3.0), mount + normal * (1.0 + k * 0.9))
+	var table := Node3D.new()
+	table.name = "RadarTurntable"
+	table.transform = Transform3D(b, mount + normal * 4.2)
+	part.add_child(table)
+	_cylinder(table, 0.6, 0.7, 0.3, Vector3.ZERO, dark)
+	# Phased array: a long, slightly tilted slab on one side.
+	var slab := _box(table, Vector3(3.6, 1.2, 0.14), Vector3(0, 0.75, -0.35), mat)
+	slab.basis = Basis(Vector3.RIGHT, deg_to_rad(-12))
+	# Dish on the other side, looking the opposite way.
+	var dish := _cylinder(table, 1.0, 0.25, 0.3, Vector3(0, 0.8, 0.55), mat)
+	dish.basis = Basis(Vector3.RIGHT, deg_to_rad(70))
+	return table
+
+
+## Lit windows on the outer walls of crewed rooms, and red / green / white
+## running lights at the port, starboard and aft extremes.
+static func _add_lights(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3) -> void:
+	var c := ShipGrid.CELL_SIZE_M
+	var holder := Node3D.new()
+	holder.name = "Lights"
+	model.root.add_child(holder)
+	model.parts["lights"] = holder
+	var lit := StandardMaterial3D.new()
+	lit.albedo_color = Color(1.0, 0.86, 0.6)
+	lit.emission_enabled = true
+	lit.emission = Color(1.0, 0.82, 0.55)
+	lit.emission_energy_multiplier = 2.5
+	for ri in bp.rooms.size():
+		var def: RoomDefinition = grid.catalog.rooms.get(bp.rooms[ri].def_id)
+		if def == null or not def.role in [&"command", &"quarters", &"life_support", &"workshop"]:
+			continue
+		for cell in ShipGrid.room_cells(bp.rooms[ri]):
+			for face: StringName in [&"port", &"starboard", &"fore"]:
+				if not grid.is_exterior_face(cell, face) or grid.slope_faces(cell).has(face) \
+						or bp.armor.has(ShipBlueprint.plate_key(cell, face)):
+					continue
+				var n := Vector3(ShipGrid.FACE_NORMALS[face])
+				var size := Vector3(1.6, 0.4, 1.6)
+				for axis in 3:
+					if n[axis] != 0.0:
+						size[axis] = 0.06
+				var w := _box(holder, size, ShipGrid.cell_center_m(cell) - origin_m + n * (c * 0.5 + 0.03) + Vector3(0, 0.3, 0), lit)
+				model.windows.append({"room": ri, "node": w})
+	if grid.module_at.is_empty():
+		return
+	var ends := {&"port": [INF, Vector3.ZERO], &"starboard": [-INF, Vector3.ZERO], &"aft": [-INF, Vector3.ZERO]}
+	for cell: Vector3i in grid.module_at:
+		var p := ShipGrid.cell_center_m(cell)
+		if p.x < ends.port[0]:
+			ends.port = [p.x, p + Vector3(-c * 0.5, 0, 0)]
+		if p.x > ends.starboard[0]:
+			ends.starboard = [p.x, p + Vector3(c * 0.5, 0, 0)]
+		if p.z + p.y * 0.01 > ends.aft[0]:
+			ends.aft = [p.z + p.y * 0.01, p + Vector3(0, c * 0.5, c * 0.5)]
+	for spec in [[&"port", Color(1.0, 0.15, 0.1)], [&"starboard", Color(0.1, 1.0, 0.3)], [&"aft", Color(1, 1, 1)]]:
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = spec[1]
+		mat.emission_enabled = true
+		mat.emission = spec[1]
+		mat.emission_energy_multiplier = 6.0
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		var bulb := MeshInstance3D.new()
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.3
+		sphere.height = 0.6
+		bulb.mesh = sphere
+		bulb.material_override = mat
+		bulb.position = (ends[spec[0]][1] as Vector3) - origin_m
+		holder.add_child(bulb)
+		model.nav_lights.append(bulb)
 
 
 ## An internal craft bay's hangar door: a framed dark panel on the room's
@@ -237,6 +326,51 @@ static func _collar(part: Node3D, mount: Vector3, normal: Vector3) -> Node3D:
 	return beacon
 
 
+## Unpressurised truss: an open lattice — the box's edges plus one diagonal
+## across each face (triangulated), one mesh so views treat it as a module.
+static func _truss(parent: Node3D, size: Vector3, center: Vector3, mat: Material) -> MeshInstance3D:
+	var h := size * 0.5
+	var corners: Array[Vector3] = []
+	for x in [-1.0, 1.0]:
+		for y in [-1.0, 1.0]:
+			for z in [-1.0, 1.0]:
+				corners.append(Vector3(x, y, z) * h)
+	var struts: Array = []
+	for a in 8:
+		for b in range(a + 1, 8):
+			var d := corners[b] - corners[a]
+			if int(absf(d.x) > 0.01) + int(absf(d.y) > 0.01) + int(absf(d.z) > 0.01) == 1:
+				struts.append([corners[a], corners[b]])
+	# One diagonal per face, alternating direction on opposite faces.
+	for k in 3:
+		for side in 2:
+			var ends: Array[Vector3] = []
+			for uv in ([[0, 0], [1, 1]] if side == 0 else [[0, 1], [1, 0]]):
+				var q := Vector3.ZERO
+				q[k] = side
+				q[(k + 1) % 3] = uv[0]
+				q[(k + 2) % 3] = uv[1]
+				ends.append((q * 2.0 - Vector3.ONE) * h)
+			struts.append(ends)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var bar := BoxMesh.new()
+	for s in struts:
+		var p0: Vector3 = s[0]
+		var p1: Vector3 = s[1]
+		var dir := (p1 - p0).normalized()
+		var up := Vector3.UP if absf(dir.y) < 0.9 else Vector3.RIGHT
+		var x := dir.cross(up).normalized()
+		var basis := Basis(x * 0.22, x.cross(dir).normalized() * 0.22, dir * (p1 - p0).length())
+		st.append_from(bar, 0, Transform3D(basis, (p0 + p1) * 0.5))
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = mat
+	mi.position = center
+	parent.add_child(mi)
+	return mi
+
+
 ## A wedge: a triangular prism, slope rising towards its own aft end (down
 ## when flipped), turned with the module.
 static func _wedge(parent: Node3D, def: HullModuleDefinition, m: ShipBlueprint.PlacedModule, center: Vector3, mat: Material) -> MeshInstance3D:
@@ -287,13 +421,107 @@ static func _add_plates(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_
 			# Square the plate to the slope: its long side runs up the slope.
 			var up_slope := (Vector3(ShipGrid.FACE_NORMALS[grid.slope_faces(cell)[0]]) * -1.0).slide(n).normalized()
 			plate.transform.basis = Basis(up_slope.cross(n), n, up_slope).orthonormalized() if up_slope.length() > 0.1 else basis
+			model.plates[key] = plate
 			continue
 		var fn := Vector3(ShipGrid.FACE_NORMALS[face])
+		if grid.is_wedge_cell(cell):
+			# A wedge's side: only the part of the face the wedge fills —
+			# a triangle (or a trapezoid slice of a long wedge).
+			var outline := _wedge_side(grid, cell, face)
+			if outline.size() >= 3 and not _is_full_square(outline):
+				model.plates[key] = _plate_prism(holder, outline, fn, depth, origin_m, mat)
+				continue
 		var size := Vector3(c * 0.96, c * 0.96, c * 0.96)
 		for axis in 3:
 			if fn[axis] != 0.0:
 				size[axis] = depth
-		_box(holder, size, cell_center + fn * (c * 0.5 + depth * 0.5), mat)
+		model.plates[key] = _box(holder, size, cell_center + fn * (c * 0.5 + depth * 0.5), mat)
+
+
+## Outline (cell units, on the face's plane) of the part of a wedge cell's
+## flat face the wedge fills: the face square clipped by the slope.
+static func _wedge_side(grid: ShipGrid, cell: Vector3i, face: StringName) -> PackedVector3Array:
+	var mi: int = grid.module_at[cell]
+	var n := Vector3(ShipGrid.FACE_NORMALS[face])
+	var axis := 0 if n.x != 0.0 else (1 if n.y != 0.0 else 2)
+	var u := Vector3.ZERO
+	var v := Vector3.ZERO
+	u[(axis + 1) % 3] = 1.0
+	v[(axis + 2) % 3] = 1.0
+	var base := Vector3(cell)
+	if n[axis] > 0.0:
+		base[axis] += 1.0
+	var inward := -n * 0.02
+	var solid := func(p: Vector3) -> bool:
+		var q := p + inward + (Vector3(cell) + Vector3.ONE * 0.5 - p) * 0.02
+		return grid.wedge_contains(mi, q)
+	var corners := [base, base + u, base + u + v, base + v]
+	var out := PackedVector3Array()
+	for k in 4:
+		var a: Vector3 = corners[k]
+		var b: Vector3 = corners[(k + 1) % 4]
+		var ia: bool = solid.call(a)
+		if ia:
+			out.append(a)
+		if ia != solid.call(b):
+			var lo := a
+			var hi := b
+			for i in 16:
+				var mid := (lo + hi) * 0.5
+				if solid.call(mid) == ia:
+					lo = mid
+				else:
+					hi = mid
+			out.append((lo + hi) * 0.5)
+	return out
+
+
+static func _is_full_square(outline: PackedVector3Array) -> bool:
+	var area := 0.0
+	for k in outline.size():
+		area += (outline[k] - outline[0]).cross(outline[(k + 1) % outline.size()] - outline[0]).length() * 0.5
+	return area > 0.98
+
+
+## A flat plate shaped like `outline` (cell units, on a face plane), `depth`
+## thick, standing out along `normal`.
+static func _plate_prism(parent: Node3D, outline: PackedVector3Array, normal: Vector3, depth: float,
+		origin_m: Vector3, mat: Material) -> MeshInstance3D:
+	var c := ShipGrid.CELL_SIZE_M
+	var center := Vector3.ZERO
+	for p in outline:
+		center += p
+	center /= outline.size()
+	# Clockwise seen from outside (Godot's front faces).
+	if (outline[1] - outline[0]).cross(outline[2] - outline[0]).dot(normal) > 0.0:
+		outline.reverse()
+	# Shrink a touch towards its centre, like the square plates' 0.96.
+	var inner := PackedVector3Array()
+	var outer := PackedVector3Array()
+	for p in outline:
+		var q := (center + (p - center) * 0.96) * c - origin_m
+		inner.append(q)
+		outer.append(q + normal * depth)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var n := outline.size()
+	for k in range(1, n - 1):
+		for tri in [[outer[0], outer[k], outer[k + 1]], [inner[0], inner[k + 1], inner[k]]]:
+			for p in tri:
+				st.add_vertex(p)
+	for k in n:
+		var a := inner[k]
+		var b := inner[(k + 1) % n]
+		var a2 := outer[k]
+		var b2 := outer[(k + 1) % n]
+		for p in [a, b, b2, a, b2, a2]:
+			st.add_vertex(p)
+	st.generate_normals()
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = mat
+	parent.add_child(mi)
+	return mi
 
 
 ## Where to paint the name: the longest straight run of exposed side faces

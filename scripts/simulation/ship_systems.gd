@@ -353,6 +353,10 @@ func reachable_rooms() -> Dictionary:
 			if other >= 0 and not seen.has(other) and (suited or rooms[other].pressurized):
 				seen[other] = true
 				queue.append(other)
+		for other: int in grid.open_rooms.get(i, []):
+			if not seen.has(other) and (suited or rooms[other].pressurized):
+				seen[other] = true
+				queue.append(other)
 	return seen
 
 
@@ -474,6 +478,11 @@ func update_pressure() -> void:
 			var rb: int = grid.room_at.get(h.b, -1)
 			var other := rb if ra == i else (ra if rb == i else -1)
 			if other >= 0 and not vacuum.has(other):
+				vacuum[other] = true
+				queue.append(other)
+		# One space: a breach vents both halves.
+		for other: int in grid.open_rooms.get(i, []):
+			if not vacuum.has(other):
 				vacuum[other] = true
 				queue.append(other)
 	for i in rooms.size():
@@ -814,6 +823,7 @@ func effective_config() -> ShipConfig:
 		return _config
 	var cfg: ShipConfig = base_config.duplicate()
 	var forward := 0.0
+	var side_engines := PackedFloat64Array([0, 0, 0, 0, 0, 0])
 	var engine_torque := Vector3.ZERO
 	var rcs: Array[EquipmentState] = []
 	for e in equipment:
@@ -824,6 +834,8 @@ func effective_config() -> ShipConfig:
 				if blueprint.equipment[e.index].face == &"aft":
 					forward += e.def.thrust_n
 					engine_torque += e.body_position.cross(Vector3(0, 0, -e.def.thrust_n))
+				else:
+					side_engines[ShipStats.engine_slot(blueprint.equipment[e.index].face)] += e.def.thrust_n
 			EquipmentDefinition.Kind.RCS:
 				rcs.append(e)
 	var rcs_thrust := 0.0
@@ -833,6 +845,7 @@ func effective_config() -> ShipConfig:
 		rcs_thrust += e.def.thrust_n
 		torque += e.def.thrust_n * Vector3(Vector2(r.y, r.z).length(), Vector2(r.x, r.z).length(), Vector2(r.x, r.y).length())
 	cfg.thrust_forward_n = forward
+	cfg.engine_thrust_n = side_engines
 	cfg.thrust_torque_body = engine_torque
 	cfg.thrust_reverse_n = rcs_thrust
 	cfg.thrust_lateral_n = rcs_thrust
@@ -844,6 +857,8 @@ func effective_config() -> ShipConfig:
 	var eng := channel_factor(Channel.ENG)
 	var sys := channel_factor(Channel.SYS)
 	cfg.thrust_forward_n *= eng
+	for k in 6:
+		cfg.engine_thrust_n[k] *= eng * (SHIP_AI_FACTOR if not has_command() else 1.0)
 	cfg.thrust_reverse_n *= eng
 	cfg.thrust_lateral_n *= eng
 	cfg.thrust_vertical_n *= eng
@@ -1051,6 +1066,12 @@ func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -
 			if other >= 0 and not suited and (isolated_rooms.has(other) or isolated_rooms.has(i)) and not destroyed_hatches.has(h.id):
 				continue
 			if other >= 0 and not prev.has(other) and (eva or rooms[other].pressurized):
+				prev[other] = i
+				queue.append(other)
+		for other: int in grid.open_rooms.get(i, []):
+			if not suited and (isolated_rooms.has(other) or isolated_rooms.has(i)):
+				continue
+			if not prev.has(other) and (eva or rooms[other].pressurized):
 				prev[other] = i
 				queue.append(other)
 	if not prev.has(to):
