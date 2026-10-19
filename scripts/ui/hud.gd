@@ -58,6 +58,11 @@ var top_alert_level: String = ""
 ## {blocked}; {} when not charging.
 var jump_state: Dictionary = {}
 var _jump_flash: ColorRect
+## The current mission goal and the tutorial's prompt (set by Main), shown
+## under the alert banner; and the escort's courier, marked like a craft.
+var guide_lines := PackedStringArray()
+var escort_id: StringName = &""
+var guide_label: RichTextLabel
 ## A nuclear burst whitens the view (flash_white): when it started (ms).
 var _white_flash_ms := -1
 const WHITE_FLASH_S := 1.4
@@ -185,6 +190,16 @@ func _build_cards() -> void:
 	weapon_label.add_theme_font_size_override("font_size", CyberTheme.SIZE_BODY)
 	_weapon_panel.add_child(weapon_label)
 	$Root.add_child(_weapon_panel)
+	# Mission goal and tutorial prompt (top centre, under the banner).
+	guide_label = RichTextLabel.new()
+	guide_label.name = "Guide"
+	guide_label.bbcode_enabled = true
+	guide_label.fit_content = true
+	guide_label.scroll_active = false
+	guide_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	guide_label.add_theme_font_size_override("normal_font_size", CyberTheme.SIZE_BODY)
+	guide_label.add_theme_stylebox_override("normal", CyberTheme.panel(CyberTheme.AMBER, CyberTheme.SPACE_S, 0.78))
+	$Root.add_child(guide_label)
 	# Event ticker (above the strip).
 	ticker_label = Label.new()
 	ticker_label.name = "Ticker"
@@ -229,6 +244,7 @@ MISSILES   M launch at the U target (the ship needs a sensor lock) · point defe
 POWER      1 SYS · 2 ENG · 3 WEP · 4 balance
 SHIP       Tab damage control, crew, power, wing · C patch damage
 CONTACTS   T target hostile · G salvage beacon · Y grappling arm · V gangway · N board / withdraw · [ / ] launch / recall craft
+MISSION    the goal is shown at the top (gold) · F2 guided first sortie: start / skip
 PANELS     O orbit · P details & combat log · H this help · F1 rebind
 MISSION    hold B 5 s: jump drive to Earth Shipyard (out of combat) · Backspace restart / respawn"""
 
@@ -387,6 +403,15 @@ func _place_banner() -> void:
 	warning_label.offset_right = x1
 	warning_label.offset_top = top
 	warning_label.offset_bottom = top + 20.0
+	var below := top + (warning_label.size.y + CyberTheme.SPACE_S if warning_label.visible else 0.0)
+	guide_label.anchor_left = 0.0
+	guide_label.anchor_right = 0.0
+	guide_label.anchor_top = 0.0
+	guide_label.anchor_bottom = 0.0
+	guide_label.offset_left = x0
+	guide_label.offset_right = x1
+	guide_label.offset_top = below
+	guide_label.offset_bottom = below + 20.0
 
 
 func toggle_orbit_panel() -> void:
@@ -497,6 +522,7 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 					overlay.extra_leads.append({"pos": overlay.ship_render_pos + (other.offset as Vector3), "label": gun.display_name.left(1)})
 	_update_gun_reticles(player, alpha, render_origin, input)
 	_update_craft_markers(world, player, alpha, render_origin)
+	_update_guide()
 	# The jump: the view whitens over the last second and a half of the charge.
 	var flash := 0.0
 	if jump_state.has("progress"):
@@ -650,6 +676,17 @@ func _assist_text(input: PlayerInput, has_target: bool) -> String:
 
 
 # --- Alerts ------------------------------------------------------------------------
+
+## Goal in gold, tutorial in teal; hidden while a panel covers the view.
+func _update_guide() -> void:
+	var lines := PackedStringArray()
+	for i in guide_lines.size():
+		lines.append(CyberTheme.tint(guide_lines[i], CyberTheme.AMBER if i == 0 else CyberTheme.CYAN))
+	guide_label.text = "\n".join(lines)
+	guide_label.visible = not lines.is_empty() and not overview.visible and not loot.visible and not debrief.visible
+	if guide_label.visible:
+		_place_banner()
+
 
 ## A nuclear burst: the view goes white and fades back.
 func flash_white() -> void:
@@ -1188,6 +1225,11 @@ func _update_craft_markers(world: WorldSimulation, player: ShipState, alpha: flo
 				continue
 			overlay.craft_markers.append({"pos": s.interpolated_position(alpha) - render_origin,
 				"label": "%s %s" % [c.label, HudFormat.distance(dist)], "hostile": hostile, "selected": c.id == selected_id})
+	if escort_id != &"" and world.has_ship(escort_id) and world.get_ship(escort_id).is_active():
+		var c := world.get_ship(escort_id)
+		overlay.craft_markers.append({"pos": c.interpolated_position(alpha) - render_origin,
+			"label": "COURIER %s · hull %d%%" % [HudFormat.distance(c.position.distance_to(player.position)),
+				roundi(100.0 * (1.0 - c.hull_damage / maxf(c.config.hull_hp, 1.0)))], "hostile": false, "selected": false})
 	for m in world.missiles:
 		var dist := m.position.distance_to(player.position)
 		if not m.is_active() or dist > reach:

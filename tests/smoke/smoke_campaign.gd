@@ -112,8 +112,10 @@ func _run() -> void:
 		"G drops a beacon: carousel open, %d crates opened, mission 1 complete" % profile.total_pulls)
 	_check(profile.loot_log.is_empty() or profile.loot_log[profile.loot_log.size() - 1].ends_with("(in cargo)"),
 		"beacon loot goes into the hold, banked once home (%s)" % profile.vessel.cargo_summary())
-	_check(profile.credits == credits_at_start + roundi(scrap * Salvage.BEACON_SCRAP_RATE) + bounty,
-		"50%% of %d cr scrap and %d cr bounty paid (%d → %d)" % [scrap, bounty, credits_at_start, profile.credits])
+	# Disabling it also met the first goal ("First blood").
+	var goal := int(MissionChain.CHAIN[0].credits)
+	_check(profile.credits == credits_at_start + roundi(scrap * Salvage.BEACON_SCRAP_RATE) + bounty + goal and int(profile.campaign.step) == 1,
+		"50%% of %d cr scrap, %d cr bounty and the %d cr mission reward paid (%d → %d)" % [scrap, bounty, goal, credits_at_start, profile.credits])
 	var next := main.world.get_ship(Main.TARGET_ID)
 	_check(next != old_target and next.display_name.begins_with("TGT-02"), "the next contact arrives (%s)" % next.display_name)
 	_check(next.position.distance_to(player.position) > 25000.0 and not main.track.detected,
@@ -214,5 +216,6 @@ func _run() -> void:
 
 func _finish() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + PlayerProfile.BACKUP_SUFFIX))
 	print("smoke_campaign: %d failure(s)" % _failures.size())
 	quit(1 if not _failures.is_empty() else 0)

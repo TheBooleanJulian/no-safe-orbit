@@ -57,7 +57,7 @@ func test_every_flight_action_has_gamepad_default() -> void:
 		# panel toggles (on a gamepad the Tab overview covers them); every pad
 		# button is taken, so targeting, the arm and missiles are keys only.
 		if entry[0] in [&"release_mouse", &"toggle_orbit_panel", &"toggle_details", &"toggle_help", &"orbit_camera", &"cycle_target", &"grapple",
-				&"fire_missile"]:
+				&"fire_missile", &"tutorial"]:
 			continue
 		if InputBindings.describe(entry[0], InputBindings.Kind.GAMEPAD) == "—":
 			missing.append(String(entry[0]))

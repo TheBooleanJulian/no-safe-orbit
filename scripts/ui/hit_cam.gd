@@ -124,7 +124,7 @@ func show_hit(ev: HitEvent, design: Dictionary, systems: ShipSystems, target_nam
 	_age = 0.0
 	visible = true
 	_title.text = "HIT CAM — %s · %s" % [target_name, report.headline().to_upper()]
-	_caption.text = _caption_for(report)
+	_caption.text = caption_for(report)
 	_build_scene(report, design, systems)
 
 
@@ -152,15 +152,29 @@ func _ease(k: float) -> float:
 	return 1.0 - (1.0 - k) * (1.0 - k)
 
 
-func _caption_for(report: DamageReport) -> String:
+## What the round did, readable at a glance: how it came in and how far it
+## got, then what it broke (glyph first: ✕ destroyed, ▲ damaged, ◆ breach),
+## the rest counted rather than cut off.
+static func caption_for(report: DamageReport) -> String:
 	var lines := PackedStringArray()
+	var side := CombatLog.side_of(report)
+	if report.ricochet:
+		lines.append("Deflected off the %s plate" % side)
+	elif report.stopped_by_armor:
+		lines.append("Stopped by the %s armour (%.0f mm on arrival)" % [side, report.entry_pen_mm])
+	else:
+		lines.append("In through the %s with %.0f mm · %s" % [side, report.entry_pen_mm,
+			"out the far side with %.0f mm" % report.exit_pen_mm if report.exit_pen_mm > 0.0 else "spent inside"])
+	var glyphs := {&"system_destroyed": CyberTheme.GLYPH_DESTROYED, &"wrecked": CyberTheme.GLYPH_DESTROYED,
+		&"system_damaged": CyberTheme.GLYPH_DEGRADED, &"breach": CyberTheme.GLYPH_CRITICAL}
+	var hurt := PackedStringArray()
 	for e in report.events:
-		if e.kind in [&"system_destroyed", &"system_damaged", &"breach", &"wrecked"]:
-			lines.append(e.text)
-	if lines.is_empty():
-		for e in report.events:
-			lines.append(e.text)
-	return "\n".join(lines.slice(0, 4))
+		if glyphs.has(e.kind):
+			hurt.append("%s %s" % [glyphs[e.kind], e.text])
+	lines.append_array(hurt.slice(0, 3))
+	if hurt.size() > 3:
+		lines.append("… and %d more" % (hurt.size() - 3))
+	return "\n".join(lines)
 
 
 ## Show a boarding action on `systems` (the boarded ship) until it ends.

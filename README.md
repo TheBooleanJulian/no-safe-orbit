@@ -62,6 +62,7 @@ godot --path .
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
 | Dimensional jump drive to Earth Shipyard (hold 5 s, not while under fire) | hold B | hold Start |
 | Controls panel (rebinding) | F1 | Guide |
+| Guided first sortie: start / skip | F2 | — |
 
 **Propellant:** the Frigate Mk I carries 80 t — about 1.6 km/s of main-engine
 Δv; the RCS shares the main engines' propellant feed and exhaust velocity
@@ -195,6 +196,23 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
 
 ## Campaign: salvage, loot, repairs
 
+**Missions.** The current goal sits at the top of the screen (gold) and
+in the hangar, and opens the debrief: ✔ met, ✕ failed, ▲ not met yet. A
+goal not met carries over to the next sortie.
+
+| # | Mission | Goal | Reward |
+|---|---|---|---|
+| 1 | First blood | Disable the contact | 150 cr |
+| 2 | Prize crew | Capture it: gangway, boarders, take its bridge | 250 cr + 20 parts |
+| 3 | Courier run | Escort the courier (it is the contact's target) until the contact is disabled | 300 cr + 10 parts |
+| 4 | Hold the line | Beat 2 contacts in one sortie | 400 cr + 30 parts |
+| — | Patrol | Disable or capture each contact | 100 cr each |
+
+**Tutorial.** A new pilot is offered a guided first sortie: press **F2**
+and one prompt at a time (teal, under the goal) walks you through flying,
+aiming, firing, disabling, salvaging, jumping home and repairing — each
+moves on when you have done it. F2 again skips it; F2 later restarts it.
+
 1. **Disable** the target — knock out its guns, its power or its bridge. A
    clean disabling shot pays better than shooting it to pieces.
 2. **Cash it in**, one of two ways:
@@ -235,7 +253,9 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
    quit mid-sortie). The
    station opens on the **debrief**: what you hit, where the hits on you came
    from, what armour stopped, what you lost, and lessons for the shipyard
-   (saved under `user://debriefs/`). **Bank cargo** to make the hold's
+   (saved under `user://debriefs/`) — it opens with a **sortie summary**:
+   the mission result, what you dealt, what was done to you and from which
+   side, which systems you lost and the crew it cost. **Bank cargo** to make the hold's
    contents safe. Spend credits at the station (see below).
 5. **Death** loses only what is in the cargo hold. The station rehires,
    rebuilds and rearms the same design — rare parts fitted to it included —
@@ -433,6 +453,13 @@ Progress is saved to `user://profile.json` (versioned JSON) — on Windows
 in `blueprints\` beside it. Running the game (F5 or `godot --path .`) uses
 that real save; the automated checks never do (they boot with
 `-- --profile=user://check_boot_profile.json`). Copy the folder to back it up.
+Each save is written to a temporary file and read back before it replaces
+the profile; the save before it is kept as `profile.json.bak`. If the
+profile is ever damaged, the game keeps it aside as
+`profile.json.unreadable`, loads the backup and says so (top of the screen
+and the shipyard status line) — it only starts a new profile when there is
+no usable backup. Loading an older save version first keeps a copy
+(`profile.json.v3`, …) before it is migrated.
 
 ## Shipyard
 

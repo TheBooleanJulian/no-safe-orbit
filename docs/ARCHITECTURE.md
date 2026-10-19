@@ -376,6 +376,28 @@ bounding-box hit test.
   being common to saves whose designs use them (`grant_used`).
   `Main.get_profile` honours `-- --profile=PATH` (the checks' throwaway).
 
+## Missions, tutorial and saves (Milestone 8)
+
+- **`MissionChain`** (`scripts/progression/`): the goal list and its
+  rewards; `PlayerProfile.campaign = {step}`. Main reports events —
+  `contact_beaten()` (first disable, or a capture of a ship not yet
+  disabled), `contact_captured()`, `escort_lost()` — and calls
+  `_complete_mission()` when one returns true. The escort's courier is a
+  craft-like `ShipState` (no systems, hull points) that the engaging enemy
+  targets instead of the player while it lives.
+- **`Tutorial`**: `{state, step}` in `PlayerProfile.tutorial`; `observe(facts)`
+  advances past every step whose fact holds, in order. Main feeds facts each
+  frame (Δv spent, lock, hits scored, contact beaten, salvaged) and on the
+  jump; the shipyard feeds "no repairs needed" for the last step.
+- **HUD guide**: `Hud.guide_lines` (goal, tutorial prompt) in a panel under
+  the alert banner.
+- **Saves**: `PlayerProfile.save()` writes `.tmp`, reads it back, renames the
+  current file to `.bak`, then `.tmp` into place. `load_or_new()`: damaged →
+  `.unreadable` + load `.bak`; missing with a whole `.tmp` → finish that
+  save; older schema → copy to `.v<n>` first. `load_notice` carries what
+  happened to the HUD and the shipyard. Schema 5 adds `tutorial` and
+  `campaign` (a pilot with history is not offered the tutorial).
+
 ## Missiles and EMP (Milestone 7)
 
 - **Launchers** (`EquipmentDefinition.Kind.MISSILE_LAUNCHER`, appended so
@@ -533,6 +555,8 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | No decoys, chaff or electronic warfare against missiles | Point defence, guns and range are the only counterplay | EW pass |
 | Nuclear effects simplified: one dose number, armour as a divisor, ship-wide heat, no blast wave, no fallout or lasting radiation | A burst is a sharp, explainable event | If a strategic weapon needs more depth |
 | EMP exposure falls with the square of the distance; no line-of-sight shielding by other ships | A ship cannot hide behind another | Later |
+| Missions are a fixed chain of four goals, then patrols; one contact at a time | Little variety after the chain | Campaign content |
+| The escort's courier is a craft-like hull (hull points, no systems) on a fixed drift | It can't evade or be repaired | If escorts become a mainstay |
 
 ## Testing
 

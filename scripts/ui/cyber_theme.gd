@@ -13,15 +13,18 @@ extends RefCounted
 ## logs. Glow is kept off panels; accents are borders and text, not fills.
 
 # --- Colour -------------------------------------------------------------------
-const CYAN := Color(0.0, 0.94, 1.0)
+## Brand palette: void #050508, surface #0A0E14, teal #00D4C8 (primary
+## accent), gold #F5C842 (secondary). Magenta and red are functional state
+## colours (hostile, danger), not brand colours.
+const CYAN := Color("00d4c8")
 const MAGENTA := Color(1.0, 0.17, 0.84)
-const AMBER := Color(1.0, 0.76, 0.22)
+const AMBER := Color("f5c842")
 const RED := Color(1.0, 0.3, 0.3)
-const TEXT := Color(0.8, 0.95, 1.0)
-const TEXT_DIM := Color(0.5, 0.62, 0.68)
-const TEXT_FAINT := Color(0.36, 0.44, 0.5)
-const BG := Color(0.02, 0.025, 0.045, 0.86)
-const SURFACE := Color(0.035, 0.045, 0.07, 0.94)
+const TEXT := Color(0.84, 0.93, 0.95)
+const TEXT_DIM := Color(0.5, 0.6, 0.64)
+const TEXT_FAINT := Color(0.36, 0.42, 0.47)
+const BG := Color(0.0196, 0.0196, 0.0314, 0.86)    # #050508
+const SURFACE := Color(0.0392, 0.0549, 0.0784, 0.94)  # #0A0E14
 ## Border opacity for panel frames and dividers.
 const BORDER_ALPHA := 0.4
 # Compatibility aliases (older panels).

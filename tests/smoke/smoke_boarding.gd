@@ -148,5 +148,6 @@ func _run() -> void:
 func _finish() -> void:
 	Engine.time_scale = 1.0
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + PlayerProfile.BACKUP_SUFFIX))
 	print("smoke_boarding: %d failure(s)" % _failures.size())
 	quit(1 if not _failures.is_empty() else 0)
