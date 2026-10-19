@@ -127,6 +127,8 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				model.turrets.append({"id": bp.equipment[i].id, "pivot": pd_pivot, "pd": true})
 			EquipmentDefinition.Kind.SENSOR:
 				_sensor_mast(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))
+			EquipmentDefinition.Kind.GRAPPLE:
+				_grapple_arm(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))
 			EquipmentDefinition.Kind.CRAFT_MOUNT:
 				# A cradle on the hull; the docked craft sits in it (views hide it
 				# while the craft is out).
@@ -138,6 +140,22 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				CraftView.build_model(craft, def.craft, def.craft.cannon != null, false)
 				model.docked_craft[bp.equipment[i].id] = craft
 	return model
+
+
+## Grappling arm: a shoulder, two boom segments folded back along the hull
+## and a three-fingered claw.
+static func _grapple_arm(part: Node3D, mount: Vector3, normal: Vector3, mat: Material, dark: Material) -> void:
+	var b := _basis_y_along(normal)
+	var shoulder := _cylinder(part, 0.5, 0.6, 0.6, Vector3.ZERO, dark)
+	shoulder.transform = Transform3D(b, mount + normal * 0.3)
+	var upper := _box(part, Vector3(0.35, 2.6, 0.35), Vector3.ZERO, mat)
+	upper.transform = Transform3D(b * Basis(Vector3.RIGHT, deg_to_rad(35)), mount + normal * 1.3 + b.z * 0.7)
+	var fore := _box(part, Vector3(0.3, 2.4, 0.3), Vector3.ZERO, mat)
+	fore.transform = Transform3D(b * Basis(Vector3.RIGHT, deg_to_rad(-60)), mount + normal * 2.2 + b.z * 0.4)
+	for k in 3:
+		var finger := _box(part, Vector3(0.12, 0.7, 0.12), Vector3.ZERO, dark)
+		var around := Basis(Vector3.UP, TAU * k / 3.0)
+		finger.transform = Transform3D(b * around * Basis(Vector3.RIGHT, deg_to_rad(25)), mount + normal * 2.5 + b * (around * Vector3(0, 0, -0.2)) - b.z * 0.6)
 
 
 ## Sensor mast: a lattice pole with a dish and a sensor head on top.

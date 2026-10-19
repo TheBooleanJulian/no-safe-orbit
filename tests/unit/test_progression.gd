@@ -549,12 +549,13 @@ func test_field_repair_needs_a_working_workshop_and_patches_over_time() -> void:
 	# Damage control walk from the workshop r9 → corridor r8 → corridor r14 → reactor room r15.
 	var walk := 3.0 * CrewRoster.ROOM_TRANSIT_S
 	assert_near(s.repair_task.travel_s, walk, 1e-6, "walk from the workshop to the reactor room (s)")
-	assert_near(s.repair_task.total_s, walk + ShipSystems.FIELD_REPAIR_SETUP_S + 15.0, 1e-6, "repair time = walk + setup + 1 s per hp (s)")
+	var work := (ShipSystems.FIELD_REPAIR_SETUP_S + 15.0) / s.room_bonus(&"workshop")
+	assert_near(s.repair_task.total_s, walk + work, 1e-6, "repair time = walk + (setup + 1 s per hp) ÷ workshop size bonus (s)")
 	var t := 0.0
 	while s.repair_task != null and t < 60.0:
 		s.tick(ship, 0.5)
 		t += 0.5
-	assert_near(t, 40.0, 0.5, "repair finished after (s)")
+	assert_near(t, walk + work, 0.5, "repair finished after (s)")
 	assert_near(s.equipment_by_id("e28").hp, 45.0, 1e-4, "reactor patched to 75 % (hp)")
 	assert_true(s.field_repair_target() == null, "nothing left to patch: the engine is destroyed")
 

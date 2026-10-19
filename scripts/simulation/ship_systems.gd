@@ -81,8 +81,18 @@ const ROLE_STATIONS := {
 }
 ## Crew reach external systems on EVA from rooms this close (cells).
 const EVA_REACH_CELLS := 2
-## A medic treats one wounded crew member in this long (s).
-const MEDICAL_TREATMENT_S := 60.0
+## A medic treats one wounded crew member in this long (s), with a working
+## life support room (the medbay; bigger is faster, see room_bonus) — twice
+## as long without one.
+const MEDICAL_TREATMENT_S := 25.0
+## Room size pays: each cell of a working room past the first adds this to
+## what it does (workshop: repairs and hull sealing; life support: the
+## medbay; bridge: scans), up to ROOM_BONUS_MAX.
+const ROOM_BONUS_PER_CELL := 0.25
+const ROOM_BONUS_MAX := 2.0
+## Damage control seals a breached room's hull in this long (with a working
+## workshop; ÷ its room bonus); life support then refills it with air.
+const HULL_SEAL_S := 30.0
 ## Without a working sensor mast: eyeballs and backup optics (m).
 const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
@@ -164,6 +174,12 @@ var equipment: Array[EquipmentState] = []
 var modules: Array[ModuleState] = []
 var rooms: Array[RoomState] = []
 var destroyed_hatches: Dictionary = {}  # hatch id -> true
+## General quarters: the crew are in spacesuits (Main sets it while a
+## hostile is about) — they move through vented rooms and survive a room
+## venting around them.
+var suited: bool = false
+## Seconds damage control has spent sealing each breached room.
+var _seal_s: Dictionary = {}
 var temperature_k: float = NOMINAL_TEMP_K
 var reactor_state: Reactor = Reactor.NORMAL
 var power_supply_kw: float = 0.0
@@ -334,7 +350,7 @@ func reachable_rooms() -> Dictionary:
 			var ra: int = grid.room_at.get(h.a, -1)
 			var rb: int = grid.room_at.get(h.b, -1)
 			var other := rb if ra == i else (ra if rb == i else -1)
-			if other >= 0 and not seen.has(other) and rooms[other].pressurized:
+			if other >= 0 and not seen.has(other) and (suited or rooms[other].pressurized):
 				seen[other] = true
 				queue.append(other)
 	return seen
@@ -464,7 +480,7 @@ func update_pressure() -> void:
 		var was := rooms[i].pressurized
 		rooms[i].pressurized = not vacuum.has(i)
 		if was and not rooms[i].pressurized:
-			var hurt: Vector2i = crew.vent(i) if crew != null else Vector2i.ZERO
+			var hurt: Vector2i = crew.vent(i) if crew != null and not suited else Vector2i.ZERO
 			_note("%s %s depressurised%s" % [_room_name(i), blueprint.rooms[i].id,
 				" — %d killed, %d wounded" % [hurt.x, hurt.y] if hurt != Vector2i.ZERO else ""])
 			_config = null
@@ -722,7 +738,56 @@ func tick(ship: ShipState, dt: float) -> bool:
 		changed = true
 	if _advance_medical(dt):
 		changed = true
+	if _advance_hull_sealing(dt):
+		changed = true
 	return changed or _config == null
+
+
+## What a role's rooms are worth: 0 with none working (powered and, unless
+## the crew are suited, pressurised); 1 for one cell, ROOM_BONUS_PER_CELL more
+## for each further cell, up to ROOM_BONUS_MAX.
+func room_bonus(role: StringName) -> float:
+	var cells := 0
+	for i in blueprint.rooms.size():
+		if room_role(i) == role and rooms[i].powered and (suited or rooms[i].pressurized):
+			cells += blueprint.rooms[i].rect.size.x * blueprint.rooms[i].rect.size.y
+	if cells == 0:
+		return 0.0
+	return minf(1.0 + ROOM_BONUS_PER_CELL * (cells - 1), ROOM_BONUS_MAX)
+
+
+## Damage control patches breached hulls one room at a time — the
+## workshop's sealant drones and foam reach a breach even where the crew
+## can't — with a working workshop, fit damage-control or engineering crew
+## aboard and life support to put the air back. Returns true when a room is
+## sealed (and re-pressurised).
+func _advance_hull_sealing(dt: float) -> bool:
+	var room := -1
+	for i in rooms.size():
+		if rooms[i].breached:
+			room = i
+			break
+	if room < 0 or crew == null or room_bonus(&"workshop") <= 0.0 or room_bonus(&"life_support") <= 0.0:
+		return false
+	if not crew.members.any(func(m: CrewRoster.Member) -> bool:
+			return m.fit() and m.location >= 0 and (m.role == CrewRoster.Role.DAMAGE_CONTROL or m.role == CrewRoster.Role.ENGINEERING)):
+		return false
+	_seal_s[room] = float(_seal_s.get(room, 0.0)) + dt * room_bonus(&"workshop")
+	if _seal_s[room] < HULL_SEAL_S:
+		return false
+	_seal_s.erase(room)
+	rooms[room].breached = false
+	_note("%s %s: hull breach sealed by damage control; life support re-pressurises it" % [_room_name(room), blueprint.rooms[room].id])
+	update_pressure()
+	return true
+
+
+## Progress (0..1) on sealing the room being patched, or -1 if none.
+func hull_seal_progress() -> float:
+	for i in rooms.size():
+		if rooms[i].breached:
+			return clampf(float(_seal_s.get(i, 0.0)) / HULL_SEAL_S, 0.0, 1.0)
+	return -1.0
 
 
 func _update_reactor_state() -> bool:
@@ -897,7 +962,7 @@ func _advance_medical(dt: float) -> bool:
 	if patient == null:
 		_treatment_s = 0.0
 		return false
-	_treatment_s += dt
+	_treatment_s += dt * maxf(room_bonus(&"life_support"), 0.5)
 	if _treatment_s < MEDICAL_TREATMENT_S:
 		return false
 	_treatment_s = 0.0
@@ -964,9 +1029,12 @@ func set_isolated(room: int, isolated: bool) -> void:
 ## no way. Unsuited crew need every room pressurised; `blocked` hatch ids
 ## (sealed doors) are impassable; destroyed hatches are open holes.
 ## Isolated compartments can't be entered or left (suited boarders cut through).
+## `suited`: boarders in suits (they also ignore our isolated compartments).
+## Our own crew in suits (general quarters) go through vented rooms too.
 func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -> Array[int]:
 	var none: Array[int] = []
-	if from < 0 or to < 0 or (not suited and (not rooms[from].pressurized or not rooms[to].pressurized)):
+	var eva := suited or self.suited
+	if from < 0 or to < 0 or (not eva and (not rooms[from].pressurized or not rooms[to].pressurized)):
 		return none
 	var prev := {from: -1}
 	var queue := [from]
@@ -982,7 +1050,7 @@ func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -
 			var other := rb if ra == i else (ra if rb == i else -1)
 			if other >= 0 and not suited and (isolated_rooms.has(other) or isolated_rooms.has(i)) and not destroyed_hatches.has(h.id):
 				continue
-			if other >= 0 and not prev.has(other) and (suited or rooms[other].pressurized):
+			if other >= 0 and not prev.has(other) and (eva or rooms[other].pressurized):
 				prev[other] = i
 				queue.append(other)
 	if not prev.has(to):
@@ -1299,7 +1367,7 @@ func start_field_repair() -> EquipmentState:
 	repair_task.member_id = m.id
 	repair_task.target_hp = FIELD_REPAIR_LIMIT * e.max_hp
 	repair_task.travel_s = (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S
-	repair_task.total_s = repair_task.travel_s + FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)
+	repair_task.total_s = repair_task.travel_s + (FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)) / maxf(room_bonus(&"workshop"), 1.0)
 	repair_task.remaining_s = repair_task.total_s
 	m.busy = true
 	m.location = path[-1]

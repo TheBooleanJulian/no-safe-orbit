@@ -724,7 +724,7 @@ static func category_of(kind: String, def: Resource) -> String:
 			return "Power & thermal"
 		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE:
 			return "Weapons"
-		EquipmentDefinition.Kind.SENSOR:
+		EquipmentDefinition.Kind.SENSOR, EquipmentDefinition.Kind.GRAPPLE:
 			return "Sensors"
 		EquipmentDefinition.Kind.PROPELLANT_TANK:
 			return "Logistics"
@@ -1227,8 +1227,8 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 	match e.kind:
 		EquipmentDefinition.Kind.CANNON:
 			var g := e.cannon
-			lines.append("GUN %.0f rpm · %.0f m/s · %.1f kg rounds · %.0f mm penetration at the muzzle (%.0f mm at 500 m/s)" % [
-				g.rate_of_fire_rpm, g.muzzle_velocity_mps, g.round_mass_kg, g.penetration_mm, g.penetration_at(500.0)])
+			lines.append("GUN %.0f rpm · %.0f m/s · %.1f kg rounds · %.0f mm penetration at any range (up to %.0f mm head-on)" % [
+				g.rate_of_fire_rpm, g.muzzle_velocity_mps, g.round_mass_kg, g.penetration_mm, g.penetration_mm * KineticCannonConfig.HEAD_ON_BONUS_MAX])
 			lines.append("TURRET %s · spread %.2f° · energy %.1f MJ a round · fed from magazines" % [
 				"trains %.0f°/s" % g.traverse_deg_s if g.traverse_deg_s > 0.0 else "fixed, fires along the nose", g.dispersion_deg,
 				0.5 * g.round_mass_kg * g.muzzle_velocity_mps * g.muzzle_velocity_mps / 1.0e6])
@@ -1250,6 +1250,9 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 			lines.append("HOLDS %.0f t of propellant · a destroyed tank loses its share" % (e.propellant_capacity_kg / 1000.0))
 		EquipmentDefinition.Kind.SENSOR:
 			lines.append("SENSOR RANGE %.0f km (without one: %.0f km visual) · needed to scan" % [e.sensor_range_m / 1000.0, ShipSystems.VISUAL_RANGE_M / 1000.0])
+		EquipmentDefinition.Kind.GRAPPLE:
+			lines.append("REACH %.0f m · [Y] grabs a ship slower than %.0f m/s: stops its tumble, matches its velocity, lines its collar up with yours, siphons a hulk's propellant and rounds" % [
+				Grapple.REACH_M, Grapple.GRAB_MAX_REL_SPEED_MPS])
 		EquipmentDefinition.Kind.CRAFT_MOUNT:
 			var c := e.craft
 			lines.append("CARRIES %s · %.0f t · %s · hull %.0f" % [c.display_name, c.mass_kg / 1000.0,

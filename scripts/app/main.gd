@@ -71,10 +71,18 @@ const ENGAGE_GRACE_S := 5.0
 const DEFAULT_AIM_RANGE_M := 2000.0
 ## Dimensional jump drive: hold [B] this long (s) to jump to Earth Shipyard.
 const JUMP_HOLD_S := 5.0
+## The jump drive is blocked while a hostile has fired on us this recently.
+const UNDER_FIRE_S := 10.0
+## When a hostile (ship or craft) last fired, and the rounds counted so far.
+var _last_enemy_fire := -INF
+var _enemy_rounds_seen := {}
 ## A beaten enemy that runs this far is gone: no payout, the next contact comes.
 const ESCAPE_RANGE_M := 40_000.0
 ## Enemies try to board a disabled player from this mission on.
 const ENEMY_BOARD_FROM_MISSION := 2
+## After we cut its gangway the enemy waits this long before trying again (s).
+const ENEMY_REBOARD_DELAY_S := 20.0
+var _enemy_reboard_at := -INF
 ## How our crew defends against boarders (chosen in Tab → CREW).
 var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
 const STATION_NAME := "Earth Shipyard"
@@ -278,6 +286,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("field_repair"):
 		start_field_repair()
 		return
+	elif event.is_action_pressed("grapple"):
+		toggle_grapple()
+		return
+	elif event.is_action_pressed("cycle_target"):
+		cycle_target()
+		return
 	elif event.is_action_pressed("dock"):
 		toggle_dock()
 		return
@@ -352,14 +366,22 @@ func _aim(input: ShipControlInput, player: ShipState, target: ShipState) -> void
 	var origin := camera.project_ray_origin(screen)
 	var dir := camera.project_ray_normal(screen)
 	var range_m := DEFAULT_AIM_RANGE_M
-	if target.is_active() and track.detected:
+	if hud.selected_id != &"" and not world.has_ship(hud.selected_id):
+		hud.selected_id = &""
+	var craft := world.get_ship(hud.selected_id) if hud.selected_id != &"" else null
+	if craft != null:
+		range_m = clampf((craft.position - player.position - origin).length(), 200.0, 30_000.0)
+	elif target.is_active() and track.detected:
 		var pos := target.position if track.in_contact else track.estimated_position(player, world.sim_time)
 		range_m = clampf((pos - player.position - origin).length(), 200.0, 30_000.0)
 	player_input.aim_range_m = range_m
 	input.has_aim = true
 	input.aim_offset = origin + dir * range_m
-	# With a lock, the fire-control computer corrects other guns' leads.
-	input.lead_target_id = TARGET_ID if target.is_active() and track.locked else &""
+	# With a lock (or a craft picked with U), fire control corrects other guns' leads.
+	if craft != null:
+		input.lead_target_id = craft.id
+	else:
+		input.lead_target_id = TARGET_ID if target.is_active() and track.locked else &""
 
 
 ## Zooming in: swing the camera to look at the aim point and put the cursor
@@ -383,6 +405,9 @@ func player_captured() -> bool:
 func _enemy_board(target: ShipState, player: ShipState) -> void:
 	var link := world.link_for(TARGET_ID)
 	if link == null:
+		if world.sim_time < _enemy_reboard_at:
+			world.set_input(TARGET_ID, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
+			return
 		var found := Docking.best(target, player)
 		if not found.is_empty() and found.assessment.ok:
 			world.dock(TARGET_ID, PLAYER_ID)
@@ -515,7 +540,7 @@ func _on_salvage_pressed() -> void:
 
 ## G: drop a salvage beacon on the disabled wreck. Earth Shipyard's tug
 ## brings it in: half its scrap value and the bounty in credits now; its
-## crates are opened at the beacon's odds and banked at the station. Returns
+## crates are opened at the beacon's odds and go into our hold. Returns
 ## the crates (a Drop each, null for an empty one).
 func drop_beacon() -> Array:
 	var target := world.get_ship(TARGET_ID)
@@ -530,15 +555,15 @@ func drop_beacon() -> Array:
 		crates.push_front(stripped)
 	for d in crates:
 		if d != null:
-			p.grant(d)
+			p.stow(d)
 	p.credits += scrap + bounty
-	var summary := "Salvage beacon on %s (%d%% intact): %d cr scrap (%d%%) + %d cr bounty; %d crates banked at %s" % [
-		target.display_name, roundi(intact * 100.0), scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), bounty, crates.size(), STATION_NAME]
-	_record_payout(target, summary, crates, "banked")
+	var summary := "Salvage beacon on %s (%d%% intact): %d cr scrap (%d%%) + %d cr bounty; %d crates into the hold" % [
+		target.display_name, roundi(intact * 100.0), scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), bounty, crates.size()]
+	_record_payout(target, summary, crates, "in the hold")
 	hud.loot.show_rewards("SALVAGE BEACON — %s" % target.display_name, PackedStringArray([
 		"Wreck %d%% intact · the station's tug brings it in" % roundi(intact * 100.0),
 		"+%d cr scrap (%d%% of %d) · +%d cr bounty" % [scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), Salvage.scrap_value(target.systems), bounty],
-		"%d crate%s · %d%% chance of loot each · found loot is banked at %s" % [crates.size(), "" if crates.size() == 1 else "s",
+		"%d crate%s · %d%% chance of loot each · into the cargo hold — banked at %s when you jump home" % [crates.size(), "" if crates.size() == 1 else "s",
 			roundi(Salvage.BEACON_LOOT_CHANCE * 100.0), STATION_NAME],
 	]), crates, p)
 	_next_contact()
@@ -627,44 +652,65 @@ func cargo_over_m3() -> float:
 	return maxf(get_profile().vessel.cargo_volume_m3(ConstructionCatalog.default_catalog()) - capacity, 0.0)
 
 
-## A hostile contact we can see is still fighting: no jumping out.
+## A hostile contact is shooting at us (it fired in the last UNDER_FIRE_S):
+## no jumping out. One that has not opened fire yet does not stop the jump.
 func in_combat() -> bool:
 	var target := world.get_ship(TARGET_ID)
-	return target_hostile and target.is_active() and target.systems != null and not target.systems.is_disabled() and track.in_contact
+	return target.is_active() and target.systems != null and not target.systems.is_disabled() \
+		and world.sim_time - _last_enemy_fire < UNDER_FIRE_S
 
 
-## Why the jump drive waits at full charge: craft out, boarders across,
-## cargo not secured. Empty = ready.
+## Note hostile fire: the enemy ship's and its craft's rounds.
+func _note_enemy_fire() -> void:
+	var shooters: Array[StringName] = [TARGET_ID]
+	for c in target_wing.flying():
+		shooters.append(c.id)
+	for id in shooters:
+		if not world.has_ship(id):
+			continue
+		var fired := world.get_ship(id).rounds_fired
+		if fired > int(_enemy_rounds_seen.get(id, 0)) and target_hostile:
+			_last_enemy_fire = world.sim_time
+		_enemy_rounds_seen[id] = fired
+
+
+## What an emergency jump now would leave behind: craft out, boarders
+## across. Empty = everyone is home. (Cargo over capacity is vented.)
 func jump_waiting() -> PackedStringArray:
 	var out := PackedStringArray()
 	var out_craft := player_wing.flying().map(func(c: AirWing.Craft) -> String: return c.label)
 	if not out_craft.is_empty():
-		out.append("recall craft %s []]" % ", ".join(out_craft))
+		out.append("craft %s ([]] recall)" % ", ".join(out_craft))
 	for b in world.boardings:
 		if b.link.attacker_id == PLAYER_ID and not b.finished() and b.team.any(func(m: CrewRoster.Member) -> bool: return m.location < 0 and m.state != CrewRoster.State.DEAD):
-			out.append("withdraw the boarding party [N]")
-	if cargo_over_m3() > 0.0:
-		out.append("vent excess cargo [Tab › CARGO]")
+			out.append("the boarding party ([N] withdraw)")
 	return out
 
 
 ## Hold [B]: the dimensional jump drive charges for JUMP_HOLD_S and takes the
-## ship home to Earth Shipyard. Not while a hostile is engaging; at full
-## charge it waits for craft and boarders to come home (amber alerts).
+## ship home to Earth Shipyard. Not while a hostile is firing on us. Craft
+## and boarders still out are left behind (an emergency jump — the countdown
+## says so in red); cargo over capacity is vented.
 ## Returns true when the jump happened (the scene is changing).
 func _update_jump(player: ShipState, delta: float) -> bool:
 	var state := {}
 	if Input.is_action_pressed("open_shipyard") and player.is_active() and not hud.controls.visible:
 		if in_combat():
 			_jump_hold = 0.0
-			state = {"blocked": "hostile contact engaged — disable it or break sensor contact"}
+			state = {"blocked": "under fire — disable the hostile, or get out of its reach until it stops shooting"}
 		else:
 			_jump_hold = minf(_jump_hold + delta, JUMP_HOLD_S)
 			var waiting := jump_waiting()
 			state = {"progress": _jump_hold / JUMP_HOLD_S, "left_s": JUMP_HOLD_S - _jump_hold, "waiting": waiting}
-			if _jump_hold >= JUMP_HOLD_S and waiting.is_empty():
+			if _jump_hold >= JUMP_HOLD_S:
 				hud.jump_state = {}
-				combat_log.record(world.sim_time, "jump", "Dimensional jump to %s" % STATION_NAME)
+				var vented := get_profile().vessel.vent_excess(player.systems.stats.cargo_m3, ConstructionCatalog.default_catalog()) \
+					if player.systems != null else PackedStringArray()
+				if not vented.is_empty():
+					combat_log.record(world.sim_time, "jump", "Vented before the jump: %s" % ", ".join(vented))
+				combat_log.record(world.sim_time, "jump", "%sump to %s%s" % [
+					"Emergency j" if not waiting.is_empty() else "Dimensional j", STATION_NAME,
+					" — left behind: %s" % ", ".join(waiting) if not waiting.is_empty() else ""])
 				open_shipyard()
 				return true
 	else:
@@ -788,7 +834,7 @@ func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
 func _update_docking_cam(player: ShipState, target: ShipState, alpha: float, render_origin: Vector3) -> void:
 	var link := world.link_for(PLAYER_ID)
 	var mine := Docking.collars(player.systems)
-	if not target.is_active() or mine.is_empty() or (link != null and link.sealed()) 			or player.position.distance_to(target.position) > DockingCam.SHOW_RANGE_M:
+	if not target.is_active() or mine.is_empty() or (link != null and link.sealed()) or player.position.distance_to(target.position) > DockingCam.SHOW_RANGE_M:
 		hud.docking_cam.visible = false
 		return
 	var found := Docking.best(player, target)
@@ -798,6 +844,31 @@ func _update_docking_cam(player: ShipState, target: ShipState, alpha: float, ren
 	hud.docking_cam.show_view(from, q * port.normal_body, q * Vector3.UP, found.get("assessment", {}))
 
 
+## U: pick what the lead pip and fire control work on — the target ship,
+## then each hostile craft out, in turn.
+func cycle_target() -> void:
+	var ids: Array[StringName] = [&""]
+	for c in target_wing.flying():
+		if world.has_ship(c.id):
+			ids.append(c.id)
+	var i := ids.find(hud.selected_id)
+	hud.selected_id = ids[(i + 1) % ids.size()]
+	hud.notice("TARGET: %s" % (world.get_ship(TARGET_ID).display_name if hud.selected_id == &"" else String(world.get_ship(hud.selected_id).display_name)), world.sim_time)
+
+
+## Y: grab the target with the grappling arm, or let go.
+func toggle_grapple() -> void:
+	var held := world.grapple_for(PLAYER_ID)
+	if held != null and held.attacker_id == PLAYER_ID:
+		held.release()
+		hud.notice("Grappling arm released%s" % (" — siphoned %.1f t propellant, %d rounds" % [held.siphoned_kg / 1000.0, held.siphoned_rounds]
+			if held.siphoned_kg > 0.0 or held.siphoned_rounds > 0 else ""), world.sim_time)
+		return
+	var why := world.grab(PLAYER_ID, TARGET_ID)
+	if why != "":
+		hud.notice("GRAPPLE: " + why, world.sim_time)
+
+
 ## V: extend a gangway to the target, or release the one we have.
 func toggle_dock() -> void:
 	var link := world.link_for(PLAYER_ID)
@@ -805,6 +876,7 @@ func toggle_dock() -> void:
 		var b := world.boarding_for(link)
 		link.release()
 		if link.attacker_id != PLAYER_ID:
+			_enemy_reboard_at = world.sim_time + ENEMY_REBOARD_DELAY_S
 			hud.notice("Enemy gangway cut loose%s" % (" — their boarders aboard are cut off!" if b != null and not b.finished() and b.room >= 0 else ""), world.sim_time)
 			return
 		hud.notice("Gangway released%s" % (" — the boarding party is cut off!" if b != null and not b.finished() and b.room >= 0 else ""), world.sim_time)
@@ -861,6 +933,7 @@ func _process(delta: float) -> void:
 	var command := player_input.build_input(delta, target_id, hud.docking_cam.visible)
 	_aim(command, player, target)
 	world.set_input(PLAYER_ID, command)
+	_note_enemy_fire()
 	if _update_jump(player, delta):
 		return
 	_update_tracks(player, target, delta)
@@ -886,6 +959,13 @@ func _process(delta: float) -> void:
 			hud.notice("Prize crew takes %s to %s" % [target.display_name, STATION_NAME], world.sim_time)
 			_next_contact()
 			target = world.get_ship(TARGET_ID)
+	# General quarters while a hostile is about: both crews in spacesuits.
+	var quarters := target_hostile and target.is_active()
+	if player.systems != null and player.systems.suited != quarters:
+		player.systems.suited = quarters
+		hud.notice("General quarters — crew in spacesuits" if quarters else "Stand down — suits off", world.sim_time)
+	if target.systems != null:
+		target.systems.suited = quarters
 	var engaging := target_hostile and target.is_active() and track.detected \
 		and world.sim_time - track.detected_time >= ENGAGE_GRACE_S and enemy_track.in_contact
 	if target.is_active() and target.systems != null and target.systems.captured:

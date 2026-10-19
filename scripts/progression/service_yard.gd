@@ -38,6 +38,7 @@ const CATEGORY := {
 	EquipmentDefinition.Kind.RCS: &"mobility",
 	EquipmentDefinition.Kind.PROPELLANT_TANK: &"mobility",
 	EquipmentDefinition.Kind.DOCKING_COLLAR: &"hull",
+	EquipmentDefinition.Kind.GRAPPLE: &"hull",
 	EquipmentDefinition.Kind.CRAFT_MOUNT: &"combat",
 }
 

@@ -71,6 +71,8 @@ var _next_round_id: int = 1
 var _hit_events: Array[HitEvent] = []
 ## Gangways and boardings (spec §9), in creation order.
 var links: Array[DockingLink] = []
+## Grappling arms holding on to another ship.
+var grapples: Array[Grapple] = []
 var boardings: Array[BoardingAction] = []
 ## Air wings (autonomous craft): updated at the start of every tick.
 var wings: Array[AirWing] = []
@@ -111,6 +113,9 @@ func remove_ship(id: StringName) -> void:
 	for link in links:
 		if link.attacker_id == id or link.target_id == id:
 			link.release()
+	for g in grapples:
+		if g.attacker_id == id or g.target_id == id:
+			g.release()
 	boardings = boardings.filter(func(b: BoardingAction) -> bool: return b.link.attacker_id != id and b.link.target_id != id)
 	_ships.erase(id)
 	_inputs.erase(id)
@@ -123,6 +128,27 @@ func link_for(id: StringName) -> DockingLink:
 		if link.active() and (link.attacker_id == id or link.target_id == id):
 			return link
 	return null
+
+
+## The arm `id` is holding with (or is held by), or null.
+func grapple_for(id: StringName) -> Grapple:
+	for g in grapples:
+		if g.holding() and (g.attacker_id == id or g.target_id == id):
+			return g
+	return null
+
+
+## Grab `target_id` with `attacker_id`'s arm. "" on success, else why not.
+func grab(attacker_id: StringName, target_id: StringName) -> String:
+	if grapple_for(attacker_id) != null:
+		return "the arm is already holding on"
+	var a := get_ship(attacker_id)
+	var why := Grapple.block_reason(a, get_ship(target_id))
+	if why != "":
+		return why
+	grapples.append(Grapple.grab(a, get_ship(target_id)))
+	_link_events.append("Grappling arm: hold on %s" % get_ship(target_id).display_name)
+	return ""
 
 
 ## The boarding over `link`, or null.
@@ -533,6 +559,9 @@ func _linked(a: StringName, b: StringName) -> bool:
 	for link in links:
 		if link.active() and ((link.attacker_id == a and link.target_id == b) or (link.attacker_id == b and link.target_id == a)):
 			return true
+	for g in grapples:
+		if g.holding() and ((g.attacker_id == a and g.target_id == b) or (g.attacker_id == b and g.target_id == a)):
+			return true
 	return false
 
 
@@ -856,6 +885,11 @@ func _step_links() -> void:
 		var msg := link.step(get_ship(link.attacker_id), get_ship(link.target_id), fixed_dt)
 		if msg != "":
 			_link_events.append(msg)
+	for g in grapples:
+		var line := g.step(get_ship(g.attacker_id), get_ship(g.target_id), fixed_dt)
+		if line != "":
+			_link_events.append(line)
+	grapples = grapples.filter(func(g: Grapple) -> bool: return g.holding())
 	for b in boardings:
 		if b.finished():
 			continue

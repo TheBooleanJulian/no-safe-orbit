@@ -103,14 +103,15 @@ func _run() -> void:
 		"HUD reports the target disabled and ready to salvage")
 
 	# 3. Salvage beacon with G: half the scrap value and the bounty in
-	# credits; the crates are opened on the carousel and banked.
+	# credits; the crates are opened on the carousel, into the hold.
 	var old_target := target
 	var scrap := Salvage.scrap_value(target.systems)
 	var bounty := Salvage.bounty_for(target.systems)
 	await _press("salvage")
 	_check(main.hud.loot.visible and profile.missions_completed == 1 and profile.total_pulls >= 1,
 		"G drops a beacon: carousel open, %d crates opened, mission 1 complete" % profile.total_pulls)
-	_check(profile.vessel.cargo_is_empty(), "beacon loot goes to the station bank, not the hold (%s)" % profile.vessel.cargo_summary())
+	_check(profile.loot_log.is_empty() or profile.loot_log[profile.loot_log.size() - 1].ends_with("(in cargo)"),
+		"beacon loot goes into the hold, banked once home (%s)" % profile.vessel.cargo_summary())
 	_check(profile.credits == credits_at_start + roundi(scrap * Salvage.BEACON_SCRAP_RATE) + bounty,
 		"50%% of %d cr scrap and %d cr bounty paid (%d → %d)" % [scrap, bounty, credits_at_start, profile.credits])
 	var next := main.world.get_ship(Main.TARGET_ID)

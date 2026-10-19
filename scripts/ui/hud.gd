@@ -41,6 +41,8 @@ const COMPACT_HEIGHT := 820.0
 var celestial: CelestialFrame
 ## Main sets this when the target is shooting back (T).
 var target_hostile: bool = false
+## What the lead pip is for: a craft picked with U ("" = the target ship).
+var selected_id: StringName = &""
 ## Persistent player state (set by Main).
 var profile: PlayerProfile
 ## The player's sensor track of the target (set by Main every frame).
@@ -56,6 +58,12 @@ var top_alert_level: String = ""
 ## {blocked}; {} when not charging.
 var jump_state: Dictionary = {}
 var _jump_flash: ColorRect
+## Big pulsing line in the middle of the screen: the worst danger alert, or
+## (with none) that the crew can patch damage now with [C].
+var attention_label: Label
+var _attention_phase := 0.0
+var _repair_hint := ""
+var _repair_hint_age := 1.0
 ## Post-combat debrief, shown when the ship is lost (created in _ready).
 var debrief: DebriefPanel
 ## Always-visible module and damage map of your ship.
@@ -107,6 +115,16 @@ func _ready() -> void:
 	_jump_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	$Root.add_child(_jump_flash)
 	_jump_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	attention_label = Label.new()
+	attention_label.name = "Attention"
+	attention_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	attention_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	attention_label.add_theme_font_size_override("font_size", 30)
+	attention_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	attention_label.add_theme_constant_override("outline_size", 8)
+	attention_label.visible = false
+	$Root.add_child(attention_label)
+	attention_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	loot = LootCarousel.new()
 	loot.name = "Loot"
 	$Root.add_child(loot)
@@ -430,6 +448,7 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	_update_weapon_strip(player)
 	_update_details(world, player)
 	_update_banner(alerts)
+	_update_attention(alerts, player, get_process_delta_time())
 	_update_ticker(t)
 	_rounds_near = world.projectiles().size()
 	_rounds_far = world.far_projectiles().size()
@@ -453,8 +472,11 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 		overlay.target_estimated = not measured
 		var dist := player.position.distance_to(target_pos)
 		overlay.target_label = HudFormat.distance(dist) if measured else "~%s ?" % HudFormat.distance(dist)
-		var lead := _lead_solution(player, target)
-		if not lead.is_empty() and (track == null or track.locked):
+		var lead_on := target
+		if selected_id != &"" and world.has_ship(selected_id):
+			lead_on = world.get_ship(selected_id)
+		var lead := _lead_solution(player, lead_on)
+		if not lead.is_empty() and (track == null or track.locked or lead_on != target):
 			overlay.has_lead = true
 			overlay.lead_render_pos = overlay.ship_render_pos + (lead.offset as Vector3)
 			overlay.lead_label = "~%.2f s" % lead.time
@@ -466,13 +488,14 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 				if seen.has(gun.display_name):
 					continue
 				seen[gun.display_name] = true
-				var other := _lead_solution(player, target, gun, k)
+				var other := _lead_solution(player, lead_on, gun, k)
 				if not other.is_empty():
 					overlay.extra_leads.append({"pos": overlay.ship_render_pos + (other.offset as Vector3), "label": gun.display_name.left(1)})
 	_update_gun_reticles(player, alpha, render_origin, input)
+	_update_craft_markers(world, player, alpha, render_origin)
 	# The jump: the view whitens over the last second and a half of the charge.
 	var flash := 0.0
-	if jump_state.has("progress") and (jump_state.waiting as PackedStringArray).is_empty():
+	if jump_state.has("progress"):
 		flash = clampf((float(jump_state.progress) - 0.7) / 0.3, 0.0, 1.0)
 	_jump_flash.color.a = flash * flash * 0.9
 	_update_orbit_path(world, orbit, alpha, render_origin)
@@ -641,8 +664,8 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 			out.append(_alert("caution", "JUMP %.1f s" % jump_state.left_s, "DIMENSIONAL JUMP DRIVE %s %.1f s TO EARTH SHIPYARD" % [
 				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s], "keep holding [B]"))
 		else:
-			out.append(_alert("caution", "JUMP HOLDING", "JUMP DRIVE %s HOLDING — %s BEFORE THE JUMP" % [
-				"▮".repeat(bars) + "▯".repeat(10 - bars), " · ".join(waiting).to_upper()], "keep holding [B]"))
+			out.append(_alert("danger", "EMERGENCY JUMP %.1f s" % jump_state.left_s, "EMERGENCY JUMP %s %.1f s — LEAVES BEHIND %s" % [
+				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s, " · ".join(waiting).to_upper()], "release [B] to wait for them"))
 	var link := world.link_for(player.id)
 	var b := world.boarding_for(link) if link != null else null
 	if link != null and link.attacker_id != player.id:
@@ -676,6 +699,11 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		if not sys.has_command():
 			out.append(_alert("caution", "SHIP AI IN CONTROL", "BRIDGE CREW LOST — SHIP AI FLYING: %d %% THRUST AND TURN RATE, GUNS AT HALF RATE" % roundi(ShipSystems.SHIP_AI_FACTOR * 100.0),
 				"[Tab] crew → cover command", sys.blueprint.rooms[sys.command_room()].id if sys.command_room() >= 0 else ""))
+		var sealing := sys.hull_seal_progress()
+		if sealing >= 0.0:
+			out.append(_alert("caution", "BREACH %d %%" % roundi(sealing * 100.0),
+				"HULL BREACH — %s" % ("DAMAGE CONTROL SEALING %d %%" % roundi(sealing * 100.0) if sys.room_bonus(&"workshop") > 0.0 and sys.room_bonus(&"life_support") > 0.0
+					else "NO WORKING WORKSHOP AND LIFE SUPPORT TO SEAL IT"), "[Tab] rooms"))
 		if not sys.has_gun_crew():
 			out.append(_alert("caution", "NO GUN CREW", "NO GUN CREW — AUTOLOADERS ONLY, HALF RATE OF FIRE", "[Tab] crew → cover weapons"))
 		for e in sys.equipment:
@@ -698,6 +726,34 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 func _alert(level: String, short: String, text: String, action: String, subject: String = "") -> Dictionary:
 	return {"level": level, "glyph": CyberTheme.GLYPH_CRITICAL if level == "danger" else CyberTheme.GLYPH_DEGRADED,
 		"short": short, "text": text, "action": action, "subject": subject}
+
+
+func _update_attention(alerts: Array[Dictionary], player: ShipState, delta: float) -> void:
+	var text := ""
+	var color := CyberTheme.RED
+	if not alerts.is_empty() and alerts[0].level == "danger":
+		text = "%s %s\n%s" % [CyberTheme.GLYPH_CRITICAL, alerts[0].short, alerts[0].action]
+	else:
+		# Finding a crew route is not free: look again twice a second.
+		_repair_hint_age += delta
+		if _repair_hint_age > 0.5:
+			_repair_hint_age = 0.0
+			_repair_hint = ""
+			if player.is_active() and player.systems != null and player.systems.field_repair_block_reason() == "":
+				var e := player.systems.field_repair_target()
+				_repair_hint = "%s DAMAGED — %s %s %d %%\npress [C] to patch it" % [CyberTheme.GLYPH_DEGRADED, e.def.display_name.to_upper(), e.id, roundi(100.0 * e.hp / e.max_hp)]
+		text = _repair_hint
+		color = CyberTheme.AMBER
+	attention_label.visible = text != "" and not overview.visible and not loot.visible and not debrief.visible
+	if not attention_label.visible:
+		return
+	_attention_phase = fmod(_attention_phase + delta * 3.0, TAU)
+	attention_label.text = text
+	color.a = 0.65 + 0.35 * sin(_attention_phase)
+	attention_label.add_theme_color_override("font_color", color)
+	var view := get_viewport().get_visible_rect().size
+	attention_label.size = Vector2(minf(view.x - 40.0, 900.0), 0)
+	attention_label.position = Vector2((view.x - attention_label.size.x) * 0.5, view.y * 0.24)
 
 
 func _update_banner(alerts: Array[Dictionary]) -> void:
@@ -765,6 +821,9 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 		"REL     %s%.1f m/s   ETA %s" % [est, rel_v, eta],
 		_approach_line(player, pos, vel, est),
 	])
+	var grapple := _grapple_line(world, player, target)
+	if grapple != "":
+		lines.append(grapple)
 	var close_look := measured and (player_wing == null or player_wing.has_close_look(world, target))
 	if target.systems != null:
 		if not close_look:
@@ -785,6 +844,18 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 	if hit_age < 3.0 and _outgoing != null:
 		lines.append("HIT     %s  (+%.1f s)  [P] log" % [_outgoing.headline(), hit_age])
 	target_label.text = "\n".join(lines)
+
+
+## Grappling arm: holding (and what it has siphoned), ready, or how far.
+func _grapple_line(world: WorldSimulation, player: ShipState, target: ShipState) -> String:
+	var held := world.grapple_for(player.id)
+	if held != null and held.target_id == target.id:
+		return "GRAPPLE %s HOLDING%s · siphoned %.1f t, %d rounds · [Y] release" % [CyberTheme.GLYPH_OK,
+			" — steady" if held.steady else " — steadying", held.siphoned_kg / 1000.0, held.siphoned_rounds]
+	if Grapple.arms(player.systems).is_empty() or player.position.distance_to(target.position) > 1000.0:
+		return ""
+	var why := Grapple.block_reason(player, target)
+	return "GRAPPLE %s" % ("READY — [Y] grab" if why == "" else why)
 
 
 ## Closest approach on present courses: when, how near, and (closing inside
@@ -1037,6 +1108,23 @@ func _lead_solution(player: ShipState, target: ShipState, gun: KineticCannonConf
 		return {}
 	var lead := FireControl.lead_point(rel_pos, rel_vel, t)
 	return {"time": t, "direction": lead.normalized(), "offset": muzzle - player.position + lead}
+
+
+## Every craft out within our sensor range, ours and theirs.
+func _update_craft_markers(world: WorldSimulation, player: ShipState, alpha: float, render_origin: Vector3) -> void:
+	overlay.craft_markers = []
+	var reach := player.systems.sensor_range_m() if player.systems != null else ShipSystems.VISUAL_RANGE_M
+	for wing in world.wings:
+		var hostile := wing.carrier_id != player.id
+		for c in wing.flying():
+			var s := world.get_ship(c.id)
+			if s == null or not s.is_active():
+				continue
+			var dist := s.position.distance_to(player.position)
+			if dist > reach:
+				continue
+			overlay.craft_markers.append({"pos": s.interpolated_position(alpha) - render_origin,
+				"label": "%s %s" % [c.label, HudFormat.distance(dist)], "hostile": hostile, "selected": c.id == selected_id})
 
 
 ## One reticle per gun: where its barrel points, at the aim range.

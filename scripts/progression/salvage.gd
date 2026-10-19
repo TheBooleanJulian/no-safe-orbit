@@ -6,7 +6,8 @@ extends RefCounted
 ## - BEACON (G on a disabled wreck within BEACON_RANGE_M): a beacon marks it
 ##   for Earth Shipyard's tug. Credits now: BEACON_SCRAP_RATE (50 %) of its
 ##   scrap value plus the bounty. Its crates (pulls_for) each hold loot with
-##   BEACON_LOOT_CHANCE; what is found goes straight to the station bank.
+##   BEACON_LOOT_CHANCE; what is found goes into our cargo hold (banked
+##   once we are home).
 ## - TAKEOVER (boarders take its bridge): TAKEOVER_SCRAP_RATE (80 %) of the
 ##   scrap value plus double bounty; its stores (spare parts) and crates —
 ##   CAPTURE_BONUS_PULLS more, each with TAKEOVER_LOOT_CHANCE — go into our
@@ -28,8 +29,8 @@ const BOUNTY_INTACT := 100
 const BEACON_SCRAP_RATE := 0.5
 const TAKEOVER_SCRAP_RATE := 0.8
 ## Chance that a crate holds loot (else it is empty).
-const BEACON_LOOT_CHANCE := 0.4
-const TAKEOVER_LOOT_CHANCE := 0.85
+const BEACON_LOOT_CHANCE := 0.6
+const TAKEOVER_LOOT_CHANCE := 0.9
 ## Credits per spare part of build cost (the station sells 10 for 25).
 const CREDITS_PER_PART := 2.5
 
