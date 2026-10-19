@@ -293,7 +293,10 @@ func _build_report(report: DamageReport, bp: ShipBlueprint, com: Vector3, c: flo
 				var corner := Vector3(r.rect.position.x, r.deck, r.rect.position.y) * c
 				_box(size * 0.98, corner + size * 0.5 - com, _flat(COLOR_BREACH, true))
 	# The round's path: an incoming lead-in, then the recorded points.
-	var dir := (report.path_body[-1] - report.path_body[0]).normalized() if report.path_body.size() > 1 else Vector3.FORWARD
+	# A round stopped at the plate has no length of path: fall back to its
+	# direction of travel into the face (or straight ahead).
+	var span := report.path_body[-1] - report.path_body[0] if report.path_body.size() > 1 else Vector3.ZERO
+	var dir := span.normalized() if span.length() > 0.01 else (-report.entry_normal_body if report.entry_normal_body.length() > 0.5 else Vector3.FORWARD)
 	_path = PackedVector3Array([report.path_body[0] - dir * 25.0])
 	_path.append_array(report.path_body)
 	_path_length = 0.0

@@ -42,6 +42,8 @@ godot --path .
 | Toggle flight assist | Z | Y |
 | Velocity hold: orbit ↔ match target | X | X |
 | Fire cannon | Left mouse (once captured) or Enter | A |
+| Zoom for gunnery (hold) | Shift | right stick click |
+| Orbit details / details & combat log / help panels | O / J / H | — (use Tab) |
 | Target hostile on/off | T | B |
 | Salvage a disabled target / close the loot panel | G | D-pad up |
 | Damage control (workshop field repair) | C | D-pad down |
@@ -149,6 +151,40 @@ a damage-control (or engineering) crew member walks there first, it costs
 spare parts, and it stops if the workshop or the part's room loses pressure
 or the repairer is hurt. Destroyed parts still need the yard.
 
+## The HUD
+
+Kept compact so the fight stays in view:
+
+- **Own ship** (top left): assist mode, inertial (orbital) velocity, where
+  the nose points relative to the velocity vector, turn rates, propellant,
+  hull, power / heat, power pips and the urgent **alerts** — each with the
+  key that acts on it.
+- **Target** (top right): identity and the **sensor track** — `MEAS`
+  (measured now), `EST` (dead-reckoned) or `STALE` (old), its confidence and
+  whether you have a **lock** (needed for the ◇ lead marker; inside 10 km).
+  Estimates are prefixed `~` and drawn as a dashed ring with a `?`. Then
+  range, closing speed, relative speed, round ETA, status (needs a close
+  look), and salvage / docking / boarding lines when they apply.
+- **Weapon strip** (bottom): gun and ammunition, point defence (none
+  fitted yet), the air wing. Above it, a ticker of recent events.
+- **On demand:** O orbit details, J details & combat log (local velocity
+  axes, Δv spent, rounds up, last hit reports), H the full controls card.
+- The **alert banner** shows the most urgent condition and what to do;
+  Tab opens damage control on the system it is about.
+- In **match-velocity** mode the prograde/retrograde markers turn yellow and
+  show motion relative to the target (green = orbital).
+- States are shapes as well as colours: ■ functional · ▲ degraded ·
+  ◆ critical · ✕ destroyed · ○ off / unpowered · ● crew. Cyan is you and
+  your systems, magenta hostiles, amber caution, red danger.
+
+**Sensors:** the sensor mast sees 25 km; without it, 3 km. A new contact
+after a salvage arrives about 30 km out and closes — it can't engage until
+you have detected it.
+
+**Hits:** steep hits stopped by the outer plate ricochet (white sparks with
+long streaks); rounds that pierce leave black entry holes and wider, ragged
+exit holes on the hull.
+
 ## Running the ship
 
 - **Damage map** (bottom left, always on): modules by structure, rooms by
@@ -156,11 +192,12 @@ or the repairer is hurt. Destroyed parts still need the yard.
 - **Power** (1 / 2 / 3, 4 to balance): six pips across SYS (turning and
   repair speed), ENG (thrust) and WEP (rate of fire), 0–4 each: 50 % at 0
   pips, 100 % at 2, 150 % at 4.
-- **Tactical overview** (Tab): your ship deck by deck, the target (with
-  boarding control), power, crew by role and where they are, orders to send
-  a general crew member to cover a lost role (bridge, guns, engineering,
-  damage control), what damage control patches first, and the boarding
-  party size.
+- **Damage control** (Tab): a drawer on the right (the fight stays
+  visible) with tabs — DAMAGE (deck-by-deck map; click a system or room for
+  its details and actions: dispatch a repair crew, switch a load off to
+  reroute power, divert power to its channel, isolate / reopen a
+  compartment), CREW (who is where, cover a lost role, boarding party
+  size), POWER (pips and every load's switch), WING, TARGET.
 - **Bridge crew lost**: the ship AI flies it with half thrust and turn rate,
   assist locked on, until someone takes over the bridge.
 - **Reactors explode** at 0 %: blast damage within 15 m, falling off with
@@ -244,7 +281,11 @@ Mk I template by default).
 | Change deck | ▲ / ▼ or PgUp / PgDn |
 | Save / load | Top bar (saved to `user://blueprints/`); "Load template" restores the Frigate Mk I |
 | Fly it | LAUNCH ▶ (disabled while the design has errors; warnings are allowed; new parts are paid for in spare parts) |
-| Repair the hangar vessel | HANGAR & SERVICE panel: pick a priority, then Repair |
+| Find a part | Search box (/) and category: Hull, Interior, Propulsion, Power & thermal, Weapons, Sensors, Utility, Logistics |
+| Bigger views | VIEWS bar: expand the side, front or 3D view; restore the deck editor |
+| Repair the hangar vessel | HANGAR → SERVICE: pick a priority, then Repair |
+| Bank cargo, buy parts | HANGAR → CARGO & BANK |
+| Vessel history, last debrief | HANGAR → HISTORY |
 
 Palette colours show rarity (grey Common, green Uncommon, teal Rare, violet
 Epic, gold Legendary); rarer equipment shows how many units you own, rarer

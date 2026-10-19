@@ -268,6 +268,30 @@ bounding-box hit test.
   on the most exposed flanks, hazard-striped collars with beacons; RCS jets
   in `ShipView` from each block's share of commanded thrust and torque.
 
+## Sensors, hits and UI (2026-10-19, UI pass)
+
+- **Sensors** (`SensorTrack`): range = best working sensor mast (25 km)
+  else 3 km visual. Measured inside range; otherwise dead-reckoned from the
+  last measurement (stored relative to the observer, so frame rebases don't
+  move it), stale after 2 s, confidence halving every 15 s; lock inside
+  10 km. Main keeps a track each way; a contact engages only after the
+  player has detected it (5 s grace) and it has the player in its own
+  sensors. Contacts after a salvage arrive 30 km out at 150 m/s.
+- **Ricochets** (`Penetration.RICOCHET_MIN_DEG` 60°): stopped by the first
+  plate at ≥ 60° incidence, the round is mirrored about the plate at 55 %
+  of its relative speed; the plate takes the momentum change.
+- **Hull holes**: reports carry outward entry/exit normals; ShipView adds
+  black discs (exit: wider, ragged), at most 80 per ship.
+- **UI tokens** (`CyberTheme`): colours, sans/mono fonts (Space Grotesk /
+  JetBrains Mono when installed, system fallbacks otherwise), spacing, panel
+  surfaces, state glyphs, and a Theme built in code that the HUD and the
+  station use. `ShipSchematic` lays out its hit areas (`layout_hits`) for
+  clicks; the drawer (`TacticalOverview`) works from them.
+- **Damage-control actions** (`ShipSystems`): `set_switched_off` (a load
+  takes no power, freeing it for others; reactors can't be switched) and
+  `set_isolated` (crew routes avoid the compartment; suited boarders still
+  cut through).
+
 ## Autonomous craft (Milestone 6)
 
 - **Craft** are `ShipState`s with their own `ShipConfig` (`data/craft/`):
