@@ -42,6 +42,7 @@ static func load_file(path: String, errors: PackedStringArray) -> ShipBlueprint:
 	var bp := from_json(FileAccess.get_file_as_string(path), errors)
 	if bp != null:
 		BlueprintFix.fit_spans(bp, ConstructionCatalog.default_catalog())
+		BlueprintFix.prune_plates(bp, ShipGrid.build(bp, ConstructionCatalog.default_catalog()))
 	return bp
 
 

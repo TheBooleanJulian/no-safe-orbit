@@ -102,9 +102,10 @@ ships' primary weapons are locked; craft still fight.
 **Point defence:** PD turrets engage hostile craft within 2 km on their own
 (their own rounds, gangway or not) and never your own craft.
 
-**Sound:** what you hear is your own ship through the hull — guns, engines,
-hits taken, alarms, the jump drive spooling; an enemy's reactor going up is
-a faint thud.
+**Sound:** what you hear is your own ship through the hull — guns, the
+engines' rumble (every main engine, reverse and side ones too, deeper and
+louder as the throttle opens), the RCS jets' hiss, hits taken, alarms, the
+jump drive spooling; an enemy's reactor going up is a faint thud.
 
 **Scans:** hold a lock (inside 10 km) with a working sensor mast for 4 s to
 read a contact's cargo — spare parts and crates aboard — its scrap value and
@@ -417,8 +418,11 @@ and Frigate Mk I (heavy) — common parts only, so any profile can fly them.
 
 **Armour** (palette → Armour): drag across cells to fit 40 mm (thin, grey)
 or 80 mm (thick, dark grey) plates on their exposed faces — all, sides only, top
-only or underside only — or strip them. Plates add mass (1.44 t / 2.88 t a
-face), cost spare parts at refit, wear when hit and are re-plated at the yard.
+only or underside only — or strip them; **Clear all armour** strips the
+lot (Ctrl+Z puts it back). A plate on a face you later build over (a new
+deck or module) goes with that edit, mass and all. Plates add mass
+(1.44 t / 2.88 t a face), cost spare parts at refit, wear when hit and are
+re-plated at the yard.
 
 **Power** (palette → Power & thermal): drag **power conduit** through hull
 cells (it joins between decks too). A system or room is powered when one of
@@ -450,7 +454,7 @@ needed between them.
 | Loot odds | HANGAR → LOOT TABLES: crate odds, tier odds, every item |
 | Select / move / delete | Select tool (S): click and drag, or arrow keys, Delete; Shift-click modules to move several together, Ctrl+A for the whole hull (everything inside comes along) |
 | Old designs | HANGAR → SERVICE → Convert to blocks: rebuilds old large sections from blocks with plates (free on your own vessel) |
-| Remove anything | Right-click |
+| Remove anything | Right-click (a room takes its hatches with it) |
 | Hatches | Hatch tool (H): click near an edge for a door, a cell's centre for a ladder to the deck above (Shift: below) |
 | Change deck | ▲ / ▼ or PgUp / PgDn |
 | Save / load | Top bar (saved to `user://blueprints/`); "Load template" restores the Frigate Mk I |

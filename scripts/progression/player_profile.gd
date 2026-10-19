@@ -523,6 +523,7 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 				p.vessels.append(v)
 	for v in p.vessels:
 		BlueprintFix.fit_spans(v.blueprint, ConstructionCatalog.default_catalog())
+		BlueprintFix.prune_plates(v.blueprint, ShipGrid.build(v.blueprint, ConstructionCatalog.default_catalog()))
 	p.active_vessel = clampi(int(d.get("active_vessel", 0)), 0, maxi(p.vessels.size() - 1, 0))
 	for c in d.get("hire_pool", []):
 		if c is Dictionary:

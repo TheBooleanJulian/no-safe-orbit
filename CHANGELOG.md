@@ -4,6 +4,20 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test bug fixes (2026-10-20)
+
+#### Fixed
+- Tab drawer (and the controls, loot and debrief panels): a click no longer
+  re-captures the mouse while a panel is open.
+- Armour plates covered by a newly built deck or module are removed with
+  that edit (same undo step), and dropped from designs and saves on load.
+- Deleting a room deletes its hatches (one undo restores both).
+- Engine sound: fuller, louder rumble that rises with the throttle and
+  follows every main engine (reverse and side ones too); new RCS hiss.
+
+#### Added
+- Shipyard armour palette: **Clear all armour** (undoable).
+
 ### Play-test feedback pass (2026-10-20)
 
 #### Added

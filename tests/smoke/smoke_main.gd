@@ -174,6 +174,20 @@ func _run() -> void:
 		off_button.pressed.emit()
 		await process_frame
 		_check(player.systems.switched_off.has("e41") and not player.systems.equipment_by_id("e41").powered, "the button switches the gun off (power rerouted)")
+	# A click beside the open drawer must not grab the mouse back.
+	main.player_input.suppress_fire = false
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = Vector2(20, 20)
+	Input.parse_input_event(click)
+	await process_frame
+	await process_frame
+	_check(main.menu_open() and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE and not main.player_input.suppress_fire,
+		"with Tab open a click keeps the cursor visible (no capture)")
+	var unclick := click.duplicate() as InputEventMouseButton
+	unclick.pressed = false
+	Input.parse_input_event(unclick)
 
 	print("smoke: %d failure(s)" % _failures.size())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))

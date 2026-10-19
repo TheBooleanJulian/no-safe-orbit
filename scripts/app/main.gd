@@ -265,9 +265,16 @@ func _spawn_view(id: StringName, tint: Color) -> void:
 	_views[id] = view
 
 
+## A panel that needs the mouse is open (Tab drawer, controls, loot, debrief):
+## clicks are for it, and the cursor stays free.
+func menu_open() -> bool:
+	return hud.overview.visible or hud.controls.visible or (hud.loot != null and hud.loot.visible) \
+		or (hud.debrief != null and hud.debrief.visible)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed \
-			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not menu_open():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		player_input.suppress_fire = true  # the capture click is not a shot
 	elif event.is_action_pressed("release_mouse"):
@@ -936,6 +943,8 @@ func _process(delta: float) -> void:
 	var player := world.get_ship(PLAYER_ID)
 	var target := world.get_ship(TARGET_ID)
 	var target_id := TARGET_ID if target.is_active() else &""
+	if menu_open() and Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	player_input.aim_limit = get_viewport().get_visible_rect().size * 0.5 - Vector2(24, 24)
 	var command := player_input.build_input(delta, target_id, hud.docking_cam.visible)
 	_aim(command, player, target)
@@ -1100,10 +1109,10 @@ func _update_audio(player: ShipState) -> void:
 	if player.rounds_fired > _rounds_heard:
 		audio.play("gun")
 	_rounds_heard = player.rounds_fired
-	var fwd := 0.0
-	if player.config.thrust_forward_n > 0.0:
-		fwd = clampf(-player.last_thrust_body.z / player.config.thrust_forward_n, 0.0, 1.0)
-	audio.set_engine(fwd if player.is_active() else 0.0)
+	var burn := ShipDynamics.thrust_fractions(player.config, player.last_thrust_body, player.last_torque_body) \
+		if player.is_active() else Vector2.ZERO
+	audio.set_engine(burn.x)
+	audio.set_rcs(burn.y)
 	audio.set_jump(float(hud.jump_state.progress) if hud.jump_state.has("progress") else -1.0)
 	var danger := hud.warning_label.text if hud.warning_label.visible and hud.top_alert_level == "danger" else ""
 	if danger != "" and danger.get_slice(" ", 1) != _alert_heard.get_slice(" ", 1):

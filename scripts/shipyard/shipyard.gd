@@ -60,6 +60,7 @@ var place_rotation: int = 0
 var place_flip: bool = false
 ## Which faces an armour stroke covers.
 var armor_faces: OptionButton
+var armor_clear: Button
 var underside_button: Button
 var selected_id: String = ""
 var _hover_cell := Vector3i.ZERO
@@ -259,6 +260,7 @@ func select_palette(kind: String, def_id: StringName) -> void:
 		iso_view.drag_rooms = deck_editor.drag_rooms
 	if armor_faces != null:
 		armor_faces.visible = kind == "armor"
+		armor_clear.visible = kind == "armor"
 	if kind == "bus":
 		var entry: Array = BUS_ENTRIES[def_id]
 		info_label.text = entry[2] % [ShipStats.BUS_KG_PER_CELL / 1000.0, ServiceYard.BUS_CELLS_PER_PART] if entry[0] else entry[2]
@@ -754,6 +756,12 @@ func _build_palette() -> void:
 	armor_faces.tooltip_text = "Which faces an armour stroke covers"
 	armor_faces.visible = false
 	box.add_child(armor_faces)
+	armor_clear = Button.new()
+	armor_clear.text = "Clear all armour"
+	armor_clear.tooltip_text = "Strip every armour plate off the design (Ctrl+Z puts them back)"
+	armor_clear.visible = false
+	armor_clear.pressed.connect(func() -> void: _set_status("Removed %d armour plates" % editor.clear_armor()))
+	box.add_child(armor_clear)
 	var turn_row := HBoxContainer.new()
 	for spec in [["⟳ Rotate [R]", "Turn the part being placed, or the selected module", rotate_current],
 			["⇅ Flip [F]", "Upside down: a wedge's slope faces down instead of up", flip_current]]:
