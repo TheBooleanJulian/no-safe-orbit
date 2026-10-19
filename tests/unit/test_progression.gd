@@ -350,14 +350,19 @@ func test_repairs_restore_the_vessel_and_charge_parts() -> void:
 	var p := PlayerProfile.new(1)
 	p.spare_parts = 500
 	p.ensure_vessel(_template())
-	p.vessel.condition = _damaged_ship().systems.condition()
+	var flown := _damaged_ship()
+	flown.systems.crew.by_id("c1").state = CrewRoster.State.DEAD  # a commander lost in the action
+	p.dock(flown.systems.condition(), _catalog())
+	assert_true(not p.vessel.condition.get("crew", {}).has("wounded"), "the wounded recover on docking")
 	var jobs := ServiceYard.repair_jobs(p.vessel, _catalog())
+	assert_true(jobs.any(func(j: ServiceYard.Job) -> bool: return j.kind == &"recruit"), "crew killed in action must be replaced")
 	var cost := ServiceYard.total_cost(jobs)
 	var spent := ServiceYard.perform(ServiceYard.plan(jobs, ServiceYard.Priority.FULL, p.spare_parts, p.vessel, p), p.vessel, p)
 	assert_true(spent == cost and p.spare_parts == 500 - cost, "full repair charged %d parts (spent %d)" % [cost, spent])
 	assert_true(not p.vessel.is_damaged(), "vessel like new after a full repair: %s" % p.vessel.condition)
-	var flown := _ship(p.vessel.blueprint, &"r", p.vessel.condition)
-	assert_near(flown.config.thrust_forward_n, _ship(_template()).config.thrust_forward_n, 1e-3, "repaired ship has full thrust (N)")
+	var relaunched := _ship(p.vessel.blueprint, &"r", p.vessel.condition)
+	assert_true(relaunched.systems.crew.count() == relaunched.systems.crew.members.size(), "full complement after recruiting")
+	assert_near(relaunched.config.thrust_forward_n, _ship(_template()).config.thrust_forward_n, 1e-3, "repaired ship has full thrust (N)")
 
 
 func test_refit_is_paid_up_front_and_keeps_wear_on_kept_parts() -> void:
@@ -462,12 +467,15 @@ func test_field_repair_needs_a_working_workshop_and_patches_over_time() -> void:
 	s.damage_equipment(s.equipment_by_id("e28"), 30.0)   # reactor at 50 %
 	var e := s.start_field_repair()
 	assert_true(e != null and e.id == "e28", "crew patch the damaged reactor, not the destroyed engine")
-	assert_near(s.repair_task.total_s, ShipSystems.FIELD_REPAIR_SETUP_S + 15.0, 1e-6, "repair time = setup + 1 s per hp (s)")
+	# Damage control walk from the workshop r9 → corridor r8 → corridor r14 → reactor room r15.
+	var walk := 3.0 * CrewRoster.ROOM_TRANSIT_S
+	assert_near(s.repair_task.travel_s, walk, 1e-6, "walk from the workshop to the reactor room (s)")
+	assert_near(s.repair_task.total_s, walk + ShipSystems.FIELD_REPAIR_SETUP_S + 15.0, 1e-6, "repair time = walk + setup + 1 s per hp (s)")
 	var t := 0.0
 	while s.repair_task != null and t < 60.0:
 		s.tick(ship, 0.5)
 		t += 0.5
-	assert_near(t, 25.0, 0.5, "repair finished after (s)")
+	assert_near(t, 40.0, 0.5, "repair finished after (s)")
 	assert_near(s.equipment_by_id("e28").hp, 45.0, 1e-4, "reactor patched to 75 % (hp)")
 	assert_true(s.field_repair_target() == null, "nothing left to patch: the engine is destroyed")
 

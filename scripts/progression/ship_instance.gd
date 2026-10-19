@@ -32,11 +32,16 @@ func record(line: String) -> void:
 
 
 func is_damaged() -> bool:
-	for key in ["equipment", "modules", "breached", "hatches"]:
+	for key in ["equipment", "modules", "breached", "hatches", "crew"]:
 		var part: Variant = condition.get(key, [])
 		if not part.is_empty():
 			return true
 	return false
+
+
+## Crew killed, by role name ({} = full complement).
+func dead_crew() -> Dictionary:
+	return condition.get("crew", {}).get("dead", {})
 
 
 ## Condition of equipment `id` as a hit-point fraction (1 = like new).

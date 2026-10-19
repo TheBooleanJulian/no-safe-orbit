@@ -15,6 +15,8 @@ enum Kind {
 	RADIATOR,
 	## Holds propellant for main engines and RCS.
 	PROPELLANT_TANK,
+	## Docking port with an extendable gangway into the room behind it.
+	DOCKING_COLLAR,
 }
 
 enum Mount { INTERNAL, EXTERNAL }
@@ -55,6 +57,7 @@ const DAMAGE_DEFAULTS := {
 	Kind.CANNON: [30.0, 15.0],
 	Kind.RADIATOR: [10.0, 3.0],
 	Kind.PROPELLANT_TANK: [25.0, 10.0],
+	Kind.DOCKING_COLLAR: [20.0, 8.0],
 }
 
 

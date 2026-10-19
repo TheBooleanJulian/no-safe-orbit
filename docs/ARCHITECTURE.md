@@ -53,6 +53,10 @@ Input (InputMap) ──► PlayerInput ──► ShipControlInput ─┐
 | `ShipInstance` | The physical hangar vessel: its blueprint copy, condition (from `ShipSystems.condition()`), sorties and service history. |
 | `ServiceYard` | Repair and refit jobs, costs, priorities, write-offs. |
 | `Salvage` | Salvage rules (disabled, < 500 m, < 5 m/s) and yield. |
+| `CrewRoster` | People per berth: role, station, current room, state (fit / wounded / dead). |
+| `Docking`, `DockingLink` | Ports, docking tolerances; the gangway (extend, seal, hold, sever). |
+| `BoardingAction` | Muster, crossing, room-by-room fighting, capture, withdrawal. |
+| `GangwayView` | Draws active gangways. |
 
 ## Construction (Milestone 2)
 
@@ -232,6 +236,38 @@ bounding-box hit test.
   spun. A round that leaves the hull with penetration to spare flies on at
   `v × (pen_exit / pen_entry)^(1/1.4)`.
 
+## Crew and boarding (Milestone 5)
+
+- **Crew** (`CrewRoster`, owned by `ShipSystems`): one person per berth,
+  default complement by role and station (see the class header). The access
+  graph is rooms joined by hatches; `ShipSystems.route()` finds a way for
+  unsuited crew (pressurised rooms only) or suited (any), past sealed doors
+  only if destroyed. A room that depressurises wounds half (rounded up) of
+  the people in it and kills the rest. Effects in `effective_config()`: no
+  fit command crew on a pressurised bridge → assist turn rates × 0.5; no fit
+  weapons crew who can reach a magazine → rate of fire × 0.5. Field repairs
+  take the nearest free damage-control (else engineering) member, who walks
+  there (5 s per room) first. Casualties persist in the vessel condition by
+  role; the wounded recover at docking; recruits cost 2 spare parts.
+- **Docking** (`Docking`, `DockingLink`): ports are working docking collars
+  (ours) and intact collars or room-backed outer hull faces (theirs).
+  Tolerances: port gap ≤ 25 m, relative speed ≤ 0.5 m/s, turn rate ≤
+  0.06 rad/s, ≤ 20° off square. Extending takes 10 s to a collar, 45 s to cut
+  the hull (that room vents). Sealed: grapples cancel relative velocity with
+  equal and opposite impulses each tick and co-rotate the target; needing
+  more than 200 kN to hold, or ports out of reach, severs it. A target with
+  power, thrust and a crew in command tries to break contact
+  (`GunneryAI.break_contact`).
+- **Boarding** (`BoardingAction`): up to 8 security/general crew muster at our
+  collar, cross (5 s) and advance room by room towards the bridge. Defenders
+  lock intact doors out of every room the boarders hold (20 s to cut); their
+  security walk to the bridge (travel time; a vented route stops them). In a
+  room with both sides, each side loses 0.08 × the other's strength hit
+  points per second (strength by role; defenders × 1.25). Bridge held with
+  no fit defender → captured (surrenders; salvage pays +2 crates). Withdraw
+  only over a sealed gangway; otherwise stranded. Boarders left behind when
+  the player docks are lost.
+
 ## Progression (Milestone 4)
 
 - **Blueprint vs vessel.** `ShipBlueprint` is the design; `ShipInstance` is
@@ -295,13 +331,14 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Overpenetrating rounds fly on slower but in a straight continuation; no deflection | Exit direction is always the entry direction | M7 (fragmentation) |
 | Docking is abstract: B docks from anywhere; no station or transfer orbit | Returning costs nothing | When stations / logistics arrive |
 | Propellant and ammunition are refilled free at every launch | Only damage and parts carry over | Logistics |
-| Field repairs need no crew role and no travel time | Any workshop fixes any reachable system | M5 (crew) |
+| Crew move abstractly (5 s per room); no skills, morale or in-flight medicine | Who is where matters; how good they are doesn't | Later |
+| The grappled gangway forces equal velocities and turn rates (no compound-body dynamics) | Turning hard while docked can tear the gangway | If docked manoeuvring matters |
+| Boarding fights are Lanchester attrition per room; fixed defender policy | Predictable, explainable outcomes | M6 (directives) |
 | All gun mounts on a ship must be one type (one fire-control solution) | No mixed batteries | Turrets / per-mount fire control |
 | Every enemy is the common-parts Kestrel; loot comes from crates, not the wreck's own parts | Salvage never returns a specific fitted part | When enemy loadouts vary |
 | Wrecked modules stay attached; no debris | Ships never break apart | Later (structural detachment) |
 | One power junction per module; no batteries, breakers or cabling; fixed shedding order | Redundancy comes from reactors and module layout only | M4/M5 (repairs, rerouting) |
 | One thermal mass per ship; radiators can't retract | An idle ship settles at ~258 K; heat can't be stored locally | When heat sinks / radiator control arrive |
-| Breaches and lost access have no crew consequences yet | Cut-off rooms are reported but nothing stops working | M5 (crew) |
 
 ## Testing
 
@@ -316,6 +353,9 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 - `tests/smoke/smoke_campaign.gd` — the Milestone 4 exit test: fight, salvage
   with G, dock damaged with B, repair and refit in the shipyard, relaunch;
   then checks the profile on disk.
+- `tests/smoke/smoke_boarding.gd` — the Milestone 5 exit test: docking
+  refused out of tolerance, a live target tearing free, then seal, board,
+  capture and salvage, with simulated time sped up while waiting.
 - Smoke tests have a watchdog (120–180 s) so a script error fails the run
   instead of hanging it, and use a throwaway profile path.
 - `tools/run_checks.sh` — runs everything, exports a `.pck` with the Windows

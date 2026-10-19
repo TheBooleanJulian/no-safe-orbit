@@ -6,13 +6,14 @@ A hard-sci-fi spacecraft engineering and combat simulator, built in Godot 4.
 Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
-**Status:** Milestones 0–4 complete — design a ship in the shipyard, then fly
+**Status:** Milestones 0–5 complete — design a ship in the shipyard, then fly
 and fight it in a real-scale 400 km Earth orbit under the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
 own orbits afterwards; power, heat, pressure and propellant are simulated.
 Disable an enemy, salvage it for spare parts and loot crates, dock, repair,
-refit and fly again — your vessel keeps its damage between sorties. Next:
-Milestone 5 (crew and boarding). See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+refit and fly again — your vessel keeps its damage between sorties. A crew
+works the ship; dock a gangway and board the enemy room by room. Next:
+Milestone 6 (drones, fighters and directives). See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Requirements
 
@@ -43,6 +44,8 @@ godot --path .
 | Target hostile on/off | T | B |
 | Salvage a disabled target / close the loot panel | G | D-pad up |
 | Damage control (workshop field repair) | C | D-pad down |
+| Extend / release a boarding gangway | V | D-pad left |
+| Send the boarding party / order it home | N | D-pad right |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
 | Dock at the shipyard (with the ship you're flying) | B | Start |
 | Controls panel (rebinding) | F1 | Guide |
@@ -127,8 +130,40 @@ Bottom right: flat radar (stalk = height above/below your plane; ▼ closing,
 
 In flight, a ship with a **workshop** (a found room blueprint) that is
 powered, pressurised and reachable can patch damaged systems to 75 % (**C**):
-it takes time, costs spare parts, and stops if the workshop or the part's
-room loses pressure. Destroyed parts still need the yard.
+a damage-control (or engineering) crew member walks there first, it costs
+spare parts, and it stops if the workshop or the part's room loses pressure
+or the repairer is hurt. Destroyed parts still need the yard.
+
+## Crew and boarding
+
+Every berth holds one crew member with a role: command (bridge), engineering,
+damage control, weapons (magazine), security, medical and general crew. They
+are not drawn; moving between rooms takes 5 s per room, through pressurised
+rooms only. A room that vents wounds or kills whoever is in it. No command
+crew on a pressurised bridge halves your turn rates; no weapons crew able to
+reach the magazine halves the guns' rate of fire. The dead must be replaced
+at the yard (2 spare parts each); the wounded recover when you dock.
+
+**Boarding** a disabled ship:
+
+1. Come alongside with matched velocity. The target panel shows the docking
+   tolerances: port gap ≤ 25 m, relative speed ≤ 0.5 m/s, turn rate ≤ 3.4°/s,
+   gangway within 20° of square.
+2. **V** extends the gangway from your docking collar: mated to the target's
+   collar in 10 s, or cut into any outer hull face with a room behind it in
+   45 s (that room vents). A target that still has power, thrust and a crew
+   in command thrusts away and tears the gangway — disable it first.
+3. **N** sends your security and general crew (up to 8). They walk to the
+   collar, cross, and fight room by room towards the bridge. Defenders lock
+   the doors ahead (20 s to cut each; hatches your guns already destroyed
+   are open) and their security falls back to hold the bridge. Fights are
+   resolved by numbers and roles, not instant kills: a full crew will
+   usually repel eight boarders, so thin them out first — venting their
+   quarters, or cutting straight into a bridge that sits under the hull.
+4. Take the bridge and the ship surrenders: salvage it (**G**) for two extra
+   crates; your party comes home with the prize. **N** again orders a
+   withdrawal; if the gangway is gone, they are stranded. Leaving (B) with
+   boarders still across loses them.
 
 Progress is saved to `user://profile.json` (versioned JSON).
 
@@ -171,7 +206,8 @@ Runs, headlessly: project import, unit tests (`tests/unit`), end-to-end
 smoke tests of flight (`smoke_main.gd`, through InputMap actions), the
 shipyard (`smoke_shipyard.gd`, including a real mouse click) and the
 Milestone 4 loop (`smoke_campaign.gd`: fight → salvage → dock damaged →
-repair and refit → relaunch), and a 600-frame boot of the main scene. Smoke
+repair and refit → relaunch) and the Milestone 5 boarding
+(`smoke_boarding.gd`), and a 600-frame boot of the main scene. Smoke
 tests use a throwaway profile, never your save. The script fails on any test failure **and**
 on any Godot `ERROR:` / `SCRIPT ERROR` in the logs. Logs: `build/check-logs/`.
 

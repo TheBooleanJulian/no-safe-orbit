@@ -157,6 +157,11 @@ func dock(after: Dictionary, catalog: ConstructionCatalog) -> PackedStringArray:
 			inventory[String(e.def_id)] = maxi(owned(e.def_id) - 1, 0)
 			lost.append("%s %s destroyed — written off" % [def.display_name, e.id])
 	vessel.condition = after.duplicate(true)
+	# The wounded recover ashore; the dead must be replaced (ServiceYard).
+	var crew: Dictionary = vessel.condition.get("crew", {})
+	crew.erase("wounded")
+	if crew.is_empty():
+		vessel.condition.erase("crew")
 	vessel.sorties += 1
 	vessel.record("Sortie %d: docked%s" % [vessel.sorties, " damaged" if vessel.is_damaged() else ""])
 	for line in lost:

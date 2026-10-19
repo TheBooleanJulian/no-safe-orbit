@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://crrexomjc3oln"
-path="res://.godot/imported/blue_marble_2048.jpg-aedfbd4280f6d1c3ba4f57e8e90b8a7a.ctex"
+uid="uid://bgjvsa1h377c"
+path="res://.godot/imported/blue_marble_oct_5400.jpg-09293f3f8f1021ea19878114d3d5f9d7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://data/earth/blue_marble_2048.jpg"
-dest_files=["res://.godot/imported/blue_marble_2048.jpg-aedfbd4280f6d1c3ba4f57e8e90b8a7a.ctex"]
+source_file="res://data/earth/blue_marble_oct_5400.jpg"
+dest_files=["res://.godot/imported/blue_marble_oct_5400.jpg-09293f3f8f1021ea19878114d3d5f9d7.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

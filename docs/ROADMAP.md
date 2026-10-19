@@ -149,6 +149,37 @@ matching test. Loot panel, HUD salvage lines and the hangar panel reviewed in
 renders. Scaffolding in the exit test: after a real exchange of fire, the
 target's gun is destroyed directly and it is placed alongside.
 
-## Milestones 5–8
+### Known issue fixed (2026-10-19)
+
+Earth's texture: 2048 × 1024 → 5400 × 2700, NASA Blue Marble NG, October
+composite (the scenario's season). Render review.
+
+## Milestone 5 — Crew and boarding ✅ (2026-10-19)
+
+Spec exit criteria: boarding is physical, counterable and influenced by
+layout. Spec tests (§16 "Crew/boarding") mapped below.
+
+| # | Acceptance criterion | Verified by | Result |
+|---|---|---|---|
+| 1 | Abstract crew roles fill the berths at stations | `test_default_crew_fills_the_berths_by_role` | 2 cmd, 2 eng, 2 DC, 1 weapons, 4 security, 1 medical, 4 general |
+| 2 | Crew cannot pass a sealed or vented connection (suits can) | `test_crew_cannot_pass_sealed_or_vented_connections` | pass |
+| 3 | Venting hurts the people in the room; losing command / gun crew degrades the ship | `test_venting_a_room_hurts_its_occupants_and_command`, `test_without_gun_crew_the_guns_fire_at_half_rate` | turn rates × 0.5; rate of fire × 0.5 |
+| 4 | A repair cannot begin without crew who can get there; repairers walk first | `test_field_repair_needs_crew_who_can_get_there`, `test_field_repair_needs_a_working_workshop_and_patches_over_time` | 15 s walk + 25 s work |
+| 5 | Casualties persist; wounded recover; dead are replaced at the yard | `test_casualties_persist_and_the_wounded_recover`, `test_repairs_restore_the_vessel_and_charge_parts` | pass |
+| 6 | Docking fails outside position / velocity / turn-rate / orientation tolerances | `test_docking_fails_outside_the_tolerances`, `smoke_boarding` | each refused, with the reason on the HUD |
+| 7 | Boarding begins only over a physical, sealed connection | `test_boarding_begins_only_over_a_sealed_gangway`, `smoke_boarding` | collar seals in 10 s |
+| 8 | A target that can still manoeuvre breaks contact | `test_a_target_that_can_still_manoeuvre_tears_free`, `smoke_boarding` | gangway torn; not once power is out |
+| 9 | Disconnecting the gangway strands the team | `test_a_severed_gangway_strands_the_team` | STRANDED |
+| 10 | No automatic kills; outcomes depend on defenders | `test_outcome_depends_on_who_is_defending_not_on_instant_kills` | full crew repels 8 boarders at the bridge (~90 s); without security: captured in ~77 s |
+| — | **Exit:** layout changes boarding | `test_layout_decides_how_long_it_takes` | collar into the bridge vs two locked hatches away: > 40 s faster |
+| — | **Exit (end to end):** dock, be torn free, disable, seal, board, capture, salvage | `smoke_boarding.gd` (10 checks, real scene and input actions) | pass |
+
+Mutation-checked: letting boarders walk through locked doors, never tearing
+the gangway, or letting unsuited crew through vacuum each fails exactly the
+matching test. Docking and boarding HUD lines and the gangway tube reviewed in
+renders. Scaffolding in the end-to-end test: the target is placed alongside
+and its security team and reactor are removed directly.
+
+## Milestones 6–8
 
 Not started. See GAME_DESIGN.md §17.

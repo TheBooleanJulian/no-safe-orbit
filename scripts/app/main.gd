@@ -26,6 +26,7 @@ const SUN_ENERGY := 1.4
 @onready var stars: Starfield = $Starfield
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
+var gangways := GangwayView.new()
 
 ## Design the player flies; set by the shipyard before it switches to this
 ## scene. Null = the default template. Only used to commission the first
@@ -55,6 +56,8 @@ static func get_profile() -> PlayerProfile:
 
 func _ready() -> void:
 	InputBindings.apply_saved()
+	gangways.name = "Gangways"
+	add_child(gangways)
 	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
 	stars.build(celestial)
 	hud.celestial = celestial
@@ -180,6 +183,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("field_repair"):
 		start_field_repair()
 		return
+	elif event.is_action_pressed("dock"):
+		toggle_dock()
+		return
+	elif event.is_action_pressed("board"):
+		toggle_boarding()
+		return
 	elif event.is_action_pressed("toggle_target_ai"):
 		target_hostile = not target_hostile
 		hud.target_hostile = target_hostile
@@ -218,6 +227,13 @@ func close_sortie() -> void:
 	var player := world.get_ship(PLAYER_ID)
 	var catalog := ConstructionCatalog.default_catalog()
 	var lines := PackedStringArray()
+	# Boarders still on the other ship are left behind.
+	for b in world.boardings:
+		if b.link.attacker_id == PLAYER_ID and b.phase != BoardingAction.Phase.RETURNED and b.phase != BoardingAction.Phase.ABORTED:
+			for m in b.team:
+				if m.location < 0 and m.state != CrewRoster.State.DEAD:
+					m.state = CrewRoster.State.DEAD
+					lines.append("Boarder %s (%s) left behind" % [m.id, CrewRoster.ROLE_NAMES[m.role]])
 	if not player.is_active():
 		lines = p.lose_vessel(catalog)
 		GameLog.info("main", "Vessel lost — %d rarer parts written off" % lines.size())
@@ -251,6 +267,9 @@ func _on_salvage_pressed() -> void:
 func salvage_target() -> Array[LootRoller.Drop]:
 	var target := world.get_ship(TARGET_ID)
 	var p := get_profile()
+	for b in world.boardings:
+		if b.link.target_id == TARGET_ID and b.phase == BoardingAction.Phase.CAPTURED:
+			b.bring_home()  # the prize crew come back with the stores
 	var intact := target.systems.intact_fraction()
 	var parts := Salvage.spare_parts_for(target.systems)
 	p.spare_parts += parts
@@ -266,6 +285,35 @@ func salvage_target() -> Array[LootRoller.Drop]:
 	hud.reset()
 	_spawn_target()
 	return drops
+
+
+## V: extend a gangway to the target, or release the one we have.
+func toggle_dock() -> void:
+	var link := world.link_for(PLAYER_ID)
+	if link != null:
+		var b := world.boarding_for(link)
+		link.release()
+		hud.notice("Gangway released%s" % (" — the boarding party is cut off!" if b != null and not b.finished() and b.room >= 0 else ""), world.sim_time)
+		return
+	var found := world.dock(PLAYER_ID, TARGET_ID)
+	if found.is_empty():
+		hud.notice("DOCK: no working docking collar opening into a room", world.sim_time)
+	elif not found.has("link"):
+		hud.notice("DOCK: " + ", ".join(found.assessment.problems), world.sim_time)
+
+
+## N: send a boarding party over a sealed gangway, or order it home.
+func toggle_boarding() -> void:
+	var link := world.link_for(PLAYER_ID)
+	var b := world.boarding_for(link) if link != null else null
+	if b != null and not b.finished():
+		b.withdraw()
+		return
+	if link == null or not link.sealed():
+		hud.notice("BOARD: needs a sealed gangway first [V]", world.sim_time)
+		return
+	if world.start_boarding(link) == null:
+		hud.notice("BOARD: no fit security or general crew can reach the collar", world.sim_time)
 
 
 ## Damage control: the crew patch the next damaged system in a working
@@ -293,7 +341,11 @@ func _process(delta: float) -> void:
 	var target := world.get_ship(TARGET_ID)
 	var target_id := TARGET_ID if target.is_active() else &""
 	world.set_input(PLAYER_ID, player_input.build_input(delta, target_id))
-	if target_hostile and target.is_active():
+	if target.is_active() and target.systems != null and target.systems.captured:
+		world.set_input(TARGET_ID, ShipControlInput.neutral())
+	elif world.link_for(TARGET_ID) != null and GunneryAI.can_break_contact(target):
+		world.set_input(TARGET_ID, GunneryAI.break_contact(target, player))
+	elif target_hostile and target.is_active():
 		world.set_input(TARGET_ID, GunneryAI.command(target, player))
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
@@ -301,6 +353,9 @@ func _process(delta: float) -> void:
 		close_sortie()
 	var running := player.is_active() and not hud.controls.visible
 	var alpha := world.advance(delta) if running else 1.0
+	for line in world.take_link_events():
+		hud.notice(line, world.sim_time)
+		GameLog.info("boarding", line)
 	var hits := world.take_hit_events()
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
 	for ev in hits:
@@ -326,6 +381,7 @@ func _process(delta: float) -> void:
 	stars.update_view(camera, planet_center, EARTH)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
 	hit_flashes.update(world, alpha, render_origin, delta)
+	gangways.sync(world, alpha, render_origin)
 	hud.update_display(world, PLAYER_ID, TARGET_ID, alpha, render_origin, camera, player_input)
 
 
