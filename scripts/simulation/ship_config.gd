@@ -56,6 +56,11 @@ extends Resource
 ## Blueprint equipment id of each mount (same order), for damage tracking.
 @export var cannon_mount_ids: PackedStringArray = PackedStringArray()
 
+@export_group("Damage")
+## Craft without a systems model: hit points of the whole hull (mm of
+## penetration absorbed); 0 = never destroyed (fixed test configs).
+@export var hull_hp: float = 0.0
+
 
 ## Mass with full tanks.
 func wet_mass_kg() -> float:

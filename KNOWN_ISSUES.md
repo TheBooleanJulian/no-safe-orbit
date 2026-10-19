@@ -9,9 +9,13 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   automated tests, end-to-end smoke tests and reviewed renders — not by a person
   playing. Mouse and gamepad feel, readability of the orbit path and damage
   reports, and whether real-scale orbital drift matters in a fight are untested.
-- **The enemy is only a gunner.** With T it turns and shoots; it doesn't
-  manoeuvre, evade, manage heat or retreat. It is passive by default.
-  (Directives and tactics: Milestone 6.)
+- **The enemy ship is only a gunner.** With T it turns and shoots and (from
+  mission 3) launches a fighter; the ship itself doesn't manoeuvre, evade,
+  manage heat or retreat. It is passive by default.
+- **Craft are simple.** No formations, no landing-bay geometry or
+  collisions; a recovered craft is serviced for free (its ammunition and
+  propellant don't come from the carrier's stores). EW jamming exists only
+  as a hook (Milestone 7).
 - **The station is abstract.** B docks from anywhere; there is no station to
   fly back to, and propellant and ammunition are refilled free at every
   launch. The cargo hold has no capacity limit yet.

@@ -4,6 +4,20 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-10-19 — Milestone 6: fighters, drones and directives
+
+### Added
+- Wasp fighter and recon drone on external racks (Frigate Mk I carries
+  both); craft fly in the same physics, have hull hit points and can be
+  shot down.
+- Directives (intercept, strike with subsystem priority, recon, escort,
+  return), risk tolerance and automatic disengagement, comms fallback.
+- Launch / recovery / servicing; craft losses and damage persist and are
+  replaced or repaired at the station. L / K; air-wing controls in Tab.
+- Recon drones give the close look at the target's systems.
+- Enemy fighters from mission 3.
+- `test_air_wing.gd` (11), `smoke_wing.gd`.
+
 ## [0.7.0] — 2026-10-19 — Ship control, station economy, cyberpunk UI
 
 ### Added

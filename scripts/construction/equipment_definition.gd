@@ -17,6 +17,8 @@ enum Kind {
 	PROPELLANT_TANK,
 	## Docking port with an extendable gangway into the room behind it.
 	DOCKING_COLLAR,
+	## External rack carrying one autonomous craft (fighter or drone).
+	CRAFT_MOUNT,
 }
 
 enum Mount { INTERNAL, EXTERNAL }
@@ -58,6 +60,7 @@ const DAMAGE_DEFAULTS := {
 	Kind.RADIATOR: [10.0, 3.0],
 	Kind.PROPELLANT_TANK: [25.0, 10.0],
 	Kind.DOCKING_COLLAR: [20.0, 8.0],
+	Kind.CRAFT_MOUNT: [20.0, 8.0],
 }
 
 
@@ -69,6 +72,8 @@ func shielding_mm() -> float:
 	return shield_mm if shield_mm > 0.0 else DAMAGE_DEFAULTS.get(kind, [20.0, 10.0])[1]
 ## CANNON only.
 @export var cannon: KineticCannonConfig
+## CRAFT_MOUNT only: the craft it carries (its mass is part of mass_kg).
+@export var craft: ShipConfig
 @export var color: Color = Color(0.8, 0.8, 0.8)
 @export_group("Progression")
 ## COMMON parts are always available; rarer ones must be found as loot.
@@ -93,6 +98,8 @@ func validate() -> PackedStringArray:
 		problems.append("%s: footprint_cells must be positive" % id)
 	if mount == Mount.EXTERNAL and allowed_faces.is_empty():
 		problems.append("%s: external equipment needs allowed_faces" % id)
+	if kind == Kind.CRAFT_MOUNT and craft == null:
+		problems.append("%s: craft mounts need a craft ShipConfig" % id)
 	if kind == Kind.CANNON and cannon == null:
 		problems.append("%s: cannon equipment needs a KineticCannonConfig" % id)
 	if (kind == Kind.MAIN_ENGINE or kind == Kind.RCS) and isp_s <= 0.0:
