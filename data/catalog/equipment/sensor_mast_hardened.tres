@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"sensor_mast_hardened"
+display_name = "Hardened sensor mast"
+kind = 8
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"dorsal", &"ventral", &"port", &"starboard", &"fore"])
+mass_kg = 2400.0
+power_kw = -40.0
+heat_kw = 10.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+color = Color(0.4, 0.95, 1.0, 1)
+sensor_range_m = 25000.0
+emp_hardening = 0.85
+rarity = 1
+drop_weight = 8.0

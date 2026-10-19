@@ -11,10 +11,30 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   upgrade costs are first guesses. Expect further tuning.
 - **Fires, coolant loops and named crew are new** and covered by tests,
   not yet by play.
-- **EW jamming exists only as a hook** for craft communications (Milestone 7).
+- **EW jamming exists only as a hook** for craft communications; there are
+  no decoys or electronic warfare against missiles yet — the counterplay is
+  point defence, guns and range.
+- **Missiles are new** (Milestone 7): ranges, prices, warhead strengths and
+  the enemy's firing interval are first guesses, covered by tests, not yet
+  by play. The **M** key has no gamepad default (every pad button is taken).
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the
   old large sections from blocks, but a section of odd length (the old
   3-long engine section) doesn't tile and stays as it was.
+
+## Fixed (2026-10-20, play-test bugs)
+
+- **Tab drawer lost the mouse cursor:** a click beside the open drawer (or
+  the controls, loot or debrief panel) captured the mouse again. Clicks no
+  longer capture while a panel is open, and the cursor stays free.
+- **Armour stuck under a new deck or module:** a plate on a face you later
+  built over stayed in the design (dead mass, impossible to remove). Covered
+  plates now go with the edit (one undo step), designs and saves drop them
+  on load, and the armour palette has **Clear all armour**.
+- **Hatches outlived their room:** deleting a room now deletes its hatches
+  (one undo brings both back).
+- **Engine sound barely audible:** the rumble is fuller (brown noise, a low
+  35–55 Hz hum and crackle), louder and rises a little with the throttle; it
+  follows reverse and side engines too, and the RCS has its own quieter hiss.
 
 ## Fixed (2026-10-20, play-test feedback)
 

@@ -370,3 +370,97 @@ func test_the_quartermaster_and_the_upgrades() -> void:
 	ship.systems.tech = q.tech
 	ship.systems.invalidate()
 	assert_near(ship.systems.effective_config().thrust_forward_n / base, 1.05, 1e-6, "+5 % thrust")
+
+
+## A top-deck cell with its top face open and nothing above it, for a plate
+## that a new block can then cover.
+func _open_top_cell(ed: ShipEditor) -> Vector3i:
+	var top := -(1 << 20)
+	for c: Vector3i in ed.grid.module_at:
+		top = maxi(top, c.y)
+	for c: Vector3i in ed.grid.module_at:
+		if c.y == top and ed.grid.plateable_faces(c).has(&"dorsal") and not ed.grid.is_wedge_cell(c):
+			return c
+	return Vector3i(1 << 20, 0, 0)
+
+
+func test_a_plate_covered_by_a_new_block_goes_with_its_mass() -> void:
+	var ed := ShipEditor.new(_template(), _catalog())
+	var c := _open_top_cell(ed)
+	assert_true(c.x != 1 << 20, "found an open top face")
+	var plain := ShipEditor.new(_template(), _catalog())
+	ed.paint_armor(c.y, Rect2i(c.x, c.z, 1, 1), ShipBlueprint.PLATE_THICK_MM, ShipEditor.PlateFaces.TOP)
+	var key := ShipBlueprint.plate_key(c, &"dorsal")
+	assert_true(ed.blueprint.armor.has(key), "plated %s" % key)
+	ed.place_module(&"hull_block", c + Vector3i.UP, 0)
+	plain.place_module(&"hull_block", c + Vector3i.UP, 0)
+	assert_true(not ed.blueprint.armor.has(key) and not ed.report.has_code(&"armor_buried"), "the covered plate is gone")
+	assert_near(ed.stats.mass_kg, plain.stats.mass_kg, 1e-3, "and so is its mass")
+	assert_true(ed.undo() and ed.blueprint.armor.has(key), "one undo brings back the plate with the block gone")
+
+
+func test_clear_all_armour_and_undo() -> void:
+	var ed := ShipEditor.new(_template(), _catalog())
+	var c := _open_top_cell(ed)
+	ed.paint_armor(c.y, Rect2i(c.x, c.z, 1, 1), ShipBlueprint.PLATE_THIN_MM)
+	var before := ed.blueprint.armor.duplicate()
+	assert_true(not before.is_empty(), "some armour to clear")
+	assert_true(ed.clear_armor() == before.size() and ed.blueprint.armor.is_empty(), "every plate stripped")
+	assert_true(ed.undo() and ed.blueprint.armor == before, "undo puts them all back")
+	assert_true(ed.clear_armor() > 0 and ed.clear_armor() == 0, "nothing left to clear the second time")
+
+
+func test_loading_drops_buried_plates() -> void:
+	var bp := _template()
+	var grid := ShipGrid.build(bp, _catalog())
+	var inner := Vector3i(1 << 20, 0, 0)
+	for c: Vector3i in grid.module_at:
+		if grid.is_hull(c + Vector3i.UP):
+			inner = c
+			break
+	bp.armor[ShipBlueprint.plate_key(inner, &"dorsal")] = 40
+	bp.armor[ShipBlueprint.plate_key(Vector3i(99, 99, 99), &"dorsal")] = 40
+	assert_true(BlueprintFix.prune_plates(bp, grid) == 2, "a covered face and a cell with no hull")
+	var p := PlayerProfile.new(3)
+	p.ensure_vessel(_template())
+	p.vessel.blueprint.armor[ShipBlueprint.plate_key(inner, &"dorsal")] = 40
+	var q := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())), PackedStringArray())
+	assert_true(not q.vessel.blueprint.armor.has(ShipBlueprint.plate_key(inner, &"dorsal")), "pruned when the profile loads")
+
+
+func test_deleting_a_room_takes_its_hatches() -> void:
+	var ed := ShipEditor.new(_template(), _catalog())
+	var room: ShipBlueprint.PlacedRoom
+	var touching: Array[String] = []
+	for r in ed.blueprint.rooms:
+		var cells := ShipGrid.room_cells(r)
+		touching.clear()
+		for h in ed.blueprint.hatches:
+			if cells.has(h.a) or cells.has(h.b):
+				touching.append(h.id)
+		if not touching.is_empty():
+			room = r
+			break
+	assert_true(room != null, "a room with hatches")
+	var hatches_before := ed.blueprint.hatches.size()
+	assert_true(ed.remove(room.id), "room deleted")
+	assert_true(ed.blueprint.hatches.size() == hatches_before - touching.size()
+		and touching.all(func(id: String) -> bool: return ed.blueprint.find(id) == null), "its %d hatches went with it" % touching.size())
+	assert_true(ed.undo() and ed.blueprint.find(room.id) != null
+		and touching.all(func(id: String) -> bool: return ed.blueprint.find(id) != null), "one undo brings back room and hatches")
+
+
+func test_engine_and_rcs_fractions_for_the_sound() -> void:
+	var cfg := ShipConfig.new()
+	cfg.thrust_forward_n = 1000.0
+	cfg.thrust_reverse_n = 100.0
+	cfg.thrust_lateral_n = 100.0
+	cfg.engine_thrust_n = PackedFloat64Array([0, 0, 0, 0, 900, 0])
+	var full_fwd := ShipDynamics.thrust_fractions(cfg, Vector3(0, 0, -1000), Vector3.ZERO)
+	assert_near(full_fwd.x, 1.0, 1e-6, "full main burn")
+	var reverse := ShipDynamics.thrust_fractions(cfg, Vector3(0, 0, 500), Vector3.ZERO)
+	assert_near(reverse.x, 0.5, 1e-6, "reverse engines count as engines")
+	var strafe := ShipDynamics.thrust_fractions(cfg, Vector3(50, 0, 0), Vector3.ZERO)
+	assert_true(strafe.x == 0.0 and absf(strafe.y - 0.5) < 1e-6, "a strafe is RCS (%s)" % strafe)
+	var turn := ShipDynamics.thrust_fractions(cfg, Vector3.ZERO, cfg.max_torque_nm * 0.25)
+	assert_near(turn.y, 0.25, 1e-6, "turning is RCS too")

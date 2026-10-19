@@ -61,6 +61,12 @@ var propellant_kg: float = 0.0
 ## pressure); null for fixed test configs. When set, `config` is its
 ## effective (damage-reduced) config.
 var systems: ShipSystems
+## A missile in flight: what it is, who fired it, what it is after, and
+## how long it has flown (null / "" for ships and craft).
+var missile: MissileConfig
+var missile_owner: StringName = &""
+var missile_target: StringName = &""
+var missile_age: float = 0.0
 
 ## Cannon state (unused when config.cannon is null). Rounds are shared by
 ## every mount; each mount has its own cooldown.

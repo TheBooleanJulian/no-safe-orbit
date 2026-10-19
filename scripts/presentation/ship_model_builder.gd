@@ -150,6 +150,18 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 					"node": _sensor_mast(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))})
 			EquipmentDefinition.Kind.GRAPPLE:
 				_grapple_arm(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))
+			EquipmentDefinition.Kind.MISSILE_LAUNCHER:
+				# A box of tubes standing on the face, the muzzles facing out.
+				var b := _basis_y_along(normal)
+				var dark := _mat(mats, Color(0.12, 0.13, 0.15) * tint)
+				var housing := _box(part, Vector3(2.0, 1.2, 2.0), Vector3.ZERO, mat)
+				housing.transform = Transform3D(b, mount + normal * 0.6)
+				var n := clampi(def.missile_capacity, 1, 4)
+				for k in n:
+					var col := float(k % 2) - 0.5 if n > 1 else 0.0
+					var row := float(k >> 1) - 0.5 if n > 2 else 0.0
+					var tube := _cylinder(part, 0.3, 0.3, 0.08, Vector3.ZERO, dark)
+					tube.transform = Transform3D(b, mount + normal * 1.22 + b.x * col * 0.9 + b.z * row * 0.9)
 			EquipmentDefinition.Kind.CRAFT_MOUNT:
 				# A cradle on the hull; the docked craft sits in it (views hide it
 				# while the craft is out).

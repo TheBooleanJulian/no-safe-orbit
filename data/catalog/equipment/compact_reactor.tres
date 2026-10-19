@@ -17,5 +17,6 @@ heat_kw = 450.0
 heat_rejection_kw = 0.0
 thrust_n = 0.0
 color = Color(1.0, 0.78, 0.35, 1)
+emp_hardening = 0.5
 rarity = 1
 drop_weight = 8.0

@@ -47,6 +47,7 @@ const ACTIONS := [
 	[&"recall_craft", "Recall craft"],
 	[&"cycle_target", "Next target (ship, enemy craft)"],
 	[&"grapple", "Grappling arm: grab / release"],
+	[&"fire_missile", "Launch missile (at the target)"],
 	[&"release_mouse", "Release mouse"],
 	[&"toggle_controls", "Controls panel"],
 ]

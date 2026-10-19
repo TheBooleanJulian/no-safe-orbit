@@ -73,6 +73,14 @@ var _hit_events: Array[HitEvent] = []
 var links: Array[DockingLink] = []
 ## Grappling arms holding on to another ship.
 var grapples: Array[Grapple] = []
+## Missiles in flight (also in the ship table, so rounds and point defence
+## can hit them).
+var missiles: Array[ShipState] = []
+var _next_missile_id := 1
+## Warhead bursts since the last take_bursts(): {ship_id, point_body, radius, kind}.
+var _bursts: Array[Dictionary] = []
+## How far a guided missile leads (zero-effort-miss navigation constant).
+const NAV_GAIN := 3.0
 var boardings: Array[BoardingAction] = []
 ## Air wings (autonomous craft): updated at the start of every tick.
 var wings: Array[AirWing] = []
@@ -116,6 +124,7 @@ func remove_ship(id: StringName) -> void:
 	for g in grapples:
 		if g.attacker_id == id or g.target_id == id:
 			g.release()
+	missiles = missiles.filter(func(x: ShipState) -> bool: return x.id != id)
 	boardings = boardings.filter(func(b: BoardingAction) -> bool: return b.link.attacker_id != id and b.link.target_id != id)
 	_ships.erase(id)
 	_inputs.erase(id)
@@ -128,6 +137,187 @@ func link_for(id: StringName) -> DockingLink:
 		if link.active() and (link.attacker_id == id or link.target_id == id):
 			return link
 	return null
+
+
+## Fire a missile from `shooter_id`'s next ready launcher at `target_id`.
+## "" on success, or why not.
+func launch_missile(shooter_id: StringName, target_id: StringName) -> String:
+	var s := get_ship(shooter_id)
+	var target := get_ship(target_id)
+	if s == null or s.systems == null or not s.is_active():
+		return "no launcher"
+	if target == null or not target.is_active():
+		return "no target"
+	var e := s.systems.ready_launcher()
+	if e == null:
+		for x in s.systems.equipment:
+			if x.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER:
+				return "launchers empty, reloading or offline"
+		return "no missile launcher fitted"
+	var cfg := e.def.missile
+	var normal := Vector3(ShipGrid.FACE_NORMALS.get(s.systems.blueprint.equipment[e.index].face, Vector3i.UP))
+	var out := s.orientation * normal
+	var m := ShipState.create(StringName("%s_msl%d" % [shooter_id, _next_missile_id]), cfg.display_name, cfg.to_ship_config(),
+		s.position + s.orientation * e.body_position + out * 4.0, s.velocity + out * 15.0,
+		Quaternion(Basis.looking_at(out, Vector3.UP if absf(out.y) < 0.95 else Vector3.BACK)))
+	_next_missile_id += 1
+	m.missile = cfg
+	m.missile_owner = shooter_id
+	m.missile_target = target_id
+	add_ship(m)
+	missiles.append(m)
+	s.systems.missiles_used[e.id] = int(s.systems.missiles_used.get(e.id, 0)) + 1
+	s.systems.launcher_cooldown[e.id] = ShipSystems.LAUNCHER_RELOAD_S
+	_link_events.append("%s launched at %s (%s)" % [cfg.display_name, target.display_name, e.id])
+	return ""
+
+
+## Missiles in flight after `id` ([] if none).
+func missiles_at(id: StringName) -> Array[ShipState]:
+	var out: Array[ShipState] = []
+	for m in missiles:
+		if m.missile_target == id and m.is_active():
+			out.append(m)
+	return out
+
+
+## Warhead bursts since the last call.
+func take_bursts() -> Array[Dictionary]:
+	var out := _bursts
+	_bursts = []
+	return out
+
+
+## Guidance: zero-effort-miss proportional navigation within the missile's
+## acceleration, the nose swung at its turn rate; full thrust while it has
+## propellant. A lost target leaves it coasting.
+func _guide_missiles() -> void:
+	for m in missiles:
+		if not m.is_active():
+			continue
+		var input := ShipControlInput.create(Vector3(0, 0, -1), Vector3.ZERO, false)
+		input.hold_translation = false
+		var target := get_ship(m.missile_target)
+		if target == null or not target.is_active() or m.missile_age < 0.3:
+			_inputs[m.id] = input if m.missile_age < 0.3 else ShipControlInput.neutral()
+			continue
+		var r := target.position - m.position
+		var v := target.velocity - m.velocity
+		var closing := maxf(-r.dot(v) / maxf(r.length(), 1.0), 1.0)
+		var t_go := clampf(r.length() / closing, 0.2, 60.0)
+		var zem := r + v * t_go
+		var accel := m.missile.accel_mps2
+		var a_cmd := zem * (NAV_GAIN / (t_go * t_go))
+		if a_cmd.length() > accel:
+			a_cmd = a_cmd.normalized() * accel
+		# Spend what is left on closing in.
+		a_cmd += r.normalized() * sqrt(maxf(accel * accel - a_cmd.length_squared(), 0.0))
+		var want := a_cmd.normalized()
+		var nose := m.orientation * Vector3.FORWARD
+		var turn := minf(nose.angle_to(want), deg_to_rad(m.missile.turn_rate_deg_s) * fixed_dt)
+		var axis := nose.cross(want)
+		if axis.length() > 1e-6 and turn > 0.0:
+			m.orientation = (Quaternion(axis.normalized(), turn) * m.orientation).normalized()
+		m.angular_velocity = Vector3.ZERO
+		_inputs[m.id] = input
+
+
+## Fuses, shoot-downs and self-destruct, after the ships have moved.
+func _step_missiles() -> void:
+	var gone: Array[StringName] = []
+	for m in missiles:
+		m.missile_age += fixed_dt
+		if not m.is_active():
+			_link_events.append("%s shot down" % m.display_name)
+			gone.append(m.id)
+			continue
+		if m.missile_age > m.missile.lifetime_s:
+			_link_events.append("%s self-destructed (out of time)" % m.display_name)
+			gone.append(m.id)
+			continue
+		var target := get_ship(m.missile_target)
+		if target == null or not target.is_active() or m.missile_age < m.missile.arm_s:
+			continue
+		var fuse := _fuse_point(m, target)
+		if fuse.is_finite():
+			m.position = fuse
+			_detonate(m, target)
+			gone.append(m.id)
+	for id in gone:
+		missiles = missiles.filter(func(x: ShipState) -> bool: return x.id != id)
+		remove_ship(id)
+
+
+## Where the missile first came within its fuse radius of `target` this
+## tick, swept along its path relative to the target (a fast missile moves
+## further than the fuse radius in a tick), or Vector3.INF if it didn't.
+func _fuse_point(m: ShipState, target: ShipState) -> Vector3:
+	var start := target.position + (m.prev_position - target.prev_position)
+	var steps := clampi(ceili(start.distance_to(m.position) / maxf(m.missile.fuse_radius_m * 0.5, 0.5)), 1, 200)
+	for k in steps + 1:
+		var p := start.lerp(m.position, float(k) / steps)
+		if Grapple.gap_to(target, p) <= m.missile.fuse_radius_m:
+			return p
+	return Vector3.INF
+
+
+func _detonate(m: ShipState, target: ShipState) -> void:
+	var cfg := m.missile
+	var inv := target.orientation.inverse()
+	match cfg.warhead:
+		MissileConfig.Warhead.ANTI_SHIP:
+			var rel_v := m.velocity - target.velocity
+			var dir := rel_v.normalized() if rel_v.length() > 1.0 else (target.position - m.position).normalized()
+			if target.systems == null:
+				target.status = ShipState.Status.DESTROYED
+				target.status_time = sim_time
+				_link_events.append("%s destroyed %s" % [cfg.display_name, target.display_name])
+				return
+			# The penetrator follows the line of flight into the hull.
+			var a := inv * (m.position - dir * 20.0 - target.position)
+			var b := inv * (m.position + dir * 60.0 - target.position)
+			var t := Penetration.first_hull_entry(target.systems, a, b)
+			var point_body := a.lerp(b, t) if t >= 0.0 else inv * (m.position - target.position)
+			var ev := HitEvent.new()
+			ev.tick = tick
+			ev.shooter_id = m.missile_owner
+			ev.target_id = target.id
+			ev.point_body = point_body
+			ev.relative_speed = rel_v.length()
+			ev.energy_j = 0.5 * m.mass_kg() * rel_v.length_squared()
+			ev.report = Penetration.apply(target.systems, point_body, inv * dir, cfg.penetration_mm)
+			_apply_damage(target, ev.report)
+			target.systems.blast_at(point_body, cfg.blast_radius_m, 0.6, 45.0, "%s hit — warhead detonated" % cfg.display_name)
+			_apply_impulse(target, point_body, rel_v * m.mass_kg())
+			target.config = target.systems.effective_config()
+			_hit_events.append(ev)
+			target.hits_taken += 1
+			_bursts.append({"ship_id": target.id, "point_body": point_body, "radius": cfg.blast_radius_m, "kind": cfg.warhead})
+			_link_events.append("%s hit %s" % [cfg.display_name, target.display_name])
+		_:
+			var reach := cfg.effect_radius_m * (3.0 if cfg.warhead == MissileConfig.Warhead.EMP else 4.0)
+			for id in _ship_order:
+				var s: ShipState = _ships[id]
+				if s == m or not s.is_active():
+					continue
+				var d := s.position.distance_to(m.position)
+				if d > reach:
+					continue
+				var exposure := pow(cfg.effect_radius_m / maxf(d, 20.0), 2.0)
+				if s.systems == null:
+					# Craft and missiles: fried or burned out close in.
+					if exposure > 1.0:
+						s.status = ShipState.Status.DESTROYED
+						s.status_time = sim_time
+					continue
+				var lines := s.systems.emp(exposure) if cfg.warhead == MissileConfig.Warhead.EMP \
+					else s.systems.nuclear(exposure, s.orientation.inverse() * (m.position - s.position))
+				s.config = s.systems.effective_config()
+				if not lines.is_empty():
+					_link_events.append("%s: %s" % [s.display_name, "; ".join(lines)])
+			_bursts.append({"ship_id": target.id, "point_body": inv * (m.position - target.position),
+				"radius": cfg.effect_radius_m * (0.15 if cfg.warhead == MissileConfig.Warhead.NUCLEAR else 0.5), "kind": cfg.warhead})
+			_link_events.append("%s detonated %.0f m from %s" % [cfg.display_name, Grapple.gap_to(target, m.position), target.display_name])
 
 
 ## The arm `id` is holding with (or is held by), or null.
@@ -241,6 +431,7 @@ func step() -> void:
 	var spawned: Array[ProjectileState] = []
 	for wing in wings:
 		wing.update(self, fixed_dt)
+	_guide_missiles()
 	for id in _ship_order:
 		var ship: ShipState = _ships[id]
 		ship.snapshot_previous()
@@ -257,6 +448,7 @@ func step() -> void:
 		_update_point_defence(ship, spawned)
 		if ship.systems != null and ship.systems.tick(ship, fixed_dt):
 			ship.config = ship.systems.effective_config()
+	_step_missiles()
 	_step_collisions()
 	_step_links()
 	tick += 1
@@ -401,7 +593,8 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		var best: ShipState
 		for id in _ship_order:
 			var other: ShipState = _ships[id]
-			if other == ship or not other.is_active() or other.systems != null or other.config.hull_hp <= 0.0 or _is_craft_of(id, ship.id):
+			if other == ship or not other.is_active() or other.systems != null or other.config.hull_hp <= 0.0 or _is_craft_of(id, ship.id) \
+					or other.missile_owner == ship.id or _is_craft_of(other.missile_owner, ship.id):
 				continue
 			if other.position.distance_to(muzzle_world) < PD_RANGE_M and (best == null or other.position.distance_squared_to(muzzle_world) < best.position.distance_squared_to(muzzle_world)):
 				best = other
@@ -531,7 +724,7 @@ func _step_collisions() -> void:
 			continue
 		for j in range(i + 1, _ship_order.size()):
 			var b: ShipState = _ships[_ship_order[j]]
-			if not b.is_active() or a.systems == null and b.systems == null:
+			if not b.is_active() or a.systems == null and b.systems == null or a.missile != null or b.missile != null:
 				continue
 			if _is_craft_of(a.id, b.id) or _is_craft_of(b.id, a.id) or _linked(a.id, b.id):
 				continue
@@ -795,6 +988,8 @@ func _resolve_round_hits(shot: ProjectileState) -> bool:
 		if id == shot.shooter_id and shot.age_s < ARM_TIME_S:
 			continue  # leaving its own muzzle
 		var ship: ShipState = _ships[id]
+		if ship.missile_owner == shot.shooter_id:
+			continue  # its own side's missile
 		if not ship.is_active():
 			continue
 		var t := HitTest.round_vs_ship(shot.prev_position, shot.position, ship)

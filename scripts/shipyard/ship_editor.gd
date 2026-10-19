@@ -106,6 +106,16 @@ func paint_armor(deck: int, rect: Rect2i, mm: int, faces: PlateFaces = PlateFace
 	return changes.size()
 
 
+## Strip every armour plate off the design. Returns how many went.
+func clear_armor() -> int:
+	var n := blueprint.armor.size()
+	if n > 0:
+		_checkpoint()
+		blueprint.armor.clear()
+		_refresh()
+	return n
+
+
 ## Lay (or with `on` false, remove) power conduit in the hull cells of
 ## `rect` (x, z) on `deck`. Returns how many cells changed.
 func paint_bus(deck: int, rect: Rect2i, on: bool) -> int:
@@ -278,10 +288,19 @@ func toggle_hatch(a: Vector3i, b: Vector3i) -> bool:
 	return true
 
 
+## Removes a part. A room takes its hatches with it (same undo step).
 func remove(id: String) -> bool:
-	if blueprint.find(id) == null:
+	var item: Variant = blueprint.find(id)
+	if item == null:
 		return false
 	_checkpoint()
+	if item is ShipBlueprint.PlacedRoom:
+		var cells := {}
+		for c in ShipGrid.room_cells(item):
+			cells[c] = true
+		for h in blueprint.hatches.duplicate():
+			if cells.has(h.a) or cells.has(h.b):
+				blueprint.remove(h.id)
 	blueprint.remove(id)
 	_refresh()
 	return true
@@ -605,6 +624,8 @@ func _restore(d: Dictionary) -> void:
 
 func _refresh() -> void:
 	grid = ShipGrid.build(blueprint, catalog)
+	# Plates a new deck or module covered go with that edit (same undo step).
+	BlueprintFix.prune_plates(blueprint, grid)
 	stats = ShipStats.compute(blueprint, grid)
 	report = _validate(blueprint, grid, stats)
 	revision += 1

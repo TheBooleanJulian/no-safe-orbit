@@ -150,4 +150,17 @@ func test_shipboard_sounds_are_synthesised() -> void:
 	for i in range(0, wav.data.size(), 2):
 		loud = maxi(loud, absi(wav.data.decode_s16(i)))
 	assert_true(loud > 5000, "and it is not silent (peak %d)" % loud)
+	# The engines' rumble and the RCS hiss: looping and well above a whisper.
+	for p in [audio._engine, audio._rcs]:
+		var loop: AudioStreamWAV = (p as AudioStreamPlayer).stream
+		assert_true(loop.loop_mode == AudioStreamWAV.LOOP_FORWARD, "the %s loops" % ("rumble" if p == audio._engine else "hiss"))
+	var rumble: AudioStreamWAV = audio._engine.stream
+	var peak := 0
+	for i in range(0, rumble.data.size(), 2):
+		peak = maxi(peak, absi(rumble.data.decode_s16(i)))
+	assert_true(peak > 12000, "the rumble is full, not near-silent (peak %d)" % peak)
+	audio.set_engine(1.0)
+	assert_true(audio._engine.volume_db >= ShipAudio.ENGINE_DB.y - 0.01 and audio._engine.pitch_scale > 1.0, "full burn: loud, a touch higher")
+	audio.set_rcs(0.5)
+	assert_true(audio._rcs.volume_db > -80.0 and audio._rcs.volume_db < audio._engine.volume_db, "the hiss is quieter than the engines")
 	audio.free()
