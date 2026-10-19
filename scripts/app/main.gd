@@ -95,6 +95,12 @@ var track := SensorTrack.new()
 var enemy_track := SensorTrack.new()
 var _target_arriving := false
 var _craft_views: Dictionary = {}  # craft id -> CraftView
+var _missile_views: Dictionary = {}  # missile id -> MissileView
+## An engaging enemy with a launcher fires when it holds a lock within this
+## range (m), at most once per interval (s).
+const ENEMY_MISSILE_RANGE_M := 12_000.0
+const ENEMY_MISSILE_INTERVAL_S := 25.0
+var _enemy_missile_at := 0.0
 var _wing_log_seen := {}  # AirWing -> log_count already shown
 
 
@@ -130,6 +136,9 @@ func _start_scenario() -> void:
 	for view in _craft_views.values():
 		(view as Node).queue_free()
 	_craft_views.clear()
+	for view in _missile_views.values():
+		(view as Node).queue_free()
+	_missile_views.clear()
 	hud.reset()
 	hit_flashes.clear()
 
@@ -199,6 +208,7 @@ func _spawn_target(arriving: bool = false) -> void:
 	target.angular_velocity = Vector3.ZERO if arriving else Vector3(0.0, 0.03, 0.01)
 	_target_arriving = arriving
 	_prize_taken = false
+	_enemy_missile_at = world.sim_time + ENEMY_MISSILE_INTERVAL_S * 0.5
 	track = SensorTrack.new()
 	enemy_track = SensorTrack.new()
 	target.attach_systems(_new_systems(TARGET_ID))
@@ -298,6 +308,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	elif event.is_action_pressed("grapple"):
 		toggle_grapple()
+		return
+	elif event.is_action_pressed("fire_missile"):
+		fire_missile()
 		return
 	elif event.is_action_pressed("cycle_target"):
 		cycle_target()
@@ -515,7 +528,8 @@ func close_sortie() -> void:
 		GameLog.info("main", "Vessel %s — the hold is gone; the station rebuilds the same design" % ("captured" if player_captured() else "lost"))
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
 		var after := player.systems.condition()
-		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds}
+		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds,
+			"missiles": player.systems.missile_count()}
 		lines.append_array(p.dock(after, catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	for line in lines:
@@ -843,6 +857,45 @@ func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
 			_craft_views.erase(id)
 
 
+func _sync_missile_views(alpha: float, render_origin: Vector3) -> void:
+	var alive := {}
+	for m in world.missiles:
+		if not m.is_active():
+			continue
+		alive[m.id] = true
+		var view: MissileView = _missile_views.get(m.id)
+		if view == null:
+			view = MissileView.new()
+			view.hostile = m.missile_owner != PLAYER_ID and player_wing.by_id(m.missile_owner) == null
+			add_child(view)
+			_missile_views[m.id] = view
+		view.sync_from(m, alpha, render_origin)
+	for id in _missile_views.keys():
+		if not alive.has(id):
+			(_missile_views[id] as Node).queue_free()
+			_missile_views.erase(id)
+
+
+## A warhead going off. The anti-ship blast already shows as an explosion
+## on the struck ship (ShipSystems.blast_at); EMP is a blue ring; a nuclear
+## burst is a fireball and a white flash.
+func _show_burst(burst: Dictionary, player: ShipState) -> void:
+	var ship := world.get_ship(burst.ship_id)
+	var dist := ship.position.distance_to(player.position) if ship != null else 0.0
+	var near := clampf(1.0 - dist / 3000.0, 0.0, 1.0)
+	match int(burst.kind):
+		MissileConfig.Warhead.EMP:
+			hit_flashes.add_burst(burst.ship_id, burst.point_body, burst.radius, Color(0.45, 0.7, 1.0, 0.9))
+			audio.play("detonation", lerpf(-18.0, -6.0, near))
+		MissileConfig.Warhead.NUCLEAR:
+			hit_flashes.add_explosion(burst.ship_id, burst.point_body, burst.radius)
+			hud.flash_white()
+			audio.play("detonation", lerpf(-10.0, 0.0, near))
+			camera.shake(3.0 * near)
+		_:
+			audio.play("detonation", lerpf(-16.0, -4.0, near))
+
+
 ## Docking camera out of our collar while a target is in boarding range and
 ## no gangway is sealed yet.
 func _update_docking_cam(player: ShipState, target: ShipState, alpha: float, render_origin: Vector3) -> void:
@@ -868,6 +921,29 @@ func cycle_target() -> void:
 	var i := ids.find(hud.selected_id)
 	hud.selected_id = ids[(i + 1) % ids.size()]
 	hud.notice("TARGET: %s" % (world.get_ship(TARGET_ID).display_name if hud.selected_id == &"" else String(world.get_ship(hud.selected_id).display_name)), world.sim_time)
+
+
+## M: a missile from the next ready launcher at the craft picked with U, or
+## else the target ship — which needs a sensor lock (a craft: within sensor
+## range). Returns "" when one is away, or why not (also a HUD notice).
+func fire_missile() -> String:
+	var player := world.get_ship(PLAYER_ID)
+	var at := hud.selected_id if hud.selected_id != &"" and world.has_ship(hud.selected_id) else TARGET_ID
+	var why := ""
+	if at == TARGET_ID and not track.locked:
+		why = "no sensor lock on %s" % world.get_ship(TARGET_ID).display_name
+	elif at != TARGET_ID and player.systems != null \
+			and world.get_ship(at).position.distance_to(player.position) > player.systems.sensor_range_m():
+		why = "that craft is outside sensor range"
+	else:
+		why = world.launch_missile(PLAYER_ID, at)
+	if why != "":
+		hud.notice("MISSILE: " + why, world.sim_time)
+		return why
+	audio.play("launch")
+	if at == TARGET_ID and not target_hostile:
+		set_target_hostile(true, "missile launched at it")
+	return ""
 
 
 ## Y: grab the target with the grappling arm, or let go.
@@ -1002,6 +1078,11 @@ func _process(delta: float) -> void:
 			_target_arriving = false
 	elif engaging:
 		world.set_input(TARGET_ID, GunneryAI.combat(target, player, world.sim_time))
+		if enemy_track.locked and world.sim_time >= _enemy_missile_at and not target.systems.is_disabled() \
+				and target.position.distance_to(player.position) < ENEMY_MISSILE_RANGE_M:
+			_enemy_missile_at = world.sim_time + ENEMY_MISSILE_INTERVAL_S
+			if world.launch_missile(TARGET_ID, PLAYER_ID) == "":
+				_last_enemy_fire = world.sim_time
 		if get_profile().missions_completed + 1 >= ENEMY_WING_FROM_MISSION and not target.systems.is_disabled():
 			for c in target_wing.crafts:
 				if c.status == AirWing.Status.DOCKED and not c.is_drone() and c.service_left_s <= 0.0 and c.hull_fraction > 0.0:
@@ -1022,8 +1103,9 @@ func _process(delta: float) -> void:
 		elif line.begins_with("COLLISION"):
 			audio.play("hit", 4.0)
 		hud.notice(line, world.sim_time)
-		GameLog.info("boarding", line)
-		combat_log.record(world.sim_time, "boarding", line)
+		var about := "missile" if line.contains("issile") or line.contains("EMP") or line.contains("Nuclear") else "boarding"
+		GameLog.info(about, line)
+		combat_log.record(world.sim_time, about, line)
 	var hits := world.take_hit_events()
 	for ev in hits:
 		combat_log.note_hit(ev, PLAYER_ID, world.sim_time, world)
@@ -1047,6 +1129,8 @@ func _process(delta: float) -> void:
 			combat_log.record(world.sim_time, "explosion", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
 			hud.notice("%s: %s" % [world.get_ship(id).display_name, blast.lines[0]], world.sim_time)
 			GameLog.info("main", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
+	for burst in world.take_bursts():
+		_show_burst(burst, player)
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
 	for wing in [player_wing, target_wing]:
 		var seen: int = _wing_log_seen.get(wing, 0)
@@ -1070,6 +1154,7 @@ func _process(delta: float) -> void:
 
 	var render_origin := player.interpolated_position(alpha)
 	_sync_craft_views(alpha, render_origin)
+	_sync_missile_views(alpha, render_origin)
 	for id: StringName in _views:
 		var ship := world.get_ship(id)
 		var view: ShipView = _views[id]

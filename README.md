@@ -48,6 +48,7 @@ godot --path .
 | Zoom for gunnery (toggle; centres on the aim, the mouse turns the view; wheel = magnification) | Shift | right stick click |
 | Next target for the lead marker (the ship, then each hostile craft) | U | — |
 | Grappling arm: grab / release | Y | — |
+| Launch missile (at the U target; the ship needs a sensor lock) | M | — |
 | Orbit details / details & combat log / help panels | O / P / H | — (use Tab) |
 | Target hostile on/off | T | B |
 | Drop a salvage beacon on a disabled target / close the loot window | G | D-pad up |
@@ -99,8 +100,41 @@ fire, the aim below its face, offline, or locked). Put the cursor on the gold
 the rate of fire and with extra spread. With a gangway attached, both
 ships' primary weapons are locked; craft still fight.
 
-**Point defence:** PD turrets engage hostile craft within 2 km on their own
-(their own rounds, gangway or not) and never your own craft.
+**Point defence:** PD turrets engage hostile craft and missiles within 2 km
+on their own (their own rounds, gangway or not) and never your own.
+
+**Missiles (M):** launchers (Weapons palette; external, any face but aft)
+fire guided missiles at the target picked with U — the enemy ship needs a
+sensor lock, a craft must be in sensor range. A missile flies proportional
+navigation within its acceleration and turn rate, so it follows a jinking
+target; it arms after 1.5 s, has a proximity fuse and self-destructs after
+150 s. Rounds and point defence shoot missiles down — that, and staying out
+of reach, is the counterplay. The weapon strip shows `MSL anti-ship 4 · EMP 2
+[M]`; an inbound missile raises **MISSILE INBOUND x.x s**. Launchers reload
+in 4 s; the yard restocks spent missiles at launch for credits.
+
+| Launcher | Rarity | Missiles | Warhead | Restock |
+|---|---|---|---|---|
+| Missile rack | uncommon | 4 | anti-ship: 160 mm penetrator along its flight, then an 8 m blast inside | 60 cr |
+| EMP missile launcher | rare | 2 | EMP: resets unhardened electronics, no damage | 180 cr |
+| Nuclear missile launcher | legendary | 1 | radiation, heat and EMP; no blast wave in vacuum | 2500 cr |
+
+**EMP and hardening:** an EMP resets electronics — reactors, guns, point
+defence, sensors, power distribution, collars, racks, arms and launchers —
+for up to 20 s at full strength (90 s at most, falling with the square of
+the distance); internal systems see half, engines, tanks and radiators
+nothing. Each comes back on its own (the **EMP RESET** caution lists them).
+Hardened parts shrug off most of it: the **hardened sensor mast** and
+**hardened power distribution unit** (uncommon, heavier) by 85 %, reactors
+by 50 %.
+
+**Nuclear:** the crew's dose is the exposure divided by the armour facing
+the burst (1 + mm / 60): sickness from 0.4, deaths from 1.5. The hull heats
+up (up to +400 K), close in the facing hull is ablated, and an EMP comes on
+top. It imparts no momentum.
+
+From mission 4 enemies carry a missile rack and fire when they hold a lock
+inside 12 km, every ~25 s; from mission 6 some carry an EMP launcher too.
 
 **Sound:** what you hear is your own ship through the hull — guns, the
 engines' rumble (every main engine, reverse and side ones too, deeper and

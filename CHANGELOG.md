@@ -4,6 +4,31 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 7 — EMP and advanced weapons (2026-10-20)
+
+#### Added
+- Guided missiles: launchers (missile rack, EMP launcher, nuclear launcher;
+  uncommon / rare / legendary), fired with **M** at the U target. Missiles
+  are small ships in the simulation: proportional-navigation guidance,
+  arming, a swept proximity fuse, self-destruct; rounds and point defence
+  shoot them down.
+- Warheads: anti-ship (penetrator plus blast), EMP (resets unhardened
+  electronics, which recover on their own), nuclear (radiation dose behind
+  the facing armour, heat, ablation close in, EMP; no momentum).
+- EMP hardening: hardened sensor mast and power distribution unit; reactors
+  half-hardened.
+- HUD: `MSL` weapon-strip entry, MISSILE INBOUND danger alert, EMP RESET
+  caution, MSL markers; missile views with exhaust, blue EMP ring, white
+  nuclear flash; launch and detonation sounds.
+- Enemies carry a missile rack from mission 4 (EMP launcher sometimes from
+  mission 6) and fire it with a lock inside 12 km.
+- Spent missiles persist in the vessel's condition and are restocked at the
+  yard for credits (shown in the hangar's resupply line).
+
+#### Changed
+- Enemy gun upgrade: the heavy kinetic cannon (the template already carries
+  autocannons).
+
 ### Play-test bug fixes (2026-10-20)
 
 #### Fixed

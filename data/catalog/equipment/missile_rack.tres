@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+[ext_resource type="Resource" path="res://data/missiles/anti_ship_missile.tres" id="2_msl"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"missile_rack"
+display_name = "Missile rack"
+kind = 12
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"fore", &"port", &"starboard", &"dorsal", &"ventral"])
+missile = ExtResource("2_msl")
+missile_capacity = 4
+mass_kg = 2400.0
+power_kw = -20.0
+heat_kw = 5.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+hit_points = 18.0
+shield_mm = 8.0
+color = Color(0.95, 0.55, 0.35, 1)
+rarity = 1
+drop_weight = 8.0

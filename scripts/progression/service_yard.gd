@@ -40,6 +40,7 @@ const CATEGORY := {
 	EquipmentDefinition.Kind.DOCKING_COLLAR: &"hull",
 	EquipmentDefinition.Kind.GRAPPLE: &"hull",
 	EquipmentDefinition.Kind.CRAFT_MOUNT: &"combat",
+	EquipmentDefinition.Kind.MISSILE_LAUNCHER: &"combat",
 }
 
 
@@ -81,14 +82,32 @@ const ROUNDS_PER_CREDIT := 10
 ## Propellant (kg) and rounds the vessel used last sortie, and what topping
 ## them up costs: {propellant_kg, rounds, credits}.
 static func resupply_needs(vessel: ShipInstance, catalog: ConstructionCatalog) -> Dictionary:
+	var missiles := missile_needs(vessel, catalog)
 	var stores: Dictionary = vessel.condition.get("stores", {})
 	if stores.is_empty():
-		return {"propellant_kg": 0.0, "rounds": 0, "credits": 0}
+		return {"propellant_kg": 0.0, "rounds": 0, "missiles": missiles.count, "missile_credits": missiles.credits,
+			"credits": missiles.credits}
 	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
 	var prop := maxf(stats.propellant_capacity_kg - float(stores.get("propellant_kg", stats.propellant_capacity_kg)), 0.0)
 	var rounds := maxi(stats.rounds_capacity - int(stores.get("rounds", stats.rounds_capacity)), 0)
-	return {"propellant_kg": prop, "rounds": rounds,
-		"credits": ceili(prop / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds) / ROUNDS_PER_CREDIT - 1e-9)}
+	return {"propellant_kg": prop, "rounds": rounds, "missiles": missiles.count, "missile_credits": missiles.credits,
+		"credits": ceili(prop / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds) / ROUNDS_PER_CREDIT - 1e-9) + missiles.credits}
+
+
+## Missiles fired since the last restock: {count, credits, by_launcher
+## (equipment id -> [fired, unit credits])}.
+static func missile_needs(vessel: ShipInstance, catalog: ConstructionCatalog) -> Dictionary:
+	var fired: Dictionary = vessel.condition.get("missiles_used", {})
+	var out := {"count": 0, "credits": 0, "by_launcher": {}}
+	for e in vessel.blueprint.equipment:
+		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
+		if def == null or def.missile == null or int(fired.get(e.id, 0)) <= 0:
+			continue
+		var n := mini(int(fired[e.id]), def.missile_capacity)
+		out.by_launcher[e.id] = [n, def.missile.unit_credits]
+		out.count += n
+		out.credits += n * def.missile.unit_credits
+	return out
 
 
 ## Top up propellant (first) and rounds with what the credits allow. Returns
@@ -97,24 +116,41 @@ static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: Cons
 	var need := resupply_needs(vessel, catalog)
 	if need.credits == 0:
 		vessel.condition.erase("stores")
+		vessel.condition.erase("missiles_used")
 		return ""
-	var stores: Dictionary = vessel.condition.stores
 	if profile.credits >= int(need.credits):
 		profile.credits -= int(need.credits)
 		vessel.condition.erase("stores")
-		var line := "Resupplied %.1f t propellant and %d rounds for %d credits" % [need.propellant_kg / 1000.0, need.rounds, need.credits]
+		vessel.condition.erase("missiles_used")
+		var line := "Resupplied %.1f t propellant and %d rounds%s for %d credits" % [need.propellant_kg / 1000.0, need.rounds,
+			" and %d missile%s" % [need.missiles, "" if need.missiles == 1 else "s"] if need.missiles > 0 else "", need.credits]
 		vessel.record(line)
 		return line
-	# Short of credits: as much propellant, then as many rounds, as they buy.
+	# Short of credits: as much propellant, then as many rounds, then as many
+	# missiles, as they buy.
 	var budget := float(profile.credits)
 	var kg := minf(float(need.propellant_kg), budget / PROPELLANT_CREDITS_PER_T * 1000.0)
 	budget -= ceilf(kg / 1000.0 * PROPELLANT_CREDITS_PER_T)
 	var rounds := mini(int(need.rounds), int(maxf(budget, 0.0)) * ROUNDS_PER_CREDIT)
 	budget -= ceilf(float(rounds) / ROUNDS_PER_CREDIT)
+	var stocked := 0
+	var fired: Dictionary = vessel.condition.get("missiles_used", {})
+	var by: Dictionary = missile_needs(vessel, catalog).by_launcher
+	for id: String in by:
+		while int(fired.get(id, 0)) > 0 and budget >= float(by[id][1]):
+			budget -= float(by[id][1])
+			fired[id] = int(fired[id]) - 1
+			stocked += 1
+		if int(fired.get(id, 0)) <= 0:
+			fired.erase(id)
+	if fired.is_empty():
+		vessel.condition.erase("missiles_used")
 	profile.credits = maxi(int(budget), 0)
-	stores["propellant_kg"] = float(stores.get("propellant_kg", 0.0)) + kg
-	stores["rounds"] = int(stores.get("rounds", 0)) + rounds
-	var line := "Partly resupplied (credits short): %.1f t propellant, %d rounds" % [kg / 1000.0, rounds]
+	if vessel.condition.has("stores"):
+		var stores: Dictionary = vessel.condition.stores
+		stores["propellant_kg"] = float(stores.get("propellant_kg", 0.0)) + kg
+		stores["rounds"] = int(stores.get("rounds", 0)) + rounds
+	var line := "Partly resupplied (credits short): %.1f t propellant, %d rounds, %d missiles" % [kg / 1000.0, rounds, stocked]
 	vessel.record(line)
 	return line
 

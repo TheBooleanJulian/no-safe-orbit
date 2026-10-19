@@ -29,7 +29,14 @@ enum Kind {
 	## Grappling arm: grabs a ship alongside, steadies it, lines up a collar
 	## and siphons a hulk's propellant and rounds (Grapple).
 	GRAPPLE,
+	## Missile launcher: `missile_capacity` of its `missile` (M fires).
+	MISSILE_LAUNCHER,
 }
+
+## Kinds with control electronics an EMP can reset (engines, tanks and
+## radiators are mechanical).
+const ELECTRONIC := [Kind.REACTOR, Kind.CANNON, Kind.DOCKING_COLLAR, Kind.CRAFT_MOUNT, Kind.SENSOR,
+	Kind.POWER_DISTRIBUTION, Kind.POINT_DEFENCE, Kind.GRAPPLE, Kind.MISSILE_LAUNCHER]
 
 enum Mount { INTERNAL, EXTERNAL }
 
@@ -46,6 +53,12 @@ enum Mount { INTERNAL, EXTERNAL }
 ## External only: cells it spans along the hull from its cell — aft, or
 ## across the ship (or up a flank) when turned with R.
 @export var length_cells: int = 1
+## Missile launchers: the missile and how many the launcher holds.
+@export var missile: MissileConfig
+@export var missile_capacity: int = 0
+## EMP hardening (0 = exposed electronics, 1 = immune): shielded and
+## filtered control electronics cost mass.
+@export var emp_hardening: float = 0.0
 ## Superseded: still loads and flies, no longer offered or dropped.
 @export var legacy: bool = false
 @export var mass_kg: float = 1000.0
@@ -79,6 +92,7 @@ const DAMAGE_DEFAULTS := {
 	Kind.SENSOR: [12.0, 4.0],
 	Kind.POWER_DISTRIBUTION: [15.0, 6.0],
 	Kind.POINT_DEFENCE: [12.0, 5.0],
+	Kind.MISSILE_LAUNCHER: [18.0, 8.0],
 }
 
 
@@ -122,6 +136,8 @@ func validate() -> PackedStringArray:
 		problems.append("%s: craft mounts need a craft ShipConfig" % id)
 	if (kind == Kind.CANNON or kind == Kind.POINT_DEFENCE) and cannon == null:
 		problems.append("%s: gun equipment needs a KineticCannonConfig" % id)
+	if kind == Kind.MISSILE_LAUNCHER and (missile == null or missile_capacity <= 0):
+		problems.append("%s: launchers need a MissileConfig and a capacity" % id)
 	if (kind == Kind.MAIN_ENGINE or kind == Kind.RCS) and isp_s <= 0.0:
 		problems.append("%s: thrusters need a positive isp_s" % id)
 	if kind == Kind.PROPELLANT_TANK and propellant_capacity_kg <= 0.0:

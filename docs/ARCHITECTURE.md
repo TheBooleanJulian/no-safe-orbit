@@ -376,6 +376,31 @@ bounding-box hit test.
   being common to saves whose designs use them (`grant_used`).
   `Main.get_profile` honours `-- --profile=PATH` (the checks' throwaway).
 
+## Missiles and EMP (Milestone 7)
+
+- **Launchers** (`EquipmentDefinition.Kind.MISSILE_LAUNCHER`, appended so
+  older `.tres` kind numbers hold) carry `missile_capacity` of a
+  `MissileConfig` (`data/missiles/`). `ShipSystems.missiles_used` (in the
+  vessel condition) and `launcher_cooldown` (4 s) track stock and reload.
+- **Missiles are `ShipState`s** in the world's ship table
+  (`WorldSimulation.missiles`, `ShipState.missile*`), flown by
+  `_guide_missiles()`: zero-effort-miss proportional navigation (gain 3)
+  within the missile's acceleration, the nose swung at its turn rate,
+  spare acceleration spent closing. `_step_missiles()` runs after the ship
+  loop: arming, a fuse swept along the tick's relative path, shoot-downs
+  (rounds and point defence treat them like craft, never their own side's),
+  self-destruct. Missiles skip collisions.
+- **Warheads** (`_detonate`): anti-ship = `Penetration.apply` along the
+  line of flight plus `ShipSystems.blast_at`; EMP and nuclear = exposure
+  (effect radius / distance)² on every ship in reach → `ShipSystems.emp()` /
+  `nuclear()`. `take_bursts()` feeds the views.
+- **EMP**: reset = 20 s × exposure × (1 − hardening) × (½ if internal), ≤ 90
+  s, ignored under 2 s; only `EquipmentDefinition.ELECTRONIC` kinds;
+  `EquipmentState.disrupted_s` makes `working()` false until it runs out.
+- **Nuclear**: dose = exposure ÷ (1 + facing armour / 60 mm); wounds above
+  0.4, deaths above 1.5 (rising chance, seeded); +120 K × dose (≤ 400 K);
+  facing hull ablated above exposure 3; then an EMP at 1.5 × exposure.
+
 ## Autonomous craft (Milestone 6)
 
 - **Craft** are `ShipState`s with their own `ShipConfig` (`data/craft/`):
@@ -504,6 +529,10 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Wrecked modules stay attached; no debris | Ships never break apart | Later (structural detachment) |
 | One power junction per module; no batteries, breakers or cabling; fixed shedding order | Redundancy comes from reactors and module layout only | M4/M5 (repairs, rerouting) |
 | One thermal mass per ship; radiators can't retract | An idle ship settles at ~258 K; heat can't be stored locally | When heat sinks / radiator control arrive |
+| Missiles are small `ShipState`s with a hit box and hull points; guidance turns the nose directly at its turn rate (no airframe or torque model) | They fly and die like craft; their path is predictable | If missile manoeuvre detail matters |
+| No decoys, chaff or electronic warfare against missiles | Point defence, guns and range are the only counterplay | EW pass |
+| Nuclear effects simplified: one dose number, armour as a divisor, ship-wide heat, no blast wave, no fallout or lasting radiation | A burst is a sharp, explainable event | If a strategic weapon needs more depth |
+| EMP exposure falls with the square of the distance; no line-of-sight shielding by other ships | A ship cannot hide behind another | Later |
 
 ## Testing
 

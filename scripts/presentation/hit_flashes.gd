@@ -28,19 +28,31 @@ func explosion_count() -> int:
 	return _explosions.size()
 
 
-func _add(ship_id: StringName, point_body: Vector3, radius: float, grow: float, life: float, color: Color, light: bool) -> void:
+## A ring of light expanding to `radius` (an EMP burst), riding on a ship.
+func add_burst(ship_id: StringName, point_body: Vector3, radius: float, color: Color) -> void:
+	var ring := TorusMesh.new()
+	ring.inner_radius = radius * 0.085
+	ring.outer_radius = radius * 0.1
+	ring.rings = 48
+	_add(ship_id, point_body, radius * 0.1, 10.0, 1.2, color, true, ring)
+
+
+func _add(ship_id: StringName, point_body: Vector3, radius: float, grow: float, life: float, color: Color, light: bool,
+		mesh: Mesh = null) -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.albedo_color = color
-	var sphere := SphereMesh.new()
-	sphere.radius = radius
-	sphere.height = radius * 2.0
-	sphere.radial_segments = 16
-	sphere.rings = 8
+	if mesh == null:
+		var sphere := SphereMesh.new()
+		sphere.radius = radius
+		sphere.height = radius * 2.0
+		sphere.radial_segments = 16
+		sphere.rings = 8
+		mesh = sphere
 	var node := MeshInstance3D.new()
-	node.mesh = sphere
+	node.mesh = mesh
 	node.material_override = mat
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(node)

@@ -58,6 +58,9 @@ var top_alert_level: String = ""
 ## {blocked}; {} when not charging.
 var jump_state: Dictionary = {}
 var _jump_flash: ColorRect
+## A nuclear burst whitens the view (flash_white): when it started (ms).
+var _white_flash_ms := -1
+const WHITE_FLASH_S := 1.4
 ## Big pulsing line in the middle of the screen: the worst danger alert, or
 ## (with none) that the crew can patch damage now with [C].
 var attention_label: Label
@@ -222,6 +225,7 @@ const HELP_TEXT := """FLIGHT     W/S pitch · A/D yaw · Q/E roll · R/F main en
 ASSIST     Z on/off · X cycles: hold orbit → match target → target markers (yellow, coast)
 GUNNERY    mouse aims the turrets (click captures; Esc releases) · LMB / Enter fire
            Shift zoom on/off, wheel = magnification · ◇ lead marker (needs a lock) · U next target
+MISSILES   M launch at the U target (the ship needs a sensor lock) · point defence shoots them down
 POWER      1 SYS · 2 ENG · 3 WEP · 4 balance
 SHIP       Tab damage control, crew, power, wing · C patch damage
 CONTACTS   T target hostile · G salvage beacon · Y grappling arm · V gangway · N board / withdraw · [ / ] launch / recall craft
@@ -497,6 +501,11 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	var flash := 0.0
 	if jump_state.has("progress"):
 		flash = clampf((float(jump_state.progress) - 0.7) / 0.3, 0.0, 1.0)
+	if _white_flash_ms >= 0:
+		var k := 1.0 - (Time.get_ticks_msec() - _white_flash_ms) / (WHITE_FLASH_S * 1000.0)
+		if k <= 0.0:
+			_white_flash_ms = -1
+		flash = maxf(flash, clampf(k, 0.0, 1.0))
 	_jump_flash.color.a = flash * flash * 0.9
 	_update_orbit_path(world, orbit, alpha, render_origin)
 	overlay.queue_redraw()
@@ -642,6 +651,24 @@ func _assist_text(input: PlayerInput, has_target: bool) -> String:
 
 # --- Alerts ------------------------------------------------------------------------
 
+## A nuclear burst: the view goes white and fades back.
+func flash_white() -> void:
+	_white_flash_ms = Time.get_ticks_msec()
+
+
+## Seconds until the nearest missile after `ship` arrives (range ÷ closing
+## speed), or -1 if none is inbound.
+static func missile_inbound_time(world: WorldSimulation, ship: ShipState) -> float:
+	var best := -1.0
+	for m in world.missiles_at(ship.id):
+		var r := m.position - ship.position
+		var closing := -r.dot(m.velocity - ship.velocity) / maxf(r.length(), 1.0)
+		var t := r.length() / maxf(closing, 1.0)
+		if best < 0.0 or t < best:
+			best = t
+	return best
+
+
 ## Urgent conditions, worst first: {level ("danger"/"caution"), glyph,
 ## short (card), text (banner), action, subject (system/room id or "")}.
 func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) -> Array[Dictionary]:
@@ -652,9 +679,21 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		return out
 	if not player.config.unlimited_propellant and player.propellant_kg <= 0.0:
 		out.append(_alert("danger", "PROPELLANT EXHAUSTED", "PROPELLANT EXHAUSTED — NO THRUST, NO RCS", "[B] dock to refuel"))
+	var missile := missile_inbound_time(world, player)
+	if missile >= 0.0:
+		out.append(_alert("danger", "MISSILE INBOUND %.1f s" % missile, "MISSILE INBOUND — %.1f s" % missile,
+			"point defence · guns on it · burn across its path"))
 	var incoming := incoming_round_time(world, player)
 	if incoming >= 0.0:
 		out.append(_alert("danger", "INCOMING %.1f s" % incoming, "INCOMING ROUND — IMPACT IN %.1f s" % incoming, "evade: [W][S][A][D][R][F]"))
+	if player.systems != null:
+		var reset := player.systems.disrupted()
+		if not reset.is_empty():
+			var names := PackedStringArray()
+			for d in reset:
+				names.append("%s %s %.0f s" % [d.name, d.id, d.left_s])
+			out.append(_alert("caution", "EMP RESET ×%d" % reset.size(), "EMP — RESETTING: %s" % ", ".join(names).to_upper(),
+				"they come back on their own", str(reset[0].id)))
 	if jump_state.has("blocked"):
 		out.append(_alert("caution", "JUMP BLOCKED", "JUMP DRIVE BLOCKED — %s" % str(jump_state.blocked).to_upper(), "release [B]"))
 	elif jump_state.has("progress"):
@@ -943,12 +982,30 @@ func _update_weapon_strip(player: ShipState) -> void:
 		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config, player), "▮".repeat(bars) + "▯".repeat(10 - bars),
 			player.cannon_rounds, cannon.magazine_rounds, "  EMPTY" if player.cannon_rounds == 0 else ""])
 	parts.append(pd_text(player))
+	var msl := missile_text(player.systems)
+	if msl != "":
+		parts.append(msl)
 	var lines := PackedStringArray(["   ·   ".join(parts)])
 	if cannon != null:
 		lines.append("GUNS  %s" % turret_summary(player.turret_status))
 	if player_wing != null and not player_wing.crafts.is_empty():
 		lines.append("WING  %s   [[] launch []] recall" % wing_text(player_wing))
 	weapon_label.text = "\n".join(lines)
+
+
+## Missiles aboard on the weapon strip: "MSL anti-ship 4 · EMP 2 [M]" ("" if
+## no launcher is fitted).
+static func missile_text(sys: ShipSystems) -> String:
+	if sys == null:
+		return ""
+	var counts := sys.missile_count()
+	if counts.is_empty():
+		return ""
+	var parts := PackedStringArray()
+	for n: String in counts:
+		var short := n.trim_suffix(" missile")
+		parts.append("%s %d" % [short if short == short.to_upper() else short.to_lower(), counts[n]])
+	return "MSL %s [M]" % " · ".join(parts)
 
 
 ## Point defence on the weapon strip: mounts, what they're engaging, rounds.
@@ -1131,6 +1188,13 @@ func _update_craft_markers(world: WorldSimulation, player: ShipState, alpha: flo
 				continue
 			overlay.craft_markers.append({"pos": s.interpolated_position(alpha) - render_origin,
 				"label": "%s %s" % [c.label, HudFormat.distance(dist)], "hostile": hostile, "selected": c.id == selected_id})
+	for m in world.missiles:
+		var dist := m.position.distance_to(player.position)
+		if not m.is_active() or dist > reach:
+			continue
+		var ours := m.missile_owner == player.id or (player_wing != null and player_wing.by_id(m.missile_owner) != null)
+		overlay.craft_markers.append({"pos": m.interpolated_position(alpha) - render_origin,
+			"label": "MSL %s" % HudFormat.distance(dist), "hostile": not ours, "selected": false})
 
 
 ## One reticle per gun: where its barrel points, at the aim range.

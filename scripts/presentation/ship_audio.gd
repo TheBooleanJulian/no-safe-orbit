@@ -31,6 +31,8 @@ func _ready() -> void:
 	_streams["alert"] = _make(0.3, _beep)
 	_streams["dock"] = _make(0.6, _thunk)
 	_streams["tick"] = _make(0.04, _tick)
+	_streams["launch"] = _make(1.2, _whoosh)
+	_streams["detonation"] = _make(3.0, _deep_boom)
 	for n in _streams:
 		var p := AudioStreamPlayer.new()
 		p.stream = _streams[n]
@@ -184,6 +186,18 @@ func _hiss(_t: float, _len: float, state: Dictionary) -> float:
 	var x := _noise()
 	state.hp = lerpf(state.hp, x, 0.3)
 	return 0.45 * (x - state.hp)
+
+
+## A missile leaving its tube: a clunk, then a hiss of the motor falling away.
+func _whoosh(t: float, len: float, state: Dictionary) -> float:
+	var clunk := 0.7 * sin(TAU * 70.0 * t) * exp(-t * 25.0)
+	var hiss := _lp_noise(state, lerpf(0.6, 0.08, t / len)) * 1.6 * exp(-t * 2.5) * minf(t * 20.0, 1.0)
+	return clunk + hiss
+
+
+## A warhead heard through the hull: a long low thud.
+func _deep_boom(t: float, _len: float, state: Dictionary) -> float:
+	return 0.9 * _lp_noise(state, 0.02) * 4.0 * exp(-t * 1.1) + 0.6 * sin(TAU * 26.0 * t) * exp(-t * 1.4)
 
 
 func _spool(t: float, len: float, _state: Dictionary) -> float:

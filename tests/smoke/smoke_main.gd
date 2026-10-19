@@ -39,6 +39,11 @@ func _run() -> void:
 	PlayerProfile.path = "user://smoke_profile.json"
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
 	Main.profile = null
+	# The template with a missile rack, so M can be tried too.
+	var errors := PackedStringArray()
+	var armed := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	EnemyFactory._fit_launcher(armed, ConstructionCatalog.default_catalog(), &"missile_rack", RandomNumberGenerator.new())
+	Main.launch_blueprint = armed
 	var main: Main = (load("res://scenes/main/main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -188,6 +193,21 @@ func _run() -> void:
 	var unclick := click.duplicate() as InputEventMouseButton
 	unclick.pressed = false
 	Input.parse_input_event(unclick)
+
+	# M: a missile at the locked target.
+	_press_action("tactical_overview")
+	main.hud.selected_id = &""
+	var t_lock := main.world.sim_time
+	while not main.track.locked and main.world.sim_time - t_lock < 10.0:
+		await process_frame
+	_press_action("fire_missile")
+	await process_frame
+	await process_frame
+	var ours := main.world.missiles.filter(func(m: ShipState) -> bool: return m.missile_owner == &"player")
+	_check(main.track.locked and not ours.is_empty() and main.hud.weapon_label.text.contains("MSL"),
+		"M launches a missile at the locked target (%d in flight; strip: %s)" % [ours.size(), main.hud.weapon_label.text.get_slice("
+", 0)])
+	Main.launch_blueprint = null
 
 	print("smoke: %d failure(s)" % _failures.size())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))

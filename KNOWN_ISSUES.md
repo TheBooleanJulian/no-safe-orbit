@@ -11,7 +11,12 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   upgrade costs are first guesses. Expect further tuning.
 - **Fires, coolant loops and named crew are new** and covered by tests,
   not yet by play.
-- **EW jamming exists only as a hook** for craft communications (Milestone 7).
+- **EW jamming exists only as a hook** for craft communications; there are
+  no decoys or electronic warfare against missiles yet — the counterplay is
+  point defence, guns and range.
+- **Missiles are new** (Milestone 7): ranges, prices, warhead strengths and
+  the enemy's firing interval are first guesses, covered by tests, not yet
+  by play. The **M** key has no gamepad default (every pad button is taken).
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the
   old large sections from blocks, but a section of odd length (the old
   3-long engine section) doesn't tile and stays as it was.

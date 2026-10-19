@@ -285,6 +285,24 @@ where they are verified (`tests/unit/test_feedback_pass.gd` unless noted):
 | Shipyard: zoom/pan, drag-move, CoM toggle, underside toggle, hatch fix, iso from front-left, thin grey armour | `smoke_shipyard`, renders | |
 | Visuals: accordion radiators, triangular plates, truss lattice, char, radar, windows/lights, room colours, far tracers, centre alerts | manual | |
 
-## Milestones 7–8
+## Milestone 7 — EMP and advanced weapons ✅ (2026-10-20)
+
+Spec exit criterion: weapons have distinct effects and viable counterplay.
+Verified in `tests/unit/test_m7_weapons.gd` unless noted.
+
+| # | Acceptance criterion | Verified by | Result |
+|---|---|---|---|
+| 1 | Guided missile follows a manoeuvring target | `test_guidance_hits_a_manoeuvring_target` | hits a target strafing at full RCS from 3 km |
+| 2 | Interception: point defence shoots missiles down | `test_point_defence_shoots_down_an_incoming_missile`, `test_own_point_defence_and_guns_ignore_our_missiles` | shot down before the hull; own PD holds fire |
+| 3 | Anti-ship warhead: penetration and blast | `test_anti_ship_warhead_penetrates_and_blasts` | penetrates, blasts inside, credited to the shooter |
+| 4 | EMP missile; electronics hardening and recovery | `test_emp_resets_exposed_electronics_and_spares_the_hardened`, `test_emp_warhead_in_flight` | 20 s reset external, half internal, none mechanical; hardened survives a pulse that resets the plain mast; no structural damage |
+| 5 | Nuclear option: armour shields crew, heat, no momentum | `test_nuclear_armour_shields_the_crew_and_heat_spikes`, `test_nuclear_burst_imparts_no_momentum` | deaths behind bare hull, none behind 80 mm; heat = 120 K × dose; velocity unchanged |
+| 6 | Launcher stock persists and is restocked for credits | `test_missiles_persist_and_restock_for_credits`, `test_launcher_reload_and_stock` | save round trip; 60 cr each, partial when short; 4 s reload |
+| 7 | Enemies use missiles; designs stay valid | `test_templates_and_enemy_designs_validate` | rack from mission 4, EMP sometimes from 6; all valid |
+| — | Player fires M at a locked target | `smoke_main.gd` | missile in flight, `MSL` on the strip |
+
+Simplifications: see ARCHITECTURE.md "Missiles and EMP (Milestone 7)".
+
+## Milestone 8
 
 Not started. See GAME_DESIGN.md §17.
