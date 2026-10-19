@@ -852,6 +852,9 @@ func _process(delta: float) -> void:
 			continue
 		for blast in s.take_explosions():
 			hit_flashes.add_explosion(id, blast.pos_body, blast.radius)
+			# The camera feels it: hard on our own ship, less with distance.
+			var dist := world.get_ship(id).position.distance_to(player.position)
+			camera.shake(2.5 * clampf(1.0 - dist / 800.0, 0.0, 1.0))
 			if id == PLAYER_ID:
 				combat_log.explosions += 1
 			combat_log.record(world.sim_time, "explosion", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])

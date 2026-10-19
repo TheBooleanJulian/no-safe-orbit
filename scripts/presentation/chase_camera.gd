@@ -25,10 +25,17 @@ var zoomed: bool = false
 ## Orbit around the ship: x = yaw, y = pitch (radians), set by Main.
 var orbit: Vector2 = Vector2.ZERO
 
+var _shake := 0.0
+var _shake_clock := 0.0
 var _smoothed: Quaternion = Quaternion.IDENTITY
 var _initialized := false
 var _zoom := 0.0
 var _orbit := Vector2.ZERO
+
+
+## A jolt (blast nearby): `strength` in metres of shake, decaying over ~1 s.
+func shake(strength: float) -> void:
+	_shake = maxf(_shake, strength)
 
 
 func follow(target: Node3D, delta: float) -> void:
@@ -47,3 +54,8 @@ func follow(target: Node3D, delta: float) -> void:
 	var offset := offset_body.lerp(offset_zoomed, _zoom)
 	global_position = target.global_position + b * offset
 	look_at(target.global_position + b * Vector3(0, 0, -look_ahead_m * lerpf(1.0, 4.0, _zoom)), b.y)
+	if _shake > 0.01:
+		_shake_clock += delta
+		var jitter := Vector3(sin(_shake_clock * 53.0), sin(_shake_clock * 41.0 + 1.3), sin(_shake_clock * 47.0 + 2.1))
+		global_position += global_basis * jitter * _shake
+		_shake *= exp(-3.0 * delta)

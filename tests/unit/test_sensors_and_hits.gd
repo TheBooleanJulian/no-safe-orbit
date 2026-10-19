@@ -112,3 +112,28 @@ func test_hole_normals_point_out_of_the_hull() -> void:
 	assert_vec_near(r.entry_normal_body, Vector3(-1, 0, 0), 1e-6, "entry hole faces port (out of the flank)")
 	if r.exit_pen_mm > 0.0:
 		assert_vec_near(r.exit_normal_body, Vector3(1, 0, 0), 1e-6, "exit hole faces starboard")
+
+
+func test_a_reactor_explosion_plays_out_and_its_debris_flies_free() -> void:
+	var world := WorldSimulation.new()
+	var ship := _ship(&"s")
+	world.add_ship(ship)
+	var boom := ReactorExplosion.new()
+	boom.setup(&"s", Vector3(0, 0, 4), ShipSystems.REACTOR_BLAST_RADIUS_M, 7)
+	boom.step(world, 1.0, Vector3.ZERO, 0.0)
+	var t := 0.0
+	var first := Vector3.ZERO
+	while t < 1.0:
+		boom.step(world, 1.0, Vector3.ZERO, 0.1)
+		t += 0.1
+	# Debris flies on its own: move the ship away, the debris does not follow.
+	var piece: MeshInstance3D = boom.get_child(boom.get_child_count() - 1).get_child(0)
+	first = piece.position
+	ship.position += Vector3(500, 0, 0)
+	boom.step(world, 1.0, Vector3.ZERO, 0.1)
+	assert_true(piece.position.distance_to(first) < 10.0, "debris keeps its own trajectory (moved %.1f m)" % piece.position.distance_to(first))
+	assert_true(boom.position.x > 400.0, "the fireball rides with the ship")
+	while not boom.finished():
+		boom.step(world, 1.0, Vector3.ZERO, 0.25)
+	assert_true(boom.age >= ReactorExplosion.LIFETIME_S, "it ends after %.1f s" % ReactorExplosion.LIFETIME_S)
+	boom.free()
