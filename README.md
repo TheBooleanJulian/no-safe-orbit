@@ -6,14 +6,15 @@ A hard-sci-fi spacecraft engineering and combat simulator, built in Godot 4.
 Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
-**Status:** Milestones 0–5 complete — design a ship in the shipyard, then fly
+**Status:** Milestones 0–6 complete — design a ship in the shipyard, then fly
 and fight it in a real-scale 400 km Earth orbit under the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
 own orbits afterwards; power, heat, pressure and propellant are simulated.
 Disable an enemy, salvage it for spare parts and loot crates, dock, repair,
 refit and fly again — your vessel keeps its damage between sorties. A crew
-works the ship; dock a gangway and board the enemy room by room. Next:
-Milestone 6 (drones, fighters and directives). See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+works the ship; dock a gangway and board the enemy room by room; launch a
+fighter and a recon drone and give them orders. Next: Milestone 7 (EMP and
+advanced weapons). See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Requirements
 
@@ -48,7 +49,8 @@ godot --path .
 | Send the boarding party / order it home | N | D-pad right |
 | Divert power to systems / engines / weapons | 1 / 2 / 3 | paddles 1–3 |
 | Balance power | 4 | paddle 4 |
-| Tactical overview (ship map, power, crew, damage control) | Tab | left stick click |
+| Tactical overview (ship map, power, crew, damage control, air wing) | Tab | left stick click |
+| Launch craft / recall craft | L / K | paddle / Misc |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
 | Dock at the shipyard (with the ship you're flying) | B | Start |
 | Controls panel (rebinding) | F1 | Guide |
@@ -162,6 +164,28 @@ or the repairer is hurt. Destroyed parts still need the yard.
   assist locked on, until someone takes over the bridge.
 - **Reactors explode** at 0 %: blast damage within 15 m, falling off with
   distance.
+
+## Air wing: fighters and drones
+
+The Frigate Mk I carries a **Wasp fighter** and a **recon drone** on external
+racks. They fly with the same physics as every ship and can be shot down.
+
+- **L** launches (the rack must work and the ship must be turning slowly);
+  **K** recalls. A craft is recovered when it comes within 10 m of its rack
+  at under 2 m/s, then rearmed and refuelled for 40 s.
+- Orders, per craft, in the tactical overview (Tab): **Strike** (gun runs
+  on the target, aimed at hull, guns, engines or reactor), **Intercept**
+  (enemy craft first), **Recon** (hold 1.5 km off the target, never fire),
+  **Escort** (fly beside you), **Return**. **Risk tolerance**
+  (conservative / balanced / aggressive) decides when a craft breaks off on
+  its own for damage, propellant or ammunition.
+- Out of contact (beyond 30 km, or jammed) for 10 s, a craft falls back to
+  returning home.
+- **Recon** gives the close look that shows the target's systems: without a
+  drone nearby you see them only within 3 km.
+- Enemies launch their own fighter from mission 3 once hostile.
+- A craft still out when you dock is lost. Lost craft are replaced, and
+  damaged ones repaired, at the station.
 
 ## Crew and boarding
 

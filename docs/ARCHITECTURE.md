@@ -268,6 +268,28 @@ bounding-box hit test.
   on the most exposed flanks, hazard-striped collars with beacons; RCS jets
   in `ShipView` from each block's share of commanded thrust and torque.
 
+## Autonomous craft (Milestone 6)
+
+- **Craft** are `ShipState`s with their own `ShipConfig` (`data/craft/`):
+  same `ShipDynamics`, same rounds and hit tests. Without a systems model
+  they have `hull_hp`: a round's penetration is taken off it; at 0 the craft
+  is `DESTROYED`.
+- **Racks** (`EquipmentDefinition.Kind.CRAFT_MOUNT`, `craft` config) carry
+  one craft each; the craft's mass is in the rack's.
+- **`AirWing`** (one per ship with racks; `WorldSimulation.wings`, updated at
+  the start of each tick): launch (working rack, carrier |ω| < 0.15 rad/s;
+  spawned 8 m off the rack at +3 m/s), recovery (< 10 m, < 2 m/s), 40 s
+  servicing, comms (30 km; jammed → fallback RETURN after 10 s), loss, and
+  persistence (`ShipInstance.wing`).
+- **`CraftAI`**: directive → `ShipControlInput`. Position control: desired
+  velocity = target velocity + 0.12 × error (≤ 80 m/s), reached in ~1.5 s
+  with the per-axis thrust available; attitude by proportional rate
+  request; gunnery by lead point with a 2 × enemy-gunner fire cone.
+  Disengage thresholds by risk ([hull, propellant, ammunition]):
+  conservative 0.6/0.4/0.3, balanced 0.35/0.25/0.1, aggressive 0.15/0.1/0.
+- **Inspection**: the target's systems show only within 3 km of the player
+  or of a recon craft.
+
 ## Crew and boarding (Milestone 5)
 
 - **Crew** (`CrewRoster`, owned by `ShipSystems`): one person per berth,
