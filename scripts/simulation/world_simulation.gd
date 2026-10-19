@@ -133,12 +133,12 @@ func dock(attacker_id: StringName, target_id: StringName) -> Dictionary:
 
 
 ## Send a boarding party over a sealed gangway (null if it can't go).
-func start_boarding(link: DockingLink) -> BoardingAction:
+func start_boarding(link: DockingLink, max_team: int = BoardingAction.MAX_TEAM) -> BoardingAction:
 	if link == null or not link.sealed() or boarding_for(link) != null:
 		return null
 	var a := get_ship(link.attacker_id)
 	var b := get_ship(link.target_id)
-	var action := BoardingAction.start(link, a.systems, b.systems)
+	var action := BoardingAction.start(link, a.systems, b.systems, max_team)
 	if action != null:
 		boardings.append(action)
 	return action

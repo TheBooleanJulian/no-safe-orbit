@@ -40,6 +40,8 @@ var world: WorldSimulation
 var celestial: CelestialFrame
 ## The target shoots back (toggle with T).
 var target_hostile: bool = false
+## Boarding party size the player has chosen (tactical overview).
+var boarding_party_size: int = BoardingAction.MAX_TEAM
 var player_input := PlayerInput.new()
 var _views: Dictionary = {}  # StringName -> ShipView
 ## Compiled designs: {blueprint, grid, stats, config} per ship id.
@@ -189,6 +191,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("board"):
 		toggle_boarding()
 		return
+	elif event.is_action_pressed("divert_balance"):
+		world.get_ship(PLAYER_ID).systems.balance_power()
+		return
+	elif event.is_action_pressed("divert_sys"):
+		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.SYS)
+		return
+	elif event.is_action_pressed("divert_eng"):
+		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.ENG)
+		return
+	elif event.is_action_pressed("divert_wep"):
+		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.WEP)
+		return
 	elif event.is_action_pressed("toggle_target_ai"):
 		target_hostile = not target_hostile
 		hud.target_hostile = target_hostile
@@ -312,7 +326,7 @@ func toggle_boarding() -> void:
 	if link == null or not link.sealed():
 		hud.notice("BOARD: needs a sealed gangway first [V]", world.sim_time)
 		return
-	if world.start_boarding(link) == null:
+	if world.start_boarding(link, boarding_party_size) == null:
 		hud.notice("BOARD: no fit security or general crew can reach the collar", world.sim_time)
 
 

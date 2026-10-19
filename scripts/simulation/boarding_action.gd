@@ -56,7 +56,7 @@ var _casualties: int = 0
 
 
 ## Start a boarding over a sealed link. Returns null if nobody can go.
-static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: ShipSystems) -> BoardingAction:
+static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: ShipSystems, max_team: int = MAX_TEAM) -> BoardingAction:
 	if p_link == null or not p_link.sealed() or p_attacker.crew == null:
 		return null
 	var b := BoardingAction.new()
@@ -67,7 +67,7 @@ static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: Ship
 	var muster := 0.0
 	for role in [CrewRoster.Role.SECURITY, CrewRoster.Role.GENERAL]:
 		for m in p_attacker.crew.members:
-			if b.team.size() >= MAX_TEAM or m.role != role or not m.available():
+			if b.team.size() >= mini(max_team, MAX_TEAM) or m.role != role or not m.available():
 				continue
 			var path := p_attacker.route(m.location, p_link.a_port.room)
 			if path.is_empty():

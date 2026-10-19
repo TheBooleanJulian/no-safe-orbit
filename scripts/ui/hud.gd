@@ -153,6 +153,7 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 		"HEAT       %.0f K  %s" % [sys.temperature_k, ["reactor normal", "REACTOR THROTTLED", "REACTOR SCRAM"][sys.reactor_state]],
 		"SYSTEMS    %s" % sys.status_line(),
 		"DMG CTRL   %s" % _repair_text(sys),
+		"DIVERT     %s   [1][2][3] [4]=balance" % power_pips_text(sys),
 	]
 	if sys.crew != null and not sys.crew.members.is_empty():
 		lines.append("CREW       %s  %s" % [sys.crew.summary(),
@@ -166,6 +167,13 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 		for line in _incoming.lines.slice(maxi(_incoming.lines.size() - 2, 1)):
 			lines.append("  " + line.left(58))
 	return lines
+
+
+static func power_pips_text(sys: ShipSystems) -> String:
+	var parts := PackedStringArray()
+	for ch in ShipSystems.Channel.size():
+		parts.append("%s %s" % [ShipSystems.CHANNEL_NAMES[ch], "■".repeat(sys.pips[ch]) + "□".repeat(ShipSystems.PIPS_MAX - sys.pips[ch])])
+	return "  ".join(parts)
 
 
 func _repair_text(sys: ShipSystems) -> String:
