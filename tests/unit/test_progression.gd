@@ -384,36 +384,95 @@ func test_refit_is_paid_up_front_and_keeps_wear_on_kept_parts() -> void:
 	assert_true(ServiceYard.refit(p.vessel, bp2, p, _catalog()) == "" and p.spare_parts == 7, "paid refit: 10 → %d parts" % p.spare_parts)
 
 
-func test_destroyed_rare_unit_is_written_off_and_needs_a_replacement() -> void:
+func test_a_destroyed_rare_part_is_rebuilt_not_written_off() -> void:
 	var p := PlayerProfile.new(1)
 	p.spare_parts = 100
 	p.inventory["railgun"] = 1
 	p.ensure_vessel(_with_gun(&"railgun"))
-	var lost := p.dock({"equipment": {"e41": 0.0}}, _catalog())
-	assert_true(lost.size() == 1 and p.owned(&"railgun") == 0, "railgun destroyed in flight is written off on docking")
-	assert_true(_report(p.vessel.blueprint, p).has_code(&"part_not_owned"), "the design now needs a railgun you do not have")
-	var job := _job(ServiceYard.repair_jobs(p.vessel, _catalog()), "e41")
-	assert_true(job.kind == &"replace" and job.needs_unit == &"railgun", "replacing it needs a railgun unit")
-	assert_true(not ServiceYard.available(job, p.vessel, p), "no unit, no replacement")
 	p.dock({"equipment": {"e41": 0.0}}, _catalog())
-	assert_true(p.owned(&"railgun") == 0, "a part already destroyed is not written off twice")
-	p.inventory["railgun"] = 1
-	assert_true(ServiceYard.available(job, p.vessel, p), "a newly found railgun can replace it")
+	assert_true(p.owned(&"railgun") == 1 and not _report(p.vessel.blueprint, p).has_errors(), "the railgun is still yours")
+	var job := _job(ServiceYard.repair_jobs(p.vessel, _catalog()), "e41")
+	assert_true(job.kind == &"replace" and job.cost == ServiceYard.equipment_cost(_catalog().equipment[&"railgun"]),
+		"rebuilt at its fitting cost (%d parts)" % job.cost)
 	var one: Array[ServiceYard.Job] = [job]
 	ServiceYard.perform(one, p.vessel, p)
-	assert_true(not p.vessel.is_damaged() and not _report(p.vessel.blueprint, p).has_errors(), "replaced: vessel whole and design valid")
+	assert_true(not p.vessel.is_damaged(), "and whole again")
 
 
-func test_losing_the_vessel_writes_off_rare_units_but_keeps_the_design() -> void:
+func test_losing_the_vessel_loses_only_the_cargo_and_a_fee() -> void:
 	var p := PlayerProfile.new(1)
-	p.inventory["railgun"] = 2
+	p.inventory["railgun"] = 1
 	p.ensure_vessel(_with_gun(&"railgun"))
 	p.vessel.condition = {"equipment": {"e29": 0.5}}
+	p.vessel.cargo = {"spare_parts": 40, "equipment": {"torch_drive": 1}}
 	var design := JSON.stringify(p.vessel.blueprint.to_dict())
+	var credits := p.credits
+	var fee := p.respawn_fee(_catalog())
 	var lost := p.lose_vessel(_catalog())
-	assert_true(lost.size() == 1 and p.owned(&"railgun") == 1, "the railgun aboard is lost (own %d)" % p.owned(&"railgun"))
-	assert_true(JSON.stringify(p.vessel.blueprint.to_dict()) == design and not p.vessel.is_damaged(), "a new hull of the same design is issued")
-	assert_true(p.vessels_lost == 1 and p.vessel.history[-1].contains("lost"), "the loss is on record")
+	assert_true(p.owned(&"railgun") == 1, "parts installed in the design are kept")
+	assert_true(p.vessel.cargo_is_empty() and p.owned(&"torch_drive") == 0, "the cargo is gone")
+	assert_true(credits - p.credits == fee and fee == PlayerProfile.RESPAWN_BASE_FEE + PlayerProfile.RESPAWN_FEE_PER_BERTH * 16,
+		"respawn fee %d credits (16 berths)" % fee)
+	assert_true(JSON.stringify(p.vessel.blueprint.to_dict()) == design and not p.vessel.is_damaged(), "the same design, rebuilt and rearmed")
+	assert_true(lost.size() == 3 and p.vessels_lost == 1, "loss report: %s" % ", ".join(lost))
+	p.credits = 10
+	p.lose_vessel(_catalog())
+	assert_true(p.credits == 0, "a short purse pays what it has")
+
+
+func test_salvage_goes_into_the_hold_until_banked() -> void:
+	var p := PlayerProfile.new(3)
+	p.ensure_vessel(_template())
+	var parts_before := p.spare_parts
+	for d in p.pull(10, _catalog()):
+		p.stow(d)
+	assert_true(not p.vessel.cargo_is_empty() and p.spare_parts == parts_before and p.inventory.is_empty() and p.unlocks.is_empty(),
+		"loot waits in the hold: %s" % p.vessel.cargo_summary())
+	var banked := p.bank_cargo(_catalog())
+	assert_true(p.vessel.cargo_is_empty() and not banked.is_empty(), "banking empties the hold: %s" % ", ".join(banked))
+	assert_true(p.spare_parts > parts_before or not p.inventory.is_empty() or not p.unlocks.is_empty(), "and it is yours")
+
+
+func test_cargo_and_credits_survive_save_and_load_and_old_saves_migrate() -> void:
+	var p := PlayerProfile.new(1)
+	p.ensure_vessel(_template())
+	p.vessel.cargo = {"spare_parts": 12, "equipment": {"railgun": 1}, "blueprints": {"workshop": ["room", 1, 1]}}
+	p.credits = 777
+	var errors := PackedStringArray()
+	var q := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())), errors)
+	assert_true(q.credits == 777 and q.vessel.cargo_summary() == p.vessel.cargo_summary(), "credits and cargo reload")
+	var v1 := p.to_dict()
+	v1.schema_version = 1
+	v1.erase("credits")
+	(v1.vessel as Dictionary).erase("cargo")
+	var old := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(v1)), errors)
+	assert_true(old != null and old.credits == PlayerProfile.STARTING_CREDITS and old.vessel.cargo_is_empty(), "a v1 profile migrates with defaults")
+
+
+func test_station_sells_spare_parts_for_credits() -> void:
+	var p := PlayerProfile.new(1)
+	p.credits = PlayerProfile.PARTS_LOT_PRICE
+	var parts := p.spare_parts
+	assert_true(p.buy_spare_parts() and p.spare_parts == parts + PlayerProfile.PARTS_LOT and p.credits == 0, "one lot bought")
+	assert_true(not p.buy_spare_parts(), "not without credits")
+
+
+func test_debrief_says_where_the_hits_came_from() -> void:
+	var log := CombatLog.new()
+	for side in ["port", "port", "fore"]:
+		var r := DamageReport.new()
+		var travel: Vector3 = {"port": Vector3(1, 0, 0), "fore": Vector3(0, 0, 1)}[side]
+		r.path_body = PackedVector3Array([Vector3.ZERO, travel])
+		assert_true(CombatLog.side_of(r) == side, "a round travelling %s came in through the %s" % [travel, side])
+		log.hits_taken += 1
+		log.hits_by_side[side] = int(log.hits_by_side.get(side, 0)) + 1
+	log.systems_lost.append({"id": "e28", "name": "Fusion reactor", "side": "port", "t": 1.0})
+	var lessons := "
+".join(CombatLog.insights(log.to_dict()))
+	assert_true(lessons.contains("through the port (2 of 3)") and lessons.contains("second reactor") and lessons.contains("workshop"),
+		"lessons name the side, the reactor and the missing workshop:
+%s" % lessons)
+	assert_true(CombatLog.render(log.to_dict()).contains("LESSONS FOR THE SHIPYARD"), "debrief renders")
 
 
 # --- Salvage -------------------------------------------------------------------------

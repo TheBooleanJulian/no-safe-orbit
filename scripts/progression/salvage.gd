@@ -13,6 +13,10 @@ const MAX_RANGE_M := 500.0
 const MAX_RELATIVE_SPEED_MPS := 5.0
 ## A ship taken by boarders hands over its stores: extra crates.
 const CAPTURE_BONUS_PULLS := 2
+## Station bounty (credits, paid at once): base + per intact fraction; × 2
+## for a captured ship.
+const BOUNTY_BASE := 100
+const BOUNTY_INTACT := 100
 
 
 ## Why `wreck` cannot be salvaged by `ship` right now ("" = it can).
@@ -32,6 +36,10 @@ static func block_reason(ship: ShipState, wreck: ShipState) -> String:
 
 static func spare_parts_for(wreck: ShipSystems) -> int:
 	return roundi(10.0 + 50.0 * wreck.intact_fraction())
+
+
+static func bounty_for(wreck: ShipSystems) -> int:
+	return roundi(BOUNTY_BASE + BOUNTY_INTACT * wreck.intact_fraction()) * (2 if wreck.captured else 1)
 
 
 static func pulls_for(wreck: ShipSystems) -> int:

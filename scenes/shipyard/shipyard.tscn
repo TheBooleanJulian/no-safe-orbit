@@ -81,7 +81,7 @@ theme_override_constants/separation = 8
 [node name="Title" type="Label" parent="Margin/VBox/TopBar"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 17
-text = "SHIPYARD"
+text = "STATION // SHIPYARD"
 
 [node name="NameEdit" type="LineEdit" parent="Margin/VBox/TopBar"]
 unique_name_in_owner = true

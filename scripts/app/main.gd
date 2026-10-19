@@ -35,6 +35,8 @@ static var launch_blueprint: ShipBlueprint
 ## Persistent player state (spare parts, loot, hangar vessel); loaded on
 ## first use from PlayerProfile.path.
 static var profile: PlayerProfile
+## The station shows the last debrief when it opens after a sortie.
+static var debrief_pending: bool = false
 
 var world: WorldSimulation
 var celestial: CelestialFrame
@@ -48,6 +50,8 @@ var _views: Dictionary = {}  # StringName -> ShipView
 var _designs: Dictionary = {}
 ## This sortie's outcome (docked or lost) is already in the profile.
 var _sortie_closed := false
+## This sortie's record, for the debrief.
+var combat_log: CombatLog
 
 
 static func get_profile() -> PlayerProfile:
@@ -95,6 +99,9 @@ func _start_scenario() -> void:
 	world.add_ship(player)
 	_spawn_target()
 	_sortie_closed = false
+	combat_log = CombatLog.begin(player, world.sim_time)
+	if hud.debrief != null:
+		hud.debrief.visible = false
 
 	_spawn_view(PLAYER_ID, Color.WHITE)
 	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
@@ -250,12 +257,20 @@ func close_sortie() -> void:
 					lines.append("Boarder %s (%s) left behind" % [m.id, CrewRoster.ROLE_NAMES[m.role]])
 	if not player.is_active():
 		lines = p.lose_vessel(catalog)
-		GameLog.info("main", "Vessel lost — %d rarer parts written off" % lines.size())
+		GameLog.info("main", "Vessel lost — the hold is gone; the station rebuilds the same design")
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
-		lines = p.dock(player.systems.condition(), catalog)
+		lines.append_array(p.dock(player.systems.condition(), catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	for line in lines:
 		GameLog.info("main", line)
+	if combat_log != null:
+		var outcome := "vessel lost" if not player.is_active() else "docked at the station"
+		combat_log.finish(player, outcome, world.sim_time, lines)
+		p.last_debrief = combat_log.to_dict()
+		var path := combat_log.save()
+		if path != "":
+			GameLog.info("main", "Debrief saved to %s" % path)
+		debrief_pending = true
 	_save_profile()
 
 
@@ -286,15 +301,24 @@ func salvage_target() -> Array[LootRoller.Drop]:
 			b.bring_home()  # the prize crew come back with the stores
 	var intact := target.systems.intact_fraction()
 	var parts := Salvage.spare_parts_for(target.systems)
-	p.spare_parts += parts
+	var bounty := Salvage.bounty_for(target.systems)
+	# Spare parts and crates go into the hold (at risk until banked); the
+	# station pays the bounty at once.
+	p.vessel.cargo["spare_parts"] = int(p.vessel.cargo.get("spare_parts", 0)) + parts
 	var drops := p.pull(Salvage.pulls_for(target.systems), ConstructionCatalog.default_catalog())
+	for d in drops:
+		p.stow(d)
+	p.credits += bounty
 	p.missions_completed += 1
 	p.vessel.salvaged += 1
-	p.vessel.record("Salvaged %s: %d spare parts, %d crates" % [target.display_name, parts, drops.size()])
+	p.vessel.record("Salvaged %s: %d spare parts, %d crates, %d credits bounty" % [target.display_name, parts, drops.size(), bounty])
+	if combat_log != null:
+		combat_log.record(world.sim_time, "salvage", "Salvaged %s (%d%% intact): %d spare parts and %d crates into the hold, %d credits bounty" % [
+			target.display_name, roundi(intact * 100.0), parts, drops.size(), bounty])
 	_save_profile()
 	GameLog.info("main", "Salvaged %s (%d%% intact): %d parts; %s" % [target.display_name, roundi(intact * 100.0), parts,
 		", ".join(drops.map(func(d: LootRoller.Drop) -> String: return "%s %s" % [Rarity.name_of(d.rarity), d.describe()]))])
-	hud.loot.show_salvage(target.display_name, intact, parts, drops, p)
+	hud.loot.show_salvage(target.display_name, intact, parts, drops, p, bounty)
 	world.remove_ship(TARGET_ID)
 	hud.reset()
 	_spawn_target()
@@ -365,18 +389,27 @@ func _process(delta: float) -> void:
 	# controls panel is open.
 	if not player.is_active() and not _sortie_closed:
 		close_sortie()
+		var p := get_profile()
+		hud.debrief.show_debrief(p.last_debrief, "[BACKSPACE] respawn the %s here  ·  [B] return to the station" % p.vessel.name)
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var running := player.is_active() and not hud.controls.visible
 	var alpha := world.advance(delta) if running else 1.0
 	for line in world.take_link_events():
 		hud.notice(line, world.sim_time)
 		GameLog.info("boarding", line)
+		combat_log.record(world.sim_time, "boarding", line)
 	var hits := world.take_hit_events()
+	for ev in hits:
+		combat_log.note_hit(ev, PLAYER_ID, world.sim_time, world)
 	for id in world.ship_ids():
 		var s := world.get_ship(id).systems
 		if s == null:
 			continue
 		for blast in s.take_explosions():
 			hit_flashes.add_explosion(id, blast.pos_body, blast.radius)
+			if id == PLAYER_ID:
+				combat_log.explosions += 1
+			combat_log.record(world.sim_time, "explosion", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
 			hud.notice("%s: %s" % [world.get_ship(id).display_name, blast.lines[0]], world.sim_time)
 			GameLog.info("main", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)

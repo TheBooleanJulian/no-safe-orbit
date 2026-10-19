@@ -31,6 +31,8 @@ var target_hostile: bool = false
 var profile: PlayerProfile
 ## Salvage results panel (created in _ready).
 var loot: LootPanel
+## Post-combat debrief, shown when the ship is lost (created in _ready).
+var debrief: DebriefPanel
 
 var _last_hit_time := -INF
 var _hits_scored := 0
@@ -51,6 +53,10 @@ func _ready() -> void:
 	loot.name = "Loot"
 	$Root.add_child(loot)
 	loot.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 70)
+	debrief = DebriefPanel.new()
+	debrief.name = "Debrief"
+	$Root.add_child(debrief)
+	debrief.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 
 
 ## A one-line message on the flight panel for a few seconds.
@@ -159,7 +165,7 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 		lines.append("CREW       %s  %s" % [sys.crew.summary(),
 			("CMD ok" if sys.has_command() else "NO COMMAND") + (" · GUN CREW ok" if sys.has_gun_crew() else " · NO GUN CREW")])
 	if profile != null:
-		lines.append("SPARES     %d parts" % profile.spare_parts)
+		lines.append("CREDITS    %d   HOLD %s" % [profile.credits, profile.vessel.cargo_summary().left(44) if profile.vessel != null else "—"])
 	if _notice != "" and sim_time - _notice_time < NOTICE_S:
 		lines.append("» " + _notice.left(60))
 	if _incoming != null and sim_time - _incoming_time < 8.0:
