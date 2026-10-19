@@ -7,6 +7,8 @@ enum Status {
 	ACTIVE,
 	## Crossed the body's entry interface; no longer simulated.
 	ENTERED_ATMOSPHERE,
+	## Hull shot through (craft with hull_hp); no longer simulated.
+	DESTROYED,
 }
 
 ## Stable identity — never derived from scene-tree position.
@@ -52,6 +54,13 @@ var rounds_fired: int = 0
 ## Total recoil impulse from firing (N·s), for the HUD.
 var recoil_impulse: float = 0.0
 var hits_taken: int = 0
+## Damage to a craft's hull (see ShipConfig.hull_hp).
+var hull_damage: float = 0.0
+
+
+## Remaining hull fraction for craft (1 for ships without hull_hp).
+func hull_fraction() -> float:
+	return 1.0 - hull_damage / config.hull_hp if config.hull_hp > 0.0 else 1.0
 
 
 static func create(

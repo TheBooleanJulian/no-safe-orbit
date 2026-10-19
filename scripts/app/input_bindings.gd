@@ -38,6 +38,8 @@ const ACTIONS := [
 	[&"divert_wep", "Divert power to weapons"],
 	[&"divert_balance", "Balance power"],
 	[&"tactical_overview", "Tactical overview / crew"],
+	[&"launch_craft", "Launch craft"],
+	[&"recall_craft", "Recall craft"],
 	[&"release_mouse", "Release mouse"],
 	[&"toggle_controls", "Controls panel"],
 ]

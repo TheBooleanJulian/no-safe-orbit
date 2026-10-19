@@ -40,6 +40,8 @@ var overview: TacticalOverview
 var docking_cam: DockingCam
 ## Boarding party size chosen in the overview (set by Main).
 var boarding_party_size: int = BoardingAction.MAX_TEAM
+## The player's craft (set by Main).
+var player_wing: AirWing
 
 var _last_hit_time := -INF
 var _hits_scored := 0
@@ -152,7 +154,8 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	damage_map.systems = player.systems
 	if overview.visible:
 		var link := world.link_for(player.id)
-		overview.update_view(player, target, world.boarding_for(link) if link != null else null, boarding_party_size, world.sim_time)
+		overview.update_view(player, target, world.boarding_for(link) if link != null else null, boarding_party_size, world.sim_time,
+			player_wing, player_wing == null or player_wing.has_close_look(world, target))
 
 
 func _update_flight_panel(player: ShipState, input: PlayerInput, sim_time: float, has_target: bool) -> void:
@@ -197,6 +200,8 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 	if sys.crew != null and not sys.crew.members.is_empty():
 		lines.append("CREW       %s  %s" % [sys.crew.summary(),
 			("CMD ok" if sys.has_command() else "NO COMMAND") + (" · GUN CREW ok" if sys.has_gun_crew() else " · NO GUN CREW")])
+	if player_wing != null and not player_wing.crafts.is_empty():
+		lines.append("WING       %s   [L] launch [K] recall" % wing_text(player_wing))
 	if profile != null:
 		lines.append("CREDITS    %d   HOLD %s" % [profile.credits, profile.vessel.cargo_summary().left(44) if profile.vessel != null else "—"])
 	if _notice != "" and sim_time - _notice_time < NOTICE_S:
@@ -206,6 +211,19 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 		for line in _incoming.lines.slice(maxi(_incoming.lines.size() - 2, 1)):
 			lines.append("  " + line.left(58))
 	return lines
+
+
+## One line per wing: callsign, state or directive, hull.
+static func wing_text(wing: AirWing) -> String:
+	var parts := PackedStringArray()
+	for c in wing.crafts:
+		var state: String = AirWing.STATUS_NAMES[c.status]
+		if c.status == AirWing.Status.FLYING:
+			state = CraftAI.DIRECTIVE_NAMES[c.directive].to_lower() if c.override_reason == "" else "RTB"
+		elif c.status == AirWing.Status.DOCKED and c.service_left_s > 0.0:
+			state = "servicing %.0fs" % c.service_left_s
+		parts.append("%s %s %d%%" % [c.label.split(" ")[-1], state, roundi(c.hull_fraction * 100.0)])
+	return " · ".join(parts)
 
 
 static func power_pips_text(sys: ShipSystems) -> String:
@@ -310,7 +328,10 @@ func _update_target_panel(world: WorldSimulation, player: ShipState, target: Shi
 		"ROUND TOF  %s" % tof,
 		"HITS       %s" % hits,
 	]
-	if target.systems != null:
+	var close_look := player_wing == null or player_wing.has_close_look(world, target)
+	if target.systems != null and not close_look:
+		lines.append("SENSORS    hull only — close to %.0f km or send a recon drone" % (AirWing.INSPECT_RANGE_M / 1000.0))
+	if target.systems != null and close_look:
 		lines.append("SYSTEMS    %s" % target.systems.status_line())
 		lines.append("REACTOR    %s  %.0f K" % [["normal", "THROTTLED", "SCRAM"][target.systems.reactor_state], target.systems.temperature_k])
 		if target.systems.is_disabled():

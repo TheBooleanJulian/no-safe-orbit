@@ -195,6 +195,26 @@ and its security team and reactor are removed directly.
 | Military hull plating, ship name on the hull, prominent hatches (collars), white RCS jets | render review (`build/screens/model_*.png`) | pass |
 | Known issues: enemy variety, salvage of fitted parts | `test_enemies_get_tougher_and_stay_valid`, `test_salvage_strips_the_best_intact_rare_part` | pass |
 
-## Milestones 6–8
+## Milestone 6 — Drones, fighters and directives ✅ (2026-10-19)
+
+Spec exit criteria: the player can command an NPC fighter and recover or
+lose it persistently. Spec tests (§16 "Autonomous units") mapped below.
+
+| # | Acceptance criterion | Verified by | Result |
+|---|---|---|---|
+| 1 | Autonomous craft share physics | craft are `ShipState`s in the same world; `test_rounds_wreck_a_craft_and_it_stays_lost` | a 60 mm round kills a 40 hp fighter |
+| 2 | Launch needs clear space and valid relative motion | `test_launch_needs_a_working_rack_and_a_steady_carrier` | refused while spinning or with a dead rack; 8 m clear, +3 m/s |
+| 3 | Fighter follows strike / intercept / recon / escort / return | `test_strike_closes_and_hits_the_target`, `test_intercept_goes_after_hostile_craft`, `test_recon_keeps_its_distance_and_gives_a_close_look`, `test_escort_stays_with_the_carrier`, `test_return_recovers_and_services_the_craft` | ≥ 5 hits from ~600 m; recon at 1.5 km, never fires; escort within 250 m |
+| 4 | Target priorities | `test_strike_aims_at_the_chosen_subsystem` | aims at a working engine; at the hull once all are gone |
+| 5 | Damaged or low-resource craft disengage under conservative rules | `test_risk_tolerance_decides_when_to_break_off`, strike test (out of ammunition) | conservative breaks off at half hull; aggressive fights on |
+| 6 | Communications disruption → defined fallback | `test_lost_comms_fall_back_to_return` | RETURN after 10 s; resumes on contact |
+| 7 | Drone reconnaissance / inspection | recon test; HUD sensor gating | systems visible only within 3 km or with a recon craft there |
+| 8 | Lost or damaged craft persist; repaired / replaced at the station | `test_rounds_wreck_a_craft_and_it_stays_lost`, `smoke_wing` | replacement 10 spare parts |
+| — | **Exit:** command a fighter, recover it, lose it persistently | `smoke_wing.gd` (15 checks, real scenes and input actions) | pass |
+
+Scaffolding in the exit test: the fighter is "shot down" by setting its
+status. Renders reviewed (craft in flight, overview air-wing controls).
+
+## Milestones 7–8
 
 Not started. See GAME_DESIGN.md §17.

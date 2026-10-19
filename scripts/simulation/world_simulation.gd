@@ -59,6 +59,8 @@ var _hit_events: Array[HitEvent] = []
 ## Gangways and boardings (spec §9), in creation order.
 var links: Array[DockingLink] = []
 var boardings: Array[BoardingAction] = []
+## Air wings (autonomous craft): updated at the start of every tick.
+var wings: Array[AirWing] = []
 var _link_events: PackedStringArray = PackedStringArray()
 
 
@@ -193,6 +195,8 @@ func step() -> void:
 	if frame != null:
 		frame.step(fixed_dt)
 	var spawned: Array[ProjectileState] = []
+	for wing in wings:
+		wing.update(self, fixed_dt)
 	for id in _ship_order:
 		var ship: ShipState = _ships[id]
 		ship.snapshot_previous()
@@ -439,6 +443,13 @@ func _resolve_round_hits(shot: ProjectileState) -> bool:
 			out.prev_position = out.position
 			out.velocity = best_ship.velocity + rel_v * keep
 			_continuing.append(out)
+	elif best_ship.systems == null and best_ship.config.hull_hp > 0.0 and shot.weapon != null:
+		# A craft: its hull absorbs the round's penetration as damage.
+		best_ship.hull_damage += shot.weapon.penetration_at(ev.relative_speed)
+		if best_ship.hull_damage >= best_ship.config.hull_hp:
+			best_ship.status = ShipState.Status.DESTROYED
+			best_ship.status_time = sim_time
+			GameLog.info("sim", "%s destroyed at T+%.2f s" % [best_ship.display_name, sim_time])
 	# Momentum the ship absorbed, applied at the impact point: it is pushed and spun.
 	_apply_impulse(best_ship, ev.point_body, rel_v * (shot.mass_kg() * absorbed))
 	_hit_events.append(ev)
