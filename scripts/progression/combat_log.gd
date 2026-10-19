@@ -57,7 +57,7 @@ func note_hit(ev: HitEvent, player_id: StringName, t: float, world: WorldSimulat
 	if ev.report == null:
 		return
 	var r := ev.report
-	if ev.shooter_id == player_id:
+	if ev.shooter_id == player_id or String(ev.shooter_id).begins_with(String(player_id) + "_"):
 		hits_scored += 1
 		systems_destroyed += r.destroyed_ids.size()
 		var target := world.get_ship(ev.target_id)
@@ -115,7 +115,7 @@ func to_dict() -> Dictionary:
 ## Writes the debrief; returns its path ("" on failure).
 func save() -> String:
 	DirAccess.make_dir_recursive_absolute(DIR)
-	var path := DIR.path_join("sortie_%s.json" % started_utc.replace(":", "").replace("-", ""))
+	var path := DIR.path_join("sortie_%s_%d.json" % [started_utc.replace(":", "").replace("-", ""), Time.get_ticks_msec()])
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return ""

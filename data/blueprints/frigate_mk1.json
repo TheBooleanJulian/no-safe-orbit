@@ -58,6 +58,8 @@
 		{ "id": "e47", "def": "propellant_tank", "cell": [0, 0, 9] },
 		{ "id": "e48", "def": "propellant_tank", "cell": [6, 0, 7] },
 		{ "id": "e49", "def": "propellant_tank", "cell": [6, 0, 9] },
-		{ "id": "e50", "def": "docking_collar", "cell": [2, 1, 5], "face": "port" }
+		{ "id": "e50", "def": "docking_collar", "cell": [2, 1, 5], "face": "port" },
+		{ "id": "e51", "def": "fighter_rack", "cell": [3, 0, 5], "face": "ventral" },
+		{ "id": "e52", "def": "drone_rack", "cell": [4, 0, 5], "face": "ventral" }
 	]
 }

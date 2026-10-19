@@ -6,7 +6,9 @@ extends PanelContainer
 ## running underneath. Built in code; Main handles the commands it emits.
 
 ## `name`: &"divert" (arg Channel), &"balance", &"cover" (arg CrewRoster.Role),
-## &"party" (arg new size), &"repair_pick" (arg equipment id), &"repair".
+## &"party" (arg new size), &"repair_pick" (arg equipment id), &"repair",
+## &"craft_launch" / &"craft_recall" (arg craft id), &"craft_directive" /
+## &"craft_risk" / &"craft_priority" (arg [craft id, value]).
 signal command(name: StringName, arg: Variant)
 
 const COVERABLE := [CrewRoster.Role.COMMAND, CrewRoster.Role.WEAPONS, CrewRoster.Role.ENGINEERING, CrewRoster.Role.DAMAGE_CONTROL]
@@ -21,6 +23,9 @@ var _party_label: Label
 var _repair_pick: OptionButton
 var _repair_ids: PackedStringArray = PackedStringArray()
 var _decks: Array[int] = []
+var _wing_box: VBoxContainer
+var _wing_rows: Dictionary = {}  # craft id -> Label (status line)
+var _wing_ref: AirWing
 
 
 func _ready() -> void:
@@ -69,6 +74,9 @@ func _ready() -> void:
 	brow.add_child(_party_label)
 	brow.add_child(_button("+", func() -> void: command.emit(&"party", 1), CyberTheme.MAGENTA))
 	mid.add_child(brow)
+	mid.add_child(_heading("AIR WING  [L] launch all  [K] recall all", CyberTheme.CYAN))
+	_wing_box = VBoxContainer.new()
+	mid.add_child(_wing_box)
 	var close := _button("Close [Tab]", func() -> void: visible = false)
 	mid.add_child(close)
 	# Target.
@@ -88,10 +96,12 @@ func toggle() -> void:
 
 
 ## Refresh from the simulation (called every frame while open).
-func update_view(player: ShipState, target: ShipState, boarding: BoardingAction, party_size: int, sim_time: float) -> void:
+func update_view(player: ShipState, target: ShipState, boarding: BoardingAction, party_size: int, sim_time: float,
+		wing: AirWing = null, close_look: bool = true) -> void:
 	var sys := player.systems
 	if sys == null:
 		return
+	_update_wing(wing)
 	_ensure_deck_maps(sys)
 	var pips := PackedStringArray()
 	for ch in ShipSystems.Channel.size():
@@ -104,11 +114,11 @@ func update_view(player: ShipState, target: ShipState, boarding: BoardingAction,
 	_crew_label.text = _crew_text(sys)
 	_party_label.text = "  %d of up to %d  " % [party_size, BoardingAction.MAX_TEAM]
 	_refresh_repairs(sys)
-	_target_map.systems = target.systems if target != null else null
-	_target_map.title = target.display_name if target != null else "NO TARGET"
+	_target_map.systems = target.systems if target != null and close_look else null
+	_target_map.title = (target.display_name if close_look else "%s — no close look (recon drone or < 3 km)" % target.display_name) if target != null else "NO TARGET"
 	_target_map.room_overlay = {}
 	var lines := PackedStringArray()
-	if target != null and target.systems != null:
+	if target != null and target.systems != null and close_look:
 		lines.append(target.systems.status_line())
 		if target.systems.is_disabled():
 			lines.append("[color=%s]DISABLED — %s[/color]" % [CyberTheme.html(CyberTheme.MAGENTA), target.systems.disabled_reason()])
@@ -121,6 +131,53 @@ func update_view(player: ShipState, target: ShipState, boarding: BoardingAction,
 		for l in boarding.log.slice(maxi(boarding.log.size() - 5, 0)):
 			lines.append(l)
 	_target_label.text = "\n".join(lines)
+
+
+## One row per craft: status line, then directive / risk / priority pickers
+## and launch / recall.
+func _update_wing(wing: AirWing) -> void:
+	if wing == null:
+		return
+	if wing != _wing_ref:
+		_wing_ref = wing
+		for child in _wing_box.get_children():
+			child.queue_free()
+		_wing_rows.clear()
+		for c in wing.crafts:
+			var status := Label.new()
+			status.add_theme_font_size_override("font_size", 12)
+			_wing_box.add_child(status)
+			_wing_rows[c.id] = status
+			var row := HBoxContainer.new()
+			var id := c.id
+			row.add_child(_picker(CraftAI.DIRECTIVE_NAMES, c.directive, func(i: int) -> void: command.emit(&"craft_directive", [id, i])))
+			row.add_child(_picker(CraftAI.RISK_NAMES, c.risk, func(i: int) -> void: command.emit(&"craft_risk", [id, i])))
+			if not c.is_drone():
+				row.add_child(_picker(CraftAI.PRIORITY_NAMES, c.priority, func(i: int) -> void: command.emit(&"craft_priority", [id, i])))
+			row.add_child(_button("Launch", func() -> void: command.emit(&"craft_launch", id)))
+			row.add_child(_button("Recall", func() -> void: command.emit(&"craft_recall", id)))
+			_wing_box.add_child(row)
+	for c in wing.crafts:
+		var label: Label = _wing_rows.get(c.id)
+		if label == null:
+			continue
+		var fuel := "fuel %d%%" % roundi(c.propellant_fraction * 100.0)
+		var ammo := " · ammo %d" % c.ammo if c.config.cannon != null else ""
+		var state: String = AirWing.STATUS_NAMES[c.status].to_upper()
+		if c.status == AirWing.Status.DOCKED and c.service_left_s > 0.0:
+			state = "SERVICING %.0f s" % c.service_left_s
+		label.text = "%s — %s · hull %d%% · %s%s%s" % [c.label, state, roundi(c.hull_fraction * 100.0), fuel, ammo,
+			"  » " + c.override_reason if c.override_reason != "" else ""]
+		label.add_theme_color_override("font_color", CyberTheme.DANGER if c.status == AirWing.Status.LOST else CyberTheme.TEXT)
+
+
+func _picker(names: Array, selected: int, on_pick: Callable) -> OptionButton:
+	var o := OptionButton.new()
+	for n in names:
+		o.add_item(n)
+	o.select(selected)
+	o.item_selected.connect(on_pick)
+	return o
 
 
 func _crew_text(sys: ShipSystems) -> String:

@@ -37,12 +37,14 @@ const CATEGORY := {
 	EquipmentDefinition.Kind.RCS: &"mobility",
 	EquipmentDefinition.Kind.PROPELLANT_TANK: &"mobility",
 	EquipmentDefinition.Kind.DOCKING_COLLAR: &"hull",
+	EquipmentDefinition.Kind.CRAFT_MOUNT: &"combat",
 }
 
 
 class Job:
 	## &"repair", &"replace" (destroyed part), &"module", &"breach", &"hatch",
 	## &"recruit" (one replacement crew member; subject = role name),
+	## &"craft" (replace or repair the craft on rack `subject`),
 	## &"build" (refit: a part the vessel does not have yet).
 	var kind: StringName
 	var subject: String
@@ -129,6 +131,25 @@ static func repair_jobs(vessel: ShipInstance, catalog: ConstructionCatalog) -> A
 		j.cost = HATCH_COST
 		j.label = "Replace hatch %s" % id
 		j.order = 3.0
+		jobs.append(j)
+	for rack_id in vessel.wing:
+		var placed: Variant = bp.find(str(rack_id))
+		var def: EquipmentDefinition = catalog.equipment.get(placed.def_id) if placed != null else null
+		if def == null or def.craft == null:
+			continue
+		var entry: Dictionary = vessel.wing[rack_id]
+		var full := maxi(ceili(def.craft.mass_kg / 1000.0), 1)
+		var j := Job.new()
+		j.kind = &"craft"
+		j.subject = str(rack_id)
+		j.category = &"combat"
+		j.order = 8.0
+		if entry.get("lost", false):
+			j.cost = full
+			j.label = "Replace lost %s (rack %s)" % [def.craft.display_name, rack_id]
+		else:
+			j.cost = maxi(damaged_cost(full, 1.0 - float(entry.get("hull", 1.0))), 1)
+			j.label = "Repair %s (rack %s, %d%%)" % [def.craft.display_name, rack_id, roundi(float(entry.get("hull", 1.0)) * 100.0)]
 		jobs.append(j)
 	var dead := vessel.dead_crew()
 	for role_name in dead:
@@ -231,6 +252,8 @@ static func perform(jobs: Array[Job], vessel: ShipInstance, profile: PlayerProfi
 				(c.get("breached", []) as Array).erase(j.subject)
 			&"hatch":
 				(c.get("hatches", []) as Array).erase(j.subject)
+			&"craft":
+				vessel.wing.erase(j.subject)
 			&"recruit":
 				var dead: Dictionary = c.get("crew", {}).get("dead", {})
 				dead[j.subject] = int(dead.get(j.subject, 0)) - 1

@@ -14,6 +14,8 @@ var condition: Dictionary = {}
 ## Cargo hold contents, at risk until banked: {spare_parts: int,
 ## equipment: {id: units}, blueprints: {id: [kind, rarity, count]}}.
 var cargo: Dictionary = {}
+## Craft not like new, by rack id: {"hull": fraction, "lost": bool}.
+var wing: Dictionary = {}
 var sorties: int = 0
 var salvaged: int = 0
 ## Service record, newest last.
@@ -39,7 +41,7 @@ func is_damaged() -> bool:
 		var part: Variant = condition.get(key, [])
 		if not part.is_empty():
 			return true
-	return false
+	return not wing.is_empty()
 
 
 func cargo_is_empty() -> bool:
@@ -77,6 +79,7 @@ func to_dict() -> Dictionary:
 		"blueprint": blueprint.to_dict(),
 		"condition": condition.duplicate(true),
 		"cargo": cargo.duplicate(true),
+		"wing": wing.duplicate(true),
 		"sorties": sorties,
 		"salvaged": salvaged,
 		"history": Array(history),
@@ -95,6 +98,8 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipInstance:
 	v.name = str(d.get("name", bp.name))
 	var c: Variant = d.get("condition", {})
 	v.condition = (c as Dictionary).duplicate(true) if c is Dictionary else {}
+	var wg: Variant = d.get("wing", {})
+	v.wing = (wg as Dictionary).duplicate(true) if wg is Dictionary else {}
 	var cg: Variant = d.get("cargo", {})
 	v.cargo = (cg as Dictionary).duplicate(true) if cg is Dictionary else {}
 	v.sorties = int(d.get("sorties", 0))

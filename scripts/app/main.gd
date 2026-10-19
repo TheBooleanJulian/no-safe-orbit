@@ -52,6 +52,13 @@ var _designs: Dictionary = {}
 var _sortie_closed := false
 ## This sortie's record, for the debrief.
 var combat_log: CombatLog
+## The player's and the target's autonomous craft (Milestone 6).
+var player_wing: AirWing
+var target_wing: AirWing
+## Enemy fighters launch from this mission on, once the target is hostile.
+const ENEMY_WING_FROM_MISSION := 3
+var _craft_views: Dictionary = {}  # craft id -> CraftView
+var _wing_log_seen := {}  # AirWing -> log_count already shown
 
 
 static func get_profile() -> PlayerProfile:
@@ -76,6 +83,9 @@ func _start_scenario() -> void:
 	for view in _views.values():
 		(view as ShipView).queue_free()
 	_views.clear()
+	for view in _craft_views.values():
+		(view as Node).queue_free()
+	_craft_views.clear()
 	hud.reset()
 	hit_flashes.clear()
 
@@ -97,6 +107,12 @@ func _start_scenario() -> void:
 		player.propellant_kg = minf(player.propellant_kg, _intact_tank_capacity(systems))
 	player.attach_systems(systems)
 	world.add_ship(player)
+	player_wing = AirWing.for_ship(player)
+	player_wing.target_id = TARGET_ID
+	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
+		player_wing.apply_state(vessel.wing)
+	world.wings.append(player_wing)
+	hud.player_wing = player_wing
 	_spawn_target()
 	_sortie_closed = false
 	combat_log = CombatLog.begin(player, world.sim_time)
@@ -126,6 +142,17 @@ func _spawn_target() -> void:
 	target.attach_systems(_new_systems(TARGET_ID))
 	world.add_ship(target)
 	world.set_input(TARGET_ID, ShipControlInput.neutral())
+	# Its craft (they launch once it is hostile, from ENEMY_WING_FROM_MISSION).
+	if target_wing != null:
+		world.wings.erase(target_wing)
+		for c in target_wing.crafts:
+			if world.has_ship(c.id):
+				world.remove_ship(c.id)
+	target_wing = AirWing.for_ship(target)
+	target_wing.target_id = PLAYER_ID
+	world.wings.append(target_wing)
+	if player_wing != null:
+		player_wing.target_id = TARGET_ID
 
 
 static func _intact_tank_capacity(systems: ShipSystems) -> float:
@@ -206,6 +233,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("divert_balance"):
 		world.get_ship(PLAYER_ID).systems.balance_power()
 		return
+	elif event.is_action_pressed("launch_craft"):
+		var n := player_wing.launch_all(world)
+		if n == 0:
+			var why := PackedStringArray()
+			for c in player_wing.crafts:
+				why.append(player_wing.launch_block_reason(world, c))
+			hud.notice("LAUNCH: " + "; ".join(why), world.sim_time)
+		return
+	elif event.is_action_pressed("recall_craft"):
+		player_wing.recall_all()
+		return
 	elif event.is_action_pressed("divert_sys"):
 		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.SYS)
 		return
@@ -258,6 +296,11 @@ func close_sortie() -> void:
 	var player := world.get_ship(PLAYER_ID)
 	var catalog := ConstructionCatalog.default_catalog()
 	var lines := PackedStringArray()
+	# Craft still out are left behind (lost); the rest keep their state.
+	for c in player_wing.crafts:
+		if c.status == AirWing.Status.FLYING:
+			lines.append("%s left behind — lost" % c.label)
+	p.vessel.wing = player_wing.state() if _designs[PLAYER_ID].blueprint == p.vessel.blueprint else {}
 	# Boarders still on the other ship are left behind.
 	for b in world.boardings:
 		if b.link.attacker_id == PLAYER_ID and b.phase != BoardingAction.Phase.RETURNED and b.phase != BoardingAction.Phase.ABORTED:
@@ -364,6 +407,54 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			sys.preferred_repair_id = str(arg)
 		&"repair":
 			start_field_repair()
+		&"craft_launch":
+			var why := player_wing.launch(world, player_wing.by_id(arg))
+			if why != "":
+				hud.notice("LAUNCH: " + why, world.sim_time)
+		&"craft_recall":
+			player_wing.by_id(arg).directive = CraftAI.Directive.RETURN
+		&"craft_directive":
+			player_wing.by_id(arg[0]).directive = arg[1]
+		&"craft_risk":
+			player_wing.by_id(arg[0]).risk = arg[1]
+		&"craft_priority":
+			player_wing.by_id(arg[0]).priority = arg[1]
+
+
+## Each wing's hostiles are the other wing's craft in flight.
+func _link_wings() -> void:
+	var ours: Array[StringName] = []
+	var theirs: Array[StringName] = []
+	for c in player_wing.flying():
+		ours.append(c.id)
+	for c in target_wing.flying():
+		theirs.append(c.id)
+	player_wing.hostile_ids = theirs
+	target_wing.hostile_ids = ours
+
+
+func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
+	var alive := {}
+	for wing in [player_wing, target_wing]:
+		for c in wing.flying():
+			var ship := world.get_ship(c.id)
+			if ship == null:
+				continue
+			alive[c.id] = true
+			var view: CraftView = _craft_views.get(c.id)
+			if view == null:
+				view = CraftView.new()
+				view.craft_id = c.id
+				view.config = c.config
+				view.callsign = c.label
+				view.hostile = wing == target_wing
+				add_child(view)
+				_craft_views[c.id] = view
+			view.sync_from(ship, alpha, render_origin)
+	for id in _craft_views.keys():
+		if not alive.has(id):
+			(_craft_views[id] as Node).queue_free()
+			_craft_views.erase(id)
 
 
 ## Docking camera out of our collar while a target is in boarding range and
@@ -441,6 +532,11 @@ func _process(delta: float) -> void:
 		world.set_input(TARGET_ID, GunneryAI.break_contact(target, player))
 	elif target_hostile and target.is_active():
 		world.set_input(TARGET_ID, GunneryAI.command(target, player))
+		if get_profile().missions_completed + 1 >= ENEMY_WING_FROM_MISSION and not target.systems.is_disabled():
+			for c in target_wing.crafts:
+				if c.status == AirWing.Status.DOCKED and not c.is_drone() and c.service_left_s <= 0.0 and c.hull_fraction > 0.0:
+					target_wing.launch(world, c)
+	_link_wings()
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
 	if not player.is_active() and not _sortie_closed:
@@ -469,13 +565,23 @@ func _process(delta: float) -> void:
 			hud.notice("%s: %s" % [world.get_ship(id).display_name, blast.lines[0]], world.sim_time)
 			GameLog.info("main", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
+	for wing in [player_wing, target_wing]:
+		var seen: int = _wing_log_seen.get(wing, 0)
+		var fresh := mini(wing.log_count - seen, wing.log.size())
+		var who := "Wing" if wing == player_wing else "Enemy wing"
+		if fresh > 0:
+			for line in wing.log.slice(wing.log.size() - fresh):
+				hud.notice("%s: %s" % [who, line], world.sim_time)
+				combat_log.record(world.sim_time, "wing", "%s: %s" % [who, line])
+		_wing_log_seen[wing] = wing.log_count
 	for ev in hits:
 		hit_flashes.add(ev)
-		if ev.shooter_id == PLAYER_ID and ev.report != null and _designs.has(ev.target_id):
+		if (ev.shooter_id == PLAYER_ID or player_wing.by_id(ev.shooter_id) != null) and ev.report != null and _designs.has(ev.target_id):
 			var struck := world.get_ship(ev.target_id)
 			hud.hit_cam.show_hit(ev, _designs[ev.target_id], struck.systems, struck.display_name)
 
 	var render_origin := player.interpolated_position(alpha)
+	_sync_craft_views(alpha, render_origin)
 	for id: StringName in _views:
 		var ship := world.get_ship(id)
 		var view: ShipView = _views[id]
