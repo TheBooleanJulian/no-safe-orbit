@@ -303,6 +303,18 @@ Verified in `tests/unit/test_m7_weapons.gd` unless noted.
 
 Simplifications: see ARCHITECTURE.md "Missiles and EMP (Milestone 7)".
 
-## Milestone 8
+## Milestone 8 — Vertical-slice polish ✅ (2026-10-20)
 
-Not started. See GAME_DESIGN.md §17.
+Spec exit criterion: a new player can design or choose a ship, fight, take
+damage, recover, repair and understand what happened. Verified in
+`tests/unit/test_m8_polish.gd` unless noted.
+
+| # | Acceptance criterion | Verified by | Result |
+|---|---|---|---|
+| 1 | Mission objectives with rewards | `test_the_mission_chain_pays_and_moves_on`, `smoke_campaign` | disable → capture → escort → waves → patrol; rewards paid once; failed goals retried; saved |
+| 2 | Tutorial flow, skippable, saved | `test_the_tutorial_follows_what_the_player_does`, `smoke_main` | F2 starts; steps advance on events in order; skip/restart; carries over to the station's repair step |
+| 3 | Clear damage reports | `test_the_debrief_opens_with_a_sortie_summary`, `test_the_hit_cam_caption_says_how_the_round_got_in`, renders | goal, dealt, taken (side), lost, crew at the top |
+| 4 | Performance under load | `test_the_simulation_keeps_a_60_hz_budget_under_load`, `tools/bench_sim.gd` | ~1 ms mean per tick with 200+ rounds and 12 missiles (budget 8 ms) |
+| 5 | Design system and font fallbacks | `test_design_tokens_match_the_design_system` | #050508 / #0A0E14 / #00D4C8 / #F5C842; Space Grotesk and JetBrains Mono first, with fallbacks |
+| 6 | Save/load hardening | `test_saves_keep_a_rolling_backup_and_never_leave_temp_files`, `test_a_damaged_profile_is_restored_from_its_backup`, `test_schema_5_migrates_a_v4_save_and_keeps_the_original`, compat check on a copy of the real profile | atomic + verified write, `.bak`, recovery with a message, schema 3/4 → 5 migration round-trips |
+| — | **Exit:** choose a ship, fight, take damage, recover, repair, understand | `smoke_campaign` (fight, salvage, jump, repair, refit, relaunch) with the mission reward; `smoke_main` (tutorial) | pass |

@@ -34,6 +34,10 @@ var aftermath: PackedStringArray = PackedStringArray()
 var has_workshop: bool = false
 ## Loot gained this sortie: "Rare: Railgun (1 unit) — in the hold" etc.
 var loot: PackedStringArray = PackedStringArray()
+## Mission goals met or failed this sortie ("✔ …", "✕ …", "▲ … not met yet").
+var objectives: PackedStringArray = PackedStringArray()
+var missiles_launched: int = 0
+var missiles_inbound: int = 0
 
 
 static func begin(ship: ShipState, sim_time: float) -> CombatLog:
@@ -111,6 +115,7 @@ func to_dict() -> Dictionary:
 		"hits_taken": hits_taken, "stopped_by_armor": stopped_by_armor, "hits_by_side": hits_by_side.duplicate(),
 		"systems_lost": systems_lost.duplicate(true), "crew_lost": crew_lost, "crew_wounded": crew_wounded,
 		"explosions": explosions, "dv_spent": dv_spent, "has_workshop": has_workshop, "events": events.duplicate(true),
+		"objectives": Array(objectives), "missiles_launched": missiles_launched, "missiles_inbound": missiles_inbound,
 	}
 
 
@@ -164,6 +169,46 @@ static func insights(d: Dictionary) -> PackedStringArray:
 	return out
 
 
+## The sortie at a glance: the goal, what we did, what was done to us and
+## what it cost — one line each, glyph first (■ fine, ▲ hurt, ✕ lost).
+static func summary(d: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	for line in d.get("objectives", []):
+		out.append(str(line))
+	var shots := int(d.get("shots_fired", 0))
+	var hits := int(d.get("hits_scored", 0))
+	var dealt := "■ DEALT  %d hit%s from %d rounds%s · %d enemy system%s destroyed" % [hits, "" if hits == 1 else "s", shots,
+		" (%.0f %%)" % (100.0 * hits / shots) if shots > 0 else "", int(d.get("systems_destroyed", 0)),
+		"" if int(d.get("systems_destroyed", 0)) == 1 else "s"]
+	if int(d.get("missiles_launched", 0)) > 0:
+		dealt += " · %d missile%s launched" % [int(d.missiles_launched), "" if int(d.missiles_launched) == 1 else "s"]
+	out.append(dealt)
+	var taken := int(d.get("hits_taken", 0))
+	var lost: Array = d.get("systems_lost", [])
+	var took := "%s TAKEN  %d hit%s · armour stopped %d" % [CyberTheme.GLYPH_OK if taken == 0 else CyberTheme.GLYPH_DEGRADED, taken,
+		"" if taken == 1 else "s", int(d.get("stopped_by_armor", 0))]
+	var sides: Dictionary = d.get("hits_by_side", {})
+	var worst := ""
+	for s in sides:
+		if worst == "" or int(sides[s]) > int(sides[worst]):
+			worst = s
+	if worst != "":
+		took += " · most through the %s" % worst
+	if int(d.get("missiles_inbound", 0)) > 0:
+		took += " · %d missile%s fired at us" % [int(d.missiles_inbound), "" if int(d.missiles_inbound) == 1 else "s"]
+	out.append(took)
+	if not lost.is_empty():
+		var names := PackedStringArray()
+		for l in lost:
+			names.append("%s %s (%s)" % [l.get("name", "?"), l.get("id", ""), l.get("side", "?")])
+		out.append("%s LOST  %s" % [CyberTheme.GLYPH_DESTROYED, ", ".join(names)])
+	var dead := int(d.get("crew_lost", 0))
+	var hurt := int(d.get("crew_wounded", 0))
+	if dead + hurt > 0:
+		out.append("%s CREW  %d killed · %d wounded (the wounded recover ashore)" % [CyberTheme.GLYPH_DESTROYED if dead > 0 else CyberTheme.GLYPH_DEGRADED, dead, hurt])
+	return out
+
+
 ## BBCode for the debrief panels.
 static func render(d: Dictionary) -> String:
 	if d.is_empty():
@@ -171,10 +216,18 @@ static func render(d: Dictionary) -> String:
 	var lines := PackedStringArray([
 		"[b]DEBRIEF — %s[/b]  (%s)" % [d.get("ship_name", "?"), d.get("design", "?")],
 		"%s · %s · Δv spent %.0f m/s" % [str(d.get("outcome", "")).to_upper(), HudFormat.clock(float(d.get("duration_s", 0.0))), float(d.get("dv_spent", 0.0))],
-		"Shots %d · hits %d · enemy systems destroyed %d" % [int(d.get("shots_fired", 0)), int(d.get("hits_scored", 0)), int(d.get("systems_destroyed", 0))],
-		"Hits taken %d · stopped by armour %d · systems lost %d · crew killed %d, wounded %d" % [int(d.get("hits_taken", 0)),
-			int(d.get("stopped_by_armor", 0)), (d.get("systems_lost", []) as Array).size(), int(d.get("crew_lost", 0)), int(d.get("crew_wounded", 0))],
+		"",
+		"[b]SORTIE SUMMARY[/b]",
 	])
+	for line in summary(d):
+		var color := CyberTheme.TEXT
+		if line.begins_with("✔"):
+			color = CyberTheme.CYAN
+		elif line.begins_with(CyberTheme.GLYPH_DESTROYED):
+			color = CyberTheme.RED
+		elif line.begins_with(CyberTheme.GLYPH_DEGRADED):
+			color = CyberTheme.AMBER
+		lines.append(CyberTheme.tint(line, color))
 	var sides: Dictionary = d.get("hits_by_side", {})
 	if not sides.is_empty():
 		var parts := PackedStringArray()

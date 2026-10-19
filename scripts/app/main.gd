@@ -101,6 +101,14 @@ var _missile_views: Dictionary = {}  # missile id -> MissileView
 const ENEMY_MISSILE_RANGE_M := 12_000.0
 const ENEMY_MISSILE_INTERVAL_S := 25.0
 var _enemy_missile_at := 0.0
+## The campaign's current goal and the guided first sortie (Milestone 8).
+var mission: MissionChain
+var tutorial: Tutorial
+## The escort mission's courier (a craft-like ship of ours, unarmed).
+const COURIER_ID := &"courier"
+## The current contact has been beaten (disabled or captured) / salvaged.
+var _contact_beaten := false
+var _salvaged := false
 var _wing_log_seen := {}  # AirWing -> log_count already shown
 
 
@@ -181,6 +189,16 @@ func _start_scenario() -> void:
 
 	_spawn_view(PLAYER_ID, Color.WHITE)
 	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
+	mission = MissionChain.from_dict(p.campaign)
+	tutorial = Tutorial.from_dict(p.tutorial)
+	_salvaged = false
+	if mission.goal() == MissionChain.Goal.ESCORT:
+		_spawn_courier(player)
+	hud.notice("%s — %s" % [mission.number_text(), mission.current().brief], world.sim_time)
+	if PlayerProfile.load_notice != "":
+		hud.notice(PlayerProfile.load_notice, world.sim_time)
+		combat_log.record(world.sim_time, "profile", PlayerProfile.load_notice)
+		PlayerProfile.load_notice = ""
 	GameLog.info("main", "Orbital sandbox ready: player flies '%s' (%.0f t), %s orbit at %.0f km, fixed dt %.4f s" % [
 		_designs[PLAYER_ID].config.display_name, _designs[PLAYER_ID].config.mass_kg / 1000.0,
 		EARTH.display_name, START_ALTITUDE_M / 1000.0, world.fixed_dt])
@@ -208,6 +226,7 @@ func _spawn_target(arriving: bool = false) -> void:
 	target.angular_velocity = Vector3.ZERO if arriving else Vector3(0.0, 0.03, 0.01)
 	_target_arriving = arriving
 	_prize_taken = false
+	_contact_beaten = false
 	_enemy_missile_at = world.sim_time + ENEMY_MISSILE_INTERVAL_S * 0.5
 	track = SensorTrack.new()
 	enemy_track = SensorTrack.new()
@@ -311,6 +330,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	elif event.is_action_pressed("fire_missile"):
 		fire_missile()
+		return
+	elif event.is_action_pressed("tutorial"):
+		toggle_tutorial()
 		return
 	elif event.is_action_pressed("cycle_target"):
 		cycle_target()
@@ -534,7 +556,14 @@ func close_sortie() -> void:
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	for line in lines:
 		GameLog.info("main", line)
+	tutorial.decline_offer()
+	p.tutorial = tutorial.to_dict()
+	p.campaign = mission.to_dict()
 	if combat_log != null:
+		if mission.failed != "":
+			combat_log.objectives.append("✕ %s %s — failed: %s" % [mission.number_text(), mission.current().title, mission.failed])
+		elif combat_log.objectives.is_empty():
+			combat_log.objectives.append("▲ %s %s — not met yet: %s" % [mission.number_text(), mission.current().title, mission.current().brief])
 		var outcome := "vessel captured by boarders" if player_captured() else ("vessel lost" if not player.is_active() else "jumped home to %s" % STATION_NAME)
 		combat_log.finish(player, outcome, world.sim_time, lines)
 		p.last_debrief = combat_log.to_dict()
@@ -581,6 +610,7 @@ func drop_beacon() -> Array:
 		if d != null:
 			p.stow(d)
 	p.credits += scrap + bounty
+	_salvaged = true
 	var summary := "Salvage beacon on %s (%d%% intact): %d cr scrap (%d%%) + %d cr bounty; %d crates into the hold" % [
 		target.display_name, roundi(intact * 100.0), scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), bounty, crates.size()]
 	_record_payout(target, summary, crates, "in the hold")
@@ -600,6 +630,13 @@ func drop_beacon() -> Array:
 ## home the prize crew takes it to Earth Shipyard and the next contact comes.
 func take_prize() -> Array:
 	_prize_taken = true
+	_salvaged = true
+	var met := false
+	if not _contact_beaten:
+		_contact_beaten = true
+		met = mission.contact_beaten()
+	if mission.contact_captured() or met:
+		_complete_mission()
 	var target := world.get_ship(TARGET_ID)
 	var p := get_profile()
 	var catalog := ConstructionCatalog.default_catalog()
@@ -735,6 +772,7 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 				combat_log.record(world.sim_time, "jump", "%sump to %s%s" % [
 					"Emergency j" if not waiting.is_empty() else "Dimensional j", STATION_NAME,
 					" — left behind: %s" % ", ".join(waiting) if not waiting.is_empty() else ""])
+				tutorial.observe({"jump": true})
 				open_shipyard()
 				return true
 	else:
@@ -876,6 +914,26 @@ func _sync_missile_views(alpha: float, render_origin: Vector3) -> void:
 			_missile_views.erase(id)
 
 
+var _courier_view: CraftView
+
+
+func _sync_courier_view(alpha: float, render_origin: Vector3) -> void:
+	var c := world.get_ship(COURIER_ID) if world.has_ship(COURIER_ID) else null
+	if c == null or not c.is_active():
+		if _courier_view != null:
+			_courier_view.queue_free()
+			_courier_view = null
+		return
+	if _courier_view == null:
+		_courier_view = CraftView.new()
+		_courier_view.craft_id = COURIER_ID
+		_courier_view.config = c.config
+		_courier_view.callsign = "COURIER"
+		_courier_view.scale = Vector3.ONE * 3.0
+		add_child(_courier_view)
+	_courier_view.sync_from(c, alpha, render_origin)
+
+
 ## A warhead going off. The anti-ship blast already shows as an explosion
 ## on the struck ship (ShipSystems.blast_at); EMP is a blue ring; a nuclear
 ## burst is a fireball and a white flash.
@@ -941,9 +999,70 @@ func fire_missile() -> String:
 		hud.notice("MISSILE: " + why, world.sim_time)
 		return why
 	audio.play("launch")
+	combat_log.missiles_launched += 1
 	if at == TARGET_ID and not target_hostile:
 		set_target_hostile(true, "missile launched at it")
 	return ""
+
+
+## F2: start the guided first sortie (or restart it), or skip it.
+func toggle_tutorial() -> void:
+	tutorial.toggle()
+	get_profile().tutorial = tutorial.to_dict()
+	_save_profile()
+	hud.notice("Tutorial started — follow the prompts at the top" if tutorial.running() else "Tutorial skipped — [F2] starts it again",
+		world.sim_time)
+
+
+## The current goal is met: reward, log, and the next goal.
+func _complete_mission() -> void:
+	var was_escort := mission.goal() == MissionChain.Goal.ESCORT
+	var line := mission.complete(get_profile())
+	hud.notice(line, world.sim_time)
+	audio.play("dock")
+	combat_log.record(world.sim_time, "mission", line)
+	combat_log.objectives.append("✔ " + line)
+	GameLog.info("main", line)
+	if was_escort and world.has_ship(COURIER_ID):
+		hud.notice("The courier jumps out — thanks for the escort", world.sim_time)
+		world.remove_ship(COURIER_ID)
+	_save_profile()
+
+
+## The escort mission's courier: ahead and to starboard, drifting with us.
+func _spawn_courier(player: ShipState) -> void:
+	var c := ShipState.create(COURIER_ID, "COURIER", MissionChain.courier_config(),
+		player.position + player.orientation * Vector3(300, 60, -400), player.velocity + player.orientation * Vector3(0, 0, -4), player.orientation)
+	world.add_ship(c)
+	world.set_input(COURIER_ID, ShipControlInput.neutral())
+	hud.escort_id = COURIER_ID
+
+
+## The escort's courier and the tutorial's prompts, each frame.
+func _update_goals(player: ShipState, target: ShipState) -> void:
+	if not _contact_beaten and target.is_active() and target.systems != null and target.systems.is_disabled():
+		_contact_beaten = true
+		if mission.contact_beaten():
+			_complete_mission()
+	if world.has_ship(COURIER_ID) and not world.get_ship(COURIER_ID).is_active():
+		mission.escort_lost()
+		var line := "COURIER DESTROYED — %s failed" % mission.number_text()
+		hud.notice(line, world.sim_time)
+		combat_log.record(world.sim_time, "mission", line)
+		world.remove_ship(COURIER_ID)
+		hud.escort_id = &""
+	if tutorial.running() and tutorial.observe({
+			"fly": player.delta_v_expended > 2.0,
+			"aim": track.locked,
+			"fire": combat_log.hits_scored > 0,
+			"disable": _contact_beaten,
+			"salvage": _salvaged}):
+		get_profile().tutorial = tutorial.to_dict()
+		audio.play("tick")
+	var guide := PackedStringArray([mission.hud_line()])
+	if tutorial.prompt() != "":
+		guide.append(tutorial.prompt())
+	hud.guide_lines = guide
 
 
 ## Y: grab the target with the grappling arm, or let go.
@@ -1077,17 +1196,21 @@ func _process(delta: float) -> void:
 		if target.position.distance_to(player.position) < ENGAGE_STANDOFF_M + 150.0:
 			_target_arriving = false
 	elif engaging:
-		world.set_input(TARGET_ID, GunneryAI.combat(target, player, world.sim_time))
+		# Escorting: the contact goes for the courier while it lives.
+		var prey := world.get_ship(COURIER_ID) if world.has_ship(COURIER_ID) and world.get_ship(COURIER_ID).is_active() else player
+		world.set_input(TARGET_ID, GunneryAI.combat(target, prey, world.sim_time))
 		if enemy_track.locked and world.sim_time >= _enemy_missile_at and not target.systems.is_disabled() \
 				and target.position.distance_to(player.position) < ENEMY_MISSILE_RANGE_M:
 			_enemy_missile_at = world.sim_time + ENEMY_MISSILE_INTERVAL_S
 			if world.launch_missile(TARGET_ID, PLAYER_ID) == "":
 				_last_enemy_fire = world.sim_time
+				combat_log.missiles_inbound += 1
 		if get_profile().missions_completed + 1 >= ENEMY_WING_FROM_MISSION and not target.systems.is_disabled():
 			for c in target_wing.crafts:
 				if c.status == AirWing.Status.DOCKED and not c.is_drone() and c.service_left_s <= 0.0 and c.hull_fraction > 0.0:
 					target_wing.launch(world, c)
 	_link_wings()
+	_update_goals(player, target)
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
 	if (not player.is_active() or player_captured()) and not _sortie_closed:
@@ -1155,6 +1278,7 @@ func _process(delta: float) -> void:
 	var render_origin := player.interpolated_position(alpha)
 	_sync_craft_views(alpha, render_origin)
 	_sync_missile_views(alpha, render_origin)
+	_sync_courier_view(alpha, render_origin)
 	for id: StringName in _views:
 		var ship := world.get_ship(id)
 		var view: ShipView = _views[id]

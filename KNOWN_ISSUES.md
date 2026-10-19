@@ -14,6 +14,12 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **EW jamming exists only as a hook** for craft communications; there are
   no decoys or electronic warfare against missiles yet — the counterplay is
   point defence, guns and range.
+- **Missions and the tutorial are new** (Milestone 8): rewards and the
+  courier's toughness are first guesses; the tutorial is verified by tests
+  and the smoke run, not yet by a new player.
+- **Only the simulation is profiled** (`tools/bench_sim.gd`, ~1 ms a tick
+  with 200+ rounds; rare 10–15 ms ticks when many hits land at once).
+  Rendering cost depends on the GPU and isn't measured by the checks.
 - **Missiles are new** (Milestone 7): ranges, prices, warhead strengths and
   the enemy's firing interval are first guesses, covered by tests, not yet
   by play. The **M** key has no gamepad default (every pad button is taken).
