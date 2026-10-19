@@ -638,7 +638,12 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 				"▮".repeat(bars) + "▯".repeat(10 - bars), " · ".join(waiting).to_upper()], "keep holding [B]"))
 	var link := world.link_for(player.id)
 	var b := world.boarding_for(link) if link != null else null
-	if b != null and not b.finished() and not b.prize and b.phase == BoardingAction.Phase.ABOARD:
+	if link != null and link.attacker_id != player.id:
+		var where := "ON THE GANGWAY" if b == null or b.room < 0 else "IN %s" % player.systems.blueprint.rooms[b.room].id
+		out.append(_alert("danger", "ENEMY BOARDERS", "ENEMY BOARDING — %s%s" % [where if b != null else "GANGWAY EXTENDING",
+			" · %d/%d FIT · DEFENCE: %s" % [b.fit_team().size(), b.team.size(), BoardingAction.DEFENCE_NAMES[b.defence].to_upper()] if b != null else ""],
+			"[V] cut the gangway · [Tab] CREW › defence"))
+	elif b != null and not b.finished() and not b.prize and b.phase == BoardingAction.Phase.ABOARD:
 		out.append(_alert("caution", "BOARDERS ACROSS", "BOARDING PARTY ON %s — %d/%d FIT" % [
 			world.get_ship(link.target_id).display_name.to_upper(), b.fit_team().size(), b.team.size()], "[N] withdraw"))
 	if profile != null and profile.vessel != null and player.systems != null:
@@ -801,6 +806,9 @@ func _boarding_lines(world: WorldSimulation, player: ShipState, target: ShipStat
 		lines.append("DOCKING    %s  [V]" % ("READY — %s" % ("collar" if found.b_port.kind == &"collar" else "hull cut") if s.ok else "; ".join(s.problems)))
 		lines.append("           port gap %.0f / %.0f m · %.2f / %.1f m/s · %.0f° / %.0f°" % [s.range, Docking.GANGWAY_MAX_M,
 			s.rel_speed, Docking.MAX_REL_SPEED_MPS, s.misalign_deg, Docking.MAX_MISALIGN_DEG])
+		return lines
+	if link.attacker_id != player.id:
+		lines.append("GANGWAY    THEIRS — %s  [V] cut it loose" % ("sealed: boarders coming" if link.sealed() else "extending to us"))
 		return lines
 	if not link.sealed():
 		lines.append("GANGWAY    %s %.0f / %.0f s  [V] release" % ["mating" if link.b_port.kind == &"collar" else "cutting in",

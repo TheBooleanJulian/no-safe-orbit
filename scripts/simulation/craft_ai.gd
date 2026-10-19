@@ -88,6 +88,25 @@ static func point(craft: ShipState, dir_world: Vector3, input: ShipControlInput)
 		0.0)
 
 
+## Turn any body axis towards a world direction (rate request for assist):
+## the rotation that takes the axis onto the direction, as body rates.
+static func point_axis(ship: ShipState, axis_body: Vector3, dir_world: Vector3, input: ShipControlInput) -> void:
+	if dir_world.length_squared() < 1e-6:
+		return
+	var have := axis_body.normalized()
+	var want := ship.orientation.inverse() * dir_world.normalized()
+	var turn := have.cross(want)
+	var angle := have.angle_to(want)
+	if turn.length() < 1e-6:
+		turn = have.cross(Vector3.UP if absf(have.y) < 0.9 else Vector3.RIGHT) if angle > 1.0 else Vector3.ZERO
+	var rate := turn.normalized() * angle * AIM_GAIN if turn.length() > 1e-6 else Vector3.ZERO
+	var rates := ship.config.assist_max_rate_rad_s
+	input.rotation = Vector3(
+		clampf(rate.x / maxf(rates.x, 1e-3), -1.0, 1.0),
+		clampf(rate.y / maxf(rates.y, 1e-3), -1.0, 1.0),
+		clampf(rate.z / maxf(rates.z, 1e-3), -1.0, 1.0))
+
+
 ## World point to aim at on `target`: the chosen subsystem if it still
 ## works, else the hull centre.
 static func aim_point(target: ShipState, priority: int) -> Vector3:

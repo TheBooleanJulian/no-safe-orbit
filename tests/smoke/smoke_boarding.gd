@@ -126,6 +126,22 @@ func _run() -> void:
 	await process_frame
 	_check(main.world.get_ship(Main.TARGET_ID) != target and main.world.link_for(Main.PLAYER_ID) == null,
 		"the prize leaves and the next contact is on its way")
+
+	# Turned round: the next enemy boards us once our guns are out.
+	var hunter := main.world.get_ship(Main.TARGET_ID)
+	_alongside(player, hunter, 120.0)
+	hunter.angular_velocity = Vector3.ZERO
+	main._target_arriving = false
+	main.set_target_hostile(true)
+	player.systems.damage_equipment(player.systems.equipment_by_id("e41"), 1000.0)
+	main._on_overview_command(&"defence", BoardingAction.Defence.COUNTERATTACK)
+	await _wait(main, 300.0, func() -> bool: return main.enemy_boarding() != null)
+	var theirs := main.enemy_boarding()
+	_check(theirs != null and theirs.link.attacker_id == Main.TARGET_ID, "a beaten player is boarded: the enemy docks and sends a party")
+	_check(theirs != null and theirs.defence == BoardingAction.Defence.COUNTERATTACK, "our chosen defence applies to their boarding")
+	_check(main.hud.warning_label.text.contains("ENEMY BOARDING"), "the HUD warns of enemy boarders")
+	await _press("dock")
+	_check(main.world.link_for(Main.PLAYER_ID) == null, "V cuts their gangway loose")
 	_finish()
 
 

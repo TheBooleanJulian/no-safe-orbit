@@ -127,6 +127,38 @@ static func flee(ship: ShipState, threat: ShipState) -> ShipControlInput:
 	return input
 
 
+## Port gap a boarding approach closes to (m): inside the gangway's reach.
+const DOCK_STANDOFF_M := 12.0
+
+
+## Close in to board a beaten ship: our best collar turned square to its
+## best port, held DOCK_STANDOFF_M off it at its velocity.
+static func dock_approach(ship: ShipState, target: ShipState) -> ShipControlInput:
+	var input := ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
+	input.hold_translation = false
+	var found := Docking.best(ship, target)
+	if found.is_empty():
+		return input
+	var pa: Docking.Port = found.a_port
+	var pb: Docking.Port = found.b_port
+	CraftAI.point_axis(ship, pa.normal_body, -pb.world_normal(target), input)
+	var goal_port := pb.world_position(target) + pb.world_normal(target) * DOCK_STANDOFF_M
+	var gap := goal_port.distance_to(pa.world_position(ship))
+	CraftAI.steer(ship, ship.position + (goal_port - pa.world_position(ship)), target.velocity, input, clampf(gap * 0.12, 0.3, 40.0))
+	return input
+
+
+## Whether `ship` would board `prey` now: the prey is beaten (disabled, not
+## already taken), and we have a working collar and fit boarders.
+static func wants_to_board(ship: ShipState, prey: ShipState) -> bool:
+	if ship.systems == null or prey.systems == null or ship.systems.is_disabled() or ship.systems.captured:
+		return false
+	if not prey.systems.is_disabled() or prey.systems.captured or Docking.collars(ship.systems).is_empty():
+		return false
+	return ship.systems.crew != null and ship.systems.crew.members.any(func(m: CrewRoster.Member) -> bool:
+		return m.available() and (m.role == CrewRoster.Role.SECURITY or m.role == CrewRoster.Role.GENERAL))
+
+
 ## A ship grappled by a gangway it didn't ask for thrusts straight away from
 ## the other ship to tear free (it can if it has the thrust and a crew in
 ## command; see DockingLink.MAX_HOLD_FORCE_N).
