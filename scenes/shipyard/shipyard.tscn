@@ -13,28 +13,31 @@ content_margin_left = 10.0
 content_margin_top = 8.0
 content_margin_right = 10.0
 content_margin_bottom = 8.0
-bg_color = Color(0.03, 0.05, 0.08, 0.92)
-border_width_left = 2
-border_color = Color(0.35, 0.65, 0.9, 0.7)
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
+bg_color = Color(0.02, 0.02, 0.05, 0.92)
+border_width_left = 3
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0.94, 1, 0.85)
+corner_radius_top_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_list"]
 content_margin_left = 6.0
 content_margin_top = 6.0
 content_margin_right = 6.0
 content_margin_bottom = 6.0
-bg_color = Color(0.02, 0.03, 0.05, 1)
+bg_color = Color(0.01, 0.01, 0.03, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.35, 0.65, 0.9, 0.3)
+border_color = Color(1, 0.17, 0.84, 0.45)
 
 [sub_resource type="Theme" id="Theme_yard"]
 default_font = SubResource("SystemFont_mono")
 default_font_size = 13
-Label/colors/font_color = Color(0.82, 0.9, 1, 1)
+Label/colors/font_color = Color(0.72, 0.97, 1, 1)
 ItemList/styles/panel = SubResource("StyleBoxFlat_list")
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_panel")
 
@@ -80,8 +83,9 @@ theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="Margin/VBox/TopBar"]
 layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.17, 0.84, 1)
 theme_override_font_sizes/font_size = 17
-text = "SHIPYARD"
+text = "STATION // SHIPYARD"
 
 [node name="NameEdit" type="LineEdit" parent="Margin/VBox/TopBar"]
 unique_name_in_owner = true

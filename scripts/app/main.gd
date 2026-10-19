@@ -35,17 +35,23 @@ static var launch_blueprint: ShipBlueprint
 ## Persistent player state (spare parts, loot, hangar vessel); loaded on
 ## first use from PlayerProfile.path.
 static var profile: PlayerProfile
+## The station shows the last debrief when it opens after a sortie.
+static var debrief_pending: bool = false
 
 var world: WorldSimulation
 var celestial: CelestialFrame
 ## The target shoots back (toggle with T).
 var target_hostile: bool = false
+## Boarding party size the player has chosen (tactical overview).
+var boarding_party_size: int = BoardingAction.MAX_TEAM
 var player_input := PlayerInput.new()
 var _views: Dictionary = {}  # StringName -> ShipView
 ## Compiled designs: {blueprint, grid, stats, config} per ship id.
 var _designs: Dictionary = {}
 ## This sortie's outcome (docked or lost) is already in the profile.
 var _sortie_closed := false
+## This sortie's record, for the debrief.
+var combat_log: CombatLog
 
 
 static func get_profile() -> PlayerProfile:
@@ -61,6 +67,7 @@ func _ready() -> void:
 	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
 	stars.build(celestial)
 	hud.celestial = celestial
+	hud.overview.command.connect(_on_overview_command)
 	sky.configure(EARTH)
 	_start_scenario()
 
@@ -77,7 +84,6 @@ func _start_scenario() -> void:
 	hud.profile = p
 	var vessel := p.ensure_vessel(launch_blueprint if launch_blueprint != null else template)
 	_designs[PLAYER_ID] = _compile(vessel.blueprint, template)
-	_designs[TARGET_ID] = _compile(template, template)
 
 	world = WorldSimulation.new()
 	var r0 := EARTH.radius_m + START_ALTITUDE_M
@@ -93,6 +99,9 @@ func _start_scenario() -> void:
 	world.add_ship(player)
 	_spawn_target()
 	_sortie_closed = false
+	combat_log = CombatLog.begin(player, world.sim_time)
+	if hud.debrief != null:
+		hud.debrief.visible = false
 
 	_spawn_view(PLAYER_ID, Color.WHITE)
 	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
@@ -106,8 +115,12 @@ func _start_scenario() -> void:
 ## have something to show.
 func _spawn_target() -> void:
 	var player := world.get_ship(PLAYER_ID)
+	var mission := get_profile().missions_completed + 1
+	var template := _load_template()
+	_designs[TARGET_ID] = _compile(EnemyFactory.design(mission, template, ConstructionCatalog.default_catalog()), template)
+	var class_name_word: String = (_designs[TARGET_ID].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
 	var target := ShipState.create(
-		TARGET_ID, "TGT-%02d KESTREL" % (get_profile().missions_completed + 1), _designs[TARGET_ID].config,
+		TARGET_ID, "TGT-%02d %s" % [mission, class_name_word], _designs[TARGET_ID].config,
 		player.position + Vector3(400, 120, -2500), player.velocity + Vector3(-25, 1.5, 6.0), Quaternion(Vector3.UP, 0.9))
 	target.angular_velocity = Vector3(0.0, 0.03, 0.01)
 	target.attach_systems(_new_systems(TARGET_ID))
@@ -158,6 +171,7 @@ func _spawn_view(id: StringName, tint: Color) -> void:
 	view.grid = _designs[id].grid
 	view.stats = _designs[id].stats
 	view.tint = tint
+	view.hull_name = get_profile().vessel.name if id == PLAYER_ID and get_profile().vessel != null else world.get_ship(id).display_name
 	add_child(view)
 	_views[id] = view
 
@@ -189,12 +203,29 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("board"):
 		toggle_boarding()
 		return
+	elif event.is_action_pressed("divert_balance"):
+		world.get_ship(PLAYER_ID).systems.balance_power()
+		return
+	elif event.is_action_pressed("divert_sys"):
+		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.SYS)
+		return
+	elif event.is_action_pressed("divert_eng"):
+		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.ENG)
+		return
+	elif event.is_action_pressed("divert_wep"):
+		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.WEP)
+		return
 	elif event.is_action_pressed("toggle_target_ai"):
 		target_hostile = not target_hostile
 		hud.target_hostile = target_hostile
 		GameLog.info("main", "Target %s" % ("HOSTILE — guns free" if target_hostile else "passive"))
 		if not target_hostile:
 			world.set_input(TARGET_ID, ShipControlInput.neutral())
+		return
+	elif event.is_action_pressed("tactical_overview"):
+		hud.overview.toggle()
+		if hud.overview.visible:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		return
 	elif event.is_action_pressed("toggle_controls"):
 		hud.controls.toggle()
@@ -236,12 +267,20 @@ func close_sortie() -> void:
 					lines.append("Boarder %s (%s) left behind" % [m.id, CrewRoster.ROLE_NAMES[m.role]])
 	if not player.is_active():
 		lines = p.lose_vessel(catalog)
-		GameLog.info("main", "Vessel lost — %d rarer parts written off" % lines.size())
+		GameLog.info("main", "Vessel lost — the hold is gone; the station rebuilds the same design")
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
-		lines = p.dock(player.systems.condition(), catalog)
+		lines.append_array(p.dock(player.systems.condition(), catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	for line in lines:
 		GameLog.info("main", line)
+	if combat_log != null:
+		var outcome := "vessel lost" if not player.is_active() else "docked at the station"
+		combat_log.finish(player, outcome, world.sim_time, lines)
+		p.last_debrief = combat_log.to_dict()
+		var path := combat_log.save()
+		if path != "":
+			GameLog.info("main", "Debrief saved to %s" % path)
+		debrief_pending = true
 	_save_profile()
 
 
@@ -272,19 +311,74 @@ func salvage_target() -> Array[LootRoller.Drop]:
 			b.bring_home()  # the prize crew come back with the stores
 	var intact := target.systems.intact_fraction()
 	var parts := Salvage.spare_parts_for(target.systems)
-	p.spare_parts += parts
+	var bounty := Salvage.bounty_for(target.systems)
+	# Spare parts and crates go into the hold (at risk until banked); the
+	# station pays the bounty at once.
+	p.vessel.cargo["spare_parts"] = int(p.vessel.cargo.get("spare_parts", 0)) + parts
 	var drops := p.pull(Salvage.pulls_for(target.systems), ConstructionCatalog.default_catalog())
+	# The best intact rarer part fitted to the wreck comes too.
+	var fitted := EnemyFactory.recoverable_part(target.systems)
+	if fitted != null:
+		var part := LootRoller.Drop.new()
+		part.kind = &"equipment"
+		part.def_id = fitted.def.id
+		part.rarity = fitted.def.rarity
+		part.display_name = "%s (stripped from the wreck)" % fitted.def.display_name
+		drops.push_front(part)
+	for d in drops:
+		p.stow(d)
+	p.credits += bounty
 	p.missions_completed += 1
 	p.vessel.salvaged += 1
-	p.vessel.record("Salvaged %s: %d spare parts, %d crates" % [target.display_name, parts, drops.size()])
+	p.vessel.record("Salvaged %s: %d spare parts, %d crates, %d credits bounty" % [target.display_name, parts, drops.size(), bounty])
+	if combat_log != null:
+		combat_log.record(world.sim_time, "salvage", "Salvaged %s (%d%% intact): %d spare parts and %d crates into the hold, %d credits bounty" % [
+			target.display_name, roundi(intact * 100.0), parts, drops.size(), bounty])
 	_save_profile()
 	GameLog.info("main", "Salvaged %s (%d%% intact): %d parts; %s" % [target.display_name, roundi(intact * 100.0), parts,
 		", ".join(drops.map(func(d: LootRoller.Drop) -> String: return "%s %s" % [Rarity.name_of(d.rarity), d.describe()]))])
-	hud.loot.show_salvage(target.display_name, intact, parts, drops, p)
+	hud.loot.show_salvage(target.display_name, intact, parts, drops, p, bounty)
 	world.remove_ship(TARGET_ID)
 	hud.reset()
 	_spawn_target()
+	# New contact, new hull (and its own name on it).
+	(_views[TARGET_ID] as Node).queue_free()
+	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
 	return drops
+
+
+func _on_overview_command(name: StringName, arg: Variant) -> void:
+	var sys := world.get_ship(PLAYER_ID).systems
+	match name:
+		&"divert":
+			sys.divert(arg)
+		&"balance":
+			sys.balance_power()
+		&"cover":
+			var why := sys.cover_role(arg)
+			hud.notice("CREW: " + why if why != "" else "Crew: sending a general crew member to cover %s" % CrewRoster.ROLE_NAMES[arg], world.sim_time)
+		&"party":
+			boarding_party_size = clampi(boarding_party_size + int(arg), 1, BoardingAction.MAX_TEAM)
+			hud.boarding_party_size = boarding_party_size
+		&"repair_pick":
+			sys.preferred_repair_id = str(arg)
+		&"repair":
+			start_field_repair()
+
+
+## Docking camera out of our collar while a target is in boarding range and
+## no gangway is sealed yet.
+func _update_docking_cam(player: ShipState, target: ShipState, alpha: float, render_origin: Vector3) -> void:
+	var link := world.link_for(PLAYER_ID)
+	var mine := Docking.collars(player.systems)
+	if not target.is_active() or mine.is_empty() or (link != null and link.sealed()) 			or player.position.distance_to(target.position) > DockingCam.SHOW_RANGE_M:
+		hud.docking_cam.visible = false
+		return
+	var found := Docking.best(player, target)
+	var port: Docking.Port = found.a_port if not found.is_empty() else mine[0]
+	var q := player.interpolated_orientation(alpha)
+	var from := player.interpolated_position(alpha) + q * port.position_body - render_origin
+	hud.docking_cam.show_view(from, q * port.normal_body, q * Vector3.UP, found.get("assessment", {}))
 
 
 ## V: extend a gangway to the target, or release the one we have.
@@ -312,7 +406,7 @@ func toggle_boarding() -> void:
 	if link == null or not link.sealed():
 		hud.notice("BOARD: needs a sealed gangway first [V]", world.sim_time)
 		return
-	if world.start_boarding(link) == null:
+	if world.start_boarding(link, boarding_party_size) == null:
 		hud.notice("BOARD: no fit security or general crew can reach the collar", world.sim_time)
 
 
@@ -351,12 +445,29 @@ func _process(delta: float) -> void:
 	# controls panel is open.
 	if not player.is_active() and not _sortie_closed:
 		close_sortie()
+		var p := get_profile()
+		hud.debrief.show_debrief(p.last_debrief, "[BACKSPACE] respawn the %s here  ·  [B] return to the station" % p.vessel.name)
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var running := player.is_active() and not hud.controls.visible
 	var alpha := world.advance(delta) if running else 1.0
 	for line in world.take_link_events():
 		hud.notice(line, world.sim_time)
 		GameLog.info("boarding", line)
+		combat_log.record(world.sim_time, "boarding", line)
 	var hits := world.take_hit_events()
+	for ev in hits:
+		combat_log.note_hit(ev, PLAYER_ID, world.sim_time, world)
+	for id in world.ship_ids():
+		var s := world.get_ship(id).systems
+		if s == null:
+			continue
+		for blast in s.take_explosions():
+			hit_flashes.add_explosion(id, blast.pos_body, blast.radius)
+			if id == PLAYER_ID:
+				combat_log.explosions += 1
+			combat_log.record(world.sim_time, "explosion", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
+			hud.notice("%s: %s" % [world.get_ship(id).display_name, blast.lines[0]], world.sim_time)
+			GameLog.info("main", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
 	for ev in hits:
 		hit_flashes.add(ev)
@@ -372,6 +483,11 @@ func _process(delta: float) -> void:
 		view.sync_from(ship, alpha, render_origin)
 
 	camera.follow(_views[PLAYER_ID], delta)
+	_update_docking_cam(player, target, alpha, render_origin)
+	var link := world.link_for(PLAYER_ID)
+	var boarding := world.boarding_for(link) if link != null else null
+	if boarding != null and not hud.hit_cam.showing_boarding():
+		hud.hit_cam.show_boarding(boarding, _designs[TARGET_ID], target.systems, target.display_name)
 	var continuous := world.continuous_position(render_origin)
 	dust.update_origin(continuous)
 	dust_far.update_origin(continuous)

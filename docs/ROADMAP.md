@@ -180,6 +180,21 @@ matching test. Docking and boarding HUD lines and the gangway tube reviewed in
 renders. Scaffolding in the end-to-end test: the target is placed alongside
 and its security team and reactor are removed directly.
 
+## Between M5 and M6 — ship control, station economy, UI (2026-10-19)
+
+| Request | Verified by | Result |
+|---|---|---|
+| Default gun nerfed (rate of fire, muzzle velocity) | `test_weapons.gd` (derived from the weapon) | 1000 m/s, 120 rpm (was 1500, 240) |
+| Ship AI flies with limited mobility when the bridge crew is lost | `test_ship_ai_flies_with_assist_when_the_bridge_is_lost`, `test_venting_a_room_hurts_its_occupants_and_command` | assist forced on; thrust and turn rates × 0.5 |
+| Reactor explodes at 0 % | `test_reactor_at_zero_explodes_and_wrecks_its_surroundings`, `test_a_round_that_kills_the_reactor_reports_the_explosion` | blast falls off over 15 m; in the hit report |
+| Power management (divert to engines, weapons, systems) | `test_ship_control.gd` (3 tests) | zero-sum pips; 150 % thrust / rate of fire / repair speed at 4 pips |
+| Crew management | `test_a_general_crew_member_can_take_over_the_bridge`, `test_cover_needs_…`, `test_player_chooses_…`, `test_boarding_party_size_…` | pass |
+| Bank at the station; death loses only the cargo; respawn fee, same design | `test_salvage_goes_into_the_hold_until_banked`, `test_losing_the_vessel_loses_only_the_cargo_and_a_fee`, `test_cargo_and_credits_survive_…`, `test_station_sells_spare_parts_for_credits`, `smoke_campaign` | pass; v1 profiles migrate |
+| Post-combat debrief from a saved combat log | `test_debrief_says_where_the_hits_came_from`, `smoke_campaign` | saved to `user://debriefs/`; shown at the station and on loss |
+| Always-visible module / damage map; tactical overview; crew and power UI; boarding room overlay in the hit cam; docking cam; cyberpunk cyan/magenta UI | render review (`build/screens/ui_*.png`) | pass |
+| Military hull plating, ship name on the hull, prominent hatches (collars), white RCS jets | render review (`build/screens/model_*.png`) | pass |
+| Known issues: enemy variety, salvage of fitted parts | `test_enemies_get_tougher_and_stay_valid`, `test_salvage_strips_the_best_intact_rare_part` | pass |
+
 ## Milestones 6–8
 
 Not started. See GAME_DESIGN.md §17.

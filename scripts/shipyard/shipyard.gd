@@ -46,6 +46,9 @@ var _hover_face: StringName = &""
 var _hangar_label: RichTextLabel
 var _priority: OptionButton
 var _repair_button: Button
+var _bank_button: Button
+var _buy_button: Button
+var debrief: DebriefPanel
 
 
 func _ready() -> void:
@@ -59,6 +62,13 @@ func _ready() -> void:
 	editor.revalidate()
 	editor.changed.connect(_refresh)
 	_build_hangar_panel()
+	debrief = DebriefPanel.new()
+	debrief.name = "Debrief"
+	add_child(debrief)
+	debrief.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	if Main.debrief_pending and not profile.last_debrief.is_empty():
+		Main.debrief_pending = false
+		debrief.show_debrief(profile.last_debrief, "Bank your cargo before the next sortie: what's in the hold is lost with the ship.")
 	for v in [deck_editor, side_view, front_view]:
 		v.editor = editor
 	_fill_palette(hull_list, catalog.hull)
@@ -262,8 +272,10 @@ func launch() -> bool:
 		return false
 	var why := ServiceYard.refit(profile.vessel, editor.blueprint, profile, editor.catalog)
 	if why != "":
-		_set_status(why + " — remove new parts or salvage more", true)
+		_set_status(why + " — remove new parts, bank cargo or buy parts", true)
 		return false
+	if not profile.vessel.cargo_is_empty():
+		GameLog.info("shipyard", "Launching with cargo still in the hold: %s" % profile.vessel.cargo_summary())
 	_save_profile()
 	Main.launch_blueprint = editor.blueprint.duplicate_blueprint()
 	get_tree().change_scene_to_file(FLIGHT_SCENE)
@@ -283,6 +295,28 @@ func repair(priority: int = -1) -> int:
 		_set_status("%s: %d repair%s for %d spare parts" % [ServiceYard.PRIORITY_NAMES[pr], jobs.size(), "" if jobs.size() == 1 else "s", spent])
 	_refresh_hangar()
 	return spent
+
+
+## Unload the cargo hold into the station bank.
+func bank_cargo() -> PackedStringArray:
+	var banked := profile.bank_cargo(editor.catalog)
+	_save_profile()
+	_set_status("Banked: %s" % ", ".join(banked) if not banked.is_empty() else "The hold is empty")
+	_fill_palette(hull_list, editor.catalog.hull)
+	_fill_palette(room_list, editor.catalog.rooms)
+	_fill_palette(equipment_list, editor.catalog.equipment)
+	editor.revalidate()
+	return banked
+
+
+func buy_spare_parts() -> bool:
+	if not profile.buy_spare_parts():
+		_set_status("Not enough credits (%d needed)" % PlayerProfile.PARTS_LOT_PRICE, true)
+		return false
+	_save_profile()
+	_set_status("Bought %d spare parts for %d credits" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE])
+	_refresh_hangar()
+	return true
 
 
 func _save_profile() -> void:
@@ -385,8 +419,25 @@ func _build_hangar_panel() -> void:
 	_repair_button.pressed.connect(func() -> void: repair())
 	row.add_child(_priority)
 	row.add_child(_repair_button)
+	var row2 := HBoxContainer.new()
+	_bank_button = Button.new()
+	_bank_button.text = "Bank cargo"
+	_bank_button.tooltip_text = "Unload the hold into the station bank: safe from loss"
+	_bank_button.pressed.connect(func() -> void: bank_cargo())
+	_buy_button = Button.new()
+	_buy_button.text = "Buy %d parts (%d cr)" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE]
+	_buy_button.pressed.connect(func() -> void: buy_spare_parts())
+	var debrief_button := Button.new()
+	debrief_button.text = "Debrief"
+	debrief_button.pressed.connect(func() -> void: debrief.show_debrief(profile.last_debrief))
+	for b in [_bank_button, _buy_button, debrief_button]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row2.add_child(b)
+	for b in [_repair_button, _bank_button, _buy_button, debrief_button]:
+		CyberTheme.style_button(b)
 	box.add_child(_hangar_label)
 	box.add_child(row)
+	box.add_child(row2)
 	panel.add_child(box)
 	right.add_child(title)
 	right.move_child(title, 1)
@@ -404,7 +455,10 @@ func _refresh_hangar() -> void:
 	var gold := Rarity.color_of(Rarity.Tier.LEGENDARY).to_html(false)
 	var lines := PackedStringArray([
 		"[b]%s[/b]  ·  %d sorties  ·  %d salvaged  ·  %d lost" % [v.name, v.sorties, v.salvaged, profile.vessels_lost],
-		"SPARE PARTS [color=#%s]%d[/color]" % [gold, profile.spare_parts],
+		"CREDITS [color=#%s]%d[/color]  ·  SPARE PARTS (banked) [color=#%s]%d[/color]  ·  respawn fee %d cr" % [
+			gold, profile.credits, gold, profile.spare_parts, profile.respawn_fee(catalog)],
+		"CARGO HOLD [color=%s]%s[/color]%s" % [CyberTheme.html(CyberTheme.MAGENTA), v.cargo_summary(),
+			"  — at risk until banked" if not v.cargo_is_empty() else ""],
 	])
 	if jobs.is_empty():
 		lines.append("[color=#80ff99]Vessel in full repair[/color]")
@@ -425,6 +479,8 @@ func _refresh_hangar() -> void:
 	_hangar_label.text = "\n".join(lines)
 	var plan := ServiceYard.plan(jobs, _priority.selected, profile.spare_parts, v, profile)
 	_repair_button.disabled = plan.is_empty()
+	_bank_button.disabled = v.cargo_is_empty()
+	_buy_button.disabled = profile.credits < PlayerProfile.PARTS_LOT_PRICE
 	_repair_button.text = "Repair (%d)" % ServiceYard.total_cost(plan) if not plan.is_empty() else "Repair"
 
 

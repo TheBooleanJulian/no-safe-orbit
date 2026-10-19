@@ -5,7 +5,7 @@ extends CanvasLayer
 
 const COLOR_WARN := Color(0.96, 0.78, 0.26)
 const COLOR_DANGER := Color(1.0, 0.38, 0.32)
-const COLOR_TARGET := Color(1.0, 0.45, 0.3, 0.95)
+const COLOR_TARGET := Color(1.0, 0.17, 0.84, 0.95)
 const COLOR_APSIS := Color(0.35, 1.0, 0.55, 0.9)
 ## Below this eccentricity, apsis positions and times are meaningless.
 const CIRCULAR_ECCENTRICITY := 1e-4
@@ -31,6 +31,15 @@ var target_hostile: bool = false
 var profile: PlayerProfile
 ## Salvage results panel (created in _ready).
 var loot: LootPanel
+## Post-combat debrief, shown when the ship is lost (created in _ready).
+var debrief: DebriefPanel
+## Always-visible module and damage map of your ship.
+var damage_map: ShipSchematic
+## Tab: tactical overview and ship management.
+var overview: TacticalOverview
+var docking_cam: DockingCam
+## Boarding party size chosen in the overview (set by Main).
+var boarding_party_size: int = BoardingAction.MAX_TEAM
 
 var _last_hit_time := -INF
 var _hits_scored := 0
@@ -51,6 +60,32 @@ func _ready() -> void:
 	loot.name = "Loot"
 	$Root.add_child(loot)
 	loot.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 70)
+	debrief = DebriefPanel.new()
+	debrief.name = "Debrief"
+	$Root.add_child(debrief)
+	debrief.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	damage_map = ShipSchematic.new()
+	damage_map.name = "DamageMap"
+	damage_map.title = "SHIP // MODULES & DAMAGE   [Tab] overview"
+	$Root.add_child(damage_map)
+	damage_map.anchor_top = 1.0
+	damage_map.anchor_bottom = 1.0
+	damage_map.offset_left = 16
+	damage_map.offset_right = 416
+	damage_map.offset_top = -268
+	damage_map.offset_bottom = -78
+	damage_map.show_legend = true
+	docking_cam = DockingCam.new()
+	docking_cam.name = "DockingCam"
+	$Root.add_child(docking_cam)
+	docking_cam.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 80)
+	overview = TacticalOverview.new()
+	overview.name = "Overview"
+	$Root.add_child(overview)
+	overview.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+	($Root/TargetPanel as PanelContainer).add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, 0))
+	hit_cam.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, 6))
+	loot.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.MAGENTA, 14))
 
 
 ## A one-line message on the flight panel for a few seconds.
@@ -114,6 +149,10 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	overlay.queue_redraw()
 
 	_update_radar(player, target if has_target else null)
+	damage_map.systems = player.systems
+	if overview.visible:
+		var link := world.link_for(player.id)
+		overview.update_view(player, target, world.boarding_for(link) if link != null else null, boarding_party_size, world.sim_time)
 
 
 func _update_flight_panel(player: ShipState, input: PlayerInput, sim_time: float, has_target: bool) -> void:
@@ -153,12 +192,13 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 		"HEAT       %.0f K  %s" % [sys.temperature_k, ["reactor normal", "REACTOR THROTTLED", "REACTOR SCRAM"][sys.reactor_state]],
 		"SYSTEMS    %s" % sys.status_line(),
 		"DMG CTRL   %s" % _repair_text(sys),
+		"DIVERT     %s   [1][2][3] [4]=balance" % power_pips_text(sys),
 	]
 	if sys.crew != null and not sys.crew.members.is_empty():
 		lines.append("CREW       %s  %s" % [sys.crew.summary(),
 			("CMD ok" if sys.has_command() else "NO COMMAND") + (" · GUN CREW ok" if sys.has_gun_crew() else " · NO GUN CREW")])
 	if profile != null:
-		lines.append("SPARES     %d parts" % profile.spare_parts)
+		lines.append("CREDITS    %d   HOLD %s" % [profile.credits, profile.vessel.cargo_summary().left(44) if profile.vessel != null else "—"])
 	if _notice != "" and sim_time - _notice_time < NOTICE_S:
 		lines.append("» " + _notice.left(60))
 	if _incoming != null and sim_time - _incoming_time < 8.0:
@@ -166,6 +206,13 @@ func _systems_lines(ship: ShipState, sim_time: float) -> Array:
 		for line in _incoming.lines.slice(maxi(_incoming.lines.size() - 2, 1)):
 			lines.append("  " + line.left(58))
 	return lines
+
+
+static func power_pips_text(sys: ShipSystems) -> String:
+	var parts := PackedStringArray()
+	for ch in ShipSystems.Channel.size():
+		parts.append("%s %s" % [ShipSystems.CHANNEL_NAMES[ch], "■".repeat(sys.pips[ch]) + "□".repeat(ShipSystems.PIPS_MAX - sys.pips[ch])])
+	return "  ".join(parts)
 
 
 func _repair_text(sys: ShipSystems) -> String:
@@ -330,6 +377,11 @@ func _update_warning(world: WorldSimulation, player: ShipState, orbit: OrbitElem
 		warning_label.visible = true
 		return
 	var sys := player.systems
+	if sys != null and not sys.has_command():
+		warning_label.text = "BRIDGE CREW LOST — SHIP AI IN CONTROL: %d %% THRUST AND TURN RATE, ASSIST LOCKED ON" % roundi(ShipSystems.SHIP_AI_FACTOR * 100.0)
+		warning_label.add_theme_color_override("font_color", COLOR_WARN)
+		warning_label.visible = true
+		return
 	if sys != null and (sys.reactor_state != ShipSystems.Reactor.NORMAL or sys.power_unmet_kw > 0.0):
 		if sys.reactor_state == ShipSystems.Reactor.SCRAM:
 			warning_label.text = "REACTOR SCRAM — %.0f K — NO POWER UNTIL IT COOLS BELOW %.0f K" % [sys.temperature_k, ShipSystems.RESTART_TEMP_K]

@@ -236,6 +236,38 @@ bounding-box hit test.
   spun. A round that leaves the hull with penetration to spare flies on at
   `v × (pen_exit / pen_entry)^(1/1.4)`.
 
+## Ship control, station economy and UI (2026-10-19)
+
+- **Power** (`ShipSystems.pips`, `divert`, `channel_factor`): zero-sum pips;
+  factor 0.5 + 0.25 × pips scales ENG → translation thrust and engine torque,
+  WEP → rate of fire, SYS → RCS torque, assist turn rates and field-repair
+  speed.
+- **Ship AI**: without fit command crew on a pressurised bridge, thrust and
+  turn rates × 0.5 and the world forces flight assist on for that ship.
+- **Reactor explosion** (`ShipSystems._explode`): a reactor at 0 hit points
+  damages modules (150 structure points × falloff), systems (90 hp × falloff)
+  within 15 m and breaches rooms within 9 m; falloff = 1 − d/15. Chains.
+  Reported in the hit report (`explosion` events) and drawn as a fireball.
+- **Crew orders** (`cover_role`): the nearest free general crew member walks
+  to the role's station and takes the role on arrival.
+- **Economy** (`PlayerProfile` schema 2): salvage → `ShipInstance.cargo`
+  (at risk); `bank_cargo()` → bank (spare parts, units, blueprints;
+  duplicates scrapped at banking). `credits`: salvage bounty; respawn fee
+  50 + 5 per berth; spare parts 10 for 25. Losing the vessel loses only the
+  cargo; the same design is rebuilt (installed rare parts kept). Destroyed
+  rare parts are rebuilt at their fitting cost, not written off.
+- **Debrief** (`CombatLog`): per-sortie record (hits each way with the entry
+  face, armour stops, systems lost, crew, explosions, boarding, salvage),
+  saved as JSON; `CombatLog.insights()` turns it into lessons.
+- **Enemies** (`EnemyFactory`): the template with parts swapped for rarer
+  ones, chances rising per mission, deterministic per mission, validated.
+- **UI** (`CyberTheme`, `ShipSchematic`, `TacticalOverview`, `DockingCam`,
+  hit-cam boarding mode, `DebriefPanel`): cyan/magenta panels; the docking
+  cam renders the main World3D from a second camera at the collar.
+- **Ship look** (`ShipModelBuilder`): triplanar procedural plating, the name
+  on the most exposed flanks, hazard-striped collars with beacons; RCS jets
+  in `ShipView` from each block's share of commanded thrust and torque.
+
 ## Crew and boarding (Milestone 5)
 
 - **Crew** (`CrewRoster`, owned by `ShipSystems`): one person per berth,
@@ -244,7 +276,7 @@ bounding-box hit test.
   unsuited crew (pressurised rooms only) or suited (any), past sealed doors
   only if destroyed. A room that depressurises wounds half (rounded up) of
   the people in it and kills the rest. Effects in `effective_config()`: no
-  fit command crew on a pressurised bridge → assist turn rates × 0.5; no fit
+  fit command crew on a pressurised bridge → ship AI (thrust, turn rates × 0.5); no fit
   weapons crew who can reach a magazine → rate of fire × 0.5. Field repairs
   take the nearest free damage-control (else engineering) member, who walks
   there (5 s per room) first. Casualties persist in the vessel condition by
@@ -282,9 +314,9 @@ bounding-box hit test.
   most that many. Rarer hull modules and rooms are blueprints, unlocked once
   found. `PlayerProfile.check_design` adds `blueprint_locked` /
   `part_not_owned` errors to the validator report in the shipyard.
-- **Write-offs.** A rarer unit that went from working to destroyed during a
-  sortie is written off at docking (once). Losing the vessel writes off every
-  rarer unit still aboard; the blueprint survives and a fresh hull is issued.
+- **Losses** (revised later the same day, see "Station economy" above): a
+  destroyed rarer unit is rebuilt at its fitting cost; losing the vessel
+  loses only its cargo, and the same design is rebuilt for a credit fee.
 - **Loot** (`LootRoller`): the tier climbs from Common with
   `Rarity.UPGRADE_CHANCE` (30/30/25/20 %), then pity (Rare+ by the 10th pull,
   Legendary by the 80th), then a weighted pick by `drop_weight` within the

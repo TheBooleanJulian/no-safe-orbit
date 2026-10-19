@@ -56,6 +56,7 @@ func _run() -> void:
 	await _frames(2)
 	var profile := Main.get_profile()
 	var parts_at_start := profile.spare_parts
+	var credits_at_start := profile.credits
 	var player := main.world.get_ship(Main.PLAYER_ID)
 	var target := main.world.get_ship(Main.TARGET_ID)
 
@@ -93,7 +94,9 @@ func _run() -> void:
 	await _press("salvage")
 	_check(main.hud.loot.visible and profile.missions_completed == 1 and profile.total_pulls >= 1,
 		"G salvages: loot panel open, %d crates opened, mission 1 complete" % profile.total_pulls)
-	_check(profile.spare_parts > parts_at_start, "spare parts recovered (%d → %d)" % [parts_at_start, profile.spare_parts])
+	_check(profile.spare_parts == parts_at_start and int(profile.vessel.cargo.get("spare_parts", 0)) > 0,
+		"salvaged parts go into the hold, not the bank (%s)" % profile.vessel.cargo_summary())
+	_check(profile.credits > credits_at_start, "the bounty is paid in credits (%d → %d)" % [credits_at_start, profile.credits])
 	var next := main.world.get_ship(Main.TARGET_ID)
 	_check(next != old_target and next.display_name.begins_with("TGT-02"), "the next contact arrives (%s)" % next.display_name)
 	_check(FileAccess.file_exists(PlayerProfile.path), "salvage saved the profile")
@@ -119,6 +122,13 @@ func _run() -> void:
 	_check(vessel.sorties == 1 and vessel.is_damaged() and JSON.stringify(vessel.condition) == JSON.stringify(flown_condition),
 		"the docked vessel keeps exactly the damage it flew back with (the wounded recover)")
 	_check(yard._hangar_label.get_parsed_text().contains("DAMAGE"), "the hangar panel lists the damage")
+	_check(yard.debrief.visible and yard.debrief.text().contains("LESSONS FOR THE SHIPYARD") and yard.debrief.text().contains("Hit from the"),
+		"the station opens on the debrief, with where the hits came from")
+	yard.debrief.hide_debrief()
+	var hold_parts := int(vessel.cargo.get("spare_parts", 0))
+	var banked_from := profile.spare_parts
+	_check(not yard.bank_cargo().is_empty() and vessel.cargo_is_empty() and profile.spare_parts >= banked_from + hold_parts,
+		"Bank cargo moves the hold into the station bank")
 
 	# 5. Repair and reconfigure.
 	var before_repair := profile.spare_parts
@@ -150,6 +160,22 @@ func _run() -> void:
 	_check(saved != null and saved.spare_parts == profile.spare_parts and saved.missions_completed == 1
 		and saved.vessel.blueprint.equipment.size() == player.systems.blueprint.equipment.size() and not saved.vessel.is_damaged(),
 		"the saved profile matches: parts, mission count, refitted and repaired vessel")
+
+	# 8. Death: only the hold is lost; the same design comes back for a fee.
+	profile.vessel.cargo = {"spare_parts": 25}
+	var credits_before_loss := profile.credits
+	var fee := profile.respawn_fee(ConstructionCatalog.default_catalog())
+	main.world.get_ship(Main.PLAYER_ID).status = ShipState.Status.ENTERED_ATMOSPHERE
+	for i in 3:
+		await process_frame
+	_check(main.hud.debrief.visible and main.hud.debrief.text().contains("VESSEL LOST") and main.hud.debrief.text().contains("Respawn fee"),
+		"losing the ship shows the debrief with the fee")
+	_check(profile.credits == credits_before_loss - fee and profile.vessel.cargo_is_empty(), "fee %d credits paid; the hold's 25 parts lost" % fee)
+	await _press("restart_scenario")
+	await _frames(3)
+	var reborn := main.world.get_ship(Main.PLAYER_ID)
+	_check(reborn.is_active() and reborn.systems.blueprint.equipment.size() == player.systems.blueprint.equipment.size() and not main.hud.debrief.visible,
+		"Backspace respawns the same design")
 	_finish()
 
 

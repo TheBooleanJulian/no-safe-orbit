@@ -306,3 +306,32 @@ func test_gunnery_ai_turns_onto_target_and_hits() -> void:
 	assert_true(hits_total >= 20, "sustained hits on a crossing target (%d)" % hits_total)
 	assert_true(float(hits_total) / maxf(gunner.rounds_fired, 1) > 0.6,
 		"fires only when aligned: %d hits from %d rounds" % [hits_total, gunner.rounds_fired])
+
+
+# --- Reactor explosion ------------------------------------------------------------
+
+func test_reactor_at_zero_explodes_and_wrecks_its_surroundings() -> void:
+	var ship := _ship(_template())
+	var s := ship.systems
+	var reactor := s.equipment_by_id("e28")
+	var near := s.equipment_by_id("e46")   # propellant tank beside the reactor room
+	var far := s.equipment_by_id("e35")    # RCS on the nose
+	s.damage_equipment(reactor, 1000.0)
+	var blasts := s.take_explosions()
+	assert_true(blasts.size() == 1 and blasts[0].lines[0].contains("CONTAINMENT FAILURE"), "reactor at 0 % explodes")
+	assert_true(near.hp < near.max_hp, "a tank %.0f m away is damaged (%.0f / %.0f hp)" % [near.body_position.distance_to(reactor.body_position), near.hp, near.max_hp])
+	assert_near(far.hp, far.max_hp, 1e-6, "the nose RCS %.0f m away is untouched (hp)" % far.body_position.distance_to(reactor.body_position))
+	var reactor_room := _room_index(s.blueprint, "r15")
+	assert_true(s.rooms[reactor_room].breached, "the reactor room is blown open")
+	assert_true(s.crew.in_room(reactor_room).is_empty(), "nobody left standing in the reactor room")
+
+
+func test_a_round_that_kills_the_reactor_reports_the_explosion() -> void:
+	var ship := _ship(_template())
+	ship.systems.damage_equipment(ship.systems.equipment_by_id("e28"), 59.0)  # 1 hp left
+	var p := _body(ship, Vector3(3.5 * CELL, 0.5 * CELL, 9.0 * CELL))
+	var r := Penetration.apply(ship.systems, p + Vector3(0, 40, 0), Vector3(0, -1, 0), 400.0)
+	assert_true(r.destroyed_ids.has("e28") and r.events.any(func(e: Dictionary) -> bool: return e.kind == &"explosion"),
+		"the hit report includes the explosion:
+%s" % "
+".join(r.lines))
