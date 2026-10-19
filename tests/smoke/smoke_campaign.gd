@@ -91,7 +91,7 @@ func _run() -> void:
 	while player.hits_taken == 0 and main.world.sim_time - t0 < 40.0:
 		await process_frame
 	await _press("toggle_target_ai")
-	_check(player.hits_taken > 0 and not player.systems.condition().modules.is_empty(),
+	_check(player.hits_taken > 0 and (not player.systems.condition().modules.is_empty() or player.systems.condition().has("plates")),
 		"the target hits us and leaves damage (%d hits)" % player.hits_taken)
 
 	# 2. Mission kill, then come alongside.

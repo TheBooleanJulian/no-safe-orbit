@@ -188,12 +188,12 @@ func test_locked_blueprints_and_unowned_parts_are_errors() -> void:
 	var p := PlayerProfile.new(1)
 	assert_true(not _report(_template(), p).has_errors(), "the all-common template needs nothing found")
 	var bp := _template()
-	(bp.find("m2") as ShipBlueprint.PlacedModule).def_id = &"armored_fuselage_section"
+	(bp.find("r12") as ShipBlueprint.PlacedRoom).def_id = &"dense_magazine"
 	for id in ["e29", "e30", "e31", "e32"]:
 		(bp.find(id) as ShipBlueprint.PlacedEquipment).def_id = &"main_engine_high_isp"
 	var r := _report(bp, p)
 	assert_true(r.has_code(&"blueprint_locked") and r.has_code(&"part_not_owned"), "locked module and unowned engines are errors:\n%s" % r.summary())
-	p.unlocks["armored_fuselage_section"] = true
+	p.unlocks["dense_magazine"] = true
 	p.inventory["main_engine_high_isp"] = 2
 	r = _report(bp, p)
 	assert_true(not r.has_code(&"blueprint_locked"), "unlocking the blueprint clears its error")

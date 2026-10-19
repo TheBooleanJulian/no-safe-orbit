@@ -59,11 +59,62 @@ func redo() -> bool:
 	return true
 
 
-func place_module(def_id: StringName, base_cell: Vector3i, rotation: int) -> String:
+func place_module(def_id: StringName, base_cell: Vector3i, rotation: int, flip: bool = false) -> String:
 	_checkpoint()
-	var m := blueprint.add_module(def_id, base_cell, rotation)
+	var m := blueprint.add_module(def_id, base_cell, rotation, flip)
 	_refresh()
 	return m.id
+
+
+## Which faces an armour paint stroke covers.
+enum PlateFaces { ALL, SIDES, TOP, UNDERSIDE }
+
+
+## Paint armour plates of `mm` (0 removes them) on the plateable faces of
+## the cells of `rect` (x, z) on `deck`, filtered by `faces`. Returns how
+## many plates changed.
+func paint_armor(deck: int, rect: Rect2i, mm: int, faces: PlateFaces = PlateFaces.ALL) -> int:
+	var changes := {}
+	for x in range(rect.position.x, rect.end.x):
+		for z in range(rect.position.y, rect.end.y):
+			var cell := Vector3i(x, deck, z)
+			for face in grid.plateable_faces(cell):
+				var top := face == &"dorsal"
+				var bottom := face == &"ventral"
+				match faces:
+					PlateFaces.SIDES:
+						if top or bottom:
+							continue
+					PlateFaces.TOP:
+						if not top:
+							continue
+					PlateFaces.UNDERSIDE:
+						if not bottom:
+							continue
+				var key := ShipBlueprint.plate_key(cell, face)
+				if int(blueprint.armor.get(key, 0)) != mm:
+					changes[key] = mm
+	if changes.is_empty():
+		return 0
+	_checkpoint()
+	for key in changes:
+		if changes[key] <= 0:
+			blueprint.armor.erase(key)
+		else:
+			blueprint.armor[key] = changes[key]
+	_refresh()
+	return changes.size()
+
+
+## Turn a module upside down (a wedge's slope then faces down).
+func flip_module(id: String) -> bool:
+	var m: Variant = blueprint.find(id)
+	if not m is ShipBlueprint.PlacedModule:
+		return false
+	_checkpoint()
+	m.flip = not m.flip
+	_refresh()
+	return true
 
 
 func place_room(def_id: StringName, deck: int, rect: Rect2i) -> String:
@@ -114,6 +165,7 @@ func move(id: String, delta: Vector3i) -> bool:
 	_checkpoint()
 	if item is ShipBlueprint.PlacedModule:
 		var contents := _contents_of(item)
+		_move_plates(contents.cells, func(c: Vector3i) -> Vector3i: return c + delta, 0)
 		item.position += delta
 		for room: ShipBlueprint.PlacedRoom in contents.rooms:
 			_shift_room(room, delta)
@@ -152,6 +204,7 @@ func rotate_module(id: String) -> bool:
 	# Cell map for a quarter turn: (x, z) → (x' + Δz, z' + sx − 1 − Δx).
 	var turn := func(c: Vector3i) -> Vector3i:
 		return Vector3i(new_pos.x + (c.z - old_pos.z), c.y, new_pos.z + size.x - 1 - (c.x - old_pos.x))
+	_move_plates(contents.cells, turn, 1)
 	m.position = new_pos
 	m.rotation = (m.rotation + 1) % 4
 	for room: ShipBlueprint.PlacedRoom in contents.rooms:
@@ -236,15 +289,33 @@ func preview_new_errors(edit: Callable) -> Array[ShipValidator.Issue]:
 	return out
 
 
-## Rooms, equipment and hatches lying entirely inside a module's cells.
+## Armour plates on `cells` follow their cells through `map`; side faces
+## turn by `quarter_turns`.
+func _move_plates(cells: Dictionary, map: Callable, quarter_turns: int) -> void:
+	var moved := {}
+	for key in blueprint.armor.keys():
+		var cf := ShipBlueprint.parse_plate_key(key)
+		if not cells.has(cf[0]):
+			continue
+		var face: StringName = cf[1]
+		if face != &"dorsal" and face != &"ventral":
+			face = ShipGrid.face_of(ShipGrid.rotate_dir(ShipGrid.FACE_NORMALS[face], quarter_turns))
+		moved[ShipBlueprint.plate_key(map.call(cf[0]), face)] = blueprint.armor[key]
+		blueprint.armor.erase(key)
+	blueprint.armor.merge(moved, true)
+
+
+## Rooms, equipment and hatches lying entirely inside a module's cells
+## (and the cells themselves, as a set).
 func _contents_of(m: ShipBlueprint.PlacedModule) -> Dictionary:
-	var out := {"rooms": [], "equipment": [], "hatches": []}
+	var out := {"rooms": [], "equipment": [], "hatches": [], "cells": {}}
 	var index := blueprint.modules.find(m)
 	if not catalog.hull.has(m.def_id):
 		return out
 	var inside := {}
 	for c in grid.module_cells(index):
 		inside[c] = true
+	out.cells = inside
 	var all_inside := func(cells: Array) -> bool:
 		return not cells.is_empty() and cells.all(func(c: Vector3i) -> bool: return inside.has(c))
 	for r in blueprint.rooms:

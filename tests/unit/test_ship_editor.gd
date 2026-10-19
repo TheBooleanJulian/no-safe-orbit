@@ -3,9 +3,11 @@ extends TestCase
 ## hatches, picking, placement preview) and that validation follows edits.
 
 
+## Editing operations against the original section-built frigate (a fixed
+## fixture with known module ids and layout).
 func _editor() -> ShipEditor:
 	var errors := PackedStringArray()
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	var bp := BlueprintIO.load_file("res://tests/fixtures/frigate_legacy.json", errors)
 	return ShipEditor.new(bp, ConstructionCatalog.default_catalog())
 
 

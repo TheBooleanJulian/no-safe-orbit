@@ -78,6 +78,8 @@ const ROLE_STATIONS := {
 	CrewRoster.Role.DAMAGE_CONTROL: [&"workshop", &"access"],
 	CrewRoster.Role.WEAPONS: [&"magazine", &"command"],
 }
+## Crew reach external systems on EVA from rooms this close (cells).
+const EVA_REACH_CELLS := 2
 ## Without a working sensor mast: eyeballs and backup optics (m).
 const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
@@ -87,8 +89,9 @@ const SHIP_AI_FACTOR := 0.5
 const SHIP_AI_GUN_RATE_FACTOR := 0.5
 const SHIP_AI_DISPERSION_DEG := 0.4
 const REACTOR_BLAST_RADIUS_M := 15.0
-## Structure points / system hit points destroyed at the blast centre.
-const REACTOR_BLAST_STRUCTURE := 150.0
+## Structure destroyed at the blast centre, as a multiple of each module's
+## own structure (falling off with distance), and system hit points.
+const REACTOR_BLAST_STRUCTURE_FRACTION := 1.2
 const REACTOR_BLAST_HP := 90.0
 ## Rooms whose centre is within this fraction of the radius are breached.
 const REACTOR_BLAST_BREACH_FRACTION := 0.6
@@ -185,8 +188,12 @@ var switched_off: Dictionary = {}
 ## Compartments sealed off by order (room index -> true): nobody passes
 ## through them; whoever is inside stays.
 var isolated_rooms: Dictionary = {}
+## Armour plates as they are now (worn by hits): plate key -> mm.
+var plates: Dictionary = {}
 
 var _attachments: Array[Array] = []
+## Exposed faces per module (passive cooling).
+var _module_faces: PackedInt32Array = PackedInt32Array()
 var _config: ShipConfig
 var _rounds_seen: int = 0
 
@@ -199,6 +206,8 @@ static func create(bp: ShipBlueprint, p_grid: ShipGrid, p_stats: ShipStats, conf
 	s.base_config = config
 	s._attachments = p_grid.attachments()
 	for i in bp.modules.size():
+		s._module_faces.append(p_grid.exterior_face_count(i) if p_grid.module_def(i) != null else 0)
+	for i in bp.modules.size():
 		var m := ModuleState.new()
 		var def := p_grid.module_def(i)
 		m.armor_mm = def.armor_mm if def != null else 0.0
@@ -207,6 +216,8 @@ static func create(bp: ShipBlueprint, p_grid: ShipGrid, p_stats: ShipStats, conf
 		s.modules.append(m)
 	for r in bp.rooms:
 		s.rooms.append(RoomState.new())
+	for key in bp.armor:
+		s.plates[key] = float(bp.armor[key])
 	for i in bp.equipment.size():
 		var def := p_grid.equipment_def(i)
 		if def == null:
@@ -337,7 +348,7 @@ func _explode(src: EquipmentState) -> void:
 	for i in modules.size():
 		var center := Vector3(blueprint.modules[i].position) * c + Vector3(grid.module_size(i)) * c * 0.5 - com
 		var k := _blast_falloff(center, src.body_position)
-		if k > 0.0 and damage_module(i, REACTOR_BLAST_STRUCTURE * k):
+		if k > 0.0 and damage_module(i, modules[i].max_structure * REACTOR_BLAST_STRUCTURE_FRACTION * k):
 			blast.lines.append("Module %s wrecked by the blast" % blueprint.modules[i].id)
 	for i in rooms.size():
 		var cells := ShipGrid.room_cells(blueprint.rooms[i])
@@ -523,9 +534,9 @@ func tick(ship: ShipState, dt: float) -> bool:
 		if def != null:
 			gen += def.heat_kw_per_cell * blueprint.rooms[i].rect.size.x * blueprint.rooms[i].rect.size.y
 	var rejection := 0.0
-	for m in modules:
-		if not m.wrecked():
-			rejection += ShipStats.PASSIVE_REJECTION_KW_PER_MODULE
+	for i in modules.size():
+		if not modules[i].wrecked():
+			rejection += ShipStats.PASSIVE_REJECTION_KW_PER_FACE * _module_faces[i]
 	for e in equipment:
 		if e.destroyed():
 			continue
@@ -936,6 +947,13 @@ func condition() -> Dictionary:
 	var hatches := destroyed_hatches.keys()
 	hatches.sort()
 	var out := {"equipment": eq, "modules": mods, "breached": breached, "hatches": hatches}
+	var worn := {}
+	for key in plates:
+		var full := float(blueprint.armor.get(key, 0.0))
+		if full > 0.0 and plates[key] < full:
+			worn[key] = plates[key] / full
+	if not worn.is_empty():
+		out["plates"] = worn
 	var hurt: Dictionary = crew.casualties() if crew != null else {}
 	if not hurt.is_empty():
 		out["crew"] = hurt
@@ -955,6 +973,9 @@ func apply_condition(c: Dictionary) -> void:
 		if def != null:
 			modules[i].armor_mm = clampf(float(entry.get("armor", 1.0)), 0.0, 1.0) * def.armor_mm
 		modules[i].structure = clampf(float(entry.get("structure", 1.0)), 0.0, 1.0) * modules[i].max_structure
+	var worn: Dictionary = c.get("plates", {})
+	for key in blueprint.armor:
+		plates[key] = float(blueprint.armor[key]) * clampf(float(worn.get(key, 1.0)), 0.0, 1.0)
 	var breached: Array = c.get("breached", [])
 	for i in rooms.size():
 		rooms[i].breached = breached.has(blueprint.rooms[i].id)
@@ -987,15 +1008,11 @@ func working_workshop() -> int:
 
 
 ## The crew can get to this system: an internal one through its room, an
-## external one on EVA from a reachable room in the module it is mounted on.
+## external one on EVA from a reachable room within EVA_REACH_CELLS of its mount.
 func can_reach(e: EquipmentState) -> bool:
 	var reach := reachable_rooms()
-	var cell: Vector3i = blueprint.equipment[e.index].cell
-	if not e.def.is_external():
-		return reach.has(grid.room_at.get(cell, -1))
-	for r in reach:
-		var cells := ShipGrid.room_cells(blueprint.rooms[r])
-		if grid.module_at.get(cells[0], -2) == e.module_index:
+	for r in _access_rooms(e):
+		if reach.has(r):
 			return true
 	return false
 
@@ -1040,7 +1057,8 @@ func _repair_crew(e: EquipmentState) -> Array:
 
 
 ## Rooms from which the crew work on `e`: its own room, or for an external
-## system any room in the module it is mounted on.
+## system any room with a cell within EVA_REACH_CELLS of its mount (an
+## airlock walk along the hull).
 func _access_rooms(e: EquipmentState) -> Array[int]:
 	var out: Array[int] = []
 	var cell: Vector3i = blueprint.equipment[e.index].cell
@@ -1050,8 +1068,11 @@ func _access_rooms(e: EquipmentState) -> Array[int]:
 			out.append(r)
 		return out
 	for r in blueprint.rooms.size():
-		if grid.module_at.get(ShipGrid.room_cells(blueprint.rooms[r])[0], -2) == e.module_index:
-			out.append(r)
+		for c in ShipGrid.room_cells(blueprint.rooms[r]):
+			var d := (c - cell).abs()
+			if maxi(d.x, maxi(d.y, d.z)) <= EVA_REACH_CELLS:
+				out.append(r)
+				break
 	return out
 
 

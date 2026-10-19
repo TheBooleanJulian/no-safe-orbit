@@ -79,6 +79,13 @@ static func rotate_dir(v: Vector3i, quarter_turns: int) -> Vector3i:
 	return v
 
 
+## Float version of rotate_dir.
+static func rotate_vec(v: Vector3, quarter_turns: int) -> Vector3:
+	for i in posmod(quarter_turns, 4):
+		v = Vector3(v.z, v.y, -v.x)
+	return v
+
+
 static func face_of(normal: Vector3i) -> StringName:
 	for face in FACE_NORMALS:
 		if FACE_NORMALS[face] == normal:
@@ -122,6 +129,81 @@ func module_cells(index: int) -> Array[Vector3i]:
 			for z in size.z:
 				cells.append(m.position + Vector3i(x, y, z))
 	return cells
+
+
+func is_wedge(index: int) -> bool:
+	var def := module_def(index)
+	return def != null and def.is_wedge()
+
+
+## Whether a cell belongs to a sloped (wedge) module.
+func is_wedge_cell(cell: Vector3i) -> bool:
+	return module_at.has(cell) and is_wedge(module_at[cell])
+
+
+## Outward unit normal of a wedge's slope, grid frame.
+func wedge_normal(index: int) -> Vector3:
+	var m := blueprint.modules[index]
+	var s := module_def(index).size_cells
+	var n := Vector3(0, -s.z if m.flip else s.z, -s.y).normalized()
+	return rotate_vec(n, m.rotation)
+
+
+## Whether a point (grid cell units, i.e. metres / CELL_SIZE_M) lies in the
+## solid part of wedge `index` (it must be inside the module's box).
+func wedge_contains(index: int, p: Vector3) -> bool:
+	var m := blueprint.modules[index]
+	var s := Vector3(module_def(index).size_cells)
+	var rs := Vector3(module_size(index))
+	# Into the module's own frame: centre, undo the turn, back to its corner.
+	var local := rotate_vec(p - (Vector3(m.position) + rs * 0.5), -m.rotation) + s * 0.5
+	var height := local.y / s.y
+	if m.flip:
+		height = 1.0 - height
+	return height <= local.z / s.z + 1e-6
+
+
+## The two grid faces of a wedge cell that its slope replaces (its own fore
+## face and its top — bottom when flipped). Systems cannot mount there.
+func slope_faces(cell: Vector3i) -> Array[StringName]:
+	var out: Array[StringName] = []
+	if not is_wedge_cell(cell):
+		return out
+	var m := blueprint.modules[module_at[cell]]
+	out.append(face_of(rotate_dir(Vector3i(0, 0, -1), m.rotation)))
+	out.append(&"ventral" if m.flip else &"dorsal")
+	return out
+
+
+## The face key a wedge cell's slope plate is stored under (its top, or
+## bottom when flipped); a box cell's plates use their own faces.
+func plate_face(cell: Vector3i, face: StringName) -> StringName:
+	var slopes := slope_faces(cell)
+	return slopes[1] if slopes.has(face) else face
+
+
+## Faces of `cell` that can carry an armour plate: exterior faces, with a
+## wedge's slope counted once (under plate_face).
+func plateable_faces(cell: Vector3i) -> Array[StringName]:
+	var out: Array[StringName] = []
+	if not is_hull(cell):
+		return out
+	for face: StringName in FACE_NORMALS:
+		if not is_exterior_face(cell, face):
+			continue
+		var f := plate_face(cell, face)
+		if not out.has(f):
+			out.append(f)
+	return out
+
+
+## Plate area factor: a slope plate is larger than the cell face it stands
+## for (hypotenuse over run).
+func plate_area_factor(cell: Vector3i, face: StringName) -> float:
+	if not is_wedge_cell(cell) or not slope_faces(cell).has(face):
+		return 1.0
+	var s := module_def(module_at[cell]).size_cells
+	return sqrt(float(s.z * s.z + s.y * s.y)) / float(s.z)
 
 
 ## Connector type of a module on a face given in grid (ship) orientation.
@@ -252,6 +334,16 @@ static func traverse(start: Vector3, dir: Vector3, max_cells: float) -> Array[Di
 		t_next[axis] += t_delta[axis]
 		out.append({"cell": cell, "t": t, "normal": normal})
 	return out
+
+
+## Faces of a module's cells open to space (its radiating surface).
+func exterior_face_count(index: int) -> int:
+	var n := 0
+	for cell in module_cells(index):
+		for face: StringName in FACE_NORMALS:
+			if not is_hull(cell + FACE_NORMALS[face]):
+				n += 1
+	return n
 
 
 ## Range of occupied decks / x / z across the hull (for editor views).

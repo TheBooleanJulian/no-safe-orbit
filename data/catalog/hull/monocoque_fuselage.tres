@@ -19,3 +19,4 @@ armor_mm = 55.0
 color = Color(0.62, 0.66, 0.74, 1)
 rarity = 4
 drop_weight = 10.0
+legacy = true

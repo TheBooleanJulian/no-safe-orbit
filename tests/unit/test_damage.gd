@@ -5,15 +5,18 @@ extends TestCase
 ## throttling, damage changing flight, and two layouts under one attack.
 
 const CELL := ShipGrid.CELL_SIZE_M
+const LEGACY_FRIGATE := "res://tests/fixtures/frigate_legacy.json"
 
 
 func _catalog() -> ConstructionCatalog:
 	return ConstructionCatalog.default_catalog()
 
 
+## The original Frigate Mk I built from large sections (a fixed fixture:
+## these tests measure the damage model against known geometry).
 func _template() -> ShipBlueprint:
 	var errors := PackedStringArray()
-	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	return BlueprintIO.load_file(LEGACY_FRIGATE, errors)
 
 
 ## A ship state flying `bp` with live systems.

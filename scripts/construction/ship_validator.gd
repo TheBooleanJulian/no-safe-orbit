@@ -216,6 +216,10 @@ static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 				_add(report, Severity.ERROR, &"equipment_not_exterior",
 					"%s %s must sit on an exterior hull face; the %s face of %s is %s." % [def.display_name, e.id,
 						e.face, _cell_text(e.cell), "not hull" if not grid.is_hull(e.cell) else "covered by another module"], e.id)
+			elif grid.slope_faces(e.cell).has(e.face):
+				_add(report, Severity.ERROR, &"equipment_on_slope",
+					"%s %s is on the sloped face of a wedge at %s: systems need a flat face. Put it on a block." % [
+						def.display_name, e.id, _cell_text(e.cell)], e.id)
 			var key := "%s|%s" % [e.cell, e.face]
 			if mounts.has(key):
 				_add(report, Severity.ERROR, &"equipment_overlap",
@@ -295,6 +299,14 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 				"%s %s has no magazine to feed it: 0 rounds. Add a magazine room." % [def.display_name, e.id], e.id)
 
 
+	var buried := 0
+	for key: String in bp.armor:
+		var cf := ShipBlueprint.parse_plate_key(key)
+		if not grid.plateable_faces(cf[0]).has(cf[1]):
+			buried += 1
+	if buried > 0:
+		_add(report, Severity.WARNING, &"armor_buried",
+			"%d armour plate%s on faces that are covered or not hull: dead weight. Repaint the armour." % [buried, "" if buried == 1 else "s"], "")
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
 		if def != null and def.kind == EquipmentDefinition.Kind.DOCKING_COLLAR and grid.room_at.get(bp.equipment[i].cell, -1) < 0:

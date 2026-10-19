@@ -33,6 +33,8 @@ const ENTRY_HOLE_RADIUS_M := 0.55
 const EXIT_HOLE_RADIUS_M := 0.9
 
 var _holes: Array[Node3D] = []
+## Gun turrets {id, pivot}, trained from the ship's turret directions.
+var _turrets: Array[Dictionary] = []
 var _hole_material: StandardMaterial3D
 var _scorch_material: StandardMaterial3D
 
@@ -42,6 +44,7 @@ func _ready() -> void:
 	add_child(model.root)
 	_parts = model.parts
 	_beacons = model.beacons
+	_turrets = model.turrets
 	_build_plumes(model.engine_nozzles)
 	_build_jets(model.rcs_blocks)
 	_wreck_material = StandardMaterial3D.new()
@@ -62,6 +65,7 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 	_plume_material.albedo_color.a = 0.15 + 0.4 * fwd_fraction
 	if state.systems != null:
 		_show_damage(state.systems)
+	_train_turrets(state)
 	_update_jets(state)
 	_clock += get_process_delta_time()
 	var on := fmod(_clock, BEACON_PERIOD_S) < 0.25
@@ -175,6 +179,19 @@ static func _snap_exhaust(dir: Vector3, normal: Vector3) -> Vector3:
 			best = axis
 	return best
 
+
+
+## Each turret's house and barrel point along its mount's barrel direction.
+func _train_turrets(state: ShipState) -> void:
+	var ids := state.config.cannon_mount_ids
+	for t in _turrets:
+		var k := ids.find(t.id)
+		if k < 0 or k >= state.turret_dirs.size():
+			continue
+		var dir := state.turret_dirs[k]
+		var pivot: Node3D = t.pivot
+		var up := Vector3.UP if absf(dir.y) < 0.95 else Vector3.BACK
+		pivot.basis = Basis.looking_at(dir, up)
 
 
 ## Destroyed external systems disappear; wrecked modules turn charred.

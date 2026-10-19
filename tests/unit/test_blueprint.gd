@@ -50,7 +50,7 @@ func test_frigate_template_validates_clean_and_compiles() -> void:
 	var stats := _stats(bp)
 	var cfg := stats.to_ship_config(bp.name)
 	assert_true(cfg.validate().is_empty(), "compiled ShipConfig problems: %s" % ", ".join(cfg.validate()))
-	assert_true(stats.mass_kg > 300_000.0 and stats.mass_kg < 450_000.0, "frigate mass %.0f kg in 300–450 t" % stats.mass_kg)
+	assert_true(stats.mass_kg > 300_000.0 and stats.mass_kg < 550_000.0, "frigate mass %.0f kg in 300–550 t" % stats.mass_kg)
 	var accel := stats.thrust_forward_n / stats.mass_kg
 	assert_true(accel > 5.0 and accel < 12.0, "main-engine acceleration %.2f m/s² in 5–12" % accel)
 	assert_near(stats.center_of_mass_m.x, 12.0, 0.25, "CoM on the centreline (x, m)")
@@ -75,7 +75,7 @@ func test_blueprint_round_trip_has_no_data_loss() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	# New ids continue after loaded ones (no id reuse).
 	var added := loaded.add_room(&"corridor", 2, Rect2i(3, 4, 1, 1))
-	assert_true(added.id == "r54", "next id after a loaded design continues numbering (got %s)" % added.id)
+	assert_true(added.id == "r118", "next id after a loaded design continues numbering (got %s)" % added.id)
 
 
 func test_unsupported_or_malformed_files_are_rejected_safely() -> void:

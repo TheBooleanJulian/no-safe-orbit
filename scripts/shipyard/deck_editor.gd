@@ -202,7 +202,9 @@ func _draw() -> void:
 		draw_rect(er, def.color.lightened(0.4), false, 1.5)
 		_label(font, er, def.display_name, Color.BLACK)
 
+	_draw_slopes()
 	_draw_module_outlines()
+	_draw_plates()
 	_draw_hatches()
 	_draw_external_equipment()
 
@@ -258,6 +260,49 @@ func _draw_module_outlines() -> void:
 				var mid: Vector2 = (seg[0] + seg[1]) * 0.5
 				var inward: Vector2 = cell_rect(cell).get_center() - mid
 				draw_line(mid + inward * 0.05, mid + inward * 0.3, CONNECTOR_COLORS.get(conn, Color.WHITE), 3.0)
+
+
+## Wedge cells: contour lines across the slope, and a chevron pointing to
+## its low edge (dimmer when the slope faces down).
+func _draw_slopes() -> void:
+	var grid := editor.grid
+	for cell: Vector3i in grid.module_at:
+		if cell.y != deck or not grid.is_wedge_cell(cell):
+			continue
+		var faces := grid.slope_faces(cell)
+		var low := _edge(cell, faces[0])
+		var r := cell_rect(cell)
+		var inward: Vector2 = r.get_center() - (low[0] + low[1]) * 0.5
+		var col := Color(0.82, 0.9, 1.0, 0.55 if faces[1] == &"dorsal" else 0.28)
+		for k in [0.25, 0.5, 0.75]:
+			var off: Vector2 = inward * 2.0 * k
+			draw_line(low[0] + off, low[1] + off, col, 1.0)
+		var mid: Vector2 = (low[0] + low[1]) * 0.5 + inward * 0.35
+		var side: Vector2 = (low[1] - low[0]) * 0.18
+		draw_polyline(PackedVector2Array([mid - side + inward * 0.25, mid, mid + side + inward * 0.25]), col, 2.0)
+
+
+## Armour plates: a bar inside the edge for side plates, a corner tab for
+## top (filled) and underside (outline) plates. Cyan = 40 mm, amber = 80 mm.
+func _draw_plates() -> void:
+	for key: String in editor.blueprint.armor:
+		var cf := ShipBlueprint.parse_plate_key(key)
+		var cell: Vector3i = cf[0]
+		if cell.y != deck:
+			continue
+		var mm := int(editor.blueprint.armor[key])
+		var col := Color(CyberTheme.AMBER if mm >= ShipBlueprint.PLATE_THICK_MM else CyberTheme.CYAN, 0.9)
+		var r := cell_rect(cell)
+		var tab := Vector2.ONE * maxf(_px * 0.24, 4.0)
+		match cf[1]:
+			&"dorsal":
+				draw_rect(Rect2(r.position + Vector2(2, 2), tab), col)
+			&"ventral":
+				draw_rect(Rect2(Vector2(r.position.x + 2, r.end.y - 2 - tab.y), tab), col, false, 1.5)
+			_:
+				var seg := _edge(cell, cf[1])
+				var inward: Vector2 = (r.get_center() - (seg[0] + seg[1]) * 0.5).normalized() * _px * 0.1
+				draw_line(seg[0] + inward, seg[1] + inward, col, maxf(_px * (0.16 if mm >= ShipBlueprint.PLATE_THICK_MM else 0.09), 2.0))
 
 
 func _draw_hatches() -> void:

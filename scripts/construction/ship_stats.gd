@@ -13,8 +13,12 @@ extends RefCounted
 ## - Power and heat totals here are the design budget; the running ship
 ##   resolves them through its power and thermal networks (ShipSystems).
 
-## Passive heat rejection of bare hull, per module (kW).
-const PASSIVE_REJECTION_KW_PER_MODULE := 30.0
+## Passive heat rejection of bare hull, per exposed cell face (kW): it
+## radiates from its outer surface.
+const PASSIVE_REJECTION_KW_PER_FACE := 0.65
+## Armour plate density (t/m³: steel–ceramic composite). One cell face is
+## 9 m², so a 40 mm plate is 1.44 t and an 80 mm plate 2.88 t.
+const PLATE_DENSITY_KG_M3 := 4000.0
 ## Assist turn rate = angular acceleration × this (s), clamped below.
 const ASSIST_RATE_SECONDS := 1.5
 const ASSIST_RATE_MIN := 0.05
@@ -54,6 +58,14 @@ var cannon_ids: PackedStringArray = PackedStringArray()
 var cannon_positions_m: PackedVector3Array = PackedVector3Array()
 var cannon_normals: PackedVector3Array = PackedVector3Array()
 var cannon_config: KineticCannonConfig
+## Armour plates: total mass and count.
+var plate_mass_kg: float = 0.0
+var plate_count: int = 0
+
+
+## Mass of one plate (kg) of `mm` over `area_factor` cell faces.
+static func plate_mass(mm: float, area_factor: float = 1.0) -> float:
+	return mm / 1000.0 * ShipGrid.CELL_SIZE_M * ShipGrid.CELL_SIZE_M * area_factor * PLATE_DENSITY_KG_M3
 
 
 static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
@@ -66,7 +78,7 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 			continue
 		var size_m := Vector3(grid.module_size(i)) * c
 		elements.append({"mass": def.structure_mass_kg, "center": Vector3(bp.modules[i].position) * c + size_m * 0.5, "size": size_m})
-		s.heat_rejection_kw += PASSIVE_REJECTION_KW_PER_MODULE
+		s.heat_rejection_kw += PASSIVE_REJECTION_KW_PER_FACE * grid.exterior_face_count(i)
 	for r in bp.rooms:
 		var def: RoomDefinition = grid.catalog.rooms.get(r.def_id)
 		if def == null:
@@ -85,6 +97,15 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 			if not grid.equipment_at.has(cell):
 				free += 1
 		s.cargo_m3 += def.cargo_m3_per_cell * free
+	for key: String in bp.armor:
+		var cf := ShipBlueprint.parse_plate_key(key)
+		var cell: Vector3i = cf[0]
+		var face: StringName = cf[1]
+		var kg := plate_mass(float(bp.armor[key]), grid.plate_area_factor(cell, face))
+		var n := Vector3(ShipGrid.FACE_NORMALS.get(face, Vector3i.ZERO))
+		elements.append({"mass": kg, "center": ShipGrid.cell_center_m(cell) + n * c * 0.5, "size": Vector3.ZERO})
+		s.plate_mass_kg += kg
+		s.plate_count += 1
 	var engines: Array[Vector3] = []
 	var engine_thrust: Array[float] = []
 	var rcs: Array[Vector3] = []

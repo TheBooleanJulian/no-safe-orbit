@@ -41,7 +41,7 @@ func record(line: String) -> void:
 
 
 func is_damaged() -> bool:
-	for key in ["equipment", "modules", "breached", "hatches", "crew"]:
+	for key in ["equipment", "modules", "breached", "hatches", "crew", "plates"]:
 		var part: Variant = condition.get(key, [])
 		if not part.is_empty():
 			return true

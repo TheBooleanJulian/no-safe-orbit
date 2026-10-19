@@ -105,9 +105,10 @@ func test_steep_hits_ricochet_and_head_on_ones_shatter() -> void:
 func test_hole_normals_point_out_of_the_hull() -> void:
 	var ship := _ship(&"s")
 	var com := ship.systems.stats.center_of_mass_m
-	var p := Vector3(3.5 * CELL, 0.5 * CELL, 0.0) - com
-	var r := Penetration.apply(ship.systems, p, Vector3(0, 0, 1), 400.0)
-	assert_true(r.penetrated, "a 400 mm round goes in through the nose")
-	assert_vec_near(r.entry_normal_body, Vector3(0, 0, -1), 1e-6, "entry hole faces forward (out of the nose)")
+	# Across the exposed upper deck, port to starboard (40 mm belt plates).
+	var p := Vector3(2.0 * CELL, 2.5 * CELL, 6.5 * CELL) - com
+	var r := Penetration.apply(ship.systems, p, Vector3(1, 0, 0), 400.0)
+	assert_true(r.penetrated, "a 400 mm round goes in through the port flank")
+	assert_vec_near(r.entry_normal_body, Vector3(-1, 0, 0), 1e-6, "entry hole faces port (out of the flank)")
 	if r.exit_pen_mm > 0.0:
-		assert_vec_near(r.exit_normal_body, Vector3(0, 0, 1), 1e-6, "exit hole faces aft")
+		assert_vec_near(r.exit_normal_body, Vector3(1, 0, 0), 1e-6, "exit hole faces starboard")

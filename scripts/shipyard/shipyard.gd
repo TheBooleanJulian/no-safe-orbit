@@ -11,7 +11,15 @@ const FLIGHT_SCENE := "res://scenes/main/main.tscn"
 const COLOR_ERROR := CyberTheme.RED
 const COLOR_WARNING := CyberTheme.AMBER
 ## Palette categories (the part kinds the catalog supports).
-const CATEGORIES := ["All", "Hull", "Interior", "Propulsion", "Power & thermal", "Weapons", "Sensors", "Utility", "Logistics"]
+const CATEGORIES := ["All", "Hull", "Armour", "Interior", "Propulsion", "Power & thermal", "Weapons", "Sensors", "Utility", "Logistics"]
+## Armour palette entries: id -> [mm (0 = remove), name, description].
+const ARMOR_ENTRIES := {
+	&"plate_40": [ShipBlueprint.PLATE_THIN_MM, "Thin armour plate (40 mm)",
+		"Thin armour plate — 40 mm on top of the hull skin\nMASS %.2f t per face (more on a slope) · COST %d spare parts\nDrag across cells on this deck to plate their exposed faces (filter below). Sloped wedge faces count their full angle: a 45° slope is %.0f%% thicker against a level shot."],
+	&"plate_80": [ShipBlueprint.PLATE_THICK_MM, "Thick armour plate (80 mm)",
+		"Thick armour plate — 80 mm on top of the hull skin\nMASS %.2f t per face (more on a slope) · COST %d spare parts\nDrag across cells on this deck to plate their exposed faces (filter below). Sloped wedge faces count their full angle: a 45° slope is %.0f%% thicker against a level shot."],
+	&"plate_remove": [0, "Remove armour plates", "Remove armour plates\nDrag across cells on this deck to strip their plates (filter below)."],
+}
 
 @onready var name_edit: LineEdit = %NameEdit
 @onready var template_list: OptionButton = %TemplateList
@@ -42,6 +50,10 @@ var tool: Tool = Tool.SELECT
 var place_kind: String = ""
 var place_def: StringName = &""
 var place_rotation: int = 0
+## Hull placement upside down (wedges slope down) — F.
+var place_flip: bool = false
+## Which faces an armour stroke covers.
+var armor_faces: OptionButton
 var selected_id: String = ""
 var _hover_cell := Vector3i.ZERO
 var _hover_face: StringName = &""
@@ -147,6 +159,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			set_tool(Tool.HATCH)
 		KEY_R:
 			rotate_current()
+		KEY_F:
+			flip_current()
 		KEY_DELETE, KEY_BACKSPACE:
 			if selected_id != "":
 				editor.remove(selected_id)
@@ -191,8 +205,15 @@ func select_palette(kind: String, def_id: StringName) -> void:
 	hatch_button.button_pressed = false
 	place_kind = kind
 	place_def = def_id
-	deck_editor.drag_rooms = kind == "room"
-	info_label.text = _describe(kind, def_id)
+	deck_editor.drag_rooms = kind == "room" or kind == "armor"
+	if armor_faces != null:
+		armor_faces.visible = kind == "armor"
+	if kind == "armor":
+		var entry: Array = ARMOR_ENTRIES[def_id]
+		info_label.text = entry[2] if entry[0] == 0 else entry[2] % [ShipStats.plate_mass(entry[0]) / 1000.0,
+			ServiceYard.plate_cost(entry[0]), (sqrt(2.0) - 1.0) * 100.0]
+	else:
+		info_label.text = _describe(kind, def_id)
 	_update_ghost()
 
 
@@ -200,6 +221,15 @@ func change_deck(delta: int) -> void:
 	var b := editor.grid.cell_bounds()
 	deck_editor.deck = clampi(deck_editor.deck + delta, int(b.position.y) - 1, int(b.end.y))
 	_refresh_views()
+
+
+## F: place hull upside down, or flip the selected module.
+func flip_current() -> void:
+	if tool == Tool.PLACE and place_kind == "hull":
+		place_flip = not place_flip
+		_update_ghost()
+	elif selected_id != "":
+		editor.flip_module(selected_id)
 
 
 func rotate_current() -> void:
@@ -245,7 +275,10 @@ func apply_at(cell: Vector3i, face: StringName, button: MouseButton = MOUSE_BUTT
 		Tool.PLACE:
 			match place_kind:
 				"hull":
-					selected_id = editor.place_module(place_def, cell, place_rotation)
+					selected_id = editor.place_module(place_def, cell, place_rotation, place_flip)
+				"armor":
+					_paint_armor(cell.y, Rect2i(cell.x, cell.z, 1, 1))
+					return
 				"room":
 					selected_id = editor.place_room(place_def, cell.y, Rect2i(cell.x, cell.z, 1, 1))
 				"equipment":
@@ -257,6 +290,15 @@ func _on_room_dragged(deck: int, rect: Rect2i) -> void:
 	if tool == Tool.PLACE and place_kind == "room":
 		selected_id = editor.place_room(place_def, deck, rect)
 		_set_status("Placed %s (%d×%d)" % [selected_id, rect.size.x, rect.size.y])
+	elif tool == Tool.PLACE and place_kind == "armor":
+		_paint_armor(deck, rect)
+
+
+func _paint_armor(deck: int, rect: Rect2i) -> void:
+	var mm: int = ARMOR_ENTRIES[place_def][0]
+	var faces := armor_faces.selected if armor_faces != null else 0
+	var n := editor.paint_armor(deck, rect, mm, faces)
+	_set_status(("%s %d plate%s" % ["Removed" if mm == 0 else "Fitted %d mm on" % mm, n, "" if n == 1 else "s"]) if n > 0 else "No exposed faces there to plate")
 
 
 # --- Files and launch -------------------------------------------------------------
@@ -459,6 +501,12 @@ func _build_palette() -> void:
 		var m: Array = palette_list.get_item_metadata(i)
 		select_palette(m[0], m[1]))
 	box.add_child(palette_list)
+	armor_faces = OptionButton.new()
+	for n in ["Plate every exposed face", "Sides only", "Top only", "Underside only"]:
+		armor_faces.add_item(n)
+	armor_faces.tooltip_text = "Which faces an armour stroke covers"
+	armor_faces.visible = false
+	box.add_child(armor_faces)
 	left.add_child(box)
 	left.move_child(box, palette.get_index())
 	_fill_palette_list()
@@ -491,9 +539,19 @@ func _fill_palette_list() -> void:
 	palette_list.clear()
 	var want: String = CATEGORIES[maxi(palette_category.selected, 0)]
 	var query := palette_search.text.strip_edges().to_lower()
+	for id: StringName in ARMOR_ENTRIES:
+		var a_name: String = ARMOR_ENTRIES[id][1]
+		if (want != "All" and want != "Armour") or (query != "" and not (a_name.to_lower().contains(query) or "armour".contains(query))):
+			continue
+		var ai := palette_list.add_item(a_name if want == "Armour" else "%s · Armour" % a_name)
+		palette_list.set_item_metadata(ai, ["armor", id])
+		var mm: int = ARMOR_ENTRIES[id][0]
+		palette_list.set_item_custom_fg_color(ai, CyberTheme.AMBER if mm >= ShipBlueprint.PLATE_THICK_MM else (CyberTheme.CYAN if mm > 0 else CyberTheme.TEXT_DIM))
 	for entry in [["hull", editor.catalog.hull], ["room", editor.catalog.rooms], ["equipment", editor.catalog.equipment]]:
 		for id in ConstructionCatalog.sorted_ids(entry[1]):
 			var def: Resource = entry[1][id]
+			if def is HullModuleDefinition and def.legacy:
+				continue
 			var cat := category_of(entry[0], def)
 			if want != "All" and cat != want:
 				continue
@@ -757,8 +815,16 @@ func _update_ghost() -> void:
 				for x in size.x:
 					for z in size.z:
 						deck_editor.ghost_cells.append(cell + Vector3i(x, 0, z))
-				edit = func(bp: ShipBlueprint) -> void: bp.add_module(place_def, cell, place_rotation)
-				hint = "%s — rotation %d° [R]" % [def.display_name, place_rotation * 90]
+				edit = func(bp: ShipBlueprint) -> void: bp.add_module(place_def, cell, place_rotation, place_flip)
+				hint = "%s — rotation %d° [R]%s" % [def.display_name, place_rotation * 90,
+					("  ·  slope %s [F]" % ("down" if place_flip else "up")) if def.is_wedge() else ("  ·  upside down [F]" if place_flip else "")]
+			"armor":
+				deck_editor.ghost_cells.append(cell)
+				hint = "%s — drag across cells; %s" % [ARMOR_ENTRIES[place_def][1], armor_faces.get_item_text(armor_faces.selected).to_lower()]
+				hint_label.text = hint
+				deck_editor.ghost_ok = editor.grid.is_hull(cell)
+				deck_editor.queue_redraw()
+				return
 			"room":
 				deck_editor.ghost_cells.append(cell)
 				edit = func(bp: ShipBlueprint) -> void: bp.add_room(place_def, cell.y, Rect2i(cell.x, cell.z, 1, 1))
@@ -856,7 +922,7 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 					"pressurised: rooms fit inside" if d.interior else "unpressurised: no rooms"],
 				"MASS %.1f t (%.1f t per cell) · STRUCTURE %.0f pts" % [d.structure_mass_kg / 1000.0, d.structure_mass_kg / 1000.0 / cells,
 					d.structure_mass_kg * ShipSystems.STRUCTURE_POINTS_PER_KG],
-				"SKIN ARMOUR %.0f mm · PASSIVE COOLING %.0f kW" % [d.armor_mm, ShipStats.PASSIVE_REJECTION_KW_PER_MODULE],
+				"SKIN ARMOUR %.0f mm · PASSIVE COOLING %.2f kW per exposed face" % [d.armor_mm, ShipStats.PASSIVE_REJECTION_KW_PER_FACE],
 				"COST %d spare parts" % ServiceYard.module_cost(d),
 				"Click to place (base on this deck) · R rotates",
 			]))

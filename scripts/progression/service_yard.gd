@@ -71,6 +71,11 @@ static func room_cost(def: RoomDefinition, cells: int) -> int:
 	return maxi(ceili(def.mass_per_cell_kg * cells / 2000.0), 1)
 
 
+## An armour plate: a part per tonne.
+static func plate_cost(mm: float) -> int:
+	return maxi(ceili(ShipStats.plate_mass(mm) / 1000.0), 1)
+
+
 static func damaged_cost(full: int, damage: float) -> int:
 	return clampi(ceili(full * clampf(damage, 0.0, 1.0) - 1e-9), 0, full)
 
@@ -115,6 +120,19 @@ static func repair_jobs(vessel: ShipInstance, catalog: ConstructionCatalog) -> A
 		j.cost = maxi(damaged_cost(module_cost(def), 0.5 * (1.0 - structure) + 0.5 * (1.0 - armor)), 1)
 		j.label = "Rebuild %s %s (structure %d%%, armour %d%%)" % [def.display_name, m.id, roundi(structure * 100.0), roundi(armor * 100.0)]
 		j.order = structure
+		jobs.append(j)
+	# Worn armour plates: one job for all of them.
+	var worn: Dictionary = vessel.condition.get("plates", {})
+	if not worn.is_empty():
+		var cost := 0.0
+		for key in worn:
+			cost += plate_cost(float(bp.armor.get(key, 0.0))) * (1.0 - clampf(float(worn[key]), 0.0, 1.0))
+		var j := Job.new()
+		j.kind = &"plates"
+		j.subject = "plates"
+		j.cost = maxi(ceili(cost - 1e-9), 1)
+		j.label = "Re-plate %d worn armour plate%s" % [worn.size(), "" if worn.size() == 1 else "s"]
+		j.order = 1.5
 		jobs.append(j)
 	for id in vessel.condition.get("breached", []):
 		var j := Job.new()
@@ -185,6 +203,17 @@ static func refit_jobs(vessel: ShipInstance, new_bp: ShipBlueprint, catalog: Con
 		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
 		if def != null and (was == null or not was is ShipBlueprint.PlacedEquipment or was.def_id != e.def_id):
 			jobs.append(_build(e.id, def.display_name, equipment_cost(def), e.def_id if def.rarity != Rarity.Tier.COMMON else &""))
+	# New or thicker armour plates: one job for all of them.
+	var plates := 0
+	var plate_parts := 0
+	for key in new_bp.armor:
+		if int(old.armor.get(key, 0)) < int(new_bp.armor[key]):
+			plates += 1
+			plate_parts += plate_cost(float(new_bp.armor[key]))
+	if plates > 0:
+		var j := _build("plates", "armour plating", plate_parts, &"")
+		j.label = "Fit %d armour plate%s" % [plates, "" if plates == 1 else "s"]
+		jobs.append(j)
 	return jobs
 
 
@@ -248,6 +277,8 @@ static func perform(jobs: Array[Job], vessel: ShipInstance, profile: PlayerProfi
 				(c.get("equipment", {}) as Dictionary).erase(j.subject)
 			&"module":
 				(c.get("modules", {}) as Dictionary).erase(j.subject)
+			&"plates":
+				c.erase("plates")
 			&"breach":
 				(c.get("breached", []) as Array).erase(j.subject)
 			&"hatch":
@@ -288,6 +319,12 @@ static func refit(vessel: ShipInstance, new_bp: ShipBlueprint, profile: PlayerPr
 		for id in table.keys():
 			if not keep.has(id):
 				table.erase(id)
+	var worn: Dictionary = c.get("plates", {})
+	for key in worn.keys():
+		if int(new_bp.armor.get(key, 0)) != int(vessel.blueprint.armor.get(key, 0)):
+			worn.erase(key)  # removed, or a new plate fitted there
+	if worn.is_empty():
+		c.erase("plates")
 	c["breached"] = (c.get("breached", []) as Array).filter(func(id: Variant) -> bool: return keep.has(str(id)))
 	c["hatches"] = (c.get("hatches", []) as Array).filter(func(id: Variant) -> bool: return new_bp.find(str(id)) != null)
 	if not jobs.is_empty():
