@@ -329,6 +329,53 @@ bounding-box hit test.
 - **Isometric view** (`ShipPreview3D`, `isometric` + `editable`): picks on the
   edited deck's plane and emits the deck editor's signals.
 
+## Play-test feedback pass (2026-10-20)
+
+- **Controls**: `PlayerInput.build_input` maps strafe J/L, I/K and R/F
+  (forward / reverse) to translation, W/S A/D Q/E to rotation.
+  `VelocityHold` has a third value, TARGET_MARKERS (coast; markers relative
+  to the target, `target_relative()`). `ZOOM_LEVELS` sets the zoomed FOV.
+  `RelativeMotion.closest_approach` feeds the CPA line.
+- **Config recompute**: `ShipSystems.effective_config` duplicates the base
+  config shallowly, so `ShipConfig.scale_rate_of_fire` must replace
+  `mount_cannons` (a fresh array), never write into it — writing compounded
+  the scaling on every recompute.
+- **Guns and magazines**: `KineticCannonConfig.penetration_at` is the rated
+  value, plus up to `HEAD_ON_BONUS_MAX` for a fast closing impact.
+  `RoomDefinition.ammo_kg_per_cell` → `ShipStats.magazine_kg`;
+  `ShipStats.rounds_from_mass` shares the mass by mount count and divides by
+  round mass; `ShipState` shares rounds between calibres the same way.
+- **Engines on any face**: `ShipConfig.engine_thrust_n` (six directions,
+  `ShipStats.engine_slot`) adds to `max_thrust`; non-aft engines need an
+  `engine_room` under the mount (validator `engine_needs_engine_room`).
+- **Grapple** (`Grapple`, `WorldSimulation.grapples`, `grab`): an
+  EquipmentDefinition.Kind.GRAPPLE mount; stepped with the links each tick;
+  grappled ships don't collide (`_linked`).
+- **Coolant** (`CoolantLoop`, `ShipBlueprint.coolant`): optional cells like
+  the bus. `cooled_radiators` floods pipes from reactor cells; stats,
+  validator (`radiator_uncooled`) and `ShipSystems.radiator_cooled` use it;
+  hits cut pipes (`coolant_cut`, persisted, re-run by the yard's bus job).
+- **Rooms**: `ShipGrid.open_rooms` joins same-type rooms side by side on a
+  deck (crew routes, reachability, venting, validator access).
+  `ShipSystems.room_bonus(role)` (1 + 25 % per extra cell, ≤ 2×) speeds
+  scans (bridge), repairs and sealing (workshop) and treatment (life
+  support). `suited` (general quarters) lets the crew route through vacuum
+  and survive venting. `_advance_hull_sealing` clears breaches.
+- **Fire** (`ShipSystems.fires`, `foam_used`): started from
+  `damage_equipment` with the ship's seeded generator; burns only in
+  pressurised rooms; foam charges persist in the condition.
+- **Crew and station** (`ShipInstance.crew`, `CrewRoster.from_plan`,
+  `PlayerProfile.hire_pool / vendor_stock / tech`, `TechTree`): an empty
+  crew list means the standard complement; `ensure_crew` names it once.
+  Docking removes the dead from the list (`bury_dead`). Upgrades reach the
+  player's ShipSystems as `tech` (`tech_factor`).
+- **Jump drive**: `in_combat()` = a hostile fired within `UNDER_FIRE_S`
+  (`_note_enemy_fire`); at full charge it always jumps, leaving
+  `jump_waiting()` behind.
+- **Profile v4**: `NO_LONGER_COMMON_V4` grants units of parts that stopped
+  being common to saves whose designs use them (`grant_used`).
+  `Main.get_profile` honours `-- --profile=PATH` (the checks' throwaway).
+
 ## Autonomous craft (Milestone 6)
 
 - **Craft** are `ShipState`s with their own `ShipConfig` (`data/craft/`):
@@ -442,12 +489,14 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Diagonal inertia (principal axes = body axes) | Designs with skewed mass don't tumble off-axis | If asymmetric hull modules arrive |
 | RCS blocks thrust equally in all six directions; torque = thrust × perpendicular lever arm | Block orientation doesn't matter | When RCS needs real quads |
 | Centre of mass fixed at the full-tanks position | Burning propellant doesn't shift the CoM | If tank placement should matter in flight |
-| Ammunition mass not counted | A full magazine weighs nothing | Logistics |
+| Ammunition mass not counted in the ship's mass (magazines are sized by mass) | A full magazine weighs nothing in flight | Logistics |
 | Penetration is a millimetre budget, not ballistics: no spall cone, ricochet or fragmentation; armour per module, not per face | Damage is predictable and explainable, never surprising | M7 (fragmentation, nukes) |
 | Overpenetrating rounds fly on slower but in a straight continuation; no deflection | Exit direction is always the entry direction | M7 (fragmentation) |
 | Docking is abstract: B docks from anywhere; no station or transfer orbit | Returning costs nothing | When stations / logistics arrive |
 | Propellant and ammunition are refilled free at every launch | Only damage and parts carry over | Logistics |
-| Crew move abstractly (5 s per room); no skills, morale or in-flight medicine | Who is where matters; how good they are doesn't | Later |
+| Crew move abstractly (5 s per room); skill is one number (repairs, treatment); no morale | Who is where matters most | Later |
+| One fire per room, no spread between rooms | Fires stay where they start | If fire should spread |
+| The grapple adjusts the target's velocity and attitude directly (shared momentum, no arm dynamics) | It always wins against a hulk | If grappling live ships matters |
 | The grappled gangway forces equal velocities and turn rates (no compound-body dynamics) | Turning hard while docked can tear the gangway | If docked manoeuvring matters |
 | Boarding fights are Lanchester attrition per room; fixed defender policy | Predictable, explainable outcomes | M6 (directives) |
 | All gun mounts on a ship must be one type (one fire-control solution) | No mixed batteries | Turrets / per-mount fire control |
