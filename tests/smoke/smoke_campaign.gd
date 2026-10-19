@@ -99,6 +99,13 @@ func _run() -> void:
 	_check(profile.credits > credits_at_start, "the bounty is paid in credits (%d → %d)" % [credits_at_start, profile.credits])
 	var next := main.world.get_ship(Main.TARGET_ID)
 	_check(next != old_target and next.display_name.begins_with("TGT-02"), "the next contact arrives (%s)" % next.display_name)
+	_check(next.position.distance_to(player.position) > 25000.0 and not main.track.detected,
+		"it arrives %.0f km out, beyond the sensors: no contact yet" % (next.position.distance_to(player.position) / 1000.0))
+	main.target_hostile = true
+	var fired_before := next.rounds_fired
+	await _frames(30)
+	_check(next.rounds_fired == fired_before, "undetected, it does not open fire even when hostile")
+	main.target_hostile = false
 	_check(FileAccess.file_exists(PlayerProfile.path), "salvage saved the profile")
 	await create_timer(LootPanel.REVEAL_INTERVAL_S * (profile.total_pulls + 2)).timeout
 	_check(main.hud.loot.revealed_all() and main.hud.loot.text().contains("Rates"), "every drop revealed, with the drop rates")

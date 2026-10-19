@@ -76,6 +76,32 @@ func _run() -> void:
 	_check(yard.issue_text.get_parsed_text().contains("No issues") and not yard.launch_button.disabled, "validation panel reads clean; launch enabled")
 	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   400 rounds"), "stats panel shows mass and magazine")
 
+	# Searchable, categorised palette.
+	yard.palette_search.text = "radiator"
+	yard.palette_search.text_changed.emit("radiator")
+	var names := PackedStringArray()
+	for i in yard.palette_list.item_count:
+		names.append(yard.palette_list.get_item_text(i))
+	_check(names.size() == 2 and " ".join(names).contains("Radiator panel") and " ".join(names).contains("Heat-pipe radiator"),
+		"search 'radiator' lists both radiators: %s" % ", ".join(names))
+	yard.palette_search.text = ""
+	yard.palette_category.select(Shipyard.CATEGORIES.find("Weapons"))
+	yard.palette_category.item_selected.emit(yard.palette_category.selected)
+	var weapons := PackedStringArray()
+	for i in yard.palette_list.item_count:
+		weapons.append(yard.palette_list.get_item_text(i))
+	_check(weapons.size() == 3 and " ".join(weapons).contains("Railgun"), "the Weapons category lists the guns: %s" % ", ".join(weapons))
+	yard.palette_list.select(0)
+	yard.palette_list.item_selected.emit(0)
+	_check(yard.tool == Shipyard.Tool.PLACE and yard.place_kind == "equipment", "picking from the list arms the place tool")
+	yard.set_tool(Shipyard.Tool.SELECT)
+	yard.expand_view("3d")
+	await _frames(2)
+	_check(not yard.deck_editor.visible and yard.preview.visible and not yard.side_view.visible, "the 3D preview expands")
+	yard.expand_view("")
+	await _frames(2)
+	_check(yard.deck_editor.visible and yard.side_view.visible, "restore brings the deck editor back")
+
 	# Place a radiator on top of the fuselage with a real mouse click.
 	var mass_before := ed.stats.mass_kg
 	var rejection_before := ed.stats.heat_rejection_kw

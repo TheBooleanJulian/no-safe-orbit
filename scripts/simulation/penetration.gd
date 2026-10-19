@@ -20,6 +20,10 @@ const STRUCTURE_DAMAGE_PER_CELL := 2.0
 const BULKHEAD_MM := 8.0
 ## Effective armour is capped at this multiple of its thickness (grazing hits).
 const MAX_OBLIQUITY_FACTOR := 3.0
+## A round stopped by the first plate it meets at this incidence or steeper
+## (degrees from the normal) is deflected rather than shattered: it
+## ricochets off the plate (the world flies it on, slower).
+const RICOCHET_MIN_DEG := 60.0
 ## Armour lost each time a round breaks through a plate / is stopped by it.
 const ARMOR_LOSS_PENETRATED_MM := 3.0
 const ARMOR_LOSS_STOPPED_MM := 1.0
@@ -74,11 +78,21 @@ static func apply(systems: ShipSystems, point_body: Vector3, dir_body: Vector3, 
 		var n: Vector3i = step.normal
 		if not first and n != Vector3i.ZERO:
 			var cos_i := absf(dir.dot(Vector3(n)))
+			# Outward hull normal at this face (against the travel when entering).
+			var outward := Vector3(n) if Vector3(n).dot(dir) > 0.0 else -Vector3(n)
 			if in_hull and not prev_in_hull:
 				pen = _strike_external(systems, systems.external_at(cell, ShipGrid.face_of(-n)), pen, report, here)
 				if pen > 0.0:
-					pen = _armor(systems, grid.module_at[cell], cos_i, pen, report, not met_armor, here)
+					var first_plate := not met_armor
+					if first_plate:
+						report.entry_normal_body = -outward
+					pen = _armor(systems, grid.module_at[cell], cos_i, pen, report, first_plate, here)
 					met_armor = true
+					var incidence := rad_to_deg(acos(clampf(cos_i, 0.0, 1.0)))
+					if pen <= 0.0 and first_plate and incidence >= RICOCHET_MIN_DEG:
+						report.ricochet = true
+						report.ricochet_normal_body = -outward
+						report.event(&"ricochet", "", here, "Deflected at %.0f° incidence — ricochets off the plate" % incidence)
 				report.exit_pen_mm = 0.0  # back inside a hull
 			elif prev_in_hull and not in_hull:
 				pen = _armor(systems, grid.module_at[prev], cos_i, pen, report, false, here, true)
@@ -87,6 +101,7 @@ static func apply(systems: ShipSystems, point_body: Vector3, dir_body: Vector3, 
 				if pen > 0.0:
 					report.exit_pen_mm = pen
 					report.exit_point_body = here
+					report.exit_normal_body = outward
 					report.event(&"exit", "", here, "Exits the hull with %.0f mm left" % pen)
 			elif prev_in_hull and in_hull:
 				var ra: int = grid.room_at.get(prev, -1)

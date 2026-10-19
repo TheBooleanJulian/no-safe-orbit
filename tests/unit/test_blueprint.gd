@@ -75,7 +75,7 @@ func test_blueprint_round_trip_has_no_data_loss() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	# New ids continue after loaded ones (no id reuse).
 	var added := loaded.add_room(&"corridor", 2, Rect2i(3, 4, 1, 1))
-	assert_true(added.id == "r53", "next id after a loaded design continues numbering (got %s)" % added.id)
+	assert_true(added.id == "r54", "next id after a loaded design continues numbering (got %s)" % added.id)
 
 
 func test_unsupported_or_malformed_files_are_rejected_safely() -> void:

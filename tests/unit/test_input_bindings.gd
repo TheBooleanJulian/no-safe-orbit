@@ -53,6 +53,10 @@ func test_capturing_ignores_releases_and_small_deflections() -> void:
 func test_every_flight_action_has_gamepad_default() -> void:
 	var missing := PackedStringArray()
 	for entry in InputBindings.ACTIONS:
-		if entry[0] != &"release_mouse" and InputBindings.describe(entry[0], InputBindings.Kind.GAMEPAD) == "—":
+		# Keyboard-only by design: releasing the mouse, and the information
+		# panel toggles (on a gamepad the Tab overview covers them).
+		if entry[0] in [&"release_mouse", &"toggle_orbit_panel", &"toggle_details", &"toggle_help"]:
+			continue
+		if InputBindings.describe(entry[0], InputBindings.Kind.GAMEPAD) == "—":
 			missing.append(String(entry[0]))
 	assert_true(missing.is_empty(), "actions without a gamepad default: %s" % ", ".join(missing))

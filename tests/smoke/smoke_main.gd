@@ -75,7 +75,7 @@ func _run() -> void:
 	Input.action_release("fire")
 	_check(player.rounds_fired >= 2 and not main.world.projectiles().is_empty(),
 		"fire action launches rounds (fired %d, in flight %d)" % [player.rounds_fired, main.world.projectiles().size()])
-	_check(main.hud.target_label.text.contains("ROUND TOF"), "HUD target panel shows round time of flight")
+	_check(main.hud.target_label.text.contains("ETA ~"), "HUD target card shows the round ETA, marked as an estimate")
 
 	# X switches the hold to target velocity matching.
 	var target := main.world.get_ship(&"target_01")
@@ -109,8 +109,9 @@ func _run() -> void:
 	var target_text: String = main.hud.target_label.text
 	_check(target_text.contains("RANGE") and target_text.contains("km"), "HUD target panel shows range in km")
 	_check(main.camera.current, "chase camera is the active camera")
-	_check(main.hud.flight_label.text.contains("POWER") and main.hud.target_label.text.contains("SYSTEMS"),
-		"HUD shows own power/heat and the target's systems")
+	_check(main.hud.flight_label.text.contains("POWER") and main.hud.flight_label.text.contains("HEAT")
+		and main.hud.target_label.text.contains("STATUS") and main.hud.target_label.text.contains("TRACK   ● MEAS"),
+		"HUD shows own power/heat, the target's status and a measured track")
 
 	# Aim at the lead (scripted) and fire through the real action: our hit
 	# opens the hit cam replay.
@@ -140,6 +141,34 @@ func _run() -> void:
 	await process_frame
 	_check(player.hits_taken > 0 and main.hud.flight_label.text.contains("HIT TAKEN"),
 		"hostile target hits the player and the HUD reports it (after %.1f s)" % (main.world.sim_time - t0))
+
+	# Panels and the damage-control drawer, through the real actions.
+	_press_action("toggle_details")
+	_press_action("toggle_orbit_panel")
+	await process_frame
+	await process_frame
+	_check(main.hud.details_label.is_visible_in_tree() and main.hud.orbit_label.is_visible_in_tree(), "J and O open the details and orbit panels")
+	player.systems.damage_equipment(player.systems.equipment_by_id("e28"), 50.0)
+	await process_frame
+	await process_frame
+	_check(main.hud.alert_subject == "e28" or main.hud.warning_label.text.contains("e28") or main.hud.flight_label.text.contains("e28"),
+		"a critical reactor raises an alert naming it")
+	_press_action("tactical_overview")
+	await process_frame
+	await process_frame
+	var drawer := main.hud.overview
+	drawer.select_subject("e41")
+	await process_frame
+	await process_frame
+	var off_button: Button
+	for b in drawer._actions.get_children():
+		if (b as Button).text.begins_with("Switch off"):
+			off_button = b
+	_check(drawer.visible and off_button != null, "Tab opens the drawer; the selected gun offers 'Switch off'")
+	if off_button != null:
+		off_button.pressed.emit()
+		await process_frame
+		_check(player.systems.switched_off.has("e41") and not player.systems.equipment_by_id("e41").powered, "the button switches the gun off (power rerouted)")
 
 	print("smoke: %d failure(s)" % _failures.size())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))

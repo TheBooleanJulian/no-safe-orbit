@@ -70,7 +70,7 @@ func _run() -> void:
 	# Launch, strike, recall, recover.
 	await _press("launch_craft")
 	_check(fighter.status == AirWing.Status.FLYING and main.world.has_ship(fighter.id), "L launches the wing")
-	_check(main.hud.flight_label.text.contains("WING"), "HUD shows the wing")
+	_check(main.hud.weapon_label.text.contains("WING"), "the weapon strip shows the wing")
 	var target := main.world.get_ship(Main.TARGET_ID)
 	var hits_before := target.hits_taken
 	await _wait(main, 150.0, func() -> bool: return target.hits_taken >= hits_before + 3)
@@ -103,7 +103,7 @@ func _run() -> void:
 	# Shot down: lost, and it stays lost.
 	main.world.get_ship(fighter.id).status = ShipState.Status.DESTROYED
 	await _wait(main, 1.0, func() -> bool: return fighter.status == AirWing.Status.LOST)
-	_check(fighter.status == AirWing.Status.LOST and main.hud.flight_label.text.contains("LOST"), "shot down: LOST, and the HUD says so")
+	_check(fighter.status == AirWing.Status.LOST and main.hud.weapon_label.text.contains("LOST"), "shot down: LOST, and the HUD says so")
 	await _press("open_shipyard")
 	for i in 4:
 		await process_frame
