@@ -444,6 +444,9 @@ func test_cargo_and_credits_survive_save_and_load_and_old_saves_migrate() -> voi
 	var v1 := p.to_dict()
 	v1.schema_version = 1
 	v1.erase("credits")
+	# v1/v2 kept a single "vessel".
+	v1["vessel"] = (v1.vessels as Array)[0]
+	v1.erase("vessels")
 	(v1.vessel as Dictionary).erase("cargo")
 	var old := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(v1)), errors)
 	assert_true(old != null and old.credits == PlayerProfile.STARTING_CREDITS and old.vessel.cargo_is_empty(), "a v1 profile migrates with defaults")
@@ -467,8 +470,7 @@ func test_debrief_says_where_the_hits_came_from() -> void:
 		log.hits_taken += 1
 		log.hits_by_side[side] = int(log.hits_by_side.get(side, 0)) + 1
 	log.systems_lost.append({"id": "e28", "name": "Fusion reactor", "side": "port", "t": 1.0})
-	var lessons := "
-".join(CombatLog.insights(log.to_dict()))
+	var lessons := "\n".join(CombatLog.insights(log.to_dict()))
 	assert_true(lessons.contains("through the port (2 of 3)") and lessons.contains("second reactor") and lessons.contains("workshop"),
 		"lessons name the side, the reactor and the missing workshop:
 %s" % lessons)
@@ -620,3 +622,42 @@ func test_cargo_hold_capacity_and_venting_the_excess() -> void:
 	assert_true(v.cargo_volume_m3(_catalog()) <= 10.0 + 1e-6 and int(v.cargo.equipment.railgun) == 1,
 		"venting the excess drops cheap spare parts first and keeps the railgun (%s)" % ", ".join(went))
 	assert_true(v.vent("equipment", "railgun") != "" and not v.cargo.has("equipment"), "a whole line can be vented")
+
+
+func test_a_new_hull_is_commissioned_into_the_hangar() -> void:
+	var p := PlayerProfile.new(9)
+	p.ensure_vessel(_template())
+	var first := p.vessel
+	var small := ShipBlueprint.new()
+	small.name = "Cutter"
+	small.add_module(&"hull_block", Vector3i.ZERO)
+	var cost := p.new_hull_cost(small, _catalog())
+	assert_true(cost.x == ServiceYard.module_cost(_catalog().hull[&"hull_block"]) and cost.y == PlayerProfile.NEW_HULL_FEE,
+		"a one-block hull costs its block and the fee (%s)" % cost)
+	p.credits = 0
+	assert_true(p.commission(small, _catalog()).contains("fee"), "no credits, no new hull")
+	p.credits = 1000
+	p.spare_parts = 100
+	assert_true(p.commission(small, _catalog()) == "" and p.vessels.size() == 2 and p.vessel.name == "Cutter",
+		"commissioned: the cutter is the active vessel")
+	assert_true(p.credits == 1000 - PlayerProfile.NEW_HULL_FEE and p.spare_parts == 100 - cost.x, "paid in parts and credits")
+	assert_true(p.select_vessel(0) and p.vessel == first, "the frigate is still in the hangar")
+	# Saved and loaded with both vessels; old single-vessel profiles migrate.
+	var q := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())), PackedStringArray())
+	assert_true(q.vessels.size() == 2 and q.active_vessel == 0 and q.vessels[1].name == "Cutter", "the hangar round-trips")
+	var old := p.to_dict()
+	old.erase("vessels")
+	old["vessel"] = first.to_dict()
+	old.schema_version = 2
+	var r := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(old)), PackedStringArray())
+	assert_true(r.vessels.size() == 1 and r.vessel.name == first.name, "a v2 profile's vessel becomes the hangar's only vessel")
+	# Rare parts fitted to one vessel are not free for another.
+	p.inventory["railgun"] = 1
+	p.vessels[0].blueprint = _with_gun(&"railgun")
+	p.select_vessel(1)
+	var with_rail := ShipBlueprint.new()
+	with_rail.add_module(&"hull_block", Vector3i.ZERO)
+	with_rail.add_equipment(&"railgun", Vector3i(0, 0, 0), &"dorsal")
+	var rep := ShipValidator.Report.new()
+	p.check_design(with_rail, _catalog(), rep)
+	assert_true(rep.has_code(&"part_not_owned"), "the railgun on the frigate cannot also go on the cutter")

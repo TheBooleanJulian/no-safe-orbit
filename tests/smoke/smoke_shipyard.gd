@@ -101,6 +101,24 @@ func _run() -> void:
 	yard.expand_view("")
 	await _frames(2)
 	_check(yard.deck_editor.visible and yard.side_view.visible, "restore brings the deck editor back")
+	# Isometric main view: edits the same deck with the same tools.
+	var deck_was := yard.deck_editor.deck
+	yard.set_main_view("iso")
+	await _frames(3)
+	_check(yard.iso_view.visible and not yard.deck_editor.visible, "the main view swaps to isometric")
+	yard.change_deck(2 - yard.deck_editor.deck)
+	var hit := yard.iso_view.pick(yard.iso_view.size * 0.5)
+	_check(not hit.is_empty() and hit.cell.y == 2, "a point in the iso view picks a cell on the edited deck (%s)" % str(hit))
+	yard.select_palette("bus", &"bus_remove")
+	var conduit_before := ed.blueprint.bus.size()
+	yard.iso_view.room_dragged.emit(2, Rect2i(0, 0, 20, 20))
+	_check(ed.blueprint.bus.size() < conduit_before, "a drag in the iso view edits like the deck editor (conduit %d → %d)" % [conduit_before, ed.blueprint.bus.size()])
+	ed.undo()
+	yard.set_tool(Shipyard.Tool.SELECT)
+	yard.set_main_view("top")
+	await _frames(2)
+	_check(yard.deck_editor.visible and not yard.iso_view.visible, "and back to top-down")
+	yard.change_deck(deck_was - yard.deck_editor.deck)
 
 	# Place a radiator on top of the fuselage with a real mouse click.
 	var mass_before := ed.stats.mass_kg
@@ -121,7 +139,8 @@ func _run() -> void:
 	await _frames(1)
 	_check(ed.report.has_code(&"power_deficit") and yard.issue_text.get_parsed_text().contains("Power deficit"),
 		"removing the reactor shows a power-deficit warning")
-	_check(not yard.launch_button.disabled, "warnings do not block launch")
+	_check(not yard.launch_button.disabled, "warnings do not block launch:
+%s" % ed.report.summary())
 
 	# An overlapping module is an error: launch blocked.
 	yard.select_palette("hull", &"nose_section")

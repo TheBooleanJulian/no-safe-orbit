@@ -336,5 +336,4 @@ func test_a_round_that_kills_the_reactor_reports_the_explosion() -> void:
 	var r := Penetration.apply(ship.systems, p + Vector3(0, 40, 0), Vector3(0, -1, 0), 400.0)
 	assert_true(r.destroyed_ids.has("e28") and r.events.any(func(e: Dictionary) -> bool: return e.kind == &"explosion"),
 		"the hit report includes the explosion:
-%s" % "
-".join(r.lines))
+%s" % "\n".join(r.lines))

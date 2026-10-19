@@ -66,6 +66,10 @@ var _hover_face: StringName = &""
 var _hangar_label: RichTextLabel
 ## HANGAR → LOOT TABLES: every possible crate drop and its odds.
 var loot_tables_label: RichTextLabel
+## The hangar's vessels (pick the one to fly and edit) and "build new".
+var vessel_picker: OptionButton
+## Designing a new hull: Launch commissions it instead of refitting.
+var building_new: bool = false
 var _cargo_label: RichTextLabel
 var _history_label: RichTextLabel
 var _priority: OptionButton
@@ -79,6 +83,11 @@ var palette_search: LineEdit
 var palette_category: OptionButton
 var _figures: Dictionary = {}  # name -> value Label
 var _expanded_view := ""
+## The main editing view: "top" (deck editor) or "iso" (isometric 3D).
+var main_view := "top"
+var iso_view: ShipPreview3D
+var _iso_turns: Array[Button] = []
+var _view_toggle: Button
 
 
 func _ready() -> void:
@@ -98,6 +107,7 @@ func _ready() -> void:
 	_build_hangar_panel()
 	CyberTheme.style_button(launch_button, CyberTheme.CYAN, true)
 	launch_button.custom_minimum_size = Vector2(200, 34)
+	launch_button.clip_text = true
 	debrief = DebriefPanel.new()
 	debrief.name = "Debrief"
 	add_child(debrief)
@@ -126,6 +136,19 @@ func _ready() -> void:
 	deck_editor.cell_pressed.connect(apply_at)
 	deck_editor.room_dragged.connect(_on_room_dragged)
 	deck_editor.hover_changed.connect(_on_hover)
+	iso_view = ShipPreview3D.new()
+	iso_view.name = "IsoView"
+	iso_view.isometric = true
+	iso_view.editable = true
+	iso_view.visible = false
+	iso_view.size_flags_horizontal = deck_editor.size_flags_horizontal
+	iso_view.size_flags_vertical = deck_editor.size_flags_vertical
+	iso_view.custom_minimum_size = deck_editor.custom_minimum_size
+	deck_editor.get_parent().add_child(iso_view)
+	deck_editor.get_parent().move_child(iso_view, deck_editor.get_index() + 1)
+	iso_view.cell_pressed.connect(apply_at)
+	iso_view.room_dragged.connect(_on_room_dragged)
+	iso_view.hover_changed.connect(_on_hover)
 	issue_text.meta_clicked.connect(_on_issue_clicked)
 	_fill_file_list(template_list, BlueprintIO.list_templates())
 	_fill_file_list(design_list, BlueprintIO.list_user())
@@ -212,6 +235,8 @@ func select_palette(kind: String, def_id: StringName) -> void:
 	place_kind = kind
 	place_def = def_id
 	deck_editor.drag_rooms = kind == "room" or kind == "armor" or kind == "bus"
+	if iso_view != null:
+		iso_view.drag_rooms = deck_editor.drag_rooms
 	if armor_faces != null:
 		armor_faces.visible = kind == "armor"
 	if kind == "bus":
@@ -360,6 +385,17 @@ func launch() -> bool:
 	if not errors.is_empty():
 		_set_status("Fix %d error%s before launch" % [errors.size(), "" if errors.size() == 1 else "s"], true)
 		return false
+	if building_new:
+		var why_new := profile.commission(editor.blueprint, editor.catalog)
+		if why_new != "":
+			_set_status(why_new + " — buy parts or bank cargo", true)
+			return false
+		building_new = false
+		profile.designing_new = false
+		_save_profile()
+		Main.launch_blueprint = editor.blueprint.duplicate_blueprint()
+		get_tree().change_scene_to_file(FLIGHT_SCENE)
+		return true
 	var why := ServiceYard.refit(profile.vessel, editor.blueprint, profile, editor.catalog)
 	if why != "":
 		_set_status(why + " — remove new parts, bank cargo or buy parts", true)
@@ -385,6 +421,50 @@ func repair(priority: int = -1) -> int:
 		_set_status("%s: %d repair%s for %d spare parts" % [ServiceYard.PRIORITY_NAMES[pr], jobs.size(), "" if jobs.size() == 1 else "s", spent])
 	_refresh_hangar()
 	return spent
+
+
+## Start designing a new hull: a single block on an empty slip. Launch
+## commissions it as another vessel in the hangar (every part built new,
+## plus the yard's fee); the current vessel stays in the hangar.
+func start_new_ship() -> void:
+	var bp := ShipBlueprint.new()
+	bp.name = "New ship %d" % (profile.vessels.size() + 1)
+	bp.designer = "Player"
+	bp.add_module(&"hull_block", Vector3i.ZERO)
+	building_new = true
+	profile.designing_new = true
+	selected_id = ""
+	editor.set_blueprint(bp)
+	deck_editor.deck = 0
+	_set_status("New hull laid down: build it, then COMMISSION (parts + %d cr fee)" % PlayerProfile.NEW_HULL_FEE)
+	_refresh_hangar()
+
+
+## Fly and edit vessel `index` of the hangar.
+func select_vessel(index: int) -> void:
+	if not profile.select_vessel(index):
+		return
+	building_new = false
+	profile.designing_new = false
+	selected_id = ""
+	editor.set_blueprint(profile.vessel.blueprint.duplicate_blueprint())
+	_save_profile()
+	_set_status("Now working on %s" % profile.vessel.name)
+	_refresh_hangar()
+
+
+func _fill_vessel_picker() -> void:
+	if vessel_picker == null:
+		return
+	vessel_picker.clear()
+	for i in profile.vessels.size():
+		var v := profile.vessels[i]
+		vessel_picker.add_item("%s · %d sortie%s%s" % [v.name, v.sorties, "" if v.sorties == 1 else "s", " · damaged" if v.is_damaged() else ""])
+	if building_new:
+		vessel_picker.add_item("(new hull on the slip)")
+		vessel_picker.select(vessel_picker.item_count - 1)
+	else:
+		vessel_picker.select(profile.active_vessel)
 
 
 ## Testing aid: 100 free credits (saved at once).
@@ -437,6 +517,8 @@ func _refresh() -> void:
 	_refresh_issues()
 	_refresh_hangar()
 	preview.show_design(editor)
+	if iso_view != null and iso_view.visible:
+		iso_view.show_design(editor)
 	_update_ghost()
 	_refresh_views()
 
@@ -447,6 +529,33 @@ func _refresh_views() -> void:
 		v.deck = deck_editor.deck
 		v.queue_redraw()
 	deck_editor.selection_cells = editor.cells_of(selected_id) if selected_id != "" else ([] as Array[Vector3i])
+	if iso_view != null and iso_view.visible and iso_view.deck != deck_editor.deck:
+		iso_view.set_deck(deck_editor.deck)
+
+
+## The deck editor's ghost changed: redraw it, and mirror it in the iso view.
+func _ghost_changed() -> void:
+	deck_editor.queue_redraw()
+	if iso_view != null and iso_view.visible:
+		iso_view.ghost_cells = deck_editor.ghost_cells
+		iso_view.ghost_ok = deck_editor.ghost_ok
+		iso_view.refresh_ghost()
+
+
+## Swap the main view between the top-down deck editor and the isometric
+## 3D view (both edit the same deck with the same tools).
+func set_main_view(mode: String) -> void:
+	main_view = mode
+	if _view_toggle != null:
+		_view_toggle.text = "%s ⇄" % ("ISOMETRIC" if mode == "iso" else "TOP-DOWN")
+	for b in _iso_turns:
+		b.visible = mode == "iso"
+	expand_view(_expanded_view)
+	if mode == "iso":
+		iso_view.drag_rooms = deck_editor.drag_rooms
+		iso_view.deck = deck_editor.deck
+		iso_view.show_design(editor)
+		_ghost_changed()
 
 
 func _refresh_stats() -> void:
@@ -494,9 +603,7 @@ func _refresh_issues() -> void:
 		if issue.subject != "":
 			text = "[url=%s]%s[/url]" % [issue.subject, text]
 		lines.append("[color=#%s]%s[/color]" % [(COLOR_ERROR if err else COLOR_WARNING).to_html(false), text])
-	issue_text.text = "
-
-".join(lines)
+	issue_text.text = "\n\n".join(lines)
 	var n_err := report.errors().size()
 	launch_button.disabled = n_err > 0
 	launch_button.tooltip_text = "Fix %d error(s) first" % n_err if n_err > 0 else "Fly this design"
@@ -659,7 +766,22 @@ func _build_view_bar() -> void:
 	cap.theme_type_variation = &"Caption"
 	cap.text = "VIEWS"
 	bar.add_child(cap)
-	for entry in [["side", "Expand side"], ["front", "Expand front"], ["3d", "Expand 3D"], ["", "Restore deck editor"]]:
+	_view_toggle = Button.new()
+	_view_toggle.text = "TOP-DOWN ⇄"
+	_view_toggle.tooltip_text = "Swap the main view between top-down and isometric (both edit the current deck)"
+	CyberTheme.style_button(_view_toggle, CyberTheme.CYAN, true)
+	_view_toggle.pressed.connect(func() -> void: set_main_view("top" if main_view == "iso" else "iso"))
+	bar.add_child(_view_toggle)
+	for turn in [[-1, "⟲"], [1, "⟳"]]:
+		var tb := Button.new()
+		tb.text = turn[1]
+		tb.tooltip_text = "Turn the isometric view"
+		tb.visible = false
+		var q: int = turn[0]
+		tb.pressed.connect(func() -> void: iso_view.turn_iso(q))
+		bar.add_child(tb)
+		_iso_turns.append(tb)
+	for entry in [["side", "Side"], ["front", "Front"], ["3d", "3D"], ["", "Restore"]]:
 		var b := Button.new()
 		b.text = entry[1]
 		var which: String = entry[0]
@@ -672,7 +794,9 @@ func _build_view_bar() -> void:
 func expand_view(which: String) -> void:
 	_expanded_view = which
 	var views := side_view.get_parent() as Control
-	deck_editor.visible = which == ""
+	deck_editor.visible = which == "" and main_view == "top"
+	if iso_view != null:
+		iso_view.visible = which == "" and main_view == "iso"
 	views.size_flags_vertical = Control.SIZE_EXPAND_FILL if which != "" else Control.SIZE_FILL
 	side_view.visible = which in ["", "side"]
 	front_view.visible = which in ["", "front"]
@@ -682,9 +806,28 @@ func expand_view(which: String) -> void:
 
 func _build_hangar_panel() -> void:
 	var right := stats_label.get_parent().get_parent().get_parent()
-	var title := Label.new()
-	title.theme_type_variation = &"Heading"
-	title.text = "HANGAR"
+	var title := HBoxContainer.new()
+	title.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	var heading := Label.new()
+	heading.theme_type_variation = &"Heading"
+	heading.text = "HANGAR"
+	title.add_child(heading)
+	vessel_picker = OptionButton.new()
+	vessel_picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vessel_picker.clip_text = true
+	vessel_picker.fit_to_longest_item = false
+	vessel_picker.custom_minimum_size = Vector2(80, 0)
+	vessel_picker.tooltip_text = "The vessel to fly and refit"
+	vessel_picker.item_selected.connect(func(i: int) -> void:
+		if i < profile.vessels.size():
+			select_vessel(i))
+	title.add_child(vessel_picker)
+	var new_ship := Button.new()
+	new_ship.text = "New ship"
+	new_ship.tooltip_text = "Lay down a new hull on an empty slip (every part built new + %d credits)" % PlayerProfile.NEW_HULL_FEE
+	CyberTheme.style_button(new_ship, CyberTheme.AMBER)
+	new_ship.pressed.connect(start_new_ship)
+	title.add_child(new_ship)
 	var tabs := TabContainer.new()
 	tabs.custom_minimum_size = Vector2(0, 240)
 	var box := VBoxContainer.new()
@@ -781,7 +924,10 @@ func _refresh_hangar() -> void:
 			lines.append("  • %s — %d%s" % [j.label, j.cost, blocked])
 		if jobs.size() > 5:
 			lines.append("  … %d more" % (jobs.size() - 5))
-	if not refit.is_empty():
+	if building_new:
+		var hull := profile.new_hull_cost(editor.blueprint, editor.catalog)
+		lines.append(CyberTheme.tint("NEW HULL on the slip: %d spare parts + %d credits at commissioning" % [hull.x, hull.y], CyberTheme.AMBER))
+	elif not refit.is_empty():
 		var cost := ServiceYard.total_cost(refit)
 		lines.append("REFIT   %d new part%s · %d spare parts at launch%s" % [refit.size(), "" if refit.size() == 1 else "s", cost,
 			"  [color=#ff7766]short by %d[/color]" % (cost - profile.spare_parts) if cost > profile.spare_parts else ""])
@@ -801,6 +947,10 @@ func _refresh_hangar() -> void:
 	_history_label.text = "\n".join(history)
 	var refit_cost := ServiceYard.total_cost(refit)
 	launch_button.text = "LAUNCH ▶" if refit.is_empty() else "LAUNCH ▶ · refit %d parts" % refit_cost
+	if building_new:
+		var cost := profile.new_hull_cost(editor.blueprint, editor.catalog)
+		launch_button.text = "COMMISSION ▶ · %d parts + %d cr" % [cost.x, cost.y]
+	_fill_vessel_picker()
 	var plan := ServiceYard.plan(jobs, _priority.selected, profile.spare_parts, v, profile)
 	_repair_button.disabled = plan.is_empty()
 	_bank_button.disabled = v.cargo_is_empty()
@@ -863,14 +1013,14 @@ func _update_ghost() -> void:
 				hint = "%s — drag across hull cells on this deck" % BUS_ENTRIES[place_def][1]
 				hint_label.text = hint
 				deck_editor.ghost_ok = editor.grid.is_hull(cell)
-				deck_editor.queue_redraw()
+				_ghost_changed()
 				return
 			"armor":
 				deck_editor.ghost_cells.append(cell)
 				hint = "%s — drag across cells; %s" % [ARMOR_ENTRIES[place_def][1], armor_faces.get_item_text(armor_faces.selected).to_lower()]
 				hint_label.text = hint
 				deck_editor.ghost_ok = editor.grid.is_hull(cell)
-				deck_editor.queue_redraw()
+				_ghost_changed()
 				return
 			"room":
 				deck_editor.ghost_cells.append(cell)
@@ -905,7 +1055,7 @@ func _update_ghost() -> void:
 		var id := editor.item_at(cell, _hover_face)
 		hint = "%s at %s" % [_name_of(id), cell] if id != "" else "%s" % cell
 	hint_label.text = hint
-	deck_editor.queue_redraw()
+	_ghost_changed()
 
 
 # --- Helpers ------------------------------------------------------------------
