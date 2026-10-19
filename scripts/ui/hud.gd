@@ -47,6 +47,8 @@ var profile: PlayerProfile
 var track: SensorTrack
 ## Salvage results panel (created in _ready).
 var loot: LootCarousel
+## With the drawer open, the target card / hit cam / radar still fit to its left.
+var right_column_fits: bool = true
 ## Jump drive while [B] is held (Main): {progress, left_s, waiting} or
 ## {blocked}; {} when not charging.
 var jump_state: Dictionary = {}
@@ -89,6 +91,8 @@ var _hits_taken := 0
 var _notices: Array[Dictionary] = []  # {text, time}
 var _orbit_forced := false
 var _strip_w := 600.0
+var _side_w := 330.0
+var _radar_size := 240.0
 
 
 func _ready() -> void:
@@ -234,6 +238,8 @@ func _layout() -> void:
 	var radar_size := 190.0 if compact else 240.0
 	radar.offset_left = -gutter - radar_size
 	radar.offset_top = -gutter - radar_size
+	_side_w = side_w
+	_radar_size = radar_size
 	# Damage map: bottom left, above the help line.
 	var map_size := Vector2(minf(side_w, 360.0), 140.0 if compact else 170.0)
 	damage_map.anchor_left = 0.0
@@ -311,6 +317,19 @@ func _reflow_for_drawer() -> void:
 	var above := _weapon_panel.size.y + CyberTheme.SPACE_L + CyberTheme.SPACE_S
 	ticker_label.offset_bottom = -above
 	ticker_label.offset_top = -above - 20.0
+	# The right-hand column (target card, hit cam, radar) moves to the left of
+	# the open drawer when there is room beside the own-ship card.
+	var gutter := float(CyberTheme.SPACE_L)
+	var drawer := view.x - right
+	var tp := $Root/TargetPanel as Control
+	tp.offset_left = -gutter - _side_w - drawer
+	tp.offset_right = -gutter - drawer
+	hit_cam.offset_left = -gutter - _side_w - drawer
+	hit_cam.offset_right = -gutter - drawer
+	radar.offset_left = -gutter - _radar_size - drawer
+	radar.offset_right = -gutter - drawer
+	var left_end := ($Root/LeftColumn as Control).get_global_rect().end.x
+	right_column_fits = drawer <= 0.0 or right - gutter - _side_w >= left_end + gutter
 
 
 ## The banner sits in the gap between the two cards; if that gap is too
@@ -434,6 +453,17 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 			overlay.has_lead = true
 			overlay.lead_render_pos = overlay.ship_render_pos + (lead.offset as Vector3)
 			overlay.lead_label = "~%.2f s" % lead.time
+			# Other gun types: their own (smaller) lead markers.
+			overlay.extra_leads = []
+			var seen := {player.config.cannon.display_name: true}
+			for k in player.config.cannon_muzzles_body.size():
+				var gun := player.config.mount_cannon(k)
+				if seen.has(gun.display_name):
+					continue
+				seen[gun.display_name] = true
+				var other := _lead_solution(player, target, gun, k)
+				if not other.is_empty():
+					overlay.extra_leads.append({"pos": overlay.ship_render_pos + (other.offset as Vector3), "label": gun.display_name.left(1)})
 	_update_gun_reticles(player, alpha, render_origin, input)
 	# The jump: the view whitens over the last second and a half of the charge.
 	var flash := 0.0
@@ -448,10 +478,11 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	# The docking camera takes the damage map's corner while it is up.
 	damage_map.visible = not overview.visible and not docking_cam.visible
 	help_label.visible = not overview.visible and not docking_cam.visible
-	($Root/TargetPanel as Control).visible = not overview.visible
-	if overview.visible and not hit_cam.showing_boarding():
-		hit_cam.visible = false
 	_reflow_for_drawer()
+	($Root/TargetPanel as Control).visible = right_column_fits
+	radar.visible = right_column_fits
+	if not right_column_fits and not hit_cam.showing_boarding():
+		hit_cam.visible = false
 	if overview.visible:
 		overview.vessel = profile.vessel if profile != null else null
 		var link := world.link_for(player.id)
@@ -802,7 +833,7 @@ func _update_weapon_strip(player: ShipState) -> void:
 	else:
 		var frac := float(player.cannon_rounds) / maxf(cannon.magazine_rounds, 1.0)
 		var bars := roundi(frac * 10.0)
-		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config), "▮".repeat(bars) + "▯".repeat(10 - bars),
+		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config, player), "▮".repeat(bars) + "▯".repeat(10 - bars),
 			player.cannon_rounds, cannon.magazine_rounds, "  EMPTY" if player.cannon_rounds == 0 else ""])
 	parts.append("PD  %s none fitted" % CyberTheme.GLYPH_OFFLINE)
 	var lines := PackedStringArray(["   ·   ".join(parts)])
@@ -814,7 +845,7 @@ func _update_weapon_strip(player: ShipState) -> void:
 
 
 ## "Medium kinetic cannon ×1 50 rpm · Railgun ×1 60 rpm" — the battery.
-static func battery_text(cfg: ShipConfig) -> String:
+static func battery_text(cfg: ShipConfig, ship: ShipState = null) -> String:
 	var counts := {}
 	var order: Array[KineticCannonConfig] = []
 	for k in cfg.cannon_muzzles_body.size():
@@ -824,7 +855,8 @@ static func battery_text(cfg: ShipConfig) -> String:
 		counts[gun.display_name] = int(counts.get(gun.display_name, 0)) + 1
 	var parts := PackedStringArray()
 	for gun in order:
-		parts.append("%s ×%d %.0f rpm" % [gun.display_name, counts[gun.display_name], gun.rate_of_fire_rpm])
+		var rounds := " · %d rds" % ship.rounds_for(gun) if ship != null and order.size() > 1 else ""
+		parts.append("%s ×%d %.0f rpm%s" % [gun.display_name, counts[gun.display_name], gun.rate_of_fire_rpm, rounds])
 	return " · ".join(parts)
 
 
@@ -947,11 +979,11 @@ static func incoming_round_time(world: WorldSimulation, ship: ShipState) -> floa
 
 
 ## {time, direction} for the player's cannon against the target, or {}.
-func _lead_solution(player: ShipState, target: ShipState) -> Dictionary:
-	var cannon := player.config.cannon
+func _lead_solution(player: ShipState, target: ShipState, gun: KineticCannonConfig = null, mount: int = 0) -> Dictionary:
+	var cannon := player.config.cannon if gun == null else gun
 	if cannon == null:
 		return {}
-	var muzzle := player.position + player.orientation * player.config.primary_muzzle()
+	var muzzle := player.position + player.orientation * player.config.cannon_muzzles_body[mount]
 	var aim := target.position + target.orientation * target.config.hit_box_center
 	var rel_pos := aim - muzzle
 	var rel_vel := target.velocity - player.velocity

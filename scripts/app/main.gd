@@ -130,7 +130,7 @@ func _start_scenario() -> void:
 		var stores: Dictionary = vessel.condition.get("stores", {})
 		player.propellant_kg = minf(float(stores.get("propellant_kg", player.propellant_kg)), player.propellant_kg)
 		player.propellant_kg = minf(player.propellant_kg, _intact_tank_capacity(systems))
-		player.cannon_rounds = mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds)
+		player.set_rounds(mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds))
 	player.attach_systems(systems)
 	world.add_ship(player)
 	player_wing = AirWing.for_ship(player)

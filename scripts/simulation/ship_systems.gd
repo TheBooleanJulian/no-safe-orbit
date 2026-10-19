@@ -80,6 +80,8 @@ const ROLE_STATIONS := {
 }
 ## Crew reach external systems on EVA from rooms this close (cells).
 const EVA_REACH_CELLS := 2
+## A medic treats one wounded crew member in this long (s).
+const MEDICAL_TREATMENT_S := 60.0
 ## Without a working sensor mast: eyeballs and backup optics (m).
 const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
@@ -199,6 +201,7 @@ var damage_rng := RandomNumberGenerator.new()
 var bus_network: Dictionary = {}
 
 var _attachments: Array[Array] = []
+var _treatment_s := 0.0
 ## Exposed faces per module (passive cooling).
 var _module_faces: PackedInt32Array = PackedInt32Array()
 var _config: ShipConfig
@@ -716,6 +719,8 @@ func tick(ship: ShipState, dt: float) -> bool:
 		changed = true
 	if _advance_crew_orders(dt):
 		changed = true
+	if _advance_medical(dt):
+		changed = true
 	return changed or _config == null
 
 
@@ -868,6 +873,39 @@ func cover_role(role: int) -> String:
 
 
 ## Returns true when someone took over a role (the flight config changes).
+## A fit medic aboard, in a pressurised room the crew can reach, treats the
+## wounded one at a time: each takes MEDICAL_TREATMENT_S (those in rooms the
+## medic can't reach wait). Returns true when someone is back on their feet.
+func _advance_medical(dt: float) -> bool:
+	if crew == null:
+		return false
+	var medic: CrewRoster.Member
+	for m in crew.members:
+		if m.role == CrewRoster.Role.MEDICAL and m.fit() and m.location >= 0 and rooms[m.location].pressurized:
+			medic = m
+			break
+	if medic == null:
+		_treatment_s = 0.0
+		return false
+	var patient: CrewRoster.Member
+	for m in crew.members:
+		if m.state == CrewRoster.State.WOUNDED and m.location >= 0 and rooms[m.location].pressurized \
+				and not route(medic.location, m.location).is_empty():
+			patient = m
+			break
+	if patient == null:
+		_treatment_s = 0.0
+		return false
+	_treatment_s += dt
+	if _treatment_s < MEDICAL_TREATMENT_S:
+		return false
+	_treatment_s = 0.0
+	patient.state = CrewRoster.State.FIT
+	_note("Medic treated crew member %s (%s): back on duty" % [patient.id, CrewRoster.ROLE_NAMES[patient.role]])
+	invalidate()
+	return true
+
+
 func _advance_crew_orders(dt: float) -> bool:
 	var changed := false
 	for id in crew_orders.keys():

@@ -30,6 +30,10 @@ const STRIKE_RANGE_M := 600.0
 const INTERCEPT_RANGE_M := 300.0
 const RECON_RANGE_M := 1500.0
 const ESCORT_OFFSET := Vector3(60, 25, 0)
+## Formations: wingmen fan out by this angle around a target (radians) and
+## escorts step out and back by this spacing (m) per rank.
+const FORMATION_FAN_RAD := 0.45
+const FORMATION_SPACING_M := 40.0
 ## Escorts break off to engage hostile craft within this range of the carrier.
 const ESCORT_ENGAGE_M := 2500.0
 ## Position control: desired closing speed per metre of error (1/s), capped.
@@ -98,10 +102,13 @@ static func aim_point(target: ShipState, priority: int) -> Vector3:
 
 ## Attack run on `target`: hold a standoff range, nose on the lead point,
 ## fire inside the gunnery cone.
-static func attack(craft: ShipState, target: ShipState, standoff: float, priority: int, input: ShipControlInput) -> void:
+static func attack(craft: ShipState, target: ShipState, standoff: float, priority: int, input: ShipControlInput, slot: int = 0) -> void:
 	var away := craft.position - target.position
 	if away.length() < 1.0:
 		away = Vector3.UP
+	if slot > 0:
+		# Wingmen take their own approach: fanned out around the target.
+		away = away.rotated(Vector3.UP, FORMATION_FAN_RAD * ((slot + 1) / 2) * (1.0 if slot % 2 == 1 else -1.0))
 	steer(craft, target.position + away.normalized() * standoff, target.velocity, input)
 	var cannon := craft.config.cannon
 	if cannon == null:
@@ -122,19 +129,19 @@ static func attack(craft: ShipState, target: ShipState, standoff: float, priorit
 ## recovered (world, local frame). `hostiles`: enemy craft, nearest first
 ## is chosen here.
 static func command(craft: ShipState, directive: Directive, carrier: ShipState, rack_point: Vector3,
-		target: ShipState, hostiles: Array[ShipState], priority: int) -> ShipControlInput:
+		target: ShipState, hostiles: Array[ShipState], priority: int, slot: int = 0) -> ShipControlInput:
 	var input := ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
 	input.hold_translation = false
 	var threat := _nearest(craft, hostiles)
 	match directive:
 		Directive.STRIKE:
 			if target != null and target.is_active():
-				attack(craft, target, STRIKE_RANGE_M, priority, input)
+				attack(craft, target, STRIKE_RANGE_M, priority, input, slot)
 				return input
 			directive = Directive.RETURN
 		Directive.INTERCEPT:
 			if threat != null:
-				attack(craft, threat, INTERCEPT_RANGE_M, 0, input)
+				attack(craft, threat, INTERCEPT_RANGE_M, 0, input, slot)
 				return input
 			directive = Directive.ESCORT
 		Directive.RECON:
@@ -152,8 +159,8 @@ static func command(craft: ShipState, directive: Directive, carrier: ShipState, 
 		if threat != null and threat.position.distance_to(carrier.position) < ESCORT_ENGAGE_M:
 			attack(craft, threat, INTERCEPT_RANGE_M, 0, input)
 			return input
-		var slot := carrier.position + carrier.orientation * ESCORT_OFFSET
-		steer(craft, slot, carrier.velocity, input)
+		var station := carrier.position + carrier.orientation * escort_offset(slot)
+		steer(craft, station, carrier.velocity, input)
 		point(craft, carrier.forward(), input)
 		return input
 	# RETURN: approach the rack, slowing as it closes.
@@ -164,6 +171,17 @@ static func command(craft: ShipState, directive: Directive, carrier: ShipState, 
 	if to_rack.length() > 50.0:
 		point(craft, to_rack, input)
 	return input
+
+
+## Escort station for formation slot `slot`: alternating sides, stepping
+## back and out (body frame).
+static func escort_offset(slot: int) -> Vector3:
+	if slot == 0:
+		return ESCORT_OFFSET
+	var side := 1.0 if slot % 2 == 1 else -1.0
+	var rank := float((slot + 1) / 2)
+	return Vector3(ESCORT_OFFSET.x * (1.0 if side > 0.0 else -1.0) + side * FORMATION_SPACING_M * rank,
+		ESCORT_OFFSET.y, ESCORT_OFFSET.z + FORMATION_SPACING_M * rank)
 
 
 static func _nearest(craft: ShipState, ships: Array[ShipState]) -> ShipState:

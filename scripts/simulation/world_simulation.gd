@@ -318,7 +318,7 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		elif locked:
 			status = ShipState.Turret.LOCKED
 		ship.turret_status[k] = status
-		if status != ShipState.Turret.READY or not input.fire or ship.cannon_cooldowns[k] > 1e-9 or ship.cannon_rounds <= 0:
+		if status != ShipState.Turret.READY or not input.fire or ship.cannon_cooldowns[k] > 1e-9 or ship.rounds_for(cannon) <= 0:
 			continue
 		var dir_body := ship.turret_dirs[k]
 		var muzzle_body := muzzles[k]
@@ -343,7 +343,7 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		ship.velocity -= dir * (cannon.muzzle_velocity_mps * cannon.round_mass_kg / ship.mass_kg())
 		ship.angular_velocity -= muzzle_body.cross(p_body) / ship.inertia_kgm2()
 		ship.recoil_impulse += cannon.muzzle_velocity_mps * cannon.round_mass_kg
-		ship.cannon_rounds -= 1
+		ship.spend_round(cannon)
 		ship.rounds_fired += 1
 		ship.cannon_cooldowns[k] += cannon.fire_interval_s()
 
@@ -494,12 +494,19 @@ func _contact_point(a: ShipState, b: ShipState) -> Dictionary:
 	var com := solid.systems.stats.center_of_mass_m
 	var sum := Vector3.ZERO
 	var count := 0
+	var grid := solid.systems.grid
 	for p in points:
 		var body := inv * (p - solid.position)
-		var cell := Vector3i(((body + com) / ShipGrid.CELL_SIZE_M).floor())
-		if solid.systems.grid.is_hull(cell):
-			sum += p
-			count += 1
+		var g := (body + com) / ShipGrid.CELL_SIZE_M
+		var cell := Vector3i(g.floor())
+		if not grid.is_hull(cell):
+			continue
+		# A wedge is solid only below its slope.
+		var mi: int = grid.module_at[cell]
+		if grid.is_wedge(mi) and not grid.wedge_contains(mi, g):
+			continue
+		sum += p
+		count += 1
 	if count == 0:
 		return {}
 	return {"point": sum / count}
@@ -510,9 +517,15 @@ func _contact_point(a: ShipState, b: ShipState) -> Dictionary:
 static func _probe_points(ship: ShipState) -> PackedVector3Array:
 	var out := PackedVector3Array()
 	if ship.systems != null:
+		var grid := ship.systems.grid
 		var com := ship.systems.stats.center_of_mass_m
-		for cell: Vector3i in ship.systems.grid.module_at:
-			out.append(ship.position + ship.orientation * (ShipGrid.cell_center_m(cell) - com))
+		for cell: Vector3i in grid.module_at:
+			var p := ShipGrid.cell_center_m(cell)
+			var mi: int = grid.module_at[cell]
+			if grid.is_wedge(mi):
+				# The middle of the solid part, below the slope.
+				p -= grid.wedge_normal(mi) * ShipGrid.CELL_SIZE_M * 0.2
+			out.append(ship.position + ship.orientation * (p - com))
 		return out
 	var c := ship.config.hit_box_center
 	var h := ship.config.hit_box_half_extents

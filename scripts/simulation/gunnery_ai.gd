@@ -56,6 +56,8 @@ const KEEP_MAX_M := 3500.0
 const FLEE_INTACT_FRACTION := 0.35
 ## Holds fire this close to the reactor's throttle temperature (K).
 const HOLD_FIRE_MARGIN_K := 15.0
+## How hard it works round to your stern while in your bow arc (thrust fraction).
+const FLANK_BIAS := 0.5
 
 
 ## A fighting ship's whole command: the gun laying above, plus keeping to a
@@ -63,8 +65,12 @@ const HOLD_FIRE_MARGIN_K := 15.0
 ## it was miss, holding fire to cool down before the reactor throttles,
 ## and running when beaten (`fleeing`).
 static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipControlInput:
+	var sys := shooter.systems
 	if should_flee(shooter):
+		_set_pips(sys, [2, 4, 0])  # everything into the engines
 		return flee(shooter, target)
+	# Power: guns while healthy, back to balanced when hurt.
+	_set_pips(sys, [1, 2, 3] if sys == null or sys.intact_fraction() > 0.6 else [2, 2, 2])
 	var input := command(shooter, target)
 	if target == null or not target.is_active():
 		return input
@@ -84,12 +90,25 @@ static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipCon
 	var up := side.cross(los).normalized()
 	var phase := float(hash(String(shooter.id)) % 100) * 0.1
 	t += side * sin(now * 0.7 + phase) * 0.8 + up * sin(now * 0.45 + phase * 2.0) * 0.5
+	# Flank: work round towards the target's stern, out of its bow arc.
+	var stern := target.position - target.forward() * (KEEP_MIN_M + KEEP_MAX_M) * 0.5
+	var to_stern := inv * (stern - shooter.position)
+	var across := to_stern - los * to_stern.dot(los)
+	if target.forward().dot(shooter.position - target.position) > 0.0 and across.length() > 1.0:
+		t += across.normalized() * FLANK_BIAS
 	input.translation = t.clamp(-Vector3.ONE, Vector3.ONE)
 	input.hold_translation = false
-	var sys := shooter.systems
 	if sys != null and sys.temperature_k >= ShipSystems.THROTTLE_TEMP_K - HOLD_FIRE_MARGIN_K:
 		input.fire = false
 	return input
+
+
+## Set power pips [SYS, ENG, WEP] (only when they change).
+static func _set_pips(sys: ShipSystems, want: Array) -> void:
+	if sys == null or (sys.pips[0] == want[0] and sys.pips[1] == want[1] and sys.pips[2] == want[2]):
+		return
+	sys.pips.assign(want)
+	sys.invalidate()
 
 
 ## Beaten but still able to run: most of its systems are gone.
