@@ -19,6 +19,8 @@ enum Kind {
 	DOCKING_COLLAR,
 	## External rack carrying one autonomous craft (fighter or drone).
 	CRAFT_MOUNT,
+	## Sensor mast: detects and tracks other ships out to sensor_range_m.
+	SENSOR,
 }
 
 enum Mount { INTERNAL, EXTERNAL }
@@ -61,6 +63,7 @@ const DAMAGE_DEFAULTS := {
 	Kind.PROPELLANT_TANK: [25.0, 10.0],
 	Kind.DOCKING_COLLAR: [20.0, 8.0],
 	Kind.CRAFT_MOUNT: [20.0, 8.0],
+	Kind.SENSOR: [12.0, 4.0],
 }
 
 
@@ -74,6 +77,8 @@ func shielding_mm() -> float:
 @export var cannon: KineticCannonConfig
 ## CRAFT_MOUNT only: the craft it carries (its mass is part of mass_kg).
 @export var craft: ShipConfig
+## SENSOR only: detection range (m).
+@export var sensor_range_m: float = 0.0
 @export var color: Color = Color(0.8, 0.8, 0.8)
 @export_group("Progression")
 ## COMMON parts are always available; rarer ones must be found as loot.

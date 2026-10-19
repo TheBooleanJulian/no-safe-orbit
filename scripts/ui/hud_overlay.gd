@@ -7,6 +7,8 @@ extends Control
 
 const COLOR_HEADING := Color(0.0, 0.94, 1.0, 0.9)
 const COLOR_PROGRADE := Color(0.35, 1.0, 0.55, 0.95)
+## Prograde/retrograde relative to the target (match-velocity mode).
+const COLOR_TARGET_RELATIVE := Color(1.0, 0.86, 0.2, 0.95)
 const COLOR_PATH := Color(0.35, 1.0, 0.55, 0.45)
 const COLOR_TARGET := Color(1.0, 0.17, 0.84, 0.95)
 const COLOR_LEAD := Color(1.0, 0.8, 0.35, 0.95)
@@ -20,9 +22,14 @@ var ship_render_pos := Vector3.ZERO
 var ship_forward := Vector3.FORWARD
 ## Direction the ship is actually moving (orbital velocity when in orbit).
 var ship_velocity := Vector3.ZERO
+## True: ship_velocity is relative to the target (match-velocity mode) and
+## the markers are yellow and labelled TGT.
+var velocity_relative_to_target := false
 var has_target := false
 var target_render_pos := Vector3.ZERO
 var target_label := ""
+## The bracket marks a dead-reckoned estimate, not a measurement: dashed, dim.
+var target_estimated := false
 var has_lead := false
 var lead_render_pos := Vector3.ZERO
 var lead_label := ""
@@ -59,22 +66,27 @@ func _draw() -> void:
 		draw_line(p + Vector2(0, 6), p + Vector2(0, 14), COLOR_HEADING, 2.0)
 		draw_circle(p, 2.0, COLOR_HEADING)
 
-	# Prograde / retrograde: where the ship is actually going.
-	if ship_velocity.length() > MIN_PROGRADE_SPEED:
+	# Prograde / retrograde: where the ship is actually going — along its
+	# orbit (green), or relative to the target in match-velocity mode (yellow).
+	var pro_color := COLOR_TARGET_RELATIVE if velocity_relative_to_target else COLOR_PROGRADE
+	var min_speed := 0.05 if velocity_relative_to_target else MIN_PROGRADE_SPEED
+	if ship_velocity.length() > min_speed:
 		var dir := ship_velocity.normalized()
 		var pro := ship_render_pos + dir * MARKER_DISTANCE_M
 		var retro := ship_render_pos - dir * MARKER_DISTANCE_M
 		if not camera.is_position_behind(pro):
 			var p := camera.unproject_position(pro)
-			draw_arc(p, 9.0, 0.0, TAU, 24, COLOR_PROGRADE, 2.0)
-			draw_line(p + Vector2(9, 0), p + Vector2(17, 0), COLOR_PROGRADE, 2.0)
-			draw_line(p + Vector2(-9, 0), p + Vector2(-17, 0), COLOR_PROGRADE, 2.0)
-			draw_line(p + Vector2(0, -9), p + Vector2(0, -17), COLOR_PROGRADE, 2.0)
+			draw_arc(p, 9.0, 0.0, TAU, 24, pro_color, 2.0)
+			draw_line(p + Vector2(9, 0), p + Vector2(17, 0), pro_color, 2.0)
+			draw_line(p + Vector2(-9, 0), p + Vector2(-17, 0), pro_color, 2.0)
+			draw_line(p + Vector2(0, -9), p + Vector2(0, -17), pro_color, 2.0)
+			if velocity_relative_to_target:
+				draw_string(font, p + Vector2(12, 18), "TGT %.1f m/s" % ship_velocity.length(), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, pro_color)
 		if not camera.is_position_behind(retro):
 			var q := camera.unproject_position(retro)
-			draw_arc(q, 9.0, 0.0, TAU, 24, COLOR_PROGRADE, 2.0)
-			draw_line(q + Vector2(-6, -6), q + Vector2(6, 6), COLOR_PROGRADE, 2.0)
-			draw_line(q + Vector2(-6, 6), q + Vector2(6, -6), COLOR_PROGRADE, 2.0)
+			draw_arc(q, 9.0, 0.0, TAU, 24, pro_color, 2.0)
+			draw_line(q + Vector2(-6, -6), q + Vector2(6, 6), pro_color, 2.0)
+			draw_line(q + Vector2(-6, 6), q + Vector2(6, -6), pro_color, 2.0)
 
 	# Target bracket or edge arrow (line of sight).
 	if has_target:
@@ -83,7 +95,13 @@ func _draw() -> void:
 		if not camera.is_position_behind(target_render_pos):
 			tp = camera.unproject_position(target_render_pos)
 			on_screen = _inner_rect().has_point(tp)
-		if on_screen:
+		if on_screen and target_estimated:
+			# Estimate: a dashed ring and a "?" — not where the sensors see it.
+			var dim := COLOR_TARGET * Color(1, 1, 1, 0.55)
+			for k in 8:
+				draw_arc(tp, 18.0, TAU * k / 8.0, TAU * (k + 0.5) / 8.0, 6, dim, 1.5)
+			draw_string(font, tp + Vector2(22, -6), target_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, dim)
+		elif on_screen:
 			_draw_bracket(tp, 16.0)
 			draw_string(font, tp + Vector2(22, -6), target_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, COLOR_TARGET)
 		else:

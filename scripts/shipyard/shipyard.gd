@@ -8,8 +8,10 @@ extends Control
 enum Tool { SELECT, PLACE, HATCH }
 
 const FLIGHT_SCENE := "res://scenes/main/main.tscn"
-const COLOR_ERROR := Color(1.0, 0.45, 0.4)
-const COLOR_WARNING := Color(0.96, 0.78, 0.26)
+const COLOR_ERROR := CyberTheme.RED
+const COLOR_WARNING := CyberTheme.AMBER
+## Palette categories (the part kinds the catalog supports).
+const CATEGORIES := ["All", "Hull", "Interior", "Propulsion", "Power & thermal", "Weapons", "Sensors", "Utility", "Logistics"]
 
 @onready var name_edit: LineEdit = %NameEdit
 @onready var template_list: OptionButton = %TemplateList
@@ -44,15 +46,24 @@ var selected_id: String = ""
 var _hover_cell := Vector3i.ZERO
 var _hover_face: StringName = &""
 var _hangar_label: RichTextLabel
+var _cargo_label: RichTextLabel
+var _history_label: RichTextLabel
 var _priority: OptionButton
 var _repair_button: Button
 var _bank_button: Button
 var _buy_button: Button
 var debrief: DebriefPanel
+## Searchable, categorised palette (replaces the three tabs).
+var palette_list: ItemList
+var palette_search: LineEdit
+var palette_category: OptionButton
+var _figures: Dictionary = {}  # name -> value Label
+var _expanded_view := ""
 
 
 func _ready() -> void:
 	InputBindings.apply_saved()
+	theme = CyberTheme.build_theme()
 	var catalog := ConstructionCatalog.default_catalog()
 	profile = Main.get_profile()
 	profile.ensure_vessel(_load_or_null(BlueprintIO.DEFAULT_TEMPLATE))
@@ -61,7 +72,12 @@ func _ready() -> void:
 	editor.profile = profile
 	editor.revalidate()
 	editor.changed.connect(_refresh)
+	_build_palette()
+	_build_key_figures()
+	_build_view_bar()
 	_build_hangar_panel()
+	CyberTheme.style_button(launch_button, CyberTheme.CYAN, true)
+	launch_button.custom_minimum_size = Vector2(200, 34)
 	debrief = DebriefPanel.new()
 	debrief.name = "Debrief"
 	add_child(debrief)
@@ -117,6 +133,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	match key:
+		KEY_SLASH:
+			palette_search.grab_focus()
 		KEY_PAGEUP:
 			change_deck(1)
 		KEY_PAGEDOWN:
@@ -151,8 +169,9 @@ func set_tool(t: Tool) -> void:
 	select_button.button_pressed = t == Tool.SELECT
 	hatch_button.button_pressed = t == Tool.HATCH
 	if t != Tool.PLACE:
-		for list in [hull_list, room_list, equipment_list]:
-			list.deselect_all()
+		for list in [hull_list, room_list, equipment_list, palette_list]:
+			if list != null:
+				list.deselect_all()
 		place_kind = ""
 		place_def = &""
 		info_label.text = {
@@ -305,6 +324,7 @@ func bank_cargo() -> PackedStringArray:
 	_fill_palette(hull_list, editor.catalog.hull)
 	_fill_palette(room_list, editor.catalog.rooms)
 	_fill_palette(equipment_list, editor.catalog.equipment)
+	_fill_palette_list()
 	editor.revalidate()
 	return banked
 
@@ -358,6 +378,13 @@ func _refresh_stats() -> void:
 		return
 	var cfg := s.to_ship_config(editor.blueprint.name)
 	var g := 9.80665
+	_set_figure("MASS", "%.0f t" % (s.wet_mass_kg() / 1000.0), CyberTheme.TEXT)
+	_set_figure("ACCEL", "%.2f g" % (s.thrust_forward_n / s.wet_mass_kg() / g), CyberTheme.TEXT if s.thrust_forward_n > 0.0 else CyberTheme.AMBER)
+	_set_figure("Δv", "%.0f m/s" % s.delta_v_m_s(), CyberTheme.TEXT if s.delta_v_m_s() > 500.0 else CyberTheme.AMBER)
+	var power := s.power_generation_kw - s.power_draw_kw
+	_set_figure("POWER", "%s %+.0f kW" % [CyberTheme.GLYPH_OK if power >= 0.0 else CyberTheme.GLYPH_DEGRADED, power], CyberTheme.CYAN if power >= 0.0 else CyberTheme.AMBER)
+	var heat := s.heat_rejection_kw - s.heat_generation_kw
+	_set_figure("HEAT", "%s %+.0f kW" % [CyberTheme.GLYPH_OK if heat >= 0.0 else CyberTheme.GLYPH_DEGRADED, heat], CyberTheme.CYAN if heat >= 0.0 else CyberTheme.AMBER)
 	stats_label.text = "\n".join([
 		"MASS       %.1f t dry · %.1f t wet" % [s.mass_kg / 1000.0, s.wet_mass_kg() / 1000.0],
 		"CoM        x %.1f  y %.1f  z %.1f m" % [s.center_of_mass_m.x, s.center_of_mass_m.y, s.center_of_mass_m.z],
@@ -377,8 +404,12 @@ func _refresh_stats() -> void:
 func _refresh_issues() -> void:
 	var report := editor.report
 	var lines := PackedStringArray()
+	var title := get_node_or_null("Margin/VBox/Body/Right/IssuesTitle") as Label
+	if title != null:
+		title.text = "VALIDATION   ✖ %d errors   ▲ %d warnings" % [report.errors().size(), report.warnings().size()]
+		title.add_theme_color_override("font_color", COLOR_ERROR if report.has_errors() else (COLOR_WARNING if not report.issues.is_empty() else CyberTheme.CYAN))
 	if report.issues.is_empty():
-		lines.append("[color=#80ff99]✔ No issues — ready to launch[/color]")
+		lines.append(CyberTheme.tint("✔ No issues — ready to launch", CyberTheme.CYAN))
 	for issue in report.issues:
 		var err := issue.severity == ShipValidator.Severity.ERROR
 		var text := ("✖ " if err else "▲ ") + issue.message.replace("[", "(").replace("]", ")")
@@ -396,18 +427,168 @@ func _refresh_issues() -> void:
 
 # --- Hangar and service --------------------------------------------------------
 
-func _build_hangar_panel() -> void:
-	var right := stats_label.get_parent().get_parent()
-	var title := Label.new()
-	title.text = "HANGAR & SERVICE"
-	var panel := PanelContainer.new()
+## Searchable palette: a category picker, a search box and one list.
+func _build_palette() -> void:
+	palette.visible = false
+	var left := palette.get_parent()
 	var box := VBoxContainer.new()
-	_hangar_label = RichTextLabel.new()
-	_hangar_label.bbcode_enabled = true
-	_hangar_label.fit_content = true
-	_hangar_label.scroll_active = false
-	_hangar_label.add_theme_font_size_override("normal_font_size", 12)
-	_hangar_label.add_theme_font_size_override("bold_font_size", 12)
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	palette_search = LineEdit.new()
+	palette_search.placeholder_text = "Search parts…  [/]"
+	palette_search.clear_button_enabled = true
+	palette_search.text_changed.connect(func(_t: String) -> void: _fill_palette_list())
+	box.add_child(palette_search)
+	palette_category = OptionButton.new()
+	for c in CATEGORIES:
+		palette_category.add_item(c)
+	palette_category.item_selected.connect(func(_i: int) -> void: _fill_palette_list())
+	box.add_child(palette_category)
+	palette_list = ItemList.new()
+	palette_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	palette_list.item_selected.connect(func(i: int) -> void:
+		var m: Array = palette_list.get_item_metadata(i)
+		select_palette(m[0], m[1]))
+	box.add_child(palette_list)
+	left.add_child(box)
+	left.move_child(box, palette.get_index())
+	_fill_palette_list()
+
+
+## Category of a part, adapted to the kinds the catalog has.
+static func category_of(kind: String, def: Resource) -> String:
+	match kind:
+		"hull":
+			return "Hull"
+		"room":
+			return "Logistics" if def.role in [&"cargo", &"magazine"] else "Interior"
+	match (def as EquipmentDefinition).kind:
+		EquipmentDefinition.Kind.MAIN_ENGINE, EquipmentDefinition.Kind.RCS:
+			return "Propulsion"
+		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR:
+			return "Power & thermal"
+		EquipmentDefinition.Kind.CANNON:
+			return "Weapons"
+		EquipmentDefinition.Kind.SENSOR:
+			return "Sensors"
+		EquipmentDefinition.Kind.PROPELLANT_TANK:
+			return "Logistics"
+	return "Utility"
+
+
+func _fill_palette_list() -> void:
+	if palette_list == null:
+		return
+	palette_list.clear()
+	var want: String = CATEGORIES[maxi(palette_category.selected, 0)]
+	var query := palette_search.text.strip_edges().to_lower()
+	for entry in [["hull", editor.catalog.hull], ["room", editor.catalog.rooms], ["equipment", editor.catalog.equipment]]:
+		for id in ConstructionCatalog.sorted_ids(entry[1]):
+			var def: Resource = entry[1][id]
+			var cat := category_of(entry[0], def)
+			if want != "All" and cat != want:
+				continue
+			if query != "" and not (def.display_name.to_lower().contains(query) or String(id).contains(query) or cat.to_lower().contains(query)):
+				continue
+			var text: String = def.display_name
+			var color := (def.color as Color).lightened(0.2)
+			if def.rarity != Rarity.Tier.COMMON:
+				color = Rarity.color_of(def.rarity)
+				if def is EquipmentDefinition:
+					text += "  ×%d" % profile.owned(id)
+				elif not profile.is_unlocked(def):
+					text += "  (locked)"
+					color = color.darkened(0.45)
+			if want == "All":
+				text = "%s · %s" % [text, cat]
+			var i := palette_list.add_item(text)
+			palette_list.set_item_metadata(i, [entry[0], id])
+			palette_list.set_item_custom_fg_color(i, color)
+			palette_list.set_item_tooltip(i, "%s — %s · %s" % [def.display_name, cat, Rarity.name_of(def.rarity)])
+
+
+## Key figures above the detailed stats.
+func _build_key_figures() -> void:
+	var panel := stats_label.get_parent()
+	panel.remove_child(stats_label)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	panel.add_child(box)
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", CyberTheme.SPACE_M)
+	for name in ["MASS", "ACCEL", "Δv", "POWER", "HEAT"]:
+		var cell := VBoxContainer.new()
+		var cap := Label.new()
+		cap.theme_type_variation = &"Caption"
+		cap.text = name
+		var value := Label.new()
+		value.add_theme_font_override("font", CyberTheme.sans())
+		value.add_theme_font_size_override("font_size", 17)
+		cell.add_child(cap)
+		cell.add_child(value)
+		grid.add_child(cell)
+		_figures[name] = value
+	box.add_child(grid)
+	stats_label.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL + 1)
+	stats_label.add_theme_color_override("font_color", CyberTheme.TEXT_DIM.lerp(CyberTheme.TEXT, 0.5))
+	box.add_child(stats_label)
+
+
+func _set_figure(name: String, text: String, color: Color) -> void:
+	var l: Label = _figures.get(name)
+	if l != null:
+		l.text = text
+		l.add_theme_color_override("font_color", color)
+
+
+## Expand one of the side / front / 3D views to fill the centre (the deck
+## editor hides until restored).
+func _build_view_bar() -> void:
+	var views := side_view.get_parent()
+	var center := views.get_parent()
+	var bar := HBoxContainer.new()
+	var cap := Label.new()
+	cap.theme_type_variation = &"Caption"
+	cap.text = "VIEWS"
+	bar.add_child(cap)
+	for entry in [["side", "Expand side"], ["front", "Expand front"], ["3d", "Expand 3D"], ["", "Restore deck editor"]]:
+		var b := Button.new()
+		b.text = entry[1]
+		var which: String = entry[0]
+		b.pressed.connect(func() -> void: expand_view(which))
+		bar.add_child(b)
+	center.add_child(bar)
+	center.move_child(bar, views.get_index())
+
+
+func expand_view(which: String) -> void:
+	_expanded_view = which
+	var views := side_view.get_parent() as Control
+	deck_editor.visible = which == ""
+	views.size_flags_vertical = Control.SIZE_EXPAND_FILL if which != "" else Control.SIZE_FILL
+	side_view.visible = which in ["", "side"]
+	front_view.visible = which in ["", "front"]
+	preview.visible = which in ["", "3d"]
+	_refresh_views()
+
+
+func _build_hangar_panel() -> void:
+	var right := stats_label.get_parent().get_parent().get_parent()
+	var title := Label.new()
+	title.theme_type_variation = &"Heading"
+	title.text = "HANGAR"
+	var tabs := TabContainer.new()
+	tabs.custom_minimum_size = Vector2(0, 240)
+	var box := VBoxContainer.new()
+	box.name = "SERVICE"
+	_hangar_label = _rich_label()
+	var cargo_box := VBoxContainer.new()
+	cargo_box.name = "CARGO & BANK"
+	_cargo_label = _rich_label()
+	var history_box := VBoxContainer.new()
+	history_box.name = "HISTORY"
+	_history_label = _rich_label()
 	var row := HBoxContainer.new()
 	_priority = OptionButton.new()
 	for n in ServiceYard.PRIORITY_NAMES:
@@ -419,7 +600,7 @@ func _build_hangar_panel() -> void:
 	_repair_button.pressed.connect(func() -> void: repair())
 	row.add_child(_priority)
 	row.add_child(_repair_button)
-	var row2 := HBoxContainer.new()
+	var row2 := HFlowContainer.new()
 	_bank_button = Button.new()
 	_bank_button.text = "Bank cargo"
 	_bank_button.tooltip_text = "Unload the hold into the station bank: safe from loss"
@@ -428,21 +609,35 @@ func _build_hangar_panel() -> void:
 	_buy_button.text = "Buy %d parts (%d cr)" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE]
 	_buy_button.pressed.connect(func() -> void: buy_spare_parts())
 	var debrief_button := Button.new()
-	debrief_button.text = "Debrief"
+	debrief_button.text = "Last debrief"
 	debrief_button.pressed.connect(func() -> void: debrief.show_debrief(profile.last_debrief))
-	for b in [_bank_button, _buy_button, debrief_button]:
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for b in [_bank_button, _buy_button]:
 		row2.add_child(b)
 	for b in [_repair_button, _bank_button, _buy_button, debrief_button]:
 		CyberTheme.style_button(b)
 	box.add_child(_hangar_label)
 	box.add_child(row)
-	box.add_child(row2)
-	panel.add_child(box)
+	cargo_box.add_child(_cargo_label)
+	cargo_box.add_child(row2)
+	history_box.add_child(_history_label)
+	history_box.add_child(debrief_button)
+	for b in [box, cargo_box, history_box]:
+		tabs.add_child(b)
 	right.add_child(title)
 	right.move_child(title, 1)
-	right.add_child(panel)
-	right.move_child(panel, 2)
+	right.add_child(tabs)
+	right.move_child(tabs, 2)
+
+
+func _rich_label() -> RichTextLabel:
+	var r := RichTextLabel.new()
+	r.bbcode_enabled = true
+	r.fit_content = true
+	r.scroll_active = false
+	r.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	r.add_theme_font_size_override("normal_font_size", CyberTheme.SIZE_SMALL + 1)
+	r.add_theme_font_size_override("bold_font_size", CyberTheme.SIZE_BODY)
+	return r
 
 
 func _refresh_hangar() -> void:
@@ -454,14 +649,10 @@ func _refresh_hangar() -> void:
 	var refit := ServiceYard.refit_jobs(v, editor.blueprint, catalog)
 	var gold := Rarity.color_of(Rarity.Tier.LEGENDARY).to_html(false)
 	var lines := PackedStringArray([
-		"[b]%s[/b]  ·  %d sorties  ·  %d salvaged  ·  %d lost" % [v.name, v.sorties, v.salvaged, profile.vessels_lost],
-		"CREDITS [color=#%s]%d[/color]  ·  SPARE PARTS (banked) [color=#%s]%d[/color]  ·  respawn fee %d cr" % [
-			gold, profile.credits, gold, profile.spare_parts, profile.respawn_fee(catalog)],
-		"CARGO HOLD [color=%s]%s[/color]%s" % [CyberTheme.html(CyberTheme.MAGENTA), v.cargo_summary(),
-			"  — at risk until banked" if not v.cargo_is_empty() else ""],
+		"[b]%s[/b] · SPARE PARTS [color=#%s]%d[/color]" % [v.name, gold, profile.spare_parts],
 	])
 	if jobs.is_empty():
-		lines.append("[color=#80ff99]Vessel in full repair[/color]")
+		lines.append(CyberTheme.tint("✔ Vessel in full repair", CyberTheme.CYAN))
 	else:
 		lines.append("DAMAGE  %d jobs · %d parts for everything" % [jobs.size(), ServiceYard.total_cost(jobs)])
 		for j in jobs.slice(0, 5):
@@ -473,10 +664,22 @@ func _refresh_hangar() -> void:
 		var cost := ServiceYard.total_cost(refit)
 		lines.append("REFIT   %d new part%s · %d spare parts at launch%s" % [refit.size(), "" if refit.size() == 1 else "s", cost,
 			"  [color=#ff7766]short by %d[/color]" % (cost - profile.spare_parts) if cost > profile.spare_parts else ""])
-	lines.append("FOUND   %s" % _found_text())
-	var pity := profile.pity_countdown()
-	lines.append("LOOT    %d crates opened · Rare+ in %d · Legendary in %d" % [profile.total_pulls, pity.x, pity.y])
 	_hangar_label.text = "\n".join(lines)
+	var pity := profile.pity_countdown()
+	_cargo_label.text = "\n".join([
+		"CREDITS [color=#%s]%d[/color] · respawn fee %d cr" % [gold, profile.credits, profile.respawn_fee(catalog)],
+		"BANKED  %d spare parts" % profile.spare_parts,
+		"HOLD    %s%s" % [CyberTheme.tint(v.cargo_summary(), CyberTheme.MAGENTA),
+			CyberTheme.tint("  ▲ at risk until banked", CyberTheme.AMBER) if not v.cargo_is_empty() else ""],
+		"FOUND   %s" % _found_text(),
+		"LOOT    %d crates opened · Rare+ in %d · Legendary in %d" % [profile.total_pulls, pity.x, pity.y],
+	])
+	var history := PackedStringArray(["[b]%s[/b] · %d sorties · %d salvaged · %d lost" % [v.name, v.sorties, v.salvaged, profile.vessels_lost]])
+	for line in Array(v.history).slice(-12):
+		history.append("• " + str(line))
+	_history_label.text = "\n".join(history)
+	var refit_cost := ServiceYard.total_cost(refit)
+	launch_button.text = "LAUNCH ▶" if refit.is_empty() else "LAUNCH ▶ · refit %d parts" % refit_cost
 	var plan := ServiceYard.plan(jobs, _priority.selected, profile.spare_parts, v, profile)
 	_repair_button.disabled = plan.is_empty()
 	_bank_button.disabled = v.cargo_is_empty()

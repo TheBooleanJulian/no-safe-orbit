@@ -10,8 +10,18 @@ extends Camera3D
 ## Higher = stiffer rotation follow (1/s).
 @export var rotation_stiffness: float = 6.0
 
+## Normal and zoomed (Shift, for precise gunnery) field of view, degrees.
+@export var fov_normal: float = 70.0
+@export var fov_zoomed: float = 22.0
+## How fast the zoom settles (1/s).
+@export var zoom_speed: float = 10.0
+
+## Held by Main while the zoom key is down.
+var zoomed: bool = false
+
 var _smoothed: Quaternion = Quaternion.IDENTITY
 var _initialized := false
+var _zoom := 0.0
 
 
 func follow(target: Node3D, delta: float) -> void:
@@ -21,6 +31,11 @@ func follow(target: Node3D, delta: float) -> void:
 		_initialized = true
 	else:
 		_smoothed = _smoothed.slerp(target_q, 1.0 - exp(-rotation_stiffness * delta))
+	# Zoom eases in and out: narrower view, camera closer to the hull and
+	# aiming further down the gun line.
+	_zoom = lerpf(_zoom, 1.0 if zoomed else 0.0, 1.0 - exp(-zoom_speed * delta))
+	fov = lerpf(fov_normal, fov_zoomed, _zoom)
 	var b := Basis(_smoothed)
-	global_position = target.global_position + b * offset_body
-	look_at(target.global_position + b * Vector3(0, 0, -look_ahead_m), b.y)
+	var offset := offset_body.lerp(Vector3(0, offset_body.y * 0.4, offset_body.z * 0.35), _zoom)
+	global_position = target.global_position + b * offset
+	look_at(target.global_position + b * Vector3(0, 0, -look_ahead_m * lerpf(1.0, 4.0, _zoom)), b.y)

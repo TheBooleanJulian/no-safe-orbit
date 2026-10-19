@@ -57,6 +57,17 @@ var player_wing: AirWing
 var target_wing: AirWing
 ## Enemy fighters launch from this mission on, once the target is hostile.
 const ENEMY_WING_FROM_MISSION := 3
+## A contact arriving after a salvage starts this far out, closing at this
+## speed, until it holds ENGAGE_STANDOFF_M.
+const ARRIVAL_DISTANCE_M := 30_000.0
+const ARRIVAL_SPEED_MPS := 150.0
+const ENGAGE_STANDOFF_M := 2500.0
+## A hostile contact holds fire this long after the player first detects it.
+const ENGAGE_GRACE_S := 5.0
+## What the player's sensors know about the target, and the target's about the player.
+var track := SensorTrack.new()
+var enemy_track := SensorTrack.new()
+var _target_arriving := false
 var _craft_views: Dictionary = {}  # craft id -> CraftView
 var _wing_log_seen := {}  # AirWing -> log_count already shown
 
@@ -126,19 +137,29 @@ func _start_scenario() -> void:
 		EARTH.display_name, START_ALTITUDE_M / 1000.0, world.fixed_dt])
 
 
-## Next contact: 2.5 km ahead of the player and off-axis on a slightly
-## different orbit, crossing the bow at ~25 m/s so range, lead and radar all
-## have something to show.
-func _spawn_target() -> void:
+## Next contact. The first of a sortie is already close: 2.5 km ahead and
+## off-axis, crossing the bow at ~25 m/s. One arriving after a salvage
+## (`arriving`) starts ARRIVAL_DISTANCE_M out and closes; it must be
+## detected before it engages.
+func _spawn_target(arriving: bool = false) -> void:
 	var player := world.get_ship(PLAYER_ID)
 	var mission := get_profile().missions_completed + 1
 	var template := _load_template()
 	_designs[TARGET_ID] = _compile(EnemyFactory.design(mission, template, ConstructionCatalog.default_catalog()), template)
 	var class_name_word: String = (_designs[TARGET_ID].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
-	var target := ShipState.create(
-		TARGET_ID, "TGT-%02d %s" % [mission, class_name_word], _designs[TARGET_ID].config,
-		player.position + Vector3(400, 120, -2500), player.velocity + Vector3(-25, 1.5, 6.0), Quaternion(Vector3.UP, 0.9))
-	target.angular_velocity = Vector3(0.0, 0.03, 0.01)
+	var pos := player.position + Vector3(400, 120, -2500)
+	var vel := player.velocity + Vector3(-25, 1.5, 6.0)
+	var attitude := Quaternion(Vector3.UP, 0.9)
+	if arriving:
+		var dir := (Basis(Vector3.UP, 1.3 * mission) * Vector3(0.35, 0.1, -1.0)).normalized()
+		pos = player.position + dir * ARRIVAL_DISTANCE_M
+		vel = player.velocity - dir * ARRIVAL_SPEED_MPS
+		attitude = Basis.looking_at(-dir, Vector3.UP).get_rotation_quaternion()
+	var target := ShipState.create(TARGET_ID, "TGT-%02d %s" % [mission, class_name_word], _designs[TARGET_ID].config, pos, vel, attitude)
+	target.angular_velocity = Vector3.ZERO if arriving else Vector3(0.0, 0.03, 0.01)
+	_target_arriving = arriving
+	track = SensorTrack.new()
+	enemy_track = SensorTrack.new()
 	target.attach_systems(_new_systems(TARGET_ID))
 	world.add_ship(target)
 	world.set_input(TARGET_ID, ShipControlInput.neutral())
@@ -264,6 +285,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.overview.toggle()
 		if hud.overview.visible:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			# Opened on what the top alert is about.
+			if hud.alert_subject != "":
+				hud.overview.select_subject(hud.alert_subject)
+		return
+	elif event.is_action_pressed("toggle_orbit_panel"):
+		hud.toggle_orbit_panel()
+		return
+	elif event.is_action_pressed("toggle_details"):
+		hud.toggle_details()
+		return
+	elif event.is_action_pressed("toggle_help"):
+		hud.toggle_help()
 		return
 	elif event.is_action_pressed("toggle_controls"):
 		hud.controls.toggle()
@@ -383,7 +416,7 @@ func salvage_target() -> Array[LootRoller.Drop]:
 	hud.loot.show_salvage(target.display_name, intact, parts, drops, p, bounty)
 	world.remove_ship(TARGET_ID)
 	hud.reset()
-	_spawn_target()
+	_spawn_target(true)
 	# New contact, new hull (and its own name on it).
 	(_views[TARGET_ID] as Node).queue_free()
 	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
@@ -407,6 +440,12 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			sys.preferred_repair_id = str(arg)
 		&"repair":
 			start_field_repair()
+		&"power_toggle":
+			sys.set_switched_off(str(arg), not sys.switched_off.has(str(arg)))
+		&"isolate":
+			for i in sys.blueprint.rooms.size():
+				if sys.blueprint.rooms[i].id == str(arg):
+					sys.set_isolated(i, not sys.isolated_rooms.has(i))
 		&"craft_launch":
 			var why := player_wing.launch(world, player_wing.by_id(arg))
 			if why != "":
@@ -419,6 +458,16 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			player_wing.by_id(arg[0]).risk = arg[1]
 		&"craft_priority":
 			player_wing.by_id(arg[0]).priority = arg[1]
+
+
+## Sensor tracks both ways; announce a new contact.
+func _update_tracks(player: ShipState, target: ShipState, delta: float) -> void:
+	var dt := delta if world == null else minf(delta, 0.25)
+	if track.update(player, target, world.sim_time, dt):
+		var line := "CONTACT — %s detected at %.1f km" % [target.display_name, player.position.distance_to(target.position) / 1000.0]
+		hud.notice(line, world.sim_time)
+		combat_log.record(world.sim_time, "sensors", line)
+	enemy_track.update(target, player, world.sim_time, dt)
 
 
 ## Each wing's hostiles are the other wing's craft in flight.
@@ -526,11 +575,24 @@ func _process(delta: float) -> void:
 	var target := world.get_ship(TARGET_ID)
 	var target_id := TARGET_ID if target.is_active() else &""
 	world.set_input(PLAYER_ID, player_input.build_input(delta, target_id))
+	_update_tracks(player, target, delta)
+	var engaging := target_hostile and target.is_active() and track.detected \
+		and world.sim_time - track.detected_time >= ENGAGE_GRACE_S and enemy_track.in_contact
 	if target.is_active() and target.systems != null and target.systems.captured:
 		world.set_input(TARGET_ID, ShipControlInput.neutral())
 	elif world.link_for(TARGET_ID) != null and GunneryAI.can_break_contact(target):
 		world.set_input(TARGET_ID, GunneryAI.break_contact(target, player))
-	elif target_hostile and target.is_active():
+	elif _target_arriving and target.is_active() and not target.systems.is_disabled():
+		# Inbound: close to the standoff, nose on the player; guns only once engaging.
+		var input := GunneryAI.command(target, player) if engaging else ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
+		if not engaging:
+			CraftAI.point(target, player.position - target.position, input)
+		var away := (target.position - player.position).normalized()
+		CraftAI.steer(target, player.position + away * ENGAGE_STANDOFF_M, player.velocity, input, ARRIVAL_SPEED_MPS)
+		world.set_input(TARGET_ID, input)
+		if target.position.distance_to(player.position) < ENGAGE_STANDOFF_M + 150.0:
+			_target_arriving = false
+	elif engaging:
 		world.set_input(TARGET_ID, GunneryAI.command(target, player))
 		if get_profile().missions_completed + 1 >= ENEMY_WING_FROM_MISSION and not target.systems.is_disabled():
 			for c in target_wing.crafts:
@@ -576,6 +638,11 @@ func _process(delta: float) -> void:
 		_wing_log_seen[wing] = wing.log_count
 	for ev in hits:
 		hit_flashes.add(ev)
+		var struck_view: ShipView = _views.get(ev.target_id)
+		if struck_view != null and ev.report != null and ev.report.penetrated and not ev.report.path_body.is_empty():
+			struck_view.add_hole(ev.report.path_body[0], ev.report.entry_normal_body, false)
+			if ev.report.exit_pen_mm > 0.0:
+				struck_view.add_hole(ev.report.exit_point_body, ev.report.exit_normal_body, true)
 		if (ev.shooter_id == PLAYER_ID or player_wing.by_id(ev.shooter_id) != null) and ev.report != null and _designs.has(ev.target_id):
 			var struck := world.get_ship(ev.target_id)
 			hud.hit_cam.show_hit(ev, _designs[ev.target_id], struck.systems, struck.display_name)
@@ -588,6 +655,7 @@ func _process(delta: float) -> void:
 		view.visible = ship.is_active()
 		view.sync_from(ship, alpha, render_origin)
 
+	camera.zoomed = Input.is_action_pressed("zoom_aim") and not hud.overview.visible
 	camera.follow(_views[PLAYER_ID], delta)
 	_update_docking_cam(player, target, alpha, render_origin)
 	var link := world.link_for(PLAYER_ID)
@@ -604,6 +672,7 @@ func _process(delta: float) -> void:
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
+	hud.track = track
 	hud.update_display(world, PLAYER_ID, TARGET_ID, alpha, render_origin, camera, player_input)
 
 

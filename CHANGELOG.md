@@ -4,6 +4,26 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-10-19 — UI simplification and polish
+
+### Added
+- Design tokens (`CyberTheme`) and a code-built Theme; state glyphs.
+- Consolidated HUD: own-ship card with actionable alerts, target card with
+  sensor-track quality (MEAS / EST / STALE), confidence and lock, weapon
+  strip, event ticker; orbit (O), details & combat log (J), help (H).
+- Damage-control drawer with clickable schematic and contextual actions
+  (dispatch repair, switch loads off to reroute power, divert, isolate).
+- Shipyard: searchable categorised palette, key figures, expandable views,
+  tabbed hangar (Service / Cargo & Bank / History), primary Launch.
+- Sensor mast and tracks; contacts arrive far out and must be detected
+  before they engage.
+- Ricochets with visible deflected tracers; black hull entry/exit holes.
+- Shift zoom for gunnery; yellow target-relative markers in match mode.
+
+### Changed
+- RCS Isp 900 s (heavy 950 s): manoeuvring no longer burns more propellant
+  per m/s than the main engines.
+
 ## [0.8.0] — 2026-10-19 — Milestone 6: fighters, drones and directives
 
 ### Added

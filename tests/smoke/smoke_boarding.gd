@@ -75,7 +75,7 @@ func _run() -> void:
 	# Out of tolerance: refused, with the reason.
 	_alongside(player, target, 60.0)
 	await _press("dock")
-	_check(main.world.link_for(Main.PLAYER_ID) == null and main.hud.flight_label.text.contains("range"),
+	_check(main.world.link_for(Main.PLAYER_ID) == null and main.hud.ticker_text().contains("range"),
 		"V at 60 m is refused and the HUD says why")
 
 	# In tolerance, but the target still has power and a crew in command: it tears free.

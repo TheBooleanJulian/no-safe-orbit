@@ -215,6 +215,22 @@ lose it persistently. Spec tests (§16 "Autonomous units") mapped below.
 Scaffolding in the exit test: the fighter is "shot down" by setting its
 status. Renders reviewed (craft in flight, overview air-wing controls).
 
+## UI simplification and polish (2026-10-19)
+
+| Request | Verified by | Result |
+|---|---|---|
+| Shared design tokens; sans headings / mono telemetry; semantic colours with shapes | `CyberTheme`; renders | applied to HUD, drawer, station, overlays |
+| Combat HUD consolidated: own-ship card, target card, weapon strip; detail panels on demand | `smoke_main` (J/O panels, strings), renders at 1280×720 / 1600×900 / 2560×1080 | no overlaps after layout fixes |
+| Measured vs estimated vs stale sensor data; lock status | `test_sensor_track_detects_estimates_and_goes_stale`; target card | MEAS / EST / STALE, confidence, lock |
+| Actionable alerts linked to the affected system | `smoke_main` (critical reactor → alert names it; Tab opens on it) | pass |
+| Damage control: less obstruction, selection details, contextual actions | `test_switching_a_load_off_reroutes_its_power`, `test_isolating_a_compartment_blocks_crew_routes`, `test_schematic_picks_the_system_under_the_cursor`, `smoke_main` (drawer button switches the gun off) | right-side drawer, tabs |
+| Shipyard: searchable categories, stats hierarchy, expandable views, tabbed hangar, primary launch | `smoke_shipyard` (search, category, pick, expand/restore), renders | pass |
+| Shift zoom for gunnery | manual (camera); input action test | eases FOV 70° → 22° |
+| RCS Δv no worse than main engines | `test_rcs_costs_no_more_per_metre_per_second_than_the_mains` | Isp 900 s |
+| Next enemy detected before it engages | `smoke_campaign` (arrives ~30 km out, holds fire undetected) | pass |
+| Ricochet trajectories; black entry / exit holes | `test_steep_hits_ricochet_and_head_on_ones_shatter`, `test_hole_normals_point_out_of_the_hull` | pass |
+| Yellow target-relative prograde/retrograde in match mode | HUD overlay | relative velocity and speed label |
+
 ## Milestones 7–8
 
 Not started. See GAME_DESIGN.md §17.

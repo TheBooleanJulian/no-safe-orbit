@@ -32,6 +32,13 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   refused because one fire-control solution serves every mount.
 - **Ship geometry is boxes with procedural plating.** Wrecked modules turn
   dark and destroyed external systems disappear, but nothing breaks off.
+- **No point defence exists yet**; the weapon strip shows "PD none fitted"
+  (Milestone 7).
+- **Fonts:** Space Grotesk and JetBrains Mono are used when installed;
+  otherwise the system's sans and monospace fonts stand in (nothing is
+  bundled, to avoid a font dependency).
+- **The tactical drawer covers the right side** (target card, hit cam,
+  radar) while open; the TARGET tab shows the same information.
 - **Earth's texture is 5400 × 2700 (~7.4 km per pixel)**, the October Blue
   Marble composite, with procedural detail on top; from 400 km straight down
   the ground is still a little soft. Clouds are procedural, not

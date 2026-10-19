@@ -17,6 +17,8 @@ var velocity: Vector3 = Vector3.ZERO
 ## Position at the start of the most recent tick (swept hits, interpolation).
 var prev_position: Vector3 = Vector3.ZERO
 var age_s: float = 0.0
+## Deflected off armour (drawn as a spark, not a tracer).
+var ricochet: bool = false
 
 ## Far-mode state: PCI position/velocity at sim time `far_epoch`.
 var far: bool = false
