@@ -72,7 +72,8 @@ func cell_at(pos: Vector2) -> Vector3i:
 
 
 ## Face of the hovered cell the pointer is nearest to: an edge face when
-## close to an edge, otherwise dorsal (ventral with Shift).
+## close to an edge; in the middle, whichever of top (dorsal) and underside
+## (ventral) is open to space — Shift picks the other one.
 func face_at(pos: Vector2, shift: bool) -> StringName:
 	var r := cell_rect(cell_at(pos))
 	var u := (pos.x - r.position.x) / _px  # 0 = aft edge, 1 = fore edge
@@ -85,8 +86,19 @@ func face_at(pos: Vector2, shift: bool) -> StringName:
 			best = face
 			best_d = d[face]
 	if best == &"":
-		return &"ventral" if shift else &"dorsal"
+		return vertical_face(cell_at(pos), shift)
 	return best
+
+
+## Top or underside of a cell: the one open to space (top if both or
+## neither are); `other` picks the opposite.
+func vertical_face(cell: Vector3i, other: bool) -> StringName:
+	var up := editor != null and editor.grid.is_exterior_face(cell, &"dorsal")
+	var down := editor != null and editor.grid.is_exterior_face(cell, &"ventral")
+	var face: StringName = &"ventral" if down and not up else &"dorsal"
+	if other:
+		face = &"dorsal" if face == &"ventral" else &"ventral"
+	return face
 
 
 ## Cell on the other side of `face` (dorsal/ventral = deck above/below).

@@ -768,7 +768,7 @@ func _update_ghost() -> void:
 				if def.is_external():
 					deck_editor.ghost_cells.append(cell)
 					deck_editor.ghost_face = _hover_face
-					hint = "%s — %s face (edges: fore/aft/port/starboard, centre: dorsal, Shift: ventral)" % [def.display_name, _hover_face]
+					hint = "%s — %s face (near an edge: that side; middle: top or underside, whichever is open — Shift: the other)" % [def.display_name, _hover_face]
 				else:
 					var fp := def.footprint_cells
 					if place_rotation % 2 == 1:
@@ -840,36 +840,84 @@ func _describe(kind: String, def_id: StringName) -> String:
 
 
 func _describe_def(kind: String, def_id: StringName) -> String:
+	return describe_definition(kind, editor.catalog, def_id)
+
+
+## Full engineering card for a palette entry: what it is, what it costs,
+## what it consumes and produces, and how it fights or breaks.
+static func describe_definition(kind: String, catalog: ConstructionCatalog, def_id: StringName) -> String:
 	match kind:
 		"hull":
-			var d: HullModuleDefinition = editor.catalog.hull[def_id]
-			var con := PackedStringArray()
-			for face in d.connectors:
-				con.append("%s: %s" % [face, d.connectors[face]])
-			return "%s\n%d×%d×%d cells, %d decks, %.0f t, armour %.0f mm\n%s\nConnectors — %s\nClick to place (base on this deck). R rotates." % [
-				d.display_name, d.size_cells.x, d.size_cells.z, d.size_cells.y, d.size_cells.y, d.structure_mass_kg / 1000.0,
-				d.armor_mm, "Pressurised" if d.interior else "Unpressurised (no rooms)", ", ".join(con)]
+			var d: HullModuleDefinition = catalog.hull[def_id]
+			var cells := d.size_cells.x * d.size_cells.y * d.size_cells.z
+			return "\n".join(PackedStringArray([
+				d.display_name,
+				"%d×%d×%d cells (%d decks) · %s" % [d.size_cells.x, d.size_cells.z, d.size_cells.y, d.size_cells.y,
+					"pressurised: rooms fit inside" if d.interior else "unpressurised: no rooms"],
+				"MASS %.1f t (%.1f t per cell) · STRUCTURE %.0f pts" % [d.structure_mass_kg / 1000.0, d.structure_mass_kg / 1000.0 / cells,
+					d.structure_mass_kg * ShipSystems.STRUCTURE_POINTS_PER_KG],
+				"SKIN ARMOUR %.0f mm · PASSIVE COOLING %.0f kW" % [d.armor_mm, ShipStats.PASSIVE_REJECTION_KW_PER_MODULE],
+				"COST %d spare parts" % ServiceYard.module_cost(d),
+				"Click to place (base on this deck) · R rotates",
+			]))
 		"room":
-			var d: RoomDefinition = editor.catalog.rooms[def_id]
-			return "%s (role: %s)\nPer cell: %.1f t, %+.0f kW%s%s%s\nDrag on the deck to place." % [
-				d.display_name, d.role, d.mass_per_cell_kg / 1000.0, d.power_kw_per_cell,
-				", %d berths" % d.crew_capacity_per_cell if d.crew_capacity_per_cell > 0 else "",
-				", %d rounds" % d.rounds_per_cell if d.rounds_per_cell > 0 else "",
-				", %.0f m³ cargo" % d.cargo_m3_per_cell if d.cargo_m3_per_cell > 0 else ""]
-		_:
-			var d: EquipmentDefinition = editor.catalog.equipment[def_id]
-			var where := "Internal %d×%d, rooms: %s" % [d.footprint_cells.x, d.footprint_cells.y,
-				", ".join(d.allowed_room_roles.map(func(r: StringName) -> String: return String(r)))] if not d.is_external() \
-				else "External, faces: %s" % ", ".join(d.allowed_faces.map(func(f: StringName) -> String: return String(f)))
-			var extra := PackedStringArray()
-			if d.thrust_n > 0.0:
-				extra.append("thrust %.0f kN" % (d.thrust_n / 1000.0))
-			if d.heat_rejection_kw > 0.0:
-				extra.append("rejects %.0f kW" % d.heat_rejection_kw)
-			if d.heat_kw > 0.0:
-				extra.append("heat %.0f kW" % d.heat_kw)
-			return "%s\n%s\n%.1f t, %+.0f kW%s" % [d.display_name, where, d.mass_kg / 1000.0, d.power_kw,
-				(", " + ", ".join(extra)) if not extra.is_empty() else ""]
+			var d: RoomDefinition = catalog.rooms[def_id]
+			var per := PackedStringArray(["%.1f t" % (d.mass_per_cell_kg / 1000.0)])
+			if d.power_kw_per_cell != 0.0:
+				per.append("%s %.0f kW" % ["uses" if d.power_kw_per_cell < 0.0 else "makes", absf(d.power_kw_per_cell)])
+			if d.heat_kw_per_cell > 0.0:
+				per.append("heat %.0f kW" % d.heat_kw_per_cell)
+			if d.crew_capacity_per_cell > 0:
+				per.append("%d berth%s" % [d.crew_capacity_per_cell, "" if d.crew_capacity_per_cell == 1 else "s"])
+			if d.rounds_per_cell > 0:
+				per.append("%d rounds" % d.rounds_per_cell)
+			if d.cargo_m3_per_cell > 0.0:
+				per.append("%.0f m³ cargo" % d.cargo_m3_per_cell)
+			return "\n".join(PackedStringArray([
+				"%s — role: %s" % [d.display_name, d.role],
+				"PER CELL  " + " · ".join(per),
+				"COST %d spare parts per cell" % ServiceYard.room_cost(d, 1),
+				"Drag on the deck to place",
+			]))
+	var e: EquipmentDefinition = catalog.equipment[def_id]
+	var lines := PackedStringArray([
+		"%s — %s" % [e.display_name, "external" if e.is_external() else "internal, %d×%d cells" % [e.footprint_cells.x, e.footprint_cells.y]],
+		"MASS %.1f t · POWER %s · HEAT %.0f kW" % [e.mass_kg / 1000.0,
+			"makes %.0f kW" % e.power_kw if e.power_kw > 0.0 else ("uses %.0f kW" % -e.power_kw if e.power_kw < 0.0 else "none"), e.heat_kw],
+		"DURABILITY %.0f hp · stops %.0f mm of a round passing through" % [e.max_hit_points(), e.shielding_mm()],
+		"COST %d spare parts%s" % [ServiceYard.equipment_cost(e), " (fitting an owned unit)" if e.rarity != Rarity.Tier.COMMON else ""],
+	])
+	match e.kind:
+		EquipmentDefinition.Kind.CANNON:
+			var g := e.cannon
+			lines.append("GUN %.0f rpm · %.0f m/s · %.1f kg rounds · %.0f mm penetration at the muzzle (%.0f mm at 500 m/s)" % [
+				g.rate_of_fire_rpm, g.muzzle_velocity_mps, g.round_mass_kg, g.penetration_mm, g.penetration_at(500.0)])
+			lines.append("TURRET %s · spread %.2f° · energy %.1f MJ a round · fed from magazines" % [
+				"trains %.0f°/s" % g.traverse_deg_s if g.traverse_deg_s > 0.0 else "fixed, fires along the nose", g.dispersion_deg,
+				0.5 * g.round_mass_kg * g.muzzle_velocity_mps * g.muzzle_velocity_mps / 1.0e6])
+		EquipmentDefinition.Kind.MAIN_ENGINE:
+			lines.append("THRUST %.0f kN · Isp %.0f s · burns %.1f kg/s · aft faces only" % [e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
+		EquipmentDefinition.Kind.RCS:
+			lines.append("THRUST %.0f kN each way · Isp %.0f s · burns %.2f kg/s at full · torque grows with distance from the centre of mass" % [
+				e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
+		EquipmentDefinition.Kind.REACTOR:
+			lines.append("OUTPUT %.0f kW · throttles at %.0f K, scrams at %.0f K · explodes when destroyed (%.0f m blast)" % [
+				e.power_kw, ShipSystems.THROTTLE_TEMP_K, ShipSystems.SCRAM_TEMP_K, ShipSystems.REACTOR_BLAST_RADIUS_M])
+		EquipmentDefinition.Kind.RADIATOR:
+			lines.append("REJECTS %.0f kW at nominal temperature (more when hot)" % e.heat_rejection_kw)
+		EquipmentDefinition.Kind.PROPELLANT_TANK:
+			lines.append("HOLDS %.0f t of propellant · a destroyed tank loses its share" % (e.propellant_capacity_kg / 1000.0))
+		EquipmentDefinition.Kind.SENSOR:
+			lines.append("SENSOR RANGE %.0f km (without one: %.0f km visual) · needed to scan" % [e.sensor_range_m / 1000.0, ShipSystems.VISUAL_RANGE_M / 1000.0])
+		EquipmentDefinition.Kind.CRAFT_MOUNT:
+			var c := e.craft
+			lines.append("CARRIES %s · %.0f t · %s · hull %.0f" % [c.display_name, c.mass_kg / 1000.0,
+				"gun %s" % c.cannon.display_name if c.cannon != null else "unarmed (recon)", c.hull_hp])
+		EquipmentDefinition.Kind.DOCKING_COLLAR:
+			lines.append("GANGWAY up to %.0f m · seals in %.0f s · opens into the room behind it" % [Docking.GANGWAY_MAX_M, Docking.COLLAR_SEAL_S])
+	if e.rarity != Rarity.Tier.COMMON:
+		lines.append("%s — found in salvage" % Rarity.name_of(e.rarity).to_upper())
+	return "\n".join(lines)
 
 
 func _name_of(id: String) -> String:

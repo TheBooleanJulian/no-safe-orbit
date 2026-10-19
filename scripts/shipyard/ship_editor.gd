@@ -185,6 +185,11 @@ func item_at(cell: Vector3i, face: StringName = &"") -> String:
 		for e in blueprint.equipment:
 			if e.cell == cell and e.face == face:
 				return e.id
+		# Pointing at the middle of a cell: the top or the underside.
+		if face == &"dorsal" or face == &"ventral":
+			for e in blueprint.equipment:
+				if e.cell == cell and (e.face == &"dorsal" or e.face == &"ventral"):
+					return e.id
 	if grid.equipment_at.has(cell):
 		return blueprint.equipment[grid.equipment_at[cell]].id
 	if grid.room_at.has(cell):

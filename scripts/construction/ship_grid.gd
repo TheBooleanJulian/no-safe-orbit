@@ -193,10 +193,10 @@ func hull_bounds_m() -> AABB:
 	return box
 
 
-## Structural attachments: for each module index, the modules it touches
-## through matching connectors. `mismatches` (optional) receives, per module,
-## a description of a contact whose connectors don't match.
-func attachments(mismatches: Dictionary = {}) -> Array[Array]:
+## Structural attachments: for each module index, the modules it shares at
+## least one face with (any common face welds them together; connector
+## types are descriptive only).
+func attachments() -> Array[Array]:
 	var n := blueprint.modules.size()
 	var attached: Array[Array] = []
 	for i in n:
@@ -207,15 +207,8 @@ func attachments(mismatches: Dictionary = {}) -> Array[Array]:
 		for cell in module_cells(i):
 			for face: StringName in FACE_NORMALS:
 				var other: int = module_at.get(cell + FACE_NORMALS[face], -1)
-				if other < 0 or other == i:
-					continue
-				var mine := module_connector(i, face)
-				var theirs := module_connector(other, face_of(-FACE_NORMALS[face]))
-				if mine != &"" and mine == theirs:
-					if not attached[i].has(other):
-						attached[i].append(other)
-				else:
-					mismatches[i] = [other, mine, theirs]
+				if other >= 0 and other != i and not attached[i].has(other):
+					attached[i].append(other)
 	return attached
 
 

@@ -100,15 +100,9 @@ static func _check_structure(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 		_add(report, Severity.ERROR, &"module_overlap", "Modules %s and %s overlap at %s." % [
 			bp.modules[o[1]].id, bp.modules[o[2]].id, _cell_text(o[0])], bp.modules[o[2]].id)
 
-	# Attachment graph: modules that touch with matching connectors.
+	# Attachment graph: modules that share at least one face.
 	var n := bp.modules.size()
-	var contacts := {}  # module index -> [other, mine, theirs] for a mismatched contact
-	var attached := grid.attachments(contacts)
-	var mismatched := {}
-	for i in contacts:
-		var c: Array = contacts[i]
-		mismatched[i] = "touches %s but the connectors there don't match (%s vs %s)" % [
-			bp.modules[c[0]].id, _connector_text(c[1]), _connector_text(c[2])]
+	var attached := grid.attachments()
 	# Everything must be attached, directly or indirectly, to the first module.
 	var seen := {0: true}
 	var queue := [0]
@@ -121,14 +115,9 @@ static func _check_structure(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 	for i in n:
 		if seen.has(i) or grid.module_def(i) == null:
 			continue
-		var why: String = mismatched.get(i, "does not touch any other module")
 		_add(report, Severity.ERROR, &"module_detached",
-			"Module %s (%s) is not structurally attached: it %s. Move it against a matching connector." % [
-				bp.modules[i].id, grid.module_def(i).display_name, why], bp.modules[i].id)
-
-
-static func _connector_text(c: StringName) -> String:
-	return "none" if c == &"" else String(c)
+			"Module %s (%s) is not structurally attached: it shares no face with the rest of the hull. Move it so one of its faces touches another module." % [
+				bp.modules[i].id, grid.module_def(i).display_name], bp.modules[i].id)
 
 
 # --- Rooms and hatches ------------------------------------------------------

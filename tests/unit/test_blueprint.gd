@@ -105,16 +105,14 @@ func test_detached_module_detected() -> void:
 	_expect(bp, &"module_detached", ShipValidator.Severity.ERROR, "pod floating in space")
 
 
-func test_incompatible_connectors_do_not_attach() -> void:
-	# Pod's starboard "pod" connector against the engine section's bare port face.
+func test_any_common_face_attaches() -> void:
+	# The pod's bare port side against the engine section's bare face: one
+	# common face is enough (connector types no longer gate attachment).
 	var bp := _template()
 	var pod := bp.add_module(&"side_pod", Vector3i(0, 0, 12))
 	var report := _report(bp)
-	var issue: ShipValidator.Issue = null
-	for i in report.issues:
-		if i.code == &"module_detached" and i.subject == pod.id:
-			issue = i
-	assert_true(issue != null and issue.message.contains("don't match"), "mismatched connectors reported for %s:\n%s" % [pod.id, report.summary()])
+	assert_true(not report.issues.any(func(i: ShipValidator.Issue) -> bool: return i.code == &"module_detached" and i.subject == pod.id),
+		"a module sharing a face is attached:\n%s" % report.summary())
 
 
 func test_rotation_maps_faces() -> void:
