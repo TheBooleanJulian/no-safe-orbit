@@ -299,6 +299,8 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 				"%s %s has no magazine to feed it: 0 rounds. Add a magazine room." % [def.display_name, e.id], e.id)
 
 
+	if not bp.bus.is_empty():
+		_check_bus(bp, grid, report)
 	var buried := 0
 	for key: String in bp.armor:
 		var cf := ShipBlueprint.parse_plate_key(key)
@@ -312,6 +314,70 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 		if def != null and def.kind == EquipmentDefinition.Kind.DOCKING_COLLAR and grid.room_at.get(bp.equipment[i].cell, -1) < 0:
 			_add(report, Severity.WARNING, &"collar_leads_nowhere",
 				"%s %s opens into no room: nobody can use it. Put a room behind it." % [def.display_name, bp.equipment[i].id], bp.equipment[i].id)
+
+
+## Routed power: conduits only run through hull; every network with a
+## reactor needs a distribution unit; every powered system should be on a
+## network that has both.
+static func _check_bus(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	var outside := 0
+	for key: String in bp.bus:
+		if not grid.is_hull(ShipBlueprint.parse_cell_key(key)):
+			outside += 1
+	if outside > 0:
+		_add(report, Severity.WARNING, &"bus_outside_hull",
+			"%d power conduit cell%s outside the hull carry nothing." % [outside, "" if outside == 1 else "s"], "")
+	var net_of := {}
+	var nets := 0
+	for key: String in bp.bus:
+		if net_of.has(key) or not grid.is_hull(ShipBlueprint.parse_cell_key(key)):
+			continue
+		net_of[key] = nets
+		var queue := [key]
+		while not queue.is_empty():
+			var cell := ShipBlueprint.parse_cell_key(queue.pop_front())
+			for face: StringName in ShipGrid.FACE_NORMALS:
+				var nk := ShipBlueprint.cell_key(cell + ShipGrid.FACE_NORMALS[face])
+				if bp.bus.has(nk) and not net_of.has(nk):
+					net_of[nk] = nets
+					queue.append(nk)
+		nets += 1
+	var net_for := func(i: int) -> int:
+		var def := grid.equipment_def(i)
+		var cells: Array = [bp.equipment[i].cell] if def.is_external() else grid.equipment_cells(i)
+		for c in cells:
+			if net_of.has(ShipBlueprint.cell_key(c)):
+				return net_of[ShipBlueprint.cell_key(c)]
+		return -1
+	var reactor_nets := {}
+	var pdu_nets := {}
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def == null:
+			continue
+		var net: int = net_for.call(i)
+		if def.kind == EquipmentDefinition.Kind.REACTOR and net >= 0:
+			reactor_nets[net] = true
+		elif def.kind == EquipmentDefinition.Kind.POWER_DISTRIBUTION and net >= 0:
+			pdu_nets[net] = true
+	for net in reactor_nets:
+		if not pdu_nets.has(net):
+			_add(report, Severity.WARNING, &"bus_no_distribution",
+				"A bus network with a reactor has no power distribution unit: its reactor feeds nothing. Put a distribution unit on it.", "")
+			break
+	var unpowered := PackedStringArray()
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def == null or def.power_kw >= 0.0:
+			continue
+		var net: int = net_for.call(i)
+		if net < 0 or not reactor_nets.has(net) or not pdu_nets.has(net):
+			unpowered.append(bp.equipment[i].id)
+	if not unpowered.is_empty():
+		_add(report, Severity.WARNING, &"power_unrouted",
+			"%d system%s not on a powered bus network (%s%s): route a conduit to %s, or use Auto-route." % [unpowered.size(),
+				"" if unpowered.size() == 1 else "s", ", ".join(unpowered.slice(0, 6)), "…" if unpowered.size() > 6 else "",
+				"it" if unpowered.size() == 1 else "them"], unpowered[0])
 
 
 ## Fixed forward-firing mounts: anything in the hull straight ahead (−z) of

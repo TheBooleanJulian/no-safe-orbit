@@ -104,6 +104,9 @@ func _run() -> void:
 		return _finish()
 	var profile := Main.get_profile()
 	_check(not (profile.vessel.wing.get(fighter.rack_id, {}) as Dictionary).get("lost", false), "the recovered fighter is not lost")
+	# Patch up whatever the fight cut (a severed conduit would ground the rack).
+	profile.spare_parts = 200
+	yard.repair(ServiceYard.Priority.FULL)
 	_check(yard.launch(), "relaunch")
 	for i in 4:
 		await process_frame

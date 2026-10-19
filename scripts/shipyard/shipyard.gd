@@ -20,6 +20,12 @@ const ARMOR_ENTRIES := {
 		"Thick armour plate — 80 mm on top of the hull skin\nMASS %.2f t per face (more on a slope) · COST %d spare parts\nDrag across cells on this deck to plate their exposed faces (filter below). Sloped wedge faces count their full angle: a 45° slope is %.0f%% thicker against a level shot."],
 	&"plate_remove": [0, "Remove armour plates", "Remove armour plates\nDrag across cells on this deck to strip their plates (filter below)."],
 }
+## Power bus palette entries: id -> [lay (true) / remove, name, description].
+const BUS_ENTRIES := {
+	&"bus_lay": [true, "Power conduit (bus)",
+		"Power conduit — routes power from reactors through a distribution unit to systems and rooms\nMASS %.1f t per cell · COST 1 spare part per %d cells\nDrag across hull cells on this deck. Conduits join face to face and between decks (▲▼). A system or room is powered when one of its cells is on a network with a reactor and a working distribution unit. Hits cut conduits: run redundant paths.\nWithout any conduit the ship uses automatic distribution through its hull."],
+	&"bus_remove": [false, "Remove power conduit", "Remove power conduit\nDrag across cells on this deck to pull out their conduit."],
+}
 
 @onready var name_edit: LineEdit = %NameEdit
 @onready var template_list: OptionButton = %TemplateList
@@ -205,10 +211,13 @@ func select_palette(kind: String, def_id: StringName) -> void:
 	hatch_button.button_pressed = false
 	place_kind = kind
 	place_def = def_id
-	deck_editor.drag_rooms = kind == "room" or kind == "armor"
+	deck_editor.drag_rooms = kind == "room" or kind == "armor" or kind == "bus"
 	if armor_faces != null:
 		armor_faces.visible = kind == "armor"
-	if kind == "armor":
+	if kind == "bus":
+		var entry: Array = BUS_ENTRIES[def_id]
+		info_label.text = entry[2] % [ShipStats.BUS_KG_PER_CELL / 1000.0, ServiceYard.BUS_CELLS_PER_PART] if entry[0] else entry[2]
+	elif kind == "armor":
 		var entry: Array = ARMOR_ENTRIES[def_id]
 		info_label.text = entry[2] if entry[0] == 0 else entry[2] % [ShipStats.plate_mass(entry[0]) / 1000.0,
 			ServiceYard.plate_cost(entry[0]), (sqrt(2.0) - 1.0) * 100.0]
@@ -279,6 +288,9 @@ func apply_at(cell: Vector3i, face: StringName, button: MouseButton = MOUSE_BUTT
 				"armor":
 					_paint_armor(cell.y, Rect2i(cell.x, cell.z, 1, 1))
 					return
+				"bus":
+					_paint_bus(cell.y, Rect2i(cell.x, cell.z, 1, 1))
+					return
 				"room":
 					selected_id = editor.place_room(place_def, cell.y, Rect2i(cell.x, cell.z, 1, 1))
 				"equipment":
@@ -292,6 +304,21 @@ func _on_room_dragged(deck: int, rect: Rect2i) -> void:
 		_set_status("Placed %s (%d×%d)" % [selected_id, rect.size.x, rect.size.y])
 	elif tool == Tool.PLACE and place_kind == "armor":
 		_paint_armor(deck, rect)
+	elif tool == Tool.PLACE and place_kind == "bus":
+		_paint_bus(deck, rect)
+
+
+func _paint_bus(deck: int, rect: Rect2i) -> void:
+	var lay: bool = BUS_ENTRIES[place_def][0]
+	var n := editor.paint_bus(deck, rect, lay)
+	_set_status(("%s %d conduit cell%s" % ["Laid" if lay else "Removed", n, "" if n == 1 else "s"]) if n > 0 else "No hull cells to change there")
+
+
+## Replace the bus with an automatic tree from the distribution unit.
+func auto_route_bus() -> int:
+	var n := editor.auto_route_bus()
+	_set_status("Auto-routed the power bus: %d conduit cells" % n if n > 0 else "Nothing to route: fit a reactor and a power distribution unit first", n == 0)
+	return n
 
 
 func _paint_armor(deck: int, rect: Rect2i) -> void:
@@ -507,6 +534,12 @@ func _build_palette() -> void:
 	armor_faces.tooltip_text = "Which faces an armour stroke covers"
 	armor_faces.visible = false
 	box.add_child(armor_faces)
+	var route := Button.new()
+	route.text = "Auto-route power bus"
+	route.tooltip_text = "Lay conduit from the distribution unit to every powered system and room (replaces the current bus)"
+	CyberTheme.style_button(route, CyberTheme.AMBER)
+	route.pressed.connect(func() -> void: auto_route_bus())
+	box.add_child(route)
 	left.add_child(box)
 	left.move_child(box, palette.get_index())
 	_fill_palette_list()
@@ -522,7 +555,7 @@ static func category_of(kind: String, def: Resource) -> String:
 	match (def as EquipmentDefinition).kind:
 		EquipmentDefinition.Kind.MAIN_ENGINE, EquipmentDefinition.Kind.RCS:
 			return "Propulsion"
-		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR:
+		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION:
 			return "Power & thermal"
 		EquipmentDefinition.Kind.CANNON:
 			return "Weapons"
@@ -539,6 +572,13 @@ func _fill_palette_list() -> void:
 	palette_list.clear()
 	var want: String = CATEGORIES[maxi(palette_category.selected, 0)]
 	var query := palette_search.text.strip_edges().to_lower()
+	for id: StringName in BUS_ENTRIES:
+		var b_name: String = BUS_ENTRIES[id][1]
+		if (want != "All" and want != "Power & thermal") or (query != "" and not (b_name.to_lower().contains(query) or "bus".contains(query) or "power".contains(query))):
+			continue
+		var bi := palette_list.add_item(b_name if want != "All" else "%s · Power & thermal" % b_name)
+		palette_list.set_item_metadata(bi, ["bus", id])
+		palette_list.set_item_custom_fg_color(bi, CyberTheme.AMBER if BUS_ENTRIES[id][0] else CyberTheme.TEXT_DIM)
 	for id: StringName in ARMOR_ENTRIES:
 		var a_name: String = ARMOR_ENTRIES[id][1]
 		if (want != "All" and want != "Armour") or (query != "" and not (a_name.to_lower().contains(query) or "armour".contains(query))):
@@ -818,6 +858,13 @@ func _update_ghost() -> void:
 				edit = func(bp: ShipBlueprint) -> void: bp.add_module(place_def, cell, place_rotation, place_flip)
 				hint = "%s — rotation %d° [R]%s" % [def.display_name, place_rotation * 90,
 					("  ·  slope %s [F]" % ("down" if place_flip else "up")) if def.is_wedge() else ("  ·  upside down [F]" if place_flip else "")]
+			"bus":
+				deck_editor.ghost_cells.append(cell)
+				hint = "%s — drag across hull cells on this deck" % BUS_ENTRIES[place_def][1]
+				hint_label.text = hint
+				deck_editor.ghost_ok = editor.grid.is_hull(cell)
+				deck_editor.queue_redraw()
+				return
 			"armor":
 				deck_editor.ghost_cells.append(cell)
 				hint = "%s — drag across cells; %s" % [ARMOR_ENTRIES[place_def][1], armor_faces.get_item_text(armor_faces.selected).to_lower()]

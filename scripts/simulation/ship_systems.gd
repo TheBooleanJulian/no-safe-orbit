@@ -190,6 +190,13 @@ var switched_off: Dictionary = {}
 var isolated_rooms: Dictionary = {}
 ## Armour plates as they are now (worn by hits): plate key -> mm.
 var plates: Dictionary = {}
+## Power conduit cells cut by hits (cell key -> true).
+var bus_cut: Dictionary = {}
+## Seeded per design: chance-based damage (conduit cuts) repeats exactly.
+var damage_rng := RandomNumberGenerator.new()
+## Bus networks by cell (cell key -> network), from the last power solve;
+## empty when the design has no routed bus.
+var bus_network: Dictionary = {}
 
 var _attachments: Array[Array] = []
 ## Exposed faces per module (passive cooling).
@@ -204,6 +211,7 @@ static func create(bp: ShipBlueprint, p_grid: ShipGrid, p_stats: ShipStats, conf
 	s.grid = p_grid
 	s.stats = p_stats
 	s.base_config = config
+	s.damage_rng.seed = hash(bp.name) + bp.modules.size()
 	s._attachments = p_grid.attachments()
 	for i in bp.modules.size():
 		s._module_faces.append(p_grid.exterior_face_count(i) if p_grid.module_def(i) != null else 0)
@@ -440,6 +448,9 @@ func update_pressure() -> void:
 
 ## Recompute which loads are powered on each junction network.
 func solve_power() -> void:
+	if not blueprint.bus.is_empty():
+		_solve_bus_power()
+		return
 	var n := modules.size()
 	var component := []
 	component.resize(n)
@@ -503,6 +514,119 @@ func solve_power() -> void:
 		else:
 			rooms[load[4]].powered = ok
 	_config = null
+
+
+## Power over a player-routed bus: conduit cells joined face to face (also
+## between decks) form networks; a cut conduit or a wrecked module's cells
+## carry nothing. A system or room is on a network when one of its cells
+## is. A network's reactors feed its loads only through a working power
+## distribution unit on it; short networks shed loads by priority.
+func _solve_bus_power() -> void:
+	bus_network.clear()
+	var networks := 0
+	for key: String in blueprint.bus:
+		if bus_network.has(key) or not _bus_alive(key):
+			continue
+		bus_network[key] = networks
+		var queue := [key]
+		while not queue.is_empty():
+			var cell := ShipBlueprint.parse_cell_key(queue.pop_front())
+			for face: StringName in ShipGrid.FACE_NORMALS:
+				var nk := ShipBlueprint.cell_key(cell + ShipGrid.FACE_NORMALS[face])
+				if blueprint.bus.has(nk) and not bus_network.has(nk) and _bus_alive(nk):
+					bus_network[nk] = networks
+					queue.append(nk)
+		networks += 1
+	var distributing := []
+	distributing.resize(networks)
+	distributing.fill(false)
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.POWER_DISTRIBUTION and not e.destroyed() and not switched_off.has(e.id):
+			var net := _network_of_equipment(e)
+			if net >= 0:
+				distributing[net] = true
+	var supply := []
+	supply.resize(networks)
+	supply.fill(0.0)
+	var loads := []
+	for e in equipment:
+		var net := _network_of_equipment(e)
+		if e.def.power_kw == 0.0:
+			e.powered = not e.destroyed()  # passive: needs no conduit
+			continue
+		if e.def.power_kw > 0.0:
+			e.powered = net >= 0 and not e.destroyed()
+			if e.def.kind == EquipmentDefinition.Kind.REACTOR and e.powered and distributing[net]:
+				supply[net] += e.def.power_kw * reactor_output()
+			continue
+		if net < 0 or e.destroyed() or switched_off.has(e.id):
+			e.powered = false
+			continue
+		loads.append([net, PRIORITY.get(e.def.kind, 4), -e.def.power_kw, e])
+	for i in blueprint.rooms.size():
+		var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
+		var cells := ShipGrid.room_cells(blueprint.rooms[i])
+		var net := _network_of_cells(cells)
+		if def == null or def.power_kw_per_cell >= 0.0:
+			rooms[i].powered = true  # draws nothing
+			continue
+		rooms[i].powered = net >= 0 and distributing[net]
+		if net >= 0:
+			loads.append([net, ROOM_PRIORITY, -def.power_kw_per_cell * cells.size(), null, i])
+		else:
+			rooms[i].powered = false
+	loads.sort_custom(func(a: Array, b: Array) -> bool: return a[1] < b[1])
+	var remaining: Array = supply.duplicate()
+	power_supply_kw = 0.0
+	for s in supply:
+		power_supply_kw += s
+	power_demand_kw = 0.0
+	power_unmet_kw = 0.0
+	for load in loads:
+		var net: int = load[0]
+		var kw: float = load[2]
+		power_demand_kw += kw
+		var ok: bool = remaining[net] >= kw - 1e-6
+		if ok:
+			remaining[net] -= kw
+		else:
+			power_unmet_kw += kw
+		if load[3] != null:
+			(load[3] as EquipmentState).powered = ok
+		else:
+			rooms[load[4]].powered = ok
+	_config = null
+
+
+func _bus_alive(key: String) -> bool:
+	if bus_cut.has(key):
+		return false
+	var mi: int = grid.module_at.get(ShipBlueprint.parse_cell_key(key), -1)
+	return mi >= 0 and not modules[mi].wrecked()
+
+
+func _network_of_cells(cells: Array) -> int:
+	for c in cells:
+		var net: int = bus_network.get(ShipBlueprint.cell_key(c), -1)
+		if net >= 0:
+			return net
+	return -1
+
+
+func _network_of_equipment(e: EquipmentState) -> int:
+	if e.def.is_external():
+		return bus_network.get(ShipBlueprint.cell_key(blueprint.equipment[e.index].cell), -1)
+	return _network_of_cells(grid.equipment_cells(e.index))
+
+
+## A round severed the conduit in `cell`. True if it was intact.
+func cut_bus(cell: Vector3i) -> bool:
+	var key := ShipBlueprint.cell_key(cell)
+	if not blueprint.bus.has(key) or bus_cut.has(key):
+		return false
+	bus_cut[key] = true
+	solve_power()
+	return true
 
 
 func reactor_output() -> float:
@@ -947,6 +1071,10 @@ func condition() -> Dictionary:
 	var hatches := destroyed_hatches.keys()
 	hatches.sort()
 	var out := {"equipment": eq, "modules": mods, "breached": breached, "hatches": hatches}
+	if not bus_cut.is_empty():
+		var cut := bus_cut.keys()
+		cut.sort()
+		out["bus_cut"] = cut
 	var worn := {}
 	for key in plates:
 		var full := float(blueprint.armor.get(key, 0.0))
@@ -973,6 +1101,10 @@ func apply_condition(c: Dictionary) -> void:
 		if def != null:
 			modules[i].armor_mm = clampf(float(entry.get("armor", 1.0)), 0.0, 1.0) * def.armor_mm
 		modules[i].structure = clampf(float(entry.get("structure", 1.0)), 0.0, 1.0) * modules[i].max_structure
+	bus_cut.clear()
+	for key in c.get("bus_cut", []):
+		if blueprint.bus.has(str(key)):
+			bus_cut[str(key)] = true
 	var worn: Dictionary = c.get("plates", {})
 	for key in blueprint.armor:
 		plates[key] = float(blueprint.armor[key]) * clampf(float(worn.get(key, 1.0)), 0.0, 1.0)

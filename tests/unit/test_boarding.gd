@@ -259,6 +259,10 @@ func test_layout_decides_how_long_it_takes() -> void:
 	# crew quarters two locked hatches away.
 	var near_bp := _template()
 	(near_bp.find("e50") as ShipBlueprint.PlacedEquipment).cell = Vector3i(2, 1, 2)
+	# The moved collar needs power: re-route the bus to it.
+	var routed := ShipEditor.new(near_bp, _catalog())
+	routed.auto_route_bus()
+	near_bp = routed.blueprint
 	var times := []
 	for bp in [_template(), near_bp]:
 		var setup := _setup(bp)

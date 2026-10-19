@@ -71,6 +71,14 @@ static func room_cost(def: RoomDefinition, cells: int) -> int:
 	return maxi(ceili(def.mass_per_cell_kg * cells / 2000.0), 1)
 
 
+## Power bus conduit: a part per BUS_CELLS_PER_PART cells.
+const BUS_CELLS_PER_PART := 2
+
+
+static func bus_cost(cells: int) -> int:
+	return ceili(float(cells) / BUS_CELLS_PER_PART) if cells > 0 else 0
+
+
 ## An armour plate: a part per tonne.
 static func plate_cost(mm: float) -> int:
 	return maxi(ceili(ShipStats.plate_mass(mm) / 1000.0), 1)
@@ -133,6 +141,16 @@ static func repair_jobs(vessel: ShipInstance, catalog: ConstructionCatalog) -> A
 		j.cost = maxi(ceili(cost - 1e-9), 1)
 		j.label = "Re-plate %d worn armour plate%s" % [worn.size(), "" if worn.size() == 1 else "s"]
 		j.order = 1.5
+		jobs.append(j)
+	var cuts: Array = vessel.condition.get("bus_cut", [])
+	if not cuts.is_empty():
+		var j := Job.new()
+		j.kind = &"bus"
+		j.subject = "bus"
+		j.category = &"combat"
+		j.cost = bus_cost(cuts.size())
+		j.label = "Re-run %d cut power conduit%s" % [cuts.size(), "" if cuts.size() == 1 else "s"]
+		j.order = 0.5
 		jobs.append(j)
 	for id in vessel.condition.get("breached", []):
 		var j := Job.new()
@@ -214,6 +232,14 @@ static func refit_jobs(vessel: ShipInstance, new_bp: ShipBlueprint, catalog: Con
 		var j := _build("plates", "armour plating", plate_parts, &"")
 		j.label = "Fit %d armour plate%s" % [plates, "" if plates == 1 else "s"]
 		jobs.append(j)
+	var new_bus := 0
+	for key in new_bp.bus:
+		if not old.bus.has(key):
+			new_bus += 1
+	if new_bus > 0:
+		var jb := _build("bus", "power bus", bus_cost(new_bus), &"")
+		jb.label = "Run %d power conduit cell%s" % [new_bus, "" if new_bus == 1 else "s"]
+		jobs.append(jb)
 	return jobs
 
 
@@ -279,6 +305,8 @@ static func perform(jobs: Array[Job], vessel: ShipInstance, profile: PlayerProfi
 				(c.get("modules", {}) as Dictionary).erase(j.subject)
 			&"plates":
 				c.erase("plates")
+			&"bus":
+				c.erase("bus_cut")
 			&"breach":
 				(c.get("breached", []) as Array).erase(j.subject)
 			&"hatch":
@@ -319,6 +347,9 @@ static func refit(vessel: ShipInstance, new_bp: ShipBlueprint, profile: PlayerPr
 		for id in table.keys():
 			if not keep.has(id):
 				table.erase(id)
+	c["bus_cut"] = (c.get("bus_cut", []) as Array).filter(func(k: Variant) -> bool: return new_bp.bus.has(str(k)))
+	if (c.bus_cut as Array).is_empty():
+		c.erase("bus_cut")
 	var worn: Dictionary = c.get("plates", {})
 	for key in worn.keys():
 		if int(new_bp.armor.get(key, 0)) != int(vessel.blueprint.armor.get(key, 0)):

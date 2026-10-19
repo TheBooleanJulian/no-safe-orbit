@@ -18,6 +18,11 @@ const STRUCTURE_MM_PER_CELL := 2.0
 const STRUCTURE_DAMAGE_PER_CELL := 2.0
 ## Penetration lost crossing a bulkhead between rooms.
 const BULKHEAD_MM := 8.0
+## A round with at least this much penetration left crossing a cell with
+## power conduit severs it with this chance (cable trays are a small target
+## in a 3 m cell; the draw is from the ship's own seeded generator).
+const BUS_CUT_MM := 5.0
+const BUS_CUT_CHANCE := 0.25
 ## Effective armour is capped at this multiple of its thickness (grazing hits).
 const MAX_OBLIQUITY_FACTOR := 3.0
 ## A round stopped by the first plate it meets at this incidence or steeper
@@ -163,6 +168,10 @@ static func apply(systems: ShipSystems, point_body: Vector3, dir_body: Vector3, 
 			if systems.damage_module(mi, STRUCTURE_DAMAGE_PER_CELL):
 				report.wrecked_modules.append(bp.modules[mi].id)
 				report.event(&"wrecked", bp.modules[mi].id, here, "Module %s structure fails — its power junction is cut" % bp.modules[mi].id)
+			var conduit := pen >= BUS_CUT_MM and systems.blueprint.bus.has(ShipBlueprint.cell_key(cell))
+			if conduit and systems.damage_rng.randf() < BUS_CUT_CHANCE and systems.cut_bus(cell):
+				report.cut_bus.append(cell)
+				report.event(&"bus_cut", "", here, "Power conduit cut at %s" % cell)
 			var ri: int = grid.room_at.get(cell, -1)
 			if ri >= 0 and not hit_rooms.has(ri):
 				hit_rooms[ri] = true

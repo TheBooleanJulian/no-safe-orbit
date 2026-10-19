@@ -19,6 +19,8 @@ const PASSIVE_REJECTION_KW_PER_FACE := 0.65
 ## Armour plate density (t/m³: steel–ceramic composite). One cell face is
 ## 9 m², so a 40 mm plate is 1.44 t and an 80 mm plate 2.88 t.
 const PLATE_DENSITY_KG_M3 := 4000.0
+## Power bus conduit (cabling, breakers, trays) per cell.
+const BUS_KG_PER_CELL := 200.0
 ## Assist turn rate = angular acceleration × this (s), clamped below.
 const ASSIST_RATE_SECONDS := 1.5
 const ASSIST_RATE_MIN := 0.05
@@ -106,6 +108,9 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 		elements.append({"mass": kg, "center": ShipGrid.cell_center_m(cell) + n * c * 0.5, "size": Vector3.ZERO})
 		s.plate_mass_kg += kg
 		s.plate_count += 1
+	for key: String in bp.bus:
+		var bus_cell := ShipBlueprint.parse_cell_key(key)
+		elements.append({"mass": BUS_KG_PER_CELL, "center": ShipGrid.cell_center_m(bus_cell), "size": Vector3.ZERO})
 	var engines: Array[Vector3] = []
 	var engine_thrust: Array[float] = []
 	var rcs: Array[Vector3] = []

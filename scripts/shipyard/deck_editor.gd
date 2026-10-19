@@ -204,6 +204,7 @@ func _draw() -> void:
 
 	_draw_slopes()
 	_draw_module_outlines()
+	_draw_bus()
 	_draw_plates()
 	_draw_hatches()
 	_draw_external_equipment()
@@ -280,6 +281,30 @@ func _draw_slopes() -> void:
 		var mid: Vector2 = (low[0] + low[1]) * 0.5 + inward * 0.35
 		var side: Vector2 = (low[1] - low[0]) * 0.18
 		draw_polyline(PackedVector2Array([mid - side + inward * 0.25, mid, mid + side + inward * 0.25]), col, 2.0)
+
+
+## Power bus: gold conduit through cell centres; ▲/▼ where it rises to the
+## deck above / drops to the one below.
+func _draw_bus() -> void:
+	var bus := editor.blueprint.bus
+	if bus.is_empty():
+		return
+	var col := Color(CyberTheme.AMBER, 0.85)
+	var w := maxf(_px * 0.1, 2.0)
+	for key: String in bus:
+		var cell := ShipBlueprint.parse_cell_key(key)
+		if cell.y != deck:
+			continue
+		var c := cell_rect(cell).get_center()
+		draw_rect(Rect2(c - Vector2.ONE * w, Vector2.ONE * w * 2.0), col)
+		for face in [&"fore", &"starboard"]:
+			var other := across(cell, face)
+			if bus.has(ShipBlueprint.cell_key(other)):
+				draw_line(c, cell_rect(other).get_center(), col, w)
+		if bus.has(ShipBlueprint.cell_key(cell + Vector3i.UP)):
+			draw_string(get_theme_default_font(), c + Vector2(w + 1, -w), "▲", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, col)
+		if bus.has(ShipBlueprint.cell_key(cell + Vector3i.DOWN)):
+			draw_string(get_theme_default_font(), c + Vector2(w + 1, w + 8), "▼", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, col)
 
 
 ## Armour plates: a bar inside the edge for side plates, a corner tab for

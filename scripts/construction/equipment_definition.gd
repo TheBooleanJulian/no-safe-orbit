@@ -21,6 +21,9 @@ enum Kind {
 	CRAFT_MOUNT,
 	## Sensor mast: detects and tracks other ships out to sensor_range_m.
 	SENSOR,
+	## Power distribution unit: a bus network's reactors only feed its loads
+	## through a working one (designs with a routed bus).
+	POWER_DISTRIBUTION,
 }
 
 enum Mount { INTERNAL, EXTERNAL }
@@ -64,6 +67,7 @@ const DAMAGE_DEFAULTS := {
 	Kind.DOCKING_COLLAR: [20.0, 8.0],
 	Kind.CRAFT_MOUNT: [20.0, 8.0],
 	Kind.SENSOR: [12.0, 4.0],
+	Kind.POWER_DISTRIBUTION: [15.0, 6.0],
 }
 
 

@@ -106,6 +106,103 @@ func paint_armor(deck: int, rect: Rect2i, mm: int, faces: PlateFaces = PlateFace
 	return changes.size()
 
 
+## Lay (or with `on` false, remove) power conduit in the hull cells of
+## `rect` (x, z) on `deck`. Returns how many cells changed.
+func paint_bus(deck: int, rect: Rect2i, on: bool) -> int:
+	var changes: Array[String] = []
+	for x in range(rect.position.x, rect.end.x):
+		for z in range(rect.position.y, rect.end.y):
+			var cell := Vector3i(x, deck, z)
+			var key := ShipBlueprint.cell_key(cell)
+			if on and grid.is_hull(cell) and not blueprint.bus.has(key):
+				changes.append(key)
+			elif not on and blueprint.bus.has(key):
+				changes.append(key)
+	if changes.is_empty():
+		return 0
+	_checkpoint()
+	for key in changes:
+		if on:
+			blueprint.bus[key] = true
+		else:
+			blueprint.bus.erase(key)
+	_refresh()
+	return changes.size()
+
+
+## Replace the bus with a tree that reaches every system that makes or
+## draws power and every room that draws it: grown from the first power
+## distribution unit (else reactor) along the shortest hull paths. Returns
+## the number of conduit cells, or 0 if there is nothing to route.
+func auto_route_bus() -> int:
+	var terminals: Array = []  # Array of Array[Vector3i]
+	var root: Array = []
+	for i in blueprint.equipment.size():
+		var def := grid.equipment_def(i)
+		if def == null or (def.power_kw == 0.0 and def.kind != EquipmentDefinition.Kind.POWER_DISTRIBUTION):
+			continue
+		var all_cells: Array = [blueprint.equipment[i].cell] if def.is_external() else grid.equipment_cells(i)
+		var cells: Array = all_cells.filter(func(c: Vector3i) -> bool: return grid.is_hull(c))
+		if cells.is_empty():
+			continue
+		if def.kind == EquipmentDefinition.Kind.POWER_DISTRIBUTION and root.is_empty():
+			root = cells
+		terminals.append(cells)
+	for r in blueprint.rooms:
+		var def: RoomDefinition = catalog.rooms.get(r.def_id)
+		if def != null and def.power_kw_per_cell < 0.0:
+			terminals.append(ShipGrid.room_cells(r))
+	if root.is_empty():
+		for i in blueprint.equipment.size():
+			var def := grid.equipment_def(i)
+			if def != null and def.kind == EquipmentDefinition.Kind.REACTOR:
+				root = grid.equipment_cells(i)
+				break
+	if root.is_empty() or terminals.is_empty():
+		return 0
+	var tree := {}
+	for c in root:
+		tree[c] = true
+	var pending := terminals.duplicate()
+	while not pending.is_empty():
+		pending = pending.filter(func(t: Array) -> bool: return not t.any(func(c: Vector3i) -> bool: return tree.has(c)))
+		if pending.is_empty():
+			break
+		var wanted := {}
+		for t in pending:
+			for c in t:
+				wanted[c] = true
+		# Multi-source BFS from the tree through hull cells to the nearest wanted cell.
+		var came := {}
+		var queue: Array[Vector3i] = []
+		for c in tree:
+			came[c] = c
+			queue.append(c)
+		var found := Vector3i(1 << 20, 0, 0)
+		while not queue.is_empty():
+			var c: Vector3i = queue.pop_front()
+			if wanted.has(c) and not tree.has(c):
+				found = c
+				break
+			for face: StringName in ShipGrid.FACE_NORMALS:
+				var nc: Vector3i = c + ShipGrid.FACE_NORMALS[face]
+				if grid.is_hull(nc) and not came.has(nc):
+					came[nc] = c
+					queue.append(nc)
+		if found.x == 1 << 20:
+			break  # the rest cannot be reached through the hull
+		var c2 := found
+		while not tree.has(c2):
+			tree[c2] = true
+			c2 = came[c2]
+	_checkpoint()
+	blueprint.bus.clear()
+	for c in tree:
+		blueprint.bus[ShipBlueprint.cell_key(c)] = true
+	_refresh()
+	return blueprint.bus.size()
+
+
 ## Turn a module upside down (a wedge's slope then faces down).
 func flip_module(id: String) -> bool:
 	var m: Variant = blueprint.find(id)
@@ -166,6 +263,7 @@ func move(id: String, delta: Vector3i) -> bool:
 	if item is ShipBlueprint.PlacedModule:
 		var contents := _contents_of(item)
 		_move_plates(contents.cells, func(c: Vector3i) -> Vector3i: return c + delta, 0)
+		_move_bus(contents.cells, func(c: Vector3i) -> Vector3i: return c + delta)
 		item.position += delta
 		for room: ShipBlueprint.PlacedRoom in contents.rooms:
 			_shift_room(room, delta)
@@ -205,6 +303,7 @@ func rotate_module(id: String) -> bool:
 	var turn := func(c: Vector3i) -> Vector3i:
 		return Vector3i(new_pos.x + (c.z - old_pos.z), c.y, new_pos.z + size.x - 1 - (c.x - old_pos.x))
 	_move_plates(contents.cells, turn, 1)
+	_move_bus(contents.cells, turn)
 	m.position = new_pos
 	m.rotation = (m.rotation + 1) % 4
 	for room: ShipBlueprint.PlacedRoom in contents.rooms:
@@ -303,6 +402,17 @@ func _move_plates(cells: Dictionary, map: Callable, quarter_turns: int) -> void:
 		moved[ShipBlueprint.plate_key(map.call(cf[0]), face)] = blueprint.armor[key]
 		blueprint.armor.erase(key)
 	blueprint.armor.merge(moved, true)
+
+
+## Conduit in `cells` follows its cells through `map`.
+func _move_bus(cells: Dictionary, map: Callable) -> void:
+	var moved := {}
+	for key in blueprint.bus.keys():
+		var c := ShipBlueprint.parse_cell_key(key)
+		if cells.has(c):
+			moved[ShipBlueprint.cell_key(map.call(c))] = true
+			blueprint.bus.erase(key)
+	blueprint.bus.merge(moved, true)
 
 
 ## Rooms, equipment and hatches lying entirely inside a module's cells
