@@ -285,6 +285,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.overview.toggle()
 		if hud.overview.visible:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			# Opened on what the top alert is about.
+			if hud.alert_subject != "":
+				hud.overview.select_subject(hud.alert_subject)
+		return
+	elif event.is_action_pressed("toggle_orbit_panel"):
+		hud.toggle_orbit_panel()
+		return
+	elif event.is_action_pressed("toggle_details"):
+		hud.toggle_details()
+		return
+	elif event.is_action_pressed("toggle_help"):
+		hud.toggle_help()
 		return
 	elif event.is_action_pressed("toggle_controls"):
 		hud.controls.toggle()
@@ -428,6 +440,12 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			sys.preferred_repair_id = str(arg)
 		&"repair":
 			start_field_repair()
+		&"power_toggle":
+			sys.set_switched_off(str(arg), not sys.switched_off.has(str(arg)))
+		&"isolate":
+			for i in sys.blueprint.rooms.size():
+				if sys.blueprint.rooms[i].id == str(arg):
+					sys.set_isolated(i, not sys.isolated_rooms.has(i))
 		&"craft_launch":
 			var why := player_wing.launch(world, player_wing.by_id(arg))
 			if why != "":
@@ -654,6 +672,7 @@ func _process(delta: float) -> void:
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
+	hud.track = track
 	hud.update_display(world, PLAYER_ID, TARGET_ID, alpha, render_origin, camera, player_input)
 
 

@@ -11,6 +11,7 @@ var camera: Camera3D
 var _viewport: SubViewport
 var _readout: Label
 var _cross: Control
+var _container: SubViewportContainer
 
 
 func _ready() -> void:
@@ -28,6 +29,7 @@ func _ready() -> void:
 	var container := SubViewportContainer.new()
 	container.stretch = true
 	container.custom_minimum_size = Vector2(400, 225)
+	_container = container
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(container)
 	_viewport = SubViewport.new()
@@ -48,6 +50,11 @@ func _ready() -> void:
 	_readout.add_theme_font_size_override("font_size", 12)
 	_readout.add_theme_color_override("font_color", CyberTheme.TEXT)
 	box.add_child(_readout)
+
+
+func set_compact(compact: bool) -> void:
+	if _container != null:
+		_container.custom_minimum_size = Vector2(320, 180) if compact else Vector2(400, 225)
 
 
 ## Show the view from `from` (render space) looking along `axis`, with the

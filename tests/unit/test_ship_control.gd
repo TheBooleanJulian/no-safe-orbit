@@ -119,3 +119,48 @@ func test_boarding_party_size_is_the_players_choice() -> void:
 	link.b_port = Docking.collars(b.systems)[0]
 	var party := BoardingAction.start(link, a.systems, b.systems, 3)
 	assert_true(party.team.size() == 3, "a party of 3 (got %d)" % party.team.size())
+
+
+# --- Damage-control actions --------------------------------------------------------
+
+func test_switching_a_load_off_reroutes_its_power() -> void:
+	var ship := _ship()
+	var s := ship.systems
+	s.damage_equipment(s.equipment_by_id("e28"), 0.0)
+	var demand := s.power_demand_kw
+	assert_true(s.set_switched_off("e41", true), "the gun can be switched off")
+	assert_true(not s.equipment_by_id("e41").powered and not s.equipment_by_id("e41").working(), "a switched-off gun is unpowered")
+	assert_near(demand - s.power_demand_kw, 120.0, 1e-3, "its 120 kW freed (kW)")
+	assert_true(not s.set_switched_off("e28", true), "reactors make power: they can't be switched off as loads")
+	s.set_switched_off("e41", false)
+	assert_true(s.equipment_by_id("e41").working(), "switched back on")
+
+
+func test_isolating_a_compartment_blocks_crew_routes() -> void:
+	var s := _ship().systems
+	var bridge := s.command_room()
+	var reactor := -1
+	var corridor := -1
+	for i in s.blueprint.rooms.size():
+		if s.blueprint.rooms[i].id == "r15":
+			reactor = i
+		if s.blueprint.rooms[i].id == "r8":
+			corridor = i
+	assert_true(not s.route(bridge, reactor).is_empty(), "bridge to reactor room: open")
+	s.set_isolated(corridor, true)
+	assert_true(s.route(bridge, reactor).is_empty(), "the corridor isolated: no way through")
+	assert_true(not s.route(bridge, reactor, true).is_empty(), "suited boarders still cut through")
+	s.set_isolated(corridor, false)
+	assert_true(not s.route(bridge, reactor).is_empty(), "reopened")
+
+
+func test_schematic_picks_the_system_under_the_cursor() -> void:
+	var map := ShipSchematic.new()
+	map.systems = _ship().systems
+	map.interactive = true
+	map.size = Vector2(500, 260)
+	map.layout_hits()
+	var c := map.center_of("e28")
+	assert_true(c.x >= 0.0, "the reactor is on the all-decks map")
+	assert_true(map.pick_at(c).get("id", "") == "e28", "clicking it picks the reactor")
+	map.free()

@@ -28,6 +28,8 @@ var velocity_relative_to_target := false
 var has_target := false
 var target_render_pos := Vector3.ZERO
 var target_label := ""
+## The bracket marks a dead-reckoned estimate, not a measurement: dashed, dim.
+var target_estimated := false
 var has_lead := false
 var lead_render_pos := Vector3.ZERO
 var lead_label := ""
@@ -93,7 +95,13 @@ func _draw() -> void:
 		if not camera.is_position_behind(target_render_pos):
 			tp = camera.unproject_position(target_render_pos)
 			on_screen = _inner_rect().has_point(tp)
-		if on_screen:
+		if on_screen and target_estimated:
+			# Estimate: a dashed ring and a "?" — not where the sensors see it.
+			var dim := COLOR_TARGET * Color(1, 1, 1, 0.55)
+			for k in 8:
+				draw_arc(tp, 18.0, TAU * k / 8.0, TAU * (k + 0.5) / 8.0, 6, dim, 1.5)
+			draw_string(font, tp + Vector2(22, -6), target_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, dim)
+		elif on_screen:
 			_draw_bracket(tp, 16.0)
 			draw_string(font, tp + Vector2(22, -6), target_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, COLOR_TARGET)
 		else:

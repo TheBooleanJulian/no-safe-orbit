@@ -175,6 +175,11 @@ var pips: Array[int] = [2, 2, 2]
 var preferred_repair_id: String = ""
 ## Crew walking to take over a role: member id -> {role, room, left_s}.
 var crew_orders: Dictionary = {}
+## Loads the crew switched off to reroute power (equipment id -> true).
+var switched_off: Dictionary = {}
+## Compartments sealed off by order (room index -> true): nobody passes
+## through them; whoever is inside stays.
+var isolated_rooms: Dictionary = {}
 
 var _attachments: Array[Array] = []
 var _config: ShipConfig
@@ -447,7 +452,7 @@ func solve_power() -> void:
 			if e.def.kind == EquipmentDefinition.Kind.REACTOR and e.powered:
 				supply[net] += e.def.power_kw * reactor_output()
 			continue
-		if net < 0 or e.destroyed():
+		if net < 0 or e.destroyed() or switched_off.has(e.id):
 			e.powered = false
 			continue
 		loads.append([net, PRIORITY.get(e.def.kind, 4), -e.def.power_kw, e])
@@ -729,9 +734,36 @@ func _advance_crew_orders(dt: float) -> bool:
 
 # --- Crew ------------------------------------------------------------------------
 
+## Switch a power load off (or back on) to reroute power to the rest.
+## Reactors and unpowered-by-design parts can't be switched. Returns false
+## if it can't be.
+func set_switched_off(id: String, off: bool) -> bool:
+	var e := equipment_by_id(id)
+	if e == null or e.def.power_kw >= 0.0:
+		return false
+	if off:
+		switched_off[id] = true
+	else:
+		switched_off.erase(id)
+	_note("%s %s switched %s" % [e.def.display_name, id, "OFF — power rerouted" if off else "back ON"])
+	solve_power()
+	return true
+
+
+## Seal a compartment off (or reopen it): crew routes avoid it.
+func set_isolated(room: int, isolated: bool) -> void:
+	if isolated:
+		isolated_rooms[room] = true
+	else:
+		isolated_rooms.erase(room)
+	_note("%s %s %s" % [_room_name(room), blueprint.rooms[room].id, "ISOLATED — hatches sealed" if isolated else "reopened"])
+	_config = null
+
+
 ## Rooms from `from` to `to` (inclusive) through hatches, or [] if there is
 ## no way. Unsuited crew need every room pressurised; `blocked` hatch ids
 ## (sealed doors) are impassable; destroyed hatches are open holes.
+## Isolated compartments can't be entered or left (suited boarders cut through).
 func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -> Array[int]:
 	var none: Array[int] = []
 	if from < 0 or to < 0 or (not suited and (not rooms[from].pressurized or not rooms[to].pressurized)):
@@ -748,6 +780,8 @@ func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -
 			var ra: int = grid.room_at.get(h.a, -1)
 			var rb: int = grid.room_at.get(h.b, -1)
 			var other := rb if ra == i else (ra if rb == i else -1)
+			if other >= 0 and not suited and (isolated_rooms.has(other) or isolated_rooms.has(i)) and not destroyed_hatches.has(h.id):
+				continue
 			if other >= 0 and not prev.has(other) and (suited or rooms[other].pressurized):
 				prev[other] = i
 				queue.append(other)

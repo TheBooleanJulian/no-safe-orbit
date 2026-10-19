@@ -32,6 +32,7 @@ const EVENT_COLORS := {
 
 var _title: Label
 var _caption: Label
+var _container: SubViewportContainer
 var _viewport: SubViewport
 var _camera: Camera3D
 var _root: Node3D
@@ -55,6 +56,14 @@ var _room_centers: Dictionary = {}  # room index -> Vector3 (body)
 const BOARDING_HOLD_S := 6.0
 
 
+## Smaller view on short screens.
+func set_compact(compact: bool) -> void:
+	if _container == null:
+		return
+	_container.custom_minimum_size = Vector2(320, 170) if compact else Vector2(400, 220)
+	_caption.custom_minimum_size = Vector2(_container.custom_minimum_size.x, 0)
+
+
 ## Should a hit of `new_severity` replace the replay currently showing?
 static func should_replace(showing: bool, age_s: float, current_severity: int, new_severity: int) -> bool:
 	if not showing:
@@ -76,6 +85,7 @@ func _ready() -> void:
 	var container := SubViewportContainer.new()
 	container.stretch = true
 	container.custom_minimum_size = Vector2(400, 220)
+	_container = container
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(container)
 	_viewport = SubViewport.new()
