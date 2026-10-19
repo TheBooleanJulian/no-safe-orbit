@@ -22,9 +22,21 @@ extends RefCounted
 ##   one damaged system at a time, up to FIELD_REPAIR_LIMIT of its condition.
 ##   A fit damage-control or engineering crew member must walk there first.
 ## - Crew (CrewRoster): people in a room that vents are killed or wounded.
-##   No fit command crew on a pressurised bridge halves the assist turn
-##   rates; no fit weapons crew able to reach a magazine halves the guns'
-##   rate of fire (autoloaders only).
+##   No fit command crew on a pressurised bridge: the ship AI flies it, with
+##   limited mobility (thrust and turn rates × SHIP_AI_FACTOR, assist always
+##   on). No fit weapons crew able to reach a magazine halves the guns' rate
+##   of fire (autoloaders only).
+## - Power distribution (pips, 6 in total, 0–4 per channel, 2 each to start):
+##   SYS = attitude control (RCS torque, turn rates) and repair speed,
+##   ENG = translation thrust, WEP = rate of fire. A channel's factor is
+##   0.5 + 0.25 × pips: 0 pips = 50 %, 2 = 100 %, 4 = 150 %. Zero-sum: the
+##   reactor's output is what it is; diverting moves it between channels.
+## - Crew orders: a fit general crew member can be sent to cover a role
+##   (bridge, guns, engineering, damage control); they walk to that role's
+##   station and take it over on arrival.
+## - A reactor at 0 % breaches containment and explodes: modules, systems and
+##   rooms within REACTOR_BLAST_RADIUS_M take damage falling off with
+##   distance (a second reactor caught in it explodes too).
 
 enum Reactor { NORMAL, THROTTLED, SCRAM }
 
@@ -54,7 +66,25 @@ const FIELD_REPAIR_LIMIT := 0.75
 const FIELD_REPAIR_SETUP_S := 10.0
 const FIELD_REPAIR_S_PER_HP := 1.0
 ## Which damaged system the crew patch first (lower = sooner).
-const NO_COMMAND_RATE_FACTOR := 0.5
+enum Channel { SYS, ENG, WEP }
+const CHANNEL_NAMES := ["SYS", "ENG", "WEP"]
+const PIPS_TOTAL := 6
+const PIPS_MAX := 4
+## Station room roles for each crew role a general can be sent to cover.
+const ROLE_STATIONS := {
+	CrewRoster.Role.COMMAND: [&"command"],
+	CrewRoster.Role.ENGINEERING: [&"engineering"],
+	CrewRoster.Role.DAMAGE_CONTROL: [&"workshop", &"access"],
+	CrewRoster.Role.WEAPONS: [&"magazine", &"command"],
+}
+## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
+const SHIP_AI_FACTOR := 0.5
+const REACTOR_BLAST_RADIUS_M := 15.0
+## Structure points / system hit points destroyed at the blast centre.
+const REACTOR_BLAST_STRUCTURE := 150.0
+const REACTOR_BLAST_HP := 90.0
+## Rooms whose centre is within this fraction of the radius are breached.
+const REACTOR_BLAST_BREACH_FRACTION := 0.6
 const NO_GUN_CREW_RATE_FACTOR := 0.5
 const FIELD_REPAIR_ORDER := {
 	EquipmentDefinition.Kind.REACTOR: 0,
@@ -135,6 +165,14 @@ var repair_task: RepairTask
 var crew: CrewRoster
 ## Taken by a boarding party: it surrenders and stops fighting.
 var captured: bool = false
+## Reactor explosions not yet shown: {pos_body, radius, lines}.
+var explosions: Array[Dictionary] = []
+## Power distribution pips per Channel.
+var pips: Array[int] = [2, 2, 2]
+## Player's pick for the next field repair ("" = default order).
+var preferred_repair_id: String = ""
+## Crew walking to take over a role: member id -> {role, room, left_s}.
+var crew_orders: Dictionary = {}
 
 var _attachments: Array[Array] = []
 var _config: ShipConfig
@@ -269,8 +307,51 @@ func damage_equipment(e: EquipmentState, amount: float) -> bool:
 	if e.destroyed():
 		_note("%s %s destroyed" % [e.def.display_name, e.id])
 		solve_power()
+		if e.def.kind == EquipmentDefinition.Kind.REACTOR:
+			_explode(e)
 		return true
 	return false
+
+
+## Reactor containment failure: blast damage falling off linearly with
+## distance from the reactor.
+func _explode(src: EquipmentState) -> void:
+	var blast := {"pos_body": src.body_position, "radius": REACTOR_BLAST_RADIUS_M,
+		"lines": PackedStringArray(["%s %s CONTAINMENT FAILURE — explosion" % [src.def.display_name, src.id]])}
+	explosions.append(blast)
+	_note(blast.lines[0])
+	var c := ShipGrid.CELL_SIZE_M
+	var com := stats.center_of_mass_m
+	for i in modules.size():
+		var center := Vector3(blueprint.modules[i].position) * c + Vector3(grid.module_size(i)) * c * 0.5 - com
+		var k := _blast_falloff(center, src.body_position)
+		if k > 0.0 and damage_module(i, REACTOR_BLAST_STRUCTURE * k):
+			blast.lines.append("Module %s wrecked by the blast" % blueprint.modules[i].id)
+	for i in rooms.size():
+		var cells := ShipGrid.room_cells(blueprint.rooms[i])
+		var center := Vector3.ZERO
+		for cell in cells:
+			center += ShipGrid.cell_center_m(cell)
+		center = center / cells.size() - com
+		if center.distance_to(src.body_position) < REACTOR_BLAST_RADIUS_M * REACTOR_BLAST_BREACH_FRACTION and breach_room(i):
+			blast.lines.append("%s %s breached by the blast" % [_room_name(i), blueprint.rooms[i].id])
+	for e in equipment:
+		if e == src or e.destroyed():
+			continue
+		var k := _blast_falloff(e.body_position, src.body_position)
+		if k > 0.0 and damage_equipment(e, REACTOR_BLAST_HP * k):
+			blast.lines.append("%s %s destroyed by the blast" % [e.def.display_name, e.id])
+
+
+func _blast_falloff(p: Vector3, center: Vector3) -> float:
+	return clampf(1.0 - p.distance_to(center) / REACTOR_BLAST_RADIUS_M, 0.0, 1.0)
+
+
+## Explosions since the last call (for flashes and HUD).
+func take_explosions() -> Array[Dictionary]:
+	var out := explosions
+	explosions = []
+	return out
 
 
 ## Returns true if this wrecked the module.
@@ -462,7 +543,9 @@ func tick(ship: ShipState, dt: float) -> bool:
 		for e in equipment:
 			if not e.def.is_external() and damage_equipment(e, OVERHEAT_DAMAGE_PER_S * dt):
 				changed = true
-	if repair_task != null and _advance_repair(dt):
+	if repair_task != null and _advance_repair(dt * channel_factor(Channel.SYS)):
+		changed = true
+	if _advance_crew_orders(dt):
 		changed = true
 	return changed or _config == null
 
@@ -518,8 +601,27 @@ func effective_config() -> ShipConfig:
 	for axis in 3:
 		if torque[axis] <= 0.0:
 			cfg.assist_max_rate_rad_s[axis] = 0.0
+	var eng := channel_factor(Channel.ENG)
+	var sys := channel_factor(Channel.SYS)
+	cfg.thrust_forward_n *= eng
+	cfg.thrust_reverse_n *= eng
+	cfg.thrust_lateral_n *= eng
+	cfg.thrust_vertical_n *= eng
+	cfg.thrust_torque_body *= eng
+	cfg.max_torque_nm *= sys
+	cfg.assist_max_rate_rad_s *= sys
+	if cfg.cannon != null and channel_factor(Channel.WEP) != 1.0:
+		var boosted: KineticCannonConfig = cfg.cannon.duplicate()
+		boosted.rate_of_fire_rpm *= channel_factor(Channel.WEP)
+		cfg.cannon = boosted
 	if not has_command():
-		cfg.assist_max_rate_rad_s *= NO_COMMAND_RATE_FACTOR
+		# Ship AI in control: limited mobility.
+		cfg.assist_max_rate_rad_s *= SHIP_AI_FACTOR
+		cfg.thrust_forward_n *= SHIP_AI_FACTOR
+		cfg.thrust_reverse_n *= SHIP_AI_FACTOR
+		cfg.thrust_lateral_n *= SHIP_AI_FACTOR
+		cfg.thrust_vertical_n *= SHIP_AI_FACTOR
+		cfg.thrust_torque_body *= SHIP_AI_FACTOR
 	if cfg.cannon != null and not has_gun_crew():
 		var gun: KineticCannonConfig = cfg.cannon.duplicate()
 		gun.rate_of_fire_rpm *= NO_GUN_CREW_RATE_FACTOR
@@ -531,6 +633,96 @@ func effective_config() -> ShipConfig:
 ## Something outside (crew casualties, capture) changed what the ship can do.
 func invalidate() -> void:
 	_config = null
+
+
+# --- Power distribution ---------------------------------------------------------
+
+func channel_factor(ch: Channel) -> float:
+	return 0.5 + 0.25 * pips[ch]
+
+
+## Move one pip into `ch` from the fullest other channel. False if it is
+## already at the maximum.
+func divert(ch: Channel) -> bool:
+	if pips[ch] >= PIPS_MAX:
+		return false
+	var donor := -1
+	for other in Channel.size():
+		if other != ch and pips[other] > 0 and (donor < 0 or pips[other] > pips[donor]):
+			donor = other
+	if donor < 0:
+		return false
+	pips[donor] -= 1
+	pips[ch] += 1
+	_config = null
+	return true
+
+
+func balance_power() -> void:
+	pips = [2, 2, 2]
+	_config = null
+
+
+# --- Crew orders --------------------------------------------------------------------
+
+## Room a crew role works from (-1 if the ship has none).
+func station_for(role: int) -> int:
+	for room_role_name in ROLE_STATIONS.get(role, []):
+		for i in blueprint.rooms.size():
+			if room_role(i) == room_role_name and rooms[i].pressurized:
+				return i
+	return -1
+
+
+## Send the nearest free general crew member to take over `role`. Returns
+## "" on success, or why it can't be done.
+func cover_role(role: int) -> String:
+	if crew == null or not ROLE_STATIONS.has(role):
+		return "that role can't be covered"
+	var dest := station_for(role)
+	if dest < 0:
+		return "no pressurised %s station" % CrewRoster.ROLE_NAMES[role]
+	var best: CrewRoster.Member
+	var best_path: Array[int] = []
+	for m in crew.members:
+		if m.role != CrewRoster.Role.GENERAL or not m.available() or m.location < 0 or crew_orders.has(m.id):
+			continue
+		var path := route(m.location, dest)
+		if not path.is_empty() and (best == null or path.size() < best_path.size()):
+			best = m
+			best_path = path
+	if best == null:
+		return "no free general crew can reach the %s station" % CrewRoster.ROLE_NAMES[role]
+	best.busy = true
+	crew_orders[best.id] = {"role": role, "room": dest, "left_s": (best_path.size() - 1) * CrewRoster.ROOM_TRANSIT_S}
+	_note("%s (general) heading to cover %s — %.0f s" % [best.id, CrewRoster.ROLE_NAMES[role], crew_orders[best.id].left_s])
+	return ""
+
+
+## Returns true when someone took over a role (the flight config changes).
+func _advance_crew_orders(dt: float) -> bool:
+	var changed := false
+	for id in crew_orders.keys():
+		var m := crew.by_id(id)
+		var order: Dictionary = crew_orders[id]
+		if m == null or not m.fit() or not rooms[order.room].pressurized:
+			if m != null:
+				m.busy = false
+			crew_orders.erase(id)
+			continue
+		order.left_s -= dt
+		if order.left_s > 0.0:
+			continue
+		m.role = order.role
+		m.station = order.room
+		m.location = order.room
+		m.busy = false
+		crew_orders.erase(id)
+		_note("%s now covering %s" % [id, CrewRoster.ROLE_NAMES[m.role]])
+		changed = true
+	if changed:
+		_config = null
+	return changed
 
 
 # --- Crew ------------------------------------------------------------------------
@@ -815,6 +1007,8 @@ func field_repair_target() -> EquipmentState:
 	for e in equipment:
 		if e.destroyed() or e.hp >= FIELD_REPAIR_LIMIT * e.max_hp - 1e-6 or not can_reach(e):
 			continue
+		if e.id == preferred_repair_id:
+			return e
 		if best == null or _repair_rank(e) < _repair_rank(best):
 			best = e
 	return best

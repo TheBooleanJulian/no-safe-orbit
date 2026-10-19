@@ -34,17 +34,17 @@ func _ready() -> void:
 
 
 ## Show what salvaging `wreck_name` produced.
-func show_salvage(wreck_name: String, intact: float, parts: int, drops: Array[LootRoller.Drop], profile: PlayerProfile) -> void:
+func show_salvage(wreck_name: String, intact: float, parts: int, drops: Array[LootRoller.Drop], profile: PlayerProfile, bounty: int = 0) -> void:
 	_header = PackedStringArray([
 		"[b]SALVAGE — %s[/b]   wreck %d%% intact" % [wreck_name, roundi(intact * 100.0)],
-		"+%d spare parts recovered" % parts,
-		"%d salvage crate%s:" % [drops.size(), "" if drops.size() == 1 else "s"],
+		"+%d credits bounty (paid)   ·   +%d spare parts into the hold" % [bounty, parts],
+		"%d salvage crate%s into the hold — bank them at the station:" % [drops.size(), "" if drops.size() == 1 else "s"],
 	])
 	_drops = drops
 	var pity := profile.pity_countdown()
 	_footer = PackedStringArray([
 		"",
-		"Spare parts %d  ·  Rare+ guaranteed in %d  ·  Legendary in %d" % [profile.spare_parts, pity.x, pity.y],
+		"Credits %d  ·  Rare+ guaranteed in %d  ·  Legendary in %d" % [profile.credits, pity.x, pity.y],
 		"[color=#8899aa]Rates %s[/color]" % LootRoller.rates_text(),
 		"[color=#8899aa][G] close — next contact inbound[/color]",
 	])

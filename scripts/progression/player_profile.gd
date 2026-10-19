@@ -1,20 +1,30 @@
 class_name PlayerProfile
 extends RefCounted
-## The player's persistent state (spec §15): spare parts, the parts and
-## blueprints found in salvage, loot pity, and the vessel in the hangar.
+## The player's persistent state (spec §15): credits, what is banked at the
+## station (spare parts, parts and blueprints found in salvage), loot pity,
+## and the vessel in the hangar with whatever is in its cargo hold.
 ## Saved as versioned JSON (plain data, never code) at `path`.
 ##
 ## Ownership model (docs/ARCHITECTURE.md → Progression):
 ## - COMMON parts: unlimited, fabricated from spare parts.
-## - Rarer equipment: `inventory[id]` units owned in total, installed or not.
-##   A design may use at most that many.
-## - Rarer hull modules and rooms: blueprints, unlocked once found.
-## - A rarer unit destroyed in flight is written off when the vessel docks;
-##   a lost vessel writes off every rarer unit it carried.
+## - Rarer equipment: `inventory[id]` units banked in total, installed or
+##   not. A design may use at most that many.
+## - Rarer hull modules and rooms: blueprints, unlocked once banked.
+## - Salvage goes into the vessel's cargo hold. It is only safe once banked
+##   at the station (bank_cargo). Losing the vessel loses the cargo — and
+##   only the cargo: a respawn fee in credits rehires, rebuilds and rearms
+##   the same design.
 
-const SCHEMA_VERSION := 1
+const SCHEMA_VERSION := 2
 const DEFAULT_PATH := "user://profile.json"
 const STARTING_SPARE_PARTS := 60
+const STARTING_CREDITS := 300
+## Respawn: base fee plus a fee per berth (rehiring the crew).
+const RESPAWN_BASE_FEE := 50
+const RESPAWN_FEE_PER_BERTH := 5
+## Station shop: spare parts bought in lots.
+const PARTS_LOT := 10
+const PARTS_LOT_PRICE := 25
 ## Spare parts a duplicate blueprint is scrapped for, by rarity.
 const DUPLICATE_SPARES := [0, 10, 25, 60, 150]
 const LOOT_LOG_LIMIT := 40
@@ -23,6 +33,9 @@ const LOOT_LOG_LIMIT := 40
 static var path := DEFAULT_PATH
 
 var spare_parts: int = STARTING_SPARE_PARTS
+var credits: int = STARTING_CREDITS
+## The last sortie's debrief (CombatLog.to_dict()), {} = none.
+var last_debrief: Dictionary = {}
 var inventory: Dictionary = {}  # equipment id (String) -> units owned
 var unlocks: Dictionary = {}    # hull/room id (String) -> true
 var pity: Dictionary = {"since_rare": 0, "since_legendary": 0}
@@ -96,7 +109,7 @@ static func rare_units(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Dicti
 
 # --- Loot ------------------------------------------------------------------------
 
-## Pull `n` drops and grant them. Returns the drops in order.
+## Roll `n` drops (not yet stowed or banked). Returns them in order.
 func pull(n: int, catalog: ConstructionCatalog) -> Array[LootRoller.Drop]:
 	var pool := LootRoller.build_pool(catalog)
 	var out: Array[LootRoller.Drop] = []
@@ -104,12 +117,60 @@ func pull(n: int, catalog: ConstructionCatalog) -> Array[LootRoller.Drop]:
 		var d := LootRoller.pull(_rng, pool, pity)
 		if d == null:
 			break
-		grant(d)
 		total_pulls += 1
 		out.append(d)
 	return out
 
 
+## Put a drop in the vessel's cargo hold (at risk until banked).
+func stow(d: LootRoller.Drop) -> void:
+	var cargo := vessel.cargo
+	match d.kind:
+		&"spares":
+			cargo["spare_parts"] = int(cargo.get("spare_parts", 0)) + d.amount
+		&"equipment":
+			var eq: Dictionary = cargo.get_or_add("equipment", {})
+			eq[String(d.def_id)] = int(eq.get(String(d.def_id), 0)) + 1
+		_:
+			var bps: Dictionary = cargo.get_or_add("blueprints", {})
+			bps[String(d.def_id)] = [String(d.kind), d.rarity, int(bps.get(String(d.def_id), [0, 0, 0])[2]) + 1]
+	loot_log.append("%s: %s (in cargo)" % [Rarity.name_of(d.rarity), d.describe()])
+	if loot_log.size() > LOOT_LOG_LIMIT:
+		loot_log.remove_at(0)
+
+
+## Unload the cargo hold into the station bank. Returns what was banked.
+func bank_cargo(catalog: ConstructionCatalog) -> PackedStringArray:
+	var out := PackedStringArray()
+	var cargo := vessel.cargo
+	var parts := int(cargo.get("spare_parts", 0))
+	if parts > 0:
+		spare_parts += parts
+		out.append("%d spare parts" % parts)
+	var eq: Dictionary = cargo.get("equipment", {})
+	for id in eq:
+		inventory[str(id)] = owned(StringName(id)) + int(eq[id])
+		var def: EquipmentDefinition = catalog.equipment.get(StringName(id))
+		out.append("%s ×%d" % [def.display_name if def != null else str(id), int(eq[id])])
+	var bps: Dictionary = cargo.get("blueprints", {})
+	for id in bps:
+		var entry: Array = bps[id]
+		for k in int(entry[2]):
+			var d := LootRoller.Drop.new()
+			d.kind = StringName(entry[0])
+			d.def_id = StringName(id)
+			d.rarity = int(entry[1])
+			var table: Dictionary = catalog.hull if d.kind == &"hull" else catalog.rooms
+			d.display_name = table[d.def_id].display_name if table.has(d.def_id) else str(id)
+			_bank_blueprint(d)
+			out.append(d.describe())
+	vessel.cargo = {}
+	if not out.is_empty():
+		vessel.record("Banked: %s" % ", ".join(out))
+	return out
+
+
+## Bank a drop directly (no cargo stage).
 func grant(d: LootRoller.Drop) -> void:
 	match d.kind:
 		&"spares":
@@ -117,15 +178,28 @@ func grant(d: LootRoller.Drop) -> void:
 		&"equipment":
 			inventory[String(d.def_id)] = owned(d.def_id) + 1
 		_:
-			if unlocks.has(String(d.def_id)):
-				d.duplicate = true
-				d.amount = DUPLICATE_SPARES[d.rarity]
-				spare_parts += d.amount
-			else:
-				unlocks[String(d.def_id)] = true
+			_bank_blueprint(d)
 	loot_log.append("%s: %s" % [Rarity.name_of(d.rarity), d.describe()])
 	if loot_log.size() > LOOT_LOG_LIMIT:
 		loot_log.remove_at(0)
+
+
+func _bank_blueprint(d: LootRoller.Drop) -> void:
+	if unlocks.has(String(d.def_id)):
+		d.duplicate = true
+		d.amount = DUPLICATE_SPARES[d.rarity]
+		spare_parts += d.amount
+	else:
+		unlocks[String(d.def_id)] = true
+
+
+## Buy a lot of spare parts at the station. False if credits are short.
+func buy_spare_parts() -> bool:
+	if credits < PARTS_LOT_PRICE:
+		return false
+	credits -= PARTS_LOT_PRICE
+	spare_parts += PARTS_LOT
+	return true
 
 
 ## Pulls left until each pity guarantee (1 = the next pull).
@@ -143,19 +217,10 @@ func ensure_vessel(bp: ShipBlueprint) -> ShipInstance:
 	return vessel
 
 
-## Back from a sortie with `after` (ShipSystems.condition()). Rarer units
-## destroyed during the sortie are written off. Returns what was lost.
-func dock(after: Dictionary, catalog: ConstructionCatalog) -> PackedStringArray:
+## Back at the station with `after` (ShipSystems.condition()): the vessel
+## keeps its damage (repairs are paid for at the yard).
+func dock(after: Dictionary, _catalog: ConstructionCatalog) -> PackedStringArray:
 	var lost := PackedStringArray()
-	var before: Dictionary = vessel.condition.get("equipment", {})
-	var now: Dictionary = after.get("equipment", {})
-	for e in vessel.blueprint.equipment:
-		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
-		if def == null or def.rarity == Rarity.Tier.COMMON:
-			continue
-		if float(now.get(e.id, 1.0)) <= 0.0 and float(before.get(e.id, 1.0)) > 0.0:
-			inventory[String(e.def_id)] = maxi(owned(e.def_id) - 1, 0)
-			lost.append("%s %s destroyed — written off" % [def.display_name, e.id])
 	vessel.condition = after.duplicate(true)
 	# The wounded recover ashore; the dead must be replaced (ServiceYard).
 	var crew: Dictionary = vessel.condition.get("crew", {})
@@ -169,20 +234,34 @@ func dock(after: Dictionary, catalog: ConstructionCatalog) -> PackedStringArray:
 	return lost
 
 
-## The vessel was lost: every rarer unit aboard that was still intact is
-## written off; the fleet issues a new hull of the same design (the
-## blueprint survives — spec §13).
+## Respawn fee for the vessel's design: rehire, rebuild, rearm.
+func respawn_fee(catalog: ConstructionCatalog) -> int:
+	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
+	return RESPAWN_BASE_FEE + RESPAWN_FEE_PER_BERTH * stats.crew_capacity
+
+
+## The vessel was lost. Only its cargo goes with it: the station rehires,
+## rebuilds and rearms the same design (parts installed in it included)
+## for the respawn fee in credits (as much as the player has). Returns what
+## was lost and paid.
 func lose_vessel(catalog: ConstructionCatalog) -> PackedStringArray:
 	var lost := PackedStringArray()
-	for e in vessel.blueprint.equipment:
-		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
-		if def == null or def.rarity == Rarity.Tier.COMMON or vessel.equipment_fraction(e.id) <= 0.0:
-			continue
-		inventory[String(e.def_id)] = maxi(owned(e.def_id) - 1, 0)
-		lost.append("%s %s lost with the ship" % [def.display_name, e.id])
+	var cargo := vessel.cargo
+	if int(cargo.get("spare_parts", 0)) > 0:
+		lost.append("%d spare parts in the hold lost" % int(cargo.spare_parts))
+	for id in cargo.get("equipment", {}):
+		lost.append("%s ×%d in the hold lost" % [id, int(cargo.equipment[id])])
+	for id in cargo.get("blueprints", {}):
+		lost.append("%s blueprint in the hold lost" % id)
+	var fee := respawn_fee(catalog)
+	var paid := mini(fee, credits)
+	credits -= paid
+	lost.append("Respawn fee: %d credits (rehire, rebuild, rearm)%s" % [paid, "" if paid == fee else " — all you had (%d due)" % fee])
 	var replacement := ShipInstance.fresh(vessel.blueprint)
 	replacement.history = vessel.history.duplicate()
-	replacement.record("%s lost after %d sorties; replacement hull issued" % [vessel.name, vessel.sorties])
+	replacement.sorties = vessel.sorties
+	replacement.salvaged = vessel.salvaged
+	replacement.record("%s lost on sortie %d; rebuilt to the same design for %d credits" % [vessel.name, vessel.sorties + 1, paid])
 	vessel = replacement
 	vessels_lost += 1
 	return lost
@@ -194,6 +273,8 @@ func to_dict() -> Dictionary:
 	return {
 		"schema_version": SCHEMA_VERSION,
 		"spare_parts": spare_parts,
+		"credits": credits,
+		"last_debrief": last_debrief.duplicate(true),
 		"inventory": inventory.duplicate(),
 		"unlocks": unlocks.keys(),
 		"pity": pity.duplicate(),
@@ -215,9 +296,12 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 	if int(version) > SCHEMA_VERSION:
 		errors.append("Profile schema %d is newer than this game supports (%d)" % [int(version), SCHEMA_VERSION])
 		return null
-	# Future schema migrations go here, oldest first.
+	# Migrations, oldest first. v1 → v2: credits and cargo added (defaults).
 	var p := PlayerProfile.new(1)
 	p.spare_parts = int(d.get("spare_parts", STARTING_SPARE_PARTS))
+	p.credits = int(d.get("credits", STARTING_CREDITS))
+	var debrief: Variant = d.get("last_debrief", {})
+	p.last_debrief = (debrief as Dictionary).duplicate(true) if debrief is Dictionary else {}
 	var inv: Variant = d.get("inventory", {})
 	if inv is Dictionary:
 		for k in inv:

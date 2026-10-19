@@ -47,6 +47,8 @@ var next_room: int = -1
 var log: PackedStringArray = PackedStringArray()
 ## Lines ever written to `log` (it keeps only the last LOG_LIMIT).
 var log_count: int = 0
+## Target rooms the boarders have cleared and hold (room index -> true).
+var captured_rooms: Dictionary = {}
 
 var _locked: Dictionary = {}  # hatch id -> true: locked by defenders
 var _cut: Dictionary = {}     # hatch id -> true: cut open by the boarders
@@ -56,7 +58,7 @@ var _casualties: int = 0
 
 
 ## Start a boarding over a sealed link. Returns null if nobody can go.
-static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: ShipSystems) -> BoardingAction:
+static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: ShipSystems, max_team: int = MAX_TEAM) -> BoardingAction:
 	if p_link == null or not p_link.sealed() or p_attacker.crew == null:
 		return null
 	var b := BoardingAction.new()
@@ -67,7 +69,7 @@ static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: Ship
 	var muster := 0.0
 	for role in [CrewRoster.Role.SECURITY, CrewRoster.Role.GENERAL]:
 		for m in p_attacker.crew.members:
-			if b.team.size() >= MAX_TEAM or m.role != role or not m.available():
+			if b.team.size() >= mini(max_team, MAX_TEAM) or m.role != role or not m.available():
 				continue
 			var path := p_attacker.route(m.location, p_link.a_port.room)
 			if path.is_empty():
@@ -108,6 +110,25 @@ func strength(members: Array[CrewRoster.Member]) -> float:
 	for m in members:
 		s += CrewRoster.COMBAT_STRENGTH[m.role]
 	return s
+
+
+## Control of each target room, for the boarding overlays: room index ->
+## &"held" (cleared by the boarders), &"contested" (fighting now) or
+## &"defended" (fit defenders there). Rooms nobody holds are left out.
+func room_control() -> Dictionary:
+	var out := {}
+	for i in defender.blueprint.rooms.size():
+		var defenders := defenders_in(i)
+		if i == room and not defenders.is_empty() and not fit_team().is_empty():
+			out[i] = &"contested"
+		elif captured_rooms.has(i) and (defenders.is_empty() or defender.captured):
+			out[i] = &"held"
+		elif not defenders.is_empty():
+			out[i] = &"defended"
+	if phase == Phase.CAPTURED:
+		for i in defender.blueprint.rooms.size():
+			out[i] = &"held"
+	return out
 
 
 ## Order the team home.
@@ -159,6 +180,7 @@ func step(dt: float) -> void:
 		Phase.ABOARD:
 			if _fight(dt):
 				return
+			captured_rooms[room] = true
 			if room == objective:
 				_capture()
 				return

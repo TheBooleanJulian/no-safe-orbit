@@ -133,12 +133,12 @@ func dock(attacker_id: StringName, target_id: StringName) -> Dictionary:
 
 
 ## Send a boarding party over a sealed gangway (null if it can't go).
-func start_boarding(link: DockingLink) -> BoardingAction:
+func start_boarding(link: DockingLink, max_team: int = BoardingAction.MAX_TEAM) -> BoardingAction:
 	if link == null or not link.sealed() or boarding_for(link) != null:
 		return null
 	var a := get_ship(link.attacker_id)
 	var b := get_ship(link.target_id)
-	var action := BoardingAction.start(link, a.systems, b.systems)
+	var action := BoardingAction.start(link, a.systems, b.systems, max_team)
 	if action != null:
 		boardings.append(action)
 	return action
@@ -199,6 +199,10 @@ func step() -> void:
 		if not ship.is_active():
 			continue
 		var input: ShipControlInput = _inputs.get(id, _neutral_input)
+		if ship.systems != null and not ship.systems.has_command() and not input.flight_assist:
+			# Ship AI in control: it always flies with assist.
+			input = ShipControlInput.create(input.translation, input.rotation, true)
+			input.fire = _inputs.get(id, _neutral_input).fire
 		_resolve_hold(input)
 		ShipDynamics.step(ship, input, fixed_dt, frame)
 		_update_cannon(ship, input, spawned)

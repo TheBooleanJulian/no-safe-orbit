@@ -102,6 +102,18 @@ func test_default_crew_fills_the_berths_by_role() -> void:
 		"command crew start on the bridge")
 
 
+func test_ship_ai_flies_with_assist_when_the_bridge_is_lost() -> void:
+	var world := WorldSimulation.new(DT)
+	var ship := _ship(_template(), &"s")
+	world.add_ship(ship)
+	_kill(ship.systems, CrewRoster.Role.COMMAND)
+	ship.config = ship.systems.effective_config()
+	ship.angular_velocity = Vector3(0, 0.2, 0)
+	world.set_input(&"s", ShipControlInput.neutral())  # manual, no input
+	_run(world, 20.0)
+	assert_near(ship.angular_velocity.length(), 0.0, 1e-3, "the ship AI damps the spin even though the pilot chose manual (rad/s)")
+
+
 func test_venting_a_room_hurts_its_occupants_and_command() -> void:
 	var ship := _ship(_template(), &"s")
 	var rate := ship.config.assist_max_rate_rad_s
@@ -111,7 +123,8 @@ func test_venting_a_room_hurts_its_occupants_and_command() -> void:
 	assert_true(cmd[0].state == CrewRoster.State.WOUNDED and cmd[1].state == CrewRoster.State.DEAD,
 		"bridge vents: one commander wounded, one killed")
 	assert_true(not ship.systems.has_command(), "no command crew on a pressurised bridge")
-	assert_vec_near(ship.config.assist_max_rate_rad_s, rate * ShipSystems.NO_COMMAND_RATE_FACTOR, 1e-6, "assist turn rates halved (rad/s)")
+	assert_vec_near(ship.config.assist_max_rate_rad_s, rate * ShipSystems.SHIP_AI_FACTOR, 1e-6, "ship AI flies it: turn rates limited (rad/s)")
+	assert_near(ship.config.thrust_forward_n, ship.systems.base_config.thrust_forward_n * ShipSystems.SHIP_AI_FACTOR, 1e-3, "and main thrust limited (N)")
 	assert_true(ship.systems.event_log[-1].contains("1 killed, 1 wounded"), "log says so: %s" % ship.systems.event_log[-1])
 
 

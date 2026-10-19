@@ -116,13 +116,13 @@ func test_impact_pushes_and_spins_the_target() -> void:
 	shot.weapon = weak
 	shot.position = Vector3(3.5 * CELL, 1.5 * CELL, -20.0) - com
 	shot.prev_position = shot.position
-	shot.velocity = Vector3(0, 0, 1500)
+	shot.velocity = Vector3(0, 0, weak.muzzle_velocity_mps)
 	world.projectiles().append(shot)
 	for i in 3:
 		world.step()
 	var hits := world.take_hit_events()
 	assert_true(hits.size() == 1 and hits[0].report.stopped_by_armor, "round stopped by armour")
-	var j := weak.round_mass_kg * 1500.0
+	var j := weak.round_mass_kg * weak.muzzle_velocity_mps
 	assert_near(target.velocity.z, j / target.mass_kg(), 1e-6, "target pushed by the full round momentum (m/s)")
 	assert_true(target.angular_velocity.length() > 1e-7, "off-centre hit spins the target (%s)" % target.angular_velocity)
 	assert_true(world.round_count() == 0, "stopped round is gone")

@@ -12,12 +12,11 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **The enemy is only a gunner.** With T it turns and shoots; it doesn't
   manoeuvre, evade, manage heat or retreat. It is passive by default.
   (Directives and tactics: Milestone 6.)
-- **Docking is abstract.** B docks from anywhere; there is no station to fly
-  back to, and propellant and ammunition are refilled free at every launch.
+- **The station is abstract.** B docks from anywhere; there is no station to
+  fly back to, and propellant and ammunition are refilled free at every
+  launch. The cargo hold has no capacity limit yet.
 - **Loot balance is untested by play.** Rates, pity, costs and salvage yields
   are tested for correctness, not for fun; expect tuning.
-- **Every enemy is the same Common-parts Kestrel**, and loot comes from crates
-  rather than the wreck's own fitted parts.
 - **Crew are abstract.** Roles, stations, routes and casualties are
   modelled; skills, morale, medical treatment in flight and individual
   equipment are not. The wounded only recover at the yard.
@@ -27,8 +26,8 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   whether that is fun needs a person to try it.
 - **One gun type per ship.** Mixed batteries (e.g. railgun + autocannon) are
   refused because one fire-control solution serves every mount.
-- **Ship geometry is placeholder boxes.** Wrecked modules turn dark and
-  destroyed external systems disappear, but nothing breaks off.
+- **Ship geometry is boxes with procedural plating.** Wrecked modules turn
+  dark and destroyed external systems disappear, but nothing breaks off.
 - **Earth's texture is 5400 × 2700 (~7.4 km per pixel)**, the October Blue
   Marble composite, with procedural detail on top; from 400 km straight down
   the ground is still a little soft. Clouds are procedural, not
@@ -43,6 +42,11 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **In-game rebinding covers keys, mouse buttons and gamepad buttons/axes**;
   the mouse virtual stick itself is fixed to mouse movement.
 - **No audio.** (Milestone 8.)
+
+## Fixed (2026-10-19, third pass)
+
+Enemies vary and escalate by mission · salvage strips the wreck's best intact
+rare part · Earth texture 5400 × 2700.
 
 ## Design decisions (not defects)
 

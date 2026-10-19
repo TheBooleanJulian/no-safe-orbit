@@ -33,6 +33,11 @@ const ACTIONS := [
 	[&"field_repair", "Damage control (workshop repair)"],
 	[&"dock", "Extend / release gangway"],
 	[&"board", "Send boarders / withdraw"],
+	[&"divert_sys", "Divert power to systems"],
+	[&"divert_eng", "Divert power to engines"],
+	[&"divert_wep", "Divert power to weapons"],
+	[&"divert_balance", "Balance power"],
+	[&"tactical_overview", "Tactical overview / crew"],
 	[&"release_mouse", "Release mouse"],
 	[&"toggle_controls", "Controls panel"],
 ]

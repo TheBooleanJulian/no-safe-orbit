@@ -5,6 +5,11 @@ extends PanelContainer
 ## the systems it damaged or destroyed, the rooms it breached — from the
 ## damage report's recorded path. A more severe hit replaces the one playing;
 ## a lesser one waits until the current replay has had its time.
+##
+## Boarding mode: while your boarders are aboard another ship, the same
+## X-ray view shows its rooms coloured by who holds them (cyan = taken,
+## pulsing magenta = being fought over, red = defended) and the team's
+## position. It takes priority over hit replays.
 
 const REPLAY_S := 2.2      # tracer flight from entry to end of path
 const HOLD_S := 3.0        # then the result stays up
@@ -41,6 +46,13 @@ var _severity := -1
 var _orbit_axis := Vector3.UP
 var _cam_offset := Vector3.ZERO
 var _focus := Vector3.ZERO
+var _boarding: BoardingAction
+var _boarding_name := ""
+var _boarding_done_age := 0.0
+var _room_boxes: Dictionary = {}  # room index -> StandardMaterial3D
+var _team_marker: MeshInstance3D
+var _room_centers: Dictionary = {}  # room index -> Vector3 (body)
+const BOARDING_HOLD_S := 6.0
 
 
 ## Should a hit of `new_severity` replace the replay currently showing?
@@ -94,7 +106,7 @@ func _ready() -> void:
 ## Replay a hit. `design` = {blueprint, grid, stats} of the struck ship.
 func show_hit(ev: HitEvent, design: Dictionary, systems: ShipSystems, target_name: String) -> void:
 	var report := ev.report
-	if report == null or report.path_body.size() < 1:
+	if report == null or report.path_body.size() < 1 or _boarding != null:
 		return
 	if not should_replace(visible, _age, _severity, report.severity()):
 		return
@@ -110,6 +122,9 @@ func _process(delta: float) -> void:
 	if not visible:
 		return
 	_age += delta
+	if _boarding != null:
+		_update_boarding(delta)
+		return
 	var k := clampf(_age / REPLAY_S, 0.0, 1.0)
 	var travelled := _path_length * _ease(k)
 	_draw_trail(travelled)
@@ -138,12 +153,87 @@ func _caption_for(report: DamageReport) -> String:
 	return "\n".join(lines.slice(0, 4))
 
 
-func _build_scene(report: DamageReport, design: Dictionary, systems: ShipSystems) -> void:
+## Show a boarding action on `systems` (the boarded ship) until it ends.
+func show_boarding(boarding: BoardingAction, design: Dictionary, systems: ShipSystems, target_name: String) -> void:
+	if _boarding == boarding:
+		return
+	_boarding = boarding
+	_boarding_name = target_name
+	_boarding_done_age = 0.0
+	_age = 0.0
+	visible = true
+	_new_root()
+	_build_hull(design, systems, null)
+	var bp: ShipBlueprint = design.blueprint
+	var c := ShipGrid.CELL_SIZE_M
+	var com: Vector3 = (design.stats as ShipStats).center_of_mass_m
+	_room_boxes.clear()
+	_room_centers.clear()
+	for i in bp.rooms.size():
+		var r := bp.rooms[i]
+		var size := Vector3(r.rect.size.x, 1, r.rect.size.y) * c
+		var center := Vector3(r.rect.position.x, r.deck, r.rect.position.y) * c + size * 0.5 - com
+		var mat := _flat(Color(0, 0, 0, 0), true)
+		_box(size * 0.96, center, mat)
+		_room_boxes[i] = mat
+		_room_centers[i] = center
+	_team_marker = _sphere(1.0, Vector3.ZERO, _flat(CyberTheme.CYAN, false, 3.0))
+	_team_marker.visible = false
+	_focus = Vector3.ZERO
+	_orbit_axis = Vector3.UP
+	var reach := maxf((design.stats as ShipStats).hull_bounds_m.size.length() * 0.7, 30.0)
+	_cam_offset = Vector3(0.8, 0.9, 0.5).normalized() * reach
+	_update_boarding(0.0)
+
+
+func _update_boarding(delta: float) -> void:
+	var b := _boarding
+	var control := b.room_control()
+	for i in _room_boxes:
+		(_room_boxes[i] as StandardMaterial3D).albedo_color = ShipSchematic.control_color(control.get(i, &""), _age)
+	_team_marker.visible = b.room >= 0 and not b.fit_team().is_empty()
+	if _team_marker.visible:
+		_team_marker.position = _room_centers.get(b.room, Vector3.ZERO) + Vector3(0, 1.5, 0)
+	var spin := Basis(_orbit_axis, 0.12 * _age)
+	_camera.look_at_from_position(_focus + spin * _cam_offset, _focus, _orbit_axis)
+	_title.text = "BOARDING — %s · %s · team %d/%d" % [_boarding_name, BoardingAction.PHASE_NAMES[b.phase].to_upper(), b.fit_team().size(), b.team.size()]
+	_caption.text = "
+".join(b.log.slice(maxi(b.log.size() - 3, 0)))
+	if b.finished():
+		_boarding_done_age += delta
+		if _boarding_done_age > BOARDING_HOLD_S:
+			stop_boarding()
+
+
+func stop_boarding() -> void:
+	_boarding = null
+	visible = false
+	_severity = -1
+
+
+func showing_boarding() -> bool:
+	return _boarding != null
+
+
+func _new_root() -> void:
 	if _root != null:
 		_root.queue_free()
 	_markers.clear()
 	_root = Node3D.new()
 	_viewport.add_child(_root)
+	_trail_mesh = null
+
+
+func _build_scene(report: DamageReport, design: Dictionary, systems: ShipSystems) -> void:
+	_new_root()
+	_build_hull(design, systems, report)
+	var stats: ShipStats = design.stats
+	_build_report(report, design.blueprint, stats.center_of_mass_m, ShipGrid.CELL_SIZE_M, stats)
+
+
+## Hull boxes and edges, and every system coloured by condition (marked by
+## `report` when given).
+func _build_hull(design: Dictionary, systems: ShipSystems, report: DamageReport) -> void:
 	var light := DirectionalLight3D.new()
 	_root.add_child(light)
 	light.look_at_from_position(Vector3.ZERO, Vector3(-0.4, -1.0, -0.5), Vector3.UP)
@@ -169,9 +259,9 @@ func _build_scene(report: DamageReport, design: Dictionary, systems: ShipSystems
 	# Systems coloured by condition.
 	for e in systems.equipment:
 		var color := COLOR_INTACT
-		if report.destroyed_ids.has(e.id):
+		if report != null and report.destroyed_ids.has(e.id):
 			color = COLOR_DESTROYED
-		elif report.damaged_ids.has(e.id):
+		elif report != null and report.damaged_ids.has(e.id):
 			color = COLOR_DAMAGED
 		elif e.destroyed():
 			color = COLOR_DEAD
@@ -182,6 +272,9 @@ func _build_scene(report: DamageReport, design: Dictionary, systems: ShipSystems
 			var fp := grid.equipment_footprint(e.index)
 			size = Vector3(fp.x, 1, fp.y) * c * 0.8
 		_box(size, e.body_position, _flat(color, false))
+
+
+func _build_report(report: DamageReport, bp: ShipBlueprint, com: Vector3, c: float, stats: ShipStats) -> void:
 	# Rooms breached by this hit.
 	for room_id in report.breached_rooms:
 		for r in bp.rooms:

@@ -93,9 +93,6 @@ static func repair_jobs(vessel: ShipInstance, catalog: ConstructionCatalog) -> A
 			j.kind = &"replace"
 			j.cost = equipment_cost(def)
 			j.label = "Replace %s %s (destroyed)" % [def.display_name, e.id]
-			if def.rarity != Rarity.Tier.COMMON:
-				j.needs_unit = e.def_id
-				j.label += " — fits an owned %s unit" % Rarity.name_of(def.rarity).to_lower()
 		else:
 			j.kind = &"repair"
 			j.cost = damaged_cost(equipment_cost(def), 1.0 - frac)
@@ -187,13 +184,11 @@ static func total_cost(jobs: Array[Job]) -> int:
 	return n
 
 
-## Jobs that can be done now: a rarer replacement needs a unit to spare
-## (owned more than the design's other installed units of that type).
-static func available(job: Job, vessel: ShipInstance, profile: PlayerProfile) -> bool:
-	if job.needs_unit == &"" or job.kind != &"replace":
-		return true
-	var installed: int = PlayerProfile.rare_units(vessel.blueprint, ConstructionCatalog.default_catalog()).get(String(job.needs_unit), 0)
-	return profile.owned(job.needs_unit) >= installed
+## Jobs that can be done now. A destroyed rarer part is rebuilt from its
+## wreckage at its fitting cost (it is not written off), so every repair is
+## available; the hook stays for rules that need stock.
+static func available(_job: Job, _vessel: ShipInstance, _profile: PlayerProfile) -> bool:
+	return true
 
 
 ## Repairs chosen by priority within `budget`: categories in the priority's

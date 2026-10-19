@@ -59,9 +59,10 @@ func test_rate_of_fire_and_magazine_limit() -> void:
 	var world := WorldSimulation.new()
 	world.add_ship(ShipState.create(&"s", "S", CONFIG))
 	world.set_input(&"s", _fire_input())
-	for i in 120:  # 2 s at 240 rpm → one shot every 15 ticks
+	for i in 120:  # 2 s of the trigger held
 		world.step()
-	assert_true(world.get_ship(&"s").rounds_fired == 8, "rounds in 2 s at 240 rpm = 8 (got %d)" % world.get_ship(&"s").rounds_fired)
+	var expected := roundi(2.0 * CONFIG.cannon.rate_of_fire_rpm / 60.0)
+	assert_true(world.get_ship(&"s").rounds_fired == expected, "rounds in 2 s at %.0f rpm = %d (got %d)" % [CONFIG.cannon.rate_of_fire_rpm, expected, world.get_ship(&"s").rounds_fired])
 
 	var small: KineticCannonConfig = CONFIG.cannon.duplicate()
 	small.magazine_rounds = 3
@@ -77,7 +78,7 @@ func test_rate_of_fire_and_magazine_limit() -> void:
 func test_flight_time_matches_straight_line_range() -> void:
 	# Stationary target 1500 m ahead. Muzzle is 34 m forward of the centre and
 	# the target box's near face is 26 m aft of its centre, so the round must
-	# cover 1500 − 34 − 26 = 1440 m at 1500 m/s → 0.96 s. Never instant.
+	# cover 1500 − 34 − 26 = 1440 m at the muzzle velocity. Never instant.
 	var world := WorldSimulation.new()
 	world.add_ship(ShipState.create(&"a_shooter", "A", CONFIG))
 	world.add_ship(ShipState.create(&"b_target", "B", CONFIG, Vector3(0, 0, -1500)))
@@ -85,7 +86,7 @@ func test_flight_time_matches_straight_line_range() -> void:
 	world.step()
 	world.set_input(&"a_shooter", ShipControlInput.neutral())
 	var hit_tick := -1
-	for i in 120:
+	for i in 240:
 		world.step()
 		var hits := world.take_hit_events()
 		if not hits.is_empty():
@@ -93,7 +94,7 @@ func test_flight_time_matches_straight_line_range() -> void:
 			break
 	assert_true(hit_tick > 0, "round hit the target")
 	# Fired at the end of tick 1; the hit is recorded in the tick it lands.
-	assert_near((hit_tick - 1) * DT, 1440.0 / 1500.0, DT, "time of flight (s)")
+	assert_near((hit_tick - 1) * DT, 1440.0 / CONFIG.cannon.muzzle_velocity_mps, DT, "time of flight (s)")
 
 
 func test_gravity_acts_on_rounds() -> void:

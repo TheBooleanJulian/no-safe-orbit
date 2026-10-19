@@ -5,9 +5,9 @@ extends Control
 ## to show height above/below the plane; a short tail shows its motion
 ## relative to the player; the label gives range, elevation and closure.
 
-const COLOR_BG := Color(0.03, 0.05, 0.08, 0.72)
-const COLOR_RING := Color(0.35, 0.65, 0.9, 0.5)
-const COLOR_SELF := Color(0.85, 0.9, 1.0, 0.9)
+const COLOR_BG := Color(0.02, 0.02, 0.05, 0.78)
+const COLOR_RING := Color(0.0, 0.94, 1.0, 0.55)
+const COLOR_SELF := Color(0.0, 0.94, 1.0, 0.95)
 ## Tail length = this many seconds of relative motion (clamped).
 const TAIL_SECONDS := 20.0
 
