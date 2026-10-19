@@ -564,6 +564,7 @@ func test_field_repair_is_interrupted_when_the_workshop_vents() -> void:
 	var ship := _ship(_with_workshop())
 	var s := ship.systems
 	s.damage_equipment(s.equipment_by_id("e28"), 30.0)
+	s.fires.clear()  # no fire to confuse the hit points
 	s.start_field_repair()
 	s.tick(ship, 1.0)
 	var workshop := -1

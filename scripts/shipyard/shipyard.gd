@@ -773,6 +773,22 @@ func _build_palette() -> void:
 	CyberTheme.style_button(route, CyberTheme.AMBER)
 	route.pressed.connect(func() -> void: auto_route_bus())
 	box.add_child(route)
+	var cool_row := HBoxContainer.new()
+	var cool := Button.new()
+	cool.text = "Auto-route coolant"
+	cool.tooltip_text = "Pipe a coolant loop from the reactors to every radiator and heat-making system. Once piped, a radiator works only on a loop that reaches a reactor — hits can cut pipes."
+	cool.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	CyberTheme.style_button(cool, CyberTheme.CYAN)
+	cool.pressed.connect(func() -> void:
+		var n := editor.auto_route_coolant()
+		_set_status("Coolant loop: %d pipe cells" % n if n > 0 else "Nothing to pipe: fit a reactor and radiators first", n == 0))
+	cool_row.add_child(cool)
+	var uncool := Button.new()
+	uncool.text = "Clear"
+	uncool.tooltip_text = "Remove the coolant pipes (every radiator then works, as on designs without a loop)"
+	uncool.pressed.connect(func() -> void: _set_status("Removed %d coolant pipe cells" % editor.clear_coolant()))
+	cool_row.add_child(uncool)
+	box.add_child(cool_row)
 	left.add_child(box)
 	left.move_child(box, palette.get_index())
 	_fill_palette_list()

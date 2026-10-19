@@ -699,6 +699,12 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		if not sys.has_command():
 			out.append(_alert("caution", "SHIP AI IN CONTROL", "BRIDGE CREW LOST — SHIP AI FLYING: %d %% THRUST AND TURN RATE, GUNS AT HALF RATE" % roundi(ShipSystems.SHIP_AI_FACTOR * 100.0),
 				"[Tab] crew → cover command", sys.blueprint.rooms[sys.command_room()].id if sys.command_room() >= 0 else ""))
+		for room: int in sys.fires:
+			var burning: bool = sys.rooms[room].pressurized
+			out.append(_alert("danger" if burning else "caution", "FIRE %s" % sys.blueprint.rooms[room].id,
+				"%s IN %s %s — FOAM %d LEFT" % ["FIRE" if burning else "SMOULDERING", sys._room_name(room).to_upper(), sys.blueprint.rooms[room].id, sys.foam_left(room)],
+				"damage control fighting it" if sys.foam_left(room) <= 0 else "foam suppression", sys.blueprint.rooms[room].id))
+			break
 		var sealing := sys.hull_seal_progress()
 		if sealing >= 0.0:
 			out.append(_alert("caution", "BREACH %d %%" % roundi(sealing * 100.0),

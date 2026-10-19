@@ -72,7 +72,24 @@ static func validate(bp: ShipBlueprint, catalog: ConstructionCatalog,
 	if stats == null:
 		stats = ShipStats.compute(bp, grid)
 	_check_systems(bp, grid, stats, report)
+	_check_coolant(bp, grid, report)
 	return report
+
+
+## Routed coolant: radiators off a reactor's loop reject nothing.
+static func _check_coolant(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	if not CoolantLoop.routed(bp):
+		return
+	var cooled := CoolantLoop.cooled_radiators(bp, grid)
+	var cold := PackedStringArray()
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def != null and def.kind == EquipmentDefinition.Kind.RADIATOR and not cooled.has(i):
+			cold.append(bp.equipment[i].id)
+	if not cold.is_empty():
+		_add(report, Severity.WARNING, &"radiator_uncooled",
+			"%d radiator%s not piped to a reactor (%s): no heat goes there. Auto-route the coolant loop." % [
+				cold.size(), "" if cold.size() == 1 else "s", ", ".join(cold)], cold[0])
 
 
 static func _add(report: Report, severity: Severity, code: StringName, message: String, subject: String) -> void:

@@ -274,6 +274,7 @@ func _draw() -> void:
 	_draw_slopes()
 	_draw_module_outlines()
 	_draw_bus()
+	_draw_coolant()
 	_draw_plates()
 	_draw_hatches()
 	_draw_external_equipment()
@@ -384,6 +385,26 @@ func _draw_bus() -> void:
 			draw_string(get_theme_default_font(), c + Vector2(w + 1, -w), "▲", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, col)
 		if bus.has(ShipBlueprint.cell_key(cell + Vector3i.DOWN)):
 			draw_string(get_theme_default_font(), c + Vector2(w + 1, w + 8), "▼", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, col)
+
+
+## Coolant pipes: thin teal lines, set off the conduit so both read.
+func _draw_coolant() -> void:
+	var pipes := editor.blueprint.coolant
+	if pipes.is_empty():
+		return
+	var col := Color(CyberTheme.CYAN, 0.55)
+	var w := maxf(_px * 0.04, 1.0)
+	var off := Vector2(_px * 0.18, _px * 0.18)
+	for key: String in pipes:
+		var cell := ShipBlueprint.parse_cell_key(key)
+		if cell.y != deck:
+			continue
+		var c := cell_rect(cell).get_center() + off
+		draw_circle(c, w * 1.5, col)
+		for face in [&"fore", &"starboard"]:
+			var other := across(cell, face)
+			if pipes.has(ShipBlueprint.cell_key(other)):
+				draw_line(c, cell_rect(other).get_center() + off, col, w)
 
 
 ## Armour plates: a thin bar inside the edge for side plates, a corner tab

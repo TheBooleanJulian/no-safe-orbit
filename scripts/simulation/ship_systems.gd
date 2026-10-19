@@ -93,6 +93,21 @@ const ROOM_BONUS_MAX := 2.0
 ## Damage control seals a breached room's hull in this long (with a working
 ## workshop; ÷ its room bonus); life support then refills it with air.
 const HULL_SEAL_S := 30.0
+## Fire: a hit system can catch fire (FIRE_START_CHANCE). It only burns with
+## air — in a vented room it smoulders (up to SMOULDER_S) and flares up if
+## the room is re-pressurised. Burning: the room's systems take
+## FIRE_HP_PER_S, its crew may be hurt, the ship takes FIRE_HEAT_KW. Every
+## room has FOAM_CHARGES of automatic foam (powered rooms), fired
+## FOAM_DELAY_S after a fire takes hold; recharged at the yard. Without foam,
+## damage control put it out by hand in CREW_FIGHT_S.
+const FIRE_START_CHANCE := 0.3
+const SMOULDER_S := 90.0
+const FIRE_HP_PER_S := 1.5
+const FIRE_HEAT_KW := 60.0
+const FIRE_WOUND_CHANCE_PER_S := 0.04
+const FOAM_CHARGES := 2
+const FOAM_DELAY_S := 3.0
+const CREW_FIGHT_S := 20.0
 ## Without a working sensor mast: eyeballs and backup optics (m).
 const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
@@ -180,6 +195,10 @@ var destroyed_hatches: Dictionary = {}  # hatch id -> true
 var suited: bool = false
 ## Seconds damage control has spent sealing each breached room.
 var _seal_s: Dictionary = {}
+## Fires by room index: seconds burning (with air) and smouldering.
+var fires: Dictionary = {}
+## Foam charges used per room (index).
+var foam_used: Dictionary = {}
 var temperature_k: float = NOMINAL_TEMP_K
 var reactor_state: Reactor = Reactor.NORMAL
 var power_supply_kw: float = 0.0
@@ -211,6 +230,10 @@ var isolated_rooms: Dictionary = {}
 var plates: Dictionary = {}
 ## Power conduit cells cut by hits (cell key -> true).
 var bus_cut: Dictionary = {}
+## Coolant pipe cells cut by hits (cell key -> true), and the radiators still
+## on a reactor's loop (null = recompute).
+var coolant_cut: Dictionary = {}
+var _cooled: Variant = null
 ## Seeded per design: chance-based damage (conduit cuts) repeats exactly.
 var damage_rng := RandomNumberGenerator.new()
 ## Bus networks by cell (cell key -> network), from the last power solve;
@@ -381,6 +404,11 @@ func damage_equipment(e: EquipmentState, amount: float) -> bool:
 	if e.destroyed():
 		return false
 	e.hp = maxf(e.hp - amount, 0.0)
+	if amount >= 5.0 and not e.def.is_external():
+		var room: int = grid.room_at.get(blueprint.equipment[e.index].cell, -1)
+		if room >= 0 and not fires.has(room) and damage_rng.randf() < FIRE_START_CHANCE:
+			fires[room] = {"burn_s": 0.0, "smoulder_s": 0.0}
+			_note("FIRE in %s %s (%s %s hit)" % [_room_name(room), blueprint.rooms[room].id, e.def.display_name, e.id])
 	if e.destroyed():
 		_note("%s %s destroyed" % [e.def.display_name, e.id])
 		solve_power()
@@ -670,6 +698,26 @@ func _network_of_equipment(e: EquipmentState) -> int:
 	return _network_of_cells(grid.equipment_cells(e.index))
 
 
+## A radiator works only on a coolant loop that reaches a reactor (designs
+## without coolant pipes: always).
+func radiator_cooled(e: EquipmentState) -> bool:
+	if not CoolantLoop.routed(blueprint):
+		return true
+	if _cooled == null:
+		_cooled = CoolantLoop.cooled_radiators(blueprint, grid, coolant_cut)
+	return (_cooled as Dictionary).has(e.index)
+
+
+## A round cut the coolant pipe in `cell`. True if it was intact.
+func cut_coolant(cell: Vector3i) -> bool:
+	var key := ShipBlueprint.cell_key(cell)
+	if not blueprint.coolant.has(key) or coolant_cut.has(key):
+		return false
+	coolant_cut[key] = true
+	_cooled = null
+	return true
+
+
 ## A round severed the conduit in `cell`. True if it was intact.
 func cut_bus(cell: Vector3i) -> bool:
 	var key := ShipBlueprint.cell_key(cell)
@@ -723,7 +771,8 @@ func tick(ship: ShipState, dt: float) -> bool:
 			EquipmentDefinition.Kind.RCS:
 				gen += e.def.heat_kw * rcs_fraction if e.powered else 0.0
 			EquipmentDefinition.Kind.RADIATOR:
-				rejection += e.def.heat_rejection_kw
+				if radiator_cooled(e):
+					rejection += e.def.heat_rejection_kw
 	if shots > 0 and cfg.cannon != null:
 		var per_shot_kj := 0.0
 		for e in equipment:
@@ -749,7 +798,59 @@ func tick(ship: ShipState, dt: float) -> bool:
 		changed = true
 	if _advance_hull_sealing(dt):
 		changed = true
+	if _advance_fires(dt):
+		changed = true
 	return changed or _config == null
+
+
+## Fires burn, smoulder, are foamed or fought; true when something changed.
+func _advance_fires(dt: float) -> bool:
+	if fires.is_empty():
+		return false
+	var changed := false
+	for room: int in fires.keys():
+		var f: Dictionary = fires[room]
+		if not rooms[room].pressurized:
+			f.smoulder_s += dt
+			if f.smoulder_s >= SMOULDER_S:
+				fires.erase(room)
+				_note("Fire in %s %s out — starved of air" % [_room_name(room), blueprint.rooms[room].id])
+			continue
+		f.burn_s += dt
+		var left := FOAM_CHARGES - int(foam_used.get(room, 0))
+		if f.burn_s >= FOAM_DELAY_S and left > 0 and rooms[room].powered:
+			foam_used[room] = int(foam_used.get(room, 0)) + 1
+			fires.erase(room)
+			_note("Foam suppression put out the fire in %s %s (%d charge%s left)" % [_room_name(room), blueprint.rooms[room].id,
+				left - 1, "" if left - 1 == 1 else "s"])
+			continue
+		if f.burn_s >= CREW_FIGHT_S and crew != null and crew.members.any(func(m: CrewRoster.Member) -> bool:
+				return m.fit() and m.role == CrewRoster.Role.DAMAGE_CONTROL and m.location >= 0 and not route(m.location, room).is_empty()):
+			fires.erase(room)
+			_note("Damage control put out the fire in %s %s" % [_room_name(room), blueprint.rooms[room].id])
+			continue
+		heat_generation_kw += FIRE_HEAT_KW
+		temperature_k += FIRE_HEAT_KW * 1000.0 * dt / (HEAT_CAPACITY_J_PER_K_KG * maxf(stats.mass_kg, 1.0))
+		for e in equipment:
+			if not e.def.is_external() and not e.destroyed() and grid.room_at.get(blueprint.equipment[e.index].cell, -1) == room:
+				e.hp = maxf(e.hp - FIRE_HP_PER_S * dt, 0.0)
+				if e.destroyed():
+					_note("%s %s destroyed by fire" % [e.def.display_name, e.id])
+					solve_power()
+					changed = true
+		if crew != null and damage_rng.randf() < FIRE_WOUND_CHANCE_PER_S * dt:
+			for m in crew.in_room(room):
+				if m.state == CrewRoster.State.FIT:
+					m.state = CrewRoster.State.WOUNDED
+					_note("Crew member %s burned in %s %s" % [m.id, _room_name(room), blueprint.rooms[room].id])
+					changed = true
+					break
+	return changed
+
+
+## Foam charges left in a room.
+func foam_left(room: int) -> int:
+	return FOAM_CHARGES - int(foam_used.get(room, 0))
 
 
 ## What a role's rooms are worth: 0 with none working (powered and, unless
@@ -1219,6 +1320,15 @@ func condition() -> Dictionary:
 		var cut := bus_cut.keys()
 		cut.sort()
 		out["bus_cut"] = cut
+	if not coolant_cut.is_empty():
+		var pipes := coolant_cut.keys()
+		pipes.sort()
+		out["coolant_cut"] = pipes
+	if not foam_used.is_empty():
+		var foam := {}
+		for room: int in foam_used:
+			foam[blueprint.rooms[room].id] = foam_used[room]
+		out["foam_used"] = foam
 	var worn := {}
 	for key in plates:
 		var full := float(blueprint.armor.get(key, 0.0))
@@ -1249,6 +1359,16 @@ func apply_condition(c: Dictionary) -> void:
 	for key in c.get("bus_cut", []):
 		if blueprint.bus.has(str(key)):
 			bus_cut[str(key)] = true
+	coolant_cut.clear()
+	for key in c.get("coolant_cut", []):
+		if blueprint.coolant.has(str(key)):
+			coolant_cut[str(key)] = true
+	_cooled = null
+	foam_used.clear()
+	var foam: Dictionary = c.get("foam_used", {})
+	for i in blueprint.rooms.size():
+		if foam.has(blueprint.rooms[i].id):
+			foam_used[i] = clampi(int(foam[blueprint.rooms[i].id]), 0, FOAM_CHARGES)
 	var worn: Dictionary = c.get("plates", {})
 	for key in blueprint.armor:
 		plates[key] = float(blueprint.armor[key]) * clampf(float(worn.get(key, 1.0)), 0.0, 1.0)

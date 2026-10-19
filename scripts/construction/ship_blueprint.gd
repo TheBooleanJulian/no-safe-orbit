@@ -63,6 +63,9 @@ var armor: Dictionary = {}
 ## Power bus conduit cells (player-routed): cell_key(cell) -> true. Empty =
 ## automatic distribution through the hull (designs from before buses).
 var bus: Dictionary = {}
+## Coolant pipe cells (CoolantLoop): cell_key(cell) -> true. Empty = every
+## radiator works (designs from before coolant loops).
+var coolant: Dictionary = {}
 var _next_id: int = 1
 
 
@@ -180,6 +183,14 @@ func to_dict() -> Dictionary:
 			var c := parse_cell_key(key)
 			cells.append([c.x, c.y, c.z])
 		d["bus"] = cells
+	if not coolant.is_empty():
+		var pipes := []
+		var pkeys := coolant.keys()
+		pkeys.sort()
+		for key in pkeys:
+			var pc := parse_cell_key(key)
+			pipes.append([pc.x, pc.y, pc.z])
+		d["coolant"] = pipes
 	for r in rooms:
 		d.rooms.append({"id": r.id, "def": String(r.def_id), "deck": r.deck,
 			"rect": [r.rect.position.x, r.rect.position.y, r.rect.size.x, r.rect.size.y]})
@@ -227,6 +238,11 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipBlueprint
 			bp.bus[cell_key(Vector3i(int(cd[0]), int(cd[1]), int(cd[2])))] = true
 		else:
 			errors.append("bus entries must be [x, deck, z]")
+	for cd in d.get("coolant", []):
+		if cd is Array and (cd as Array).size() == 3:
+			bp.coolant[cell_key(Vector3i(int(cd[0]), int(cd[1]), int(cd[2])))] = true
+		else:
+			errors.append("coolant entries must be [x, deck, z]")
 	for rd in _list(d, "rooms", errors):
 		var r := PlacedRoom.new()
 		r.id = str(rd.get("id", ""))

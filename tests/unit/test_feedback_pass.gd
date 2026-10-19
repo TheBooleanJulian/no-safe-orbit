@@ -237,3 +237,78 @@ func test_same_type_rooms_side_by_side_need_no_hatch() -> void:
 	var ic := bp.rooms.find(c)
 	assert_true((grid.open_rooms.get(ia, []) as Array).has(ib), "two corridors touching are one space")
 	assert_true(not (grid.open_rooms.get(ia, []) as Array).has(ic), "a corridor and a hold still need a hatch")
+
+
+func test_engines_trade_thrust_for_isp() -> void:
+	var cat := _catalog()
+	var budget := func(id: StringName) -> float: return cat.equipment[id].thrust_n * cat.equipment[id].isp_s
+	var base: float = budget.call(&"main_engine")
+	for id in [&"main_engine_high_isp", &"main_engine_high_thrust"]:
+		var k: float = budget.call(id) / base
+		assert_true(k > 1.0 and k < 1.4, "%s: an uncommon upgrade, a little more than the standard engine (%.2f×)" % [id, k])
+	assert_true(cat.equipment[&"main_engine_high_thrust"].thrust_n > cat.equipment[&"main_engine"].thrust_n
+		and cat.equipment[&"main_engine_high_thrust"].isp_s < cat.equipment[&"main_engine"].isp_s, "more thrust costs Isp")
+	var torch: float = budget.call(&"torch_drive") / base
+	assert_true(torch > 2.0 and torch < 4.0, "the legendary torch drive is better, not absurd (%.1f×)" % torch)
+	var rcs: float = budget.call(&"rcs_block_heavy") / budget.call(&"rcs_block")
+	assert_true(rcs > 1.0 and rcs < 1.4, "heavy RCS: double the thrust at a lower Isp (%.2f×)" % rcs)
+
+
+func test_coolant_loops_feed_radiators() -> void:
+	var bp := _template()
+	var grid := ShipGrid.build(bp, _catalog())
+	var before := ShipStats.compute(bp, grid).heat_rejection_kw
+	var ed := ShipEditor.new(bp, _catalog())
+	assert_true(ed.auto_route_coolant() > 0, "the loop is piped")
+	var piped := ShipStats.compute(ed.blueprint, ShipGrid.build(ed.blueprint, _catalog()))
+	assert_near(piped.heat_rejection_kw, before, 1e-3, "every radiator on the loop: the same cooling")
+	assert_true(not ShipValidator.validate(ed.blueprint, _catalog()).has_code(&"radiator_uncooled"), "no cold radiators")
+	var back := ShipBlueprint.from_dict(ed.blueprint.to_dict(), PackedStringArray())
+	assert_true(back.coolant.size() == ed.blueprint.coolant.size(), "pipes survive save and load")
+	# Cut the pipe next to a radiator: it goes cold.
+	var ship := _ship(&"s", Vector3.ZERO, ed.blueprint)
+	var s := ship.systems
+	var rad: ShipSystems.EquipmentState
+	for e in s.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.RADIATOR:
+			rad = e
+	assert_true(s.radiator_cooled(rad), "on the loop")
+	for c in s.grid.external_cells(rad.index):
+		s.cut_coolant(c)
+	assert_true(not s.radiator_cooled(rad), "its pipe cut: cold")
+	assert_true(s.condition().has("coolant_cut"), "the cut is saved with the vessel")
+
+
+func test_foam_puts_out_fires_until_it_runs_out() -> void:
+	var ship := _ship(&"s")
+	var s := ship.systems
+	var room := _room_index(s, &"engineering")
+	s.fires[room] = {"burn_s": 0.0, "smoulder_s": 0.0}
+	for i in 10:
+		s._advance_fires(0.5)
+	assert_true(not s.fires.has(room) and s.foam_left(room) == ShipSystems.FOAM_CHARGES - 1, "foamed in seconds, a charge used")
+	s.foam_used[room] = ShipSystems.FOAM_CHARGES
+	s.fires[room] = {"burn_s": 0.0, "smoulder_s": 0.0}
+	s._advance_fires(ShipSystems.FOAM_DELAY_S + 1.0)
+	assert_true(s.fires.has(room), "no foam left: it keeps burning")
+	assert_true(s.condition().has("foam_used"), "the used charges are saved for the yard to recharge")
+	s.breach_room(room)
+	for i in roundi(ShipSystems.SMOULDER_S / 5.0) + 1:
+		s._advance_fires(5.0)
+	assert_true(not s.fires.has(room), "vented: it smoulders out")
+
+
+func test_templates_of_every_size_use_only_standard_parts() -> void:
+	var cat := _catalog()
+	var masses := []
+	for path in BlueprintIO.list_templates():
+		var bp := BlueprintIO.load_file(path, PackedStringArray())
+		var r := ShipValidator.validate(bp, cat)
+		assert_true(not r.has_errors(), "%s is valid:\n%s" % [bp.name, r.summary()])
+		var fresh := PlayerProfile.new(1)
+		var rep := ShipValidator.Report.new()
+		fresh.check_design(bp, cat, rep)
+		assert_true(not rep.has_errors(), "%s flies on a new profile (common parts only):\n%s" % [bp.name, rep.summary()])
+		masses.append(ShipStats.compute(bp, ShipGrid.build(bp, cat)).wet_mass_kg())
+	masses.sort()
+	assert_true(masses.size() >= 3 and masses[-1] > masses[0] * 2.0, "light to heavy (%s t)" % [masses.map(func(m: float) -> int: return roundi(m / 1000.0))])

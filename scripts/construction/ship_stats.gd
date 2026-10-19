@@ -172,6 +172,13 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 				s.propellant_capacity_kg += def.propellant_capacity_kg
 				propellant.append({"mass": def.propellant_capacity_kg, "center": pos, "size": size_m})
 	s.rounds_capacity += rounds_from_mass(s.magazine_kg, s.cannon_configs)
+	if CoolantLoop.routed(bp):
+		# Only radiators piped to a reactor reject heat.
+		var cooled := CoolantLoop.cooled_radiators(bp, grid)
+		for i in bp.equipment.size():
+			var rdef := grid.equipment_def(i)
+			if rdef != null and rdef.kind == EquipmentDefinition.Kind.RADIATOR and not cooled.has(i):
+				s.heat_rejection_kw -= rdef.heat_rejection_kw
 	s.main_isp_s = s.thrust_forward_n / main_flow if main_flow > 0.0 else 0.0
 	s.rcs_isp_s = s.thrust_rcs_n / rcs_flow if rcs_flow > 0.0 else 0.0
 
