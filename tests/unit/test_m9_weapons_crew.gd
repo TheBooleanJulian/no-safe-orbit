@@ -223,3 +223,21 @@ func test_missile_mode_and_order_are_saved() -> void:
 	old.erase("missile_order")
 	var r := PlayerProfile.from_dict(old, PackedStringArray())
 	assert_true(r.missile_mode == MissileSalvo.Mode.ALL and r.missile_order == MissileSalvo.DEFAULT_ORDER, "older saves: all, default order")
+
+
+func test_missile_hits_are_not_gun_hits_in_the_debrief() -> void:
+	var world := _duel([&"missile_rack"], 2000.0)
+	var log := CombatLog.begin(world.get_ship(&"a"), 0.0)
+	world.launch_missile(&"a", &"b")
+	var t := 0.0
+	while not world.missiles.is_empty() and t < 30.0:
+		world.step()
+		for ev in world.take_hit_events():
+			log.note_hit(ev, &"a", world.sim_time, world)
+		t += DT
+	assert_true(log.missile_hits == 1 and log.hits_scored == 0, "one missile hit, no gun hits (%d / %d)" % [log.missile_hits, log.hits_scored])
+	log.missiles_launched = 1
+	log.finish(world.get_ship(&"a"), "test", world.sim_time)
+	var d := log.to_dict()
+	var text := "\n".join(CombatLog.summary(d)) + "\n".join(CombatLog.insights(d))
+	assert_true(text.contains("1 missile launched, 1 struck") and not text.contains("Accuracy"), "accuracy counts rounds only:\n%s" % text)

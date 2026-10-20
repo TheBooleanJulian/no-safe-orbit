@@ -4,6 +4,18 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### README screenshots (2026-10-20)
+
+#### Added
+- Gameplay screenshots in the README (flight, gunnery, missile salvo,
+  damage control, crew, debrief, shipyard) and `tools/capture_readme.gd`,
+  which renders them on a scratch profile.
+
+#### Fixed
+- Debrief accuracy counted missile strikes as gun hits (e.g. "48 hits from
+  7 rounds, 686 %"); missile strikes are now counted on their own
+  ("18 missiles launched, 41 struck") and accuracy is rounds only.
+
 ### Milestone 9 — play-test batch 2: salvos, wrecks, crew (2026-10-20)
 
 #### Added
