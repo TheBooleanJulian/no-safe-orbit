@@ -467,12 +467,22 @@ Original brief:
 - Tests: length limit, priority order, dedupe, hysteresis, every alert has
   a sound and a clear condition.
 
-### Milestone 11 — countermeasures and electronic warfare
+### Milestone 11 — countermeasures and electronic warfare ✅ (2026-10-20)
 
 Decoy launcher; missile seekers choose by signature and lose lock under
 jamming; jamming degrades sensor-track confidence; hardened masts and
 burn-through at close range as counterplay; an EW drone. Deterministic,
-seeded tests for decoys and jamming.
+seeded tests for decoys and jamming. (Play-test: "on top of PD for missile
+defence, implement flares".)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Decoy (flare) launcher, flares that fan out and burn out | `test_m11_countermeasures` (launching) | 3 a launch, 1.5 s cycle, 6 s burn |
+| Seekers choose by signature; discrimination; seeded | `test_m11` (odds, on-time, too early; seduction mutation-checked) | p = 0.71 fresh flare vs frigate; flares 3.5 s out: decoyed, unhurt; 14 s out: hit; same result twice |
+| Jamming degrades tracks; burn-through; hardened mast | `test_m11` (tracks) | 8 km: confidence 0.81 → 0.20, lock lost; 2.5 km: no effect; hardened mast keeps the lock |
+| Missiles lose lock under jamming | `test_m11` (locks) | 5/8 at 9 km against a jammer, 0/8 without |
+| EW drone | `test_m11` (drone) | covers its carrier within 3 km, not at 5 km |
+| Policy, AI, yard | `test_m11` (policy, restock) | auto-flares ≤ 4 s (Defensive/Standard/Aggressive), enemies from mission 3, 1 cr a flare |
 
 ### Milestone 12 — shipyard overhaul, ship dealer, economy
 

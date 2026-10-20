@@ -64,6 +64,11 @@ const PD_KIND_NAMES := {&"missile": "missiles", &"craft": "craft", &"round": "ro
 @export var autofire_enabled: bool = false
 @export var autofire_tolerance_deg: float = 0.5
 
+@export_group("Countermeasures")
+## Fire flares on their own when a missile is this close in time (s).
+@export var cm_auto: bool = false
+@export var cm_lead_s: float = 4.0
+
 @export_group("Tactics (AI ships)")
 @export var role: Role = Role.CLOSER
 ## Several AI ships shoot at the same target instead of each at its nearest.
@@ -144,6 +149,12 @@ func trigger(manual: bool, locked: bool, hostile: bool, aim_error_deg: float, fi
 	return manual or autofire(locked, hostile, aim_error_deg, fightable)
 
 
+## Auto-countermeasures: fire flares now? (`missile_s`: the nearest
+## inbound missile's time to impact, < 0 if none.)
+func cm_due(missile_s: float) -> bool:
+	return cm_auto and missile_s >= 0.0 and missile_s <= cm_lead_s
+
+
 ## Auto-salvo: start one now?
 func salvo_due(locked: bool, confidence: float, range_m: float, hostile: bool, now: float, next_at: float,
 		fightable: bool = true) -> bool:
@@ -157,6 +168,8 @@ func summary() -> String:
 	bits.append("PD %s" % (" › ".join(pd_order().map(func(k: StringName) -> String: return PD_KIND_NAMES[k])) if pd_enabled else "off"))
 	if autofire_enabled:
 		bits.append("auto-fire ≤%.1f°" % autofire_tolerance_deg)
+	if cm_auto:
+		bits.append("auto-flares ≤%.0fs" % cm_lead_s)
 	if salvo_enabled:
 		bits.append("auto-salvo %s ×%s" % [MissileSalvo.MODE_NAMES[clampi(salvo_mode, 0, MissileSalvo.MODE_NAMES.size() - 1)],
 			str(salvo_count) if salvo_count > 0 else "all"])
@@ -167,7 +180,7 @@ func summary() -> String:
 
 const SAVED := ["preset_name", "discipline", "pd_enabled", "pd_range_m", "pd_reserve_fraction", "salvo_enabled",
 	"salvo_min_confidence", "salvo_min_range_m", "salvo_max_range_m", "salvo_mode", "salvo_count", "salvo_interval_s",
-	"autofire_enabled", "autofire_tolerance_deg"]
+	"autofire_enabled", "autofire_tolerance_deg", "cm_auto", "cm_lead_s"]
 
 
 func to_dict() -> Dictionary:
@@ -196,6 +209,8 @@ static func from_dict(d: Dictionary) -> ShipPolicy:
 	p.salvo_interval_s = clampf(float(d.get("salvo_interval_s", p.salvo_interval_s)), 2.0, 300.0)
 	p.autofire_enabled = bool(d.get("autofire_enabled", p.autofire_enabled))
 	p.autofire_tolerance_deg = clampf(float(d.get("autofire_tolerance_deg", p.autofire_tolerance_deg)), 0.05, 5.0)
+	p.cm_auto = bool(d.get("cm_auto", p.cm_auto))
+	p.cm_lead_s = clampf(float(d.get("cm_lead_s", p.cm_lead_s)), 1.0, 15.0)
 	var order: Variant = d.get("pd_priorities", [])
 	if order is Array:
 		var kinds: Array[StringName] = []

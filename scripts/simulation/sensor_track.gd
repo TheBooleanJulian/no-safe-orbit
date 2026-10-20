@@ -11,11 +11,19 @@ extends RefCounted
 ## confidence decays with CONFIDENCE_HALF_LIFE_S. A weapons LOCK needs a
 ## fresh measurement inside LOCK_RANGE_M.
 ##
+## Jamming (Milestone 11; WorldSimulation.jam_effect): the target's noise,
+## less what the observer's best mast filters out, beyond burn-through range
+## cuts the measured confidence; under JAMMED_LOCK_CONFIDENCE there is no lock.
+##
 ## Stored relative to the observer, so local-frame rebases don't move it.
 
 const STALE_AFTER_S := 2.0
 const LOCK_RANGE_M := 10_000.0
 const CONFIDENCE_HALF_LIFE_S := 15.0
+## Full jamming takes this much off a measurement's confidence (fraction).
+const JAM_CONFIDENCE_LOSS := 0.75
+## A jammed track holds a lock only at or above this confidence.
+const JAMMED_LOCK_CONFIDENCE := 0.45
 ## A SCAN (cargo and bounty estimate) needs the lock held this long with an
 ## active sensor mast; progress drains back if the lock drops first.
 const SCAN_TIME_S := 4.0
@@ -41,6 +49,8 @@ var scanned: bool = false
 var scan_error: float = 1.0
 ## Set by the update that completed the scan.
 var just_scanned: bool = false
+## How much of the target's jamming reached this track last update (0–1).
+var jammed: float = 0.0
 
 
 static func range_of(observer: ShipState) -> float:
@@ -48,7 +58,8 @@ static func range_of(observer: ShipState) -> float:
 
 
 ## Measure if possible. Returns true the moment the target is first detected.
-func update(observer: ShipState, target: ShipState, now: float, dt: float) -> bool:
+## `jamming`: the target's (WorldSimulation.jamming_of).
+func update(observer: ShipState, target: ShipState, now: float, dt: float, jamming: float = 0.0) -> bool:
 	if observer == null or target == null:
 		in_contact = false
 		locked = false
@@ -66,7 +77,9 @@ func update(observer: ShipState, target: ShipState, now: float, dt: float) -> bo
 		last_relative = target.position - observer.position
 		last_velocity = target.velocity
 		confidence = clampf(1.0 - 0.6 * d / range_m, 0.2, 1.0)
-		locked = d <= minf(range_m, LOCK_RANGE_M)
+		jammed = WorldSimulation.jam_effect(jamming, observer.systems.sensor_ew_resist() if observer.systems != null else 0.0, d)
+		confidence *= 1.0 - JAM_CONFIDENCE_LOSS * jammed
+		locked = d <= minf(range_m, LOCK_RANGE_M) and (jammed <= 0.0 or confidence >= JAMMED_LOCK_CONFIDENCE)
 	else:
 		locked = false
 		confidence *= pow(0.5, dt / CONFIDENCE_HALF_LIFE_S)

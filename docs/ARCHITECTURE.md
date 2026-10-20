@@ -190,6 +190,35 @@ and the location's central body:
   air on/off, surface map), stars' occlusion, eclipse, station names (HUD
   `station_name`). `EnemyFactory.encounter_size(chosen)` clamps the pick.
 
+## Countermeasures and EW (Milestone 11, 2026-10-20)
+
+- **Flares:** `WorldSimulation.decoys` holds flares as plain records (id,
+  side, owner, position, velocity, age, life, signature). They drift in
+  the local frame, ride rebases and burn out. `launch_decoys` fires every
+  ready `DECOY_LAUNCHER` once; flare use is kept in `missiles_used`, so it
+  saves, resupplies and prices with the missiles (`ServiceYard.FLARE_CREDITS`).
+- **Seekers** (`_update_seekers`, before guidance): a missile weighs each
+  enemy flare once, when the flare is inside its cone
+  (`MissileConfig.seeker_cone_deg`) and no further than 1.5 × its target.
+  The chance is `seduction_chance` = s_flare / (s_flare + s_ship ×
+  discrimination), with `signature_of` growing with mass^(1/3) and engine
+  burn. The roll is seeded by the (missile, flare) pair. A seduced missile
+  guides on the flare and bursts on it. When its flare burns out it
+  re-acquires the ship only inside its cone, else it is lost and
+  self-destructs 3 s later.
+- **Jamming:** `jamming_of(ship)` is the ship's working `JAMMER`s plus EW
+  craft of its side within `EW_ESCORT_M`. `jam_effect` is noise × (1 −
+  resist) × a 0 → 1 ramp from `BURN_THROUGH_M` to `JAM_FULL_M`. It feeds
+  two places:
+  - `SensorTrack.update(…, jamming)`: confidence × (1 − 0.75 × effect), no
+    lock under 0.45; the resist is the best mast's EMP hardening.
+  - Missiles: a seeded 10 % × effect chance a second to lose lock (the
+    resist is `MissileConfig.jam_resist`).
+- **Automation:** `ShipPolicy.cm_auto` / `cm_lead_s` (additive keys,
+  defaults from the preset). `Main._auto_countermeasures` runs them for the
+  player and every live contact; Space fires manually (`fire_countermeasures`).
+  `DecoyView` draws flares.
+
 ## Alerts and audio (Pass A, 2026-10-20)
 
 - `Hud._alerts` reports every condition each frame as an `AlertQueue.Alert`:
@@ -713,7 +742,8 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | One power junction per module; no batteries, breakers or cabling; fixed shedding order | Redundancy comes from reactors and module layout only | M4/M5 (repairs, rerouting) |
 | One thermal mass per ship; radiators can't retract | An idle ship settles at ~258 K; heat can't be stored locally | When heat sinks / radiator control arrive |
 | Missiles are small `ShipState`s with a hit box and hull points; guidance turns the nose directly at its turn rate (no airframe or torque model) | They fly and die like craft; their path is predictable | If missile manoeuvre detail matters |
-| No decoys, chaff or electronic warfare against missiles | Point defence, guns and range are the only counterplay | EW pass |
+| Flares are points with a scalar signature (no IR spectrum, no chaff/radar distinction); a seeker weighs each flare once, by a seeded roll | Countermeasures are predictable and testable; timing matters, spectrum doesn't | If seeker types multiply |
+| Jamming is one noise number per side (own jammers + EW drones within 3 km), linear from burn-through (3 km) to full (6 km); no frequency agility or home-on-jam | Jamming is a range game | If EW grows into a minigame |
 | Nuclear effects simplified: one dose number, armour as a divisor, ship-wide heat, no blast wave, no fallout or lasting radiation | A burst is a sharp, explainable event | If a strategic weapon needs more depth |
 | EMP exposure falls with the square of the distance; no line-of-sight shielding by other ships | A ship cannot hide behind another | Later |
 | Missions are a fixed chain of four goals, then patrols | Little variety after the chain | Campaign content (M13) |

@@ -4,6 +4,34 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 11 — countermeasures and electronic warfare (2026-10-20)
+
+#### Added
+- **Flare launcher** (common): 30 flares, three a launch (Space, or the
+  policy's auto-countermeasures when a missile is 4 s out), each burning
+  6 s and fanning out from the launcher's face; restocked at 1 cr a flare.
+- **Seekers**: a missile weighs each enemy flare in its cone once (seeded,
+  repeatable): chance = flare signature / (flare + ship signature ×
+  seeker discrimination). Ships are brighter when bigger and much brighter
+  at full burn. A seduced missile bursts on the flare; flares fired too
+  early burn out and the missile finds the ship again. Seekers: saturation
+  0.6 (easily fooled), anti-ship and EMP 1.0, nuclear 2.0.
+- **EW jammer** (rare, 150 kW): beyond burn-through (3 km, full by 6 km)
+  enemy tracks lose up to 75 % confidence and their locks; missiles may
+  lose lock (10 %/s at full effect, less for jam-resistant seekers) and
+  self-destruct. Hardened masts filter the noise by their hardening.
+- **EW drone** (rare, its own rack): jams for ships of its side within 3 km.
+- Enemies: flares from mission 3, a jammer on some ships from mission 6,
+  auto-flares 3.5 s out.
+- HUD: `CM 27 [SPC] · EW ■` on the weapon strip; the missile alert's key
+  chip is `[SPC]` when flares are aboard; Tab › WEAPONS lists flares and
+  the jammer. `DecoyView` draws flares (white-hot, flickering, cooling).
+- Tests: `test_m11_countermeasures.gd` (10).
+
+#### Tests changed (and why)
+- `smoke_shipyard`: the Weapons category now lists 10 parts (flare launcher
+  and jammer added).
+
 ### Pass A — alerts and audio (2026-10-20)
 
 #### Added

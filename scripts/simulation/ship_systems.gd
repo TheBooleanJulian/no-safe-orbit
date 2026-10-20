@@ -1027,6 +1027,49 @@ func ready_launcher(warhead: int = -1) -> EquipmentState:
 	return null
 
 
+## Flares left in a decoy launcher (their use is kept with the missiles').
+func decoys_left(e: EquipmentState) -> int:
+	return maxi(e.def.decoy_capacity - int(missiles_used.get(e.id, 0)), 0) if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER else 0
+
+
+## Working decoy launchers with flares left and their tube cycled.
+func ready_decoy_launchers() -> Array[EquipmentState]:
+	var out: Array[EquipmentState] = []
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER and e.working() and decoys_left(e) > 0 \
+				and float(launcher_cooldown.get(e.id, 0.0)) <= 0.0:
+			out.append(e)
+	return out
+
+
+## Flares aboard in working launchers.
+func decoys_aboard() -> int:
+	var n := 0
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER and not e.destroyed():
+			n += decoys_left(e)
+	return n
+
+
+## This ship's own jamming: its working jammers' strength (0 = none).
+func jamming_strength() -> float:
+	var j := 0.0
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.JAMMER and e.working() and not switched_off.has(e.id):
+			j += e.def.jam_strength
+	return j
+
+
+## How much jamming the best working sensor mast shrugs off (0–1): a
+## hardened mast's EMP hardening also filters noise.
+func sensor_ew_resist() -> float:
+	var best := 0.0
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.SENSOR and e.working():
+			best = maxf(best, e.def.emp_hardening)
+	return best
+
+
 ## The launcher `id` if it can fire now, else null.
 func launcher_if_ready(id: String) -> EquipmentState:
 	for e in equipment:
@@ -1660,7 +1703,7 @@ func apply_condition(c: Dictionary) -> void:
 	var fired: Dictionary = c.get("missiles_used", {})
 	for e in equipment:
 		if fired.has(e.id):
-			missiles_used[e.id] = clampi(int(fired[e.id]), 0, e.def.missile_capacity)
+			missiles_used[e.id] = clampi(int(fired[e.id]), 0, maxi(e.def.missile_capacity, e.def.decoy_capacity))
 	foam_used.clear()
 	var foam: Dictionary = c.get("foam_used", {})
 	for i in blueprint.rooms.size():

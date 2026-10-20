@@ -81,6 +81,24 @@ var _next_missile_id := 1
 var _bursts: Array[Dictionary] = []
 ## How far a guided missile leads (zero-effort-miss navigation constant).
 const NAV_GAIN := 3.0
+## Countermeasures (Milestone 11).
+## Flares in flight: {id, side, owner, position, velocity, age, life, signature}.
+var decoys: Array[Dictionary] = []
+var _next_decoy_id := 1
+## Decoys each missile has already weighed (missile id -> {decoy id: true}).
+var _seen_decoys: Dictionary = {}
+## A flare leaves its tube at this speed (m/s), fanned around the launcher's face.
+const DECOY_EJECT_MPS := 35.0
+const DECOY_CYCLE_S := 1.5
+## Jamming does nothing inside BURN_THROUGH_M and is at full effect beyond
+## JAM_FULL_M (the noise drowns the echo only at range).
+const BURN_THROUGH_M := 3000.0
+const JAM_FULL_M := 6000.0
+## Chance a fully jammed missile loses lock, per second of flight.
+const JAM_LOCK_LOSS_PER_S := 0.1
+## An EW drone's noise covers ships of its side within this.
+const EW_ESCORT_M := 3000.0
+const LOST_SELF_DESTRUCT_S := 3.0
 var boardings: Array[BoardingAction] = []
 ## Air wings (autonomous craft): updated at the start of every tick.
 var wings: Array[AirWing] = []
@@ -229,6 +247,159 @@ func launch_missile(shooter_id: StringName, target_id: StringName, warhead: int 
 	return ""
 
 
+## Fire every ready decoy launcher of `ship_id` once: decoy_salvo flares
+## each, fanned out from the launcher's face. "" or why not.
+func launch_decoys(ship_id: StringName) -> String:
+	var s := get_ship(ship_id)
+	if s == null or s.systems == null or not s.is_active():
+		return "no launcher"
+	var ready := s.systems.ready_decoy_launchers()
+	if ready.is_empty():
+		for e in s.systems.equipment:
+			if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER:
+				return "flares empty, cycling or offline"
+		return "no flare launcher fitted"
+	var fired := 0
+	for e in ready:
+		var normal := Vector3(ShipGrid.FACE_NORMALS.get(s.systems.blueprint.equipment[e.index].face, Vector3i.UP))
+		var out := s.orientation * normal
+		var side := out.cross(Vector3.UP if absf(out.y) < 0.95 else Vector3.RIGHT).normalized()
+		var up := side.cross(out)
+		var n := mini(e.def.decoy_salvo, s.systems.decoys_left(e))
+		for k in n:
+			var a := TAU * k / maxf(n, 1)
+			var dir := (out + (side * cos(a) + up * sin(a)) * 0.7).normalized()
+			decoys.append({"id": _next_decoy_id, "side": s.side, "owner": ship_id,
+				"position": s.position + s.orientation * e.body_position + out * 3.0,
+				"velocity": s.velocity + dir * DECOY_EJECT_MPS, "age": 0.0, "life": e.def.decoy_life_s,
+				"signature": e.def.decoy_signature})
+			_next_decoy_id += 1
+		s.systems.missiles_used[e.id] = int(s.systems.missiles_used.get(e.id, 0)) + n
+		s.systems.launcher_cooldown[e.id] = DECOY_CYCLE_S
+		fired += n
+	_link_events.append("%s: %d flares" % [s.display_name, fired])
+	return ""
+
+
+## A flare's signature now: bright at first, burning down to nothing.
+static func decoy_signature(d: Dictionary) -> float:
+	return float(d.signature) * sqrt(clampf(1.0 - float(d.age) / float(d.life), 0.0, 1.0))
+
+
+## A ship as a seeker sees it (~1 for a frigate at rest): bigger hulls are
+## brighter, and burning engines much more so.
+static func signature_of(ship: ShipState) -> float:
+	var size := pow(maxf(ship.config.mass_kg, 1.0) / 400_000.0, 1.0 / 3.0)
+	var burn := 0.0
+	if ship.config.thrust_forward_n > 0.0:
+		burn = clampf(ship.last_thrust_body.length() / ship.config.thrust_forward_n, 0.0, 1.0)
+	return size * (1.0 + 1.5 * burn)
+
+
+## Jamming protecting `ship`: its own jammers plus EW craft of its side
+## within EW_ESCORT_M.
+func jamming_of(ship: ShipState) -> float:
+	if ship == null:
+		return 0.0
+	var j := ship.systems.jamming_strength() if ship.systems != null else 0.0
+	for wing in wings:
+		for c in wing.flying():
+			var craft := get_ship(c.id)
+			if craft != null and craft.is_active() and craft.side == ship.side and craft.config.jam_strength > 0.0 \
+					and craft.position.distance_to(ship.position) <= EW_ESCORT_M:
+				j += craft.config.jam_strength
+	return j
+
+
+## How much of `jamming` gets through at `range_m` past `resist` (0–1):
+## nothing inside burn-through, full beyond JAM_FULL_M.
+static func jam_effect(jamming: float, resist: float, range_m: float) -> float:
+	var ramp := clampf((range_m - BURN_THROUGH_M) / (JAM_FULL_M - BURN_THROUGH_M), 0.0, 1.0)
+	return clampf(jamming * (1.0 - clampf(resist, 0.0, 1.0)) * ramp, 0.0, 1.0)
+
+
+func _decoy(id: int) -> Dictionary:
+	for d in decoys:
+		if int(d.id) == id:
+			return d
+	return {}
+
+
+## Seekers: each missile weighs each enemy flare once, when it first sees
+## it inside its cone and no further than 1.5 × its target (seeded by the
+## pair, so the same engagement always goes the same way); a seduced missile
+## chases the flare. A burned-out flare leaves it to find the target again
+## inside its cone, or lost. Jamming may break the lock outright.
+func _update_seekers() -> void:
+	for m in missiles:
+		if not m.is_active() or m.missile_lost:
+			continue
+		var target := get_ship(m.missile_target)
+		if target == null or not target.is_active():
+			continue
+		var cfg := m.missile
+		if m.missile_decoy >= 0:
+			var chased := _decoy(m.missile_decoy)
+			if chased.is_empty() or decoy_signature(chased) <= 0.05:
+				m.missile_decoy = -1
+				var to_t := target.position - m.position
+				if rad_to_deg((m.orientation * Vector3.FORWARD).angle_to(to_t)) > cfg.seeker_cone_deg:
+					_lose_lock(m, "lost its flare")
+			continue
+		var to_target := target.position - m.position
+		var seen: Dictionary = _seen_decoys.get(m.id, {})
+		for d in decoys:
+			if d.side == m.side or seen.has(d.id):
+				continue
+			var to_d: Vector3 = (d.position as Vector3) - m.position
+			if to_d.length() > to_target.length() * 1.5 or rad_to_deg(to_d.angle_to(to_target)) > cfg.seeker_cone_deg:
+				continue
+			seen[d.id] = true
+			var p := seduction_chance(decoy_signature(d), signature_of(target), cfg.seeker_discrimination)
+			if _roll("%s|%d" % [m.id, int(d.id)]) < p:
+				m.missile_decoy = int(d.id)
+				_link_events.append("%s decoyed by a flare" % cfg.display_name)
+				break
+		_seen_decoys[m.id] = seen
+		# Jamming: once a second of flight, a chance to lose the lock.
+		var second := int(m.missile_age)
+		if m.missile_decoy < 0 and second != int(m.missile_age - fixed_dt):
+			var eff := jam_effect(jamming_of(target), cfg.jam_resist, to_target.length())
+			if eff > 0.0 and _roll("%s|jam|%d" % [m.id, second]) < eff * JAM_LOCK_LOSS_PER_S:
+				_lose_lock(m, "jammed")
+
+
+func _lose_lock(m: ShipState, why: String) -> void:
+	m.missile_lost = true
+	m.missile_lost_at = sim_time
+	_link_events.append("%s %s" % [m.missile.display_name, why])
+
+
+## Chance a seeker chases a flare of `decoy_sig` instead of a ship of
+## `ship_sig`: the flare's share of the light, the ship's weighted by how
+## well the seeker tells them apart.
+static func seduction_chance(decoy_sig: float, ship_sig: float, discrimination: float) -> float:
+	return decoy_sig / maxf(decoy_sig + ship_sig * discrimination, 1e-6)
+
+
+## A repeatable roll in [0, 1) for `key`.
+static func _roll(key: String) -> float:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(key)
+	return rng.randf()
+
+
+## Flares drift and burn out.
+func _step_decoys() -> void:
+	var alive: Array[Dictionary] = []
+	for d in decoys:
+		d.age = float(d.age) + fixed_dt
+		d.position = (d.position as Vector3) + (d.velocity as Vector3) * fixed_dt
+		if float(d.age) < float(d.life):
+			alive.append(d)
+	decoys = alive
+
+
 ## Missiles in flight after `id` ([] if none).
 func missiles_at(id: StringName) -> Array[ShipState]:
 	var out: Array[ShipState] = []
@@ -255,11 +426,18 @@ func _guide_missiles() -> void:
 		var input := ShipControlInput.create(Vector3(0, 0, -1), Vector3.ZERO, false)
 		input.hold_translation = false
 		var target := get_ship(m.missile_target)
-		if target == null or not target.is_active() or m.missile_age < 0.3:
+		if target == null or not target.is_active() or m.missile_age < 0.3 or m.missile_lost:
 			_inputs[m.id] = input if m.missile_age < 0.3 else ShipControlInput.neutral()
 			continue
-		var r := target.position - m.position
-		var v := target.velocity - m.velocity
+		var aim_pos := target.position
+		var aim_vel := target.velocity
+		if m.missile_decoy >= 0:
+			var chased := _decoy(m.missile_decoy)
+			if not chased.is_empty():
+				aim_pos = chased.position
+				aim_vel = chased.velocity
+		var r := aim_pos - m.position
+		var v := aim_vel - m.velocity
 		var closing := maxf(-r.dot(v) / maxf(r.length(), 1.0), 1.0)
 		var t_go := clampf(r.length() / closing, 0.2, 60.0)
 		var zem := r + v * t_go
@@ -294,8 +472,20 @@ func _step_missiles() -> void:
 			_burst_in_space(m, true)
 			gone.append(m.id)
 			continue
+		if m.missile_lost and sim_time - m.missile_lost_at >= LOST_SELF_DESTRUCT_S:
+			_link_events.append("%s self-destructed (no lock)" % m.display_name)
+			_burst_in_space(m, true)
+			gone.append(m.id)
+			continue
+		if m.missile_decoy >= 0 and m.missile_age >= m.missile.arm_s:
+			var chased := _decoy(m.missile_decoy)
+			if not chased.is_empty() and m.position.distance_to(chased.position) <= maxf(m.missile.fuse_radius_m * 3.0, 15.0):
+				_link_events.append("%s burst on a flare" % m.display_name)
+				_burst_in_space(m, false)
+				gone.append(m.id)
+				continue
 		var target := get_ship(m.missile_target)
-		if target == null or not target.is_active() or m.missile_age < m.missile.arm_s:
+		if target == null or not target.is_active() or m.missile_age < m.missile.arm_s or m.missile_decoy >= 0 or m.missile_lost:
 			continue
 		var fuse := _fuse_point(m, target)
 		if fuse.is_finite():
@@ -304,6 +494,7 @@ func _step_missiles() -> void:
 			gone.append(m.id)
 	for id in gone:
 		missiles = missiles.filter(func(x: ShipState) -> bool: return x.id != id)
+		_seen_decoys.erase(id)
 		remove_ship(id)
 
 
@@ -526,6 +717,7 @@ func step() -> void:
 	for wing in wings:
 		wing.update(self, fixed_dt)
 	_phase("wings")
+	_update_seekers()
 	_guide_missiles()
 	_phase("guidance")
 	for id in _ship_order:
@@ -548,6 +740,7 @@ func step() -> void:
 			ship.config = ship.systems.effective_config()
 		_phase("systems")
 	_step_missiles()
+	_step_decoys()
 	_phase("missiles")
 	_step_collisions()
 	_phase("collisions")
@@ -1388,3 +1581,5 @@ func _rebase_if_needed() -> void:
 	for shot in _rounds:
 		shot.position -= shift
 		shot.prev_position -= shift
+	for d in decoys:
+		d.position = (d.position as Vector3) - shift

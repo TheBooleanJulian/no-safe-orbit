@@ -11,9 +11,9 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   upgrade costs are first guesses. Expect further tuning.
 - **Fires, coolant loops and named crew are new** and covered by tests,
   not yet by play.
-- **EW jamming exists only as a hook** for craft communications; there are
-  no decoys or electronic warfare against missiles yet — the counterplay is
-  point defence, guns and range.
+- **Countermeasures are new** (Milestone 11): flare signature and burn
+  time, seeker discrimination, jamming strength and the burn-through range
+  are first guesses, covered by seeded tests, not yet by play.
 - **Encounters of two and three ships are hard** (Milestone 10): focus fire
   and salvos from three ships wrecked the player's frigate within ~30 s of
   game time in a test render at mission 7. Since 2026-10-20 the player picks

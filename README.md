@@ -170,6 +170,8 @@ godot --path .
 | Grappling arm: grab / release | Y | — |
 | Missile volley at the U target (the ship needs a sensor lock): one launch from each pod the mode allows | M | — |
 | Missile mode: all / conventional / EMP / nuclear / sequence | , | — |
+| Countermeasures: flares from every ready launcher | Space | — |
+| Acknowledge the top non-critical alert | . | — |
 | Orbit details / details & combat log / help panels | O / P / H | — (use Tab) |
 | Target hostile on/off | T | B |
 | Drop a salvage beacon on a disabled target / close the loot window | G | D-pad up |
@@ -281,6 +283,33 @@ INBOUND x.x s**. The yard restocks spent missiles at launch, cheaply.
 | Saturation missile pod | rare | 48, **8 a launch** | small anti-ship: 45 mm penetrator, 3 m blast — weak alone, a swarm saturates point defence | 1 cr |
 | EMP missile launcher | rare | 6 | EMP: resets unhardened electronics, no damage | 5 cr |
 | Nuclear missile launcher | legendary | 3 | radiation, heat and EMP; no blast wave in vacuum | 30 cr |
+
+**Countermeasures (Milestone 11):**
+- **Flares.** A flare launcher (common, Weapons palette) carries 30 flares
+  and fires three per launch: Space, or automatically under a policy that
+  allows it (Defensive, Standard and Aggressive do: when a missile is 4 s
+  out). Each flare is a bright heat source that burns for 6 s.
+- **How a missile sees a flare.** A missile that sees one inside its seeker
+  cone, near its target, may chase it instead. The odds are the flare's
+  signature against the ship's, weighted by the seeker:
+  - **Signatures:** a flare starts at 2.5. A frigate at rest is ≈1, and
+    engines at full burn make it ×2.5.
+  - **Seekers:** saturation missiles are fooled most easily; nuclear
+    missiles have the sharpest seekers.
+  - A seduced missile bursts harmlessly on the flare.
+- **Timing matters.** Fire as the missile closes, 3–5 s out. Flares fired
+  early burn out, and a missile with you still in its cone simply finds
+  you again.
+- **Jamming.** An EW jammer (rare, 150 kW) cuts enemy sensor-track
+  confidence, breaks their locks and makes their missiles lose lock now
+  and then:
+  - **Burn-through:** it does nothing inside 3 km and is at full strength
+    beyond 6 km.
+  - **Counterplay:** a hardened sensor mast filters most of it.
+  - **EW drone:** the drone (rare, its own drone rack) spreads the jamming
+    to ships of its side within 3 km.
+- **Enemies.** They carry flares from mission 3 and sometimes a jammer
+  from mission 6. The yard restocks flares at 1 cr each.
 
 **EMP and hardening:** an EMP resets electronics — reactors, guns, point
 defence, sensors, power distribution, collars, racks, arms and launchers —

@@ -41,6 +41,13 @@ const ISP_S := 280.0
 @export var blast_structure_fraction: float = 0.6
 @export var blast_hp: float = 45.0
 @export var effect_radius_m: float = 400.0
+## Seeker (Milestone 11): how well it tells a ship from a flare (a flare
+## seduces it with chance s_flare / (s_flare + s_ship × discrimination)),
+## the cone (half-angle, °) it sees decoys in, and how much of a jammer's
+## noise it shrugs off (0–1).
+@export var seeker_discrimination: float = 1.0
+@export var seeker_cone_deg: float = 20.0
+@export var jam_resist: float = 0.0
 ## Yard price per missile at resupply (credits).
 @export var unit_credits: int = 60
 

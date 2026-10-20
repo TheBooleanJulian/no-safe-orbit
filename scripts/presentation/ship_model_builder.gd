@@ -162,6 +162,26 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 					var row := float(k >> 1) - 0.5 if n > 2 else 0.0
 					var tube := _cylinder(part, 0.3, 0.3, 0.08, Vector3.ZERO, dark)
 					tube.transform = Transform3D(b, mount + normal * 1.22 + b.x * col * 0.9 + b.z * row * 0.9)
+			EquipmentDefinition.Kind.DECOY_LAUNCHER:
+				# A squat dispenser: a block with a 3 × 3 grid of flare tubes.
+				var b := _basis_y_along(normal)
+				var housing := _box(part, Vector3(1.4, 0.6, 1.4), Vector3.ZERO, mat)
+				housing.transform = Transform3D(b, mount + normal * 0.3)
+				var dark := _mat(mats, Color(0.12, 0.1, 0.08) * tint)
+				for gx in 3:
+					for gz in 3:
+						var tube := _cylinder(part, 0.14, 0.14, 0.06, Vector3.ZERO, dark)
+						tube.transform = Transform3D(b, mount + normal * 0.62 + b.x * (gx - 1) * 0.4 + b.z * (gz - 1) * 0.4)
+			EquipmentDefinition.Kind.JAMMER:
+				# A short mast with a flat phased-array panel and a stub dish.
+				var b := _basis_y_along(normal)
+				var dark := _mat(mats, Color(0.22, 0.24, 0.27) * tint)
+				var post := _cylinder(part, 0.15, 0.25, 1.6, Vector3.ZERO, dark)
+				post.transform = Transform3D(b, mount + normal * 0.8)
+				var panel := _box(part, Vector3(2.2, 1.4, 0.12), Vector3.ZERO, mat)
+				panel.transform = Transform3D(b, mount + normal * 2.0)
+				var dish := _cylinder(part, 0.55, 0.15, 0.25, Vector3.ZERO, mat)
+				dish.transform = Transform3D(b * Basis(Vector3.RIGHT, deg_to_rad(90)), mount + normal * 2.0 + b.z * 0.25)
 			EquipmentDefinition.Kind.CRAFT_MOUNT:
 				# A cradle on the hull; the docked craft sits in it (views hide it
 				# while the craft is out).

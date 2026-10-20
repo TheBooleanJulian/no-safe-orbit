@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"flare_launcher"
+display_name = "Flare launcher"
+kind = 13
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"aft", &"dorsal", &"ventral", &"port", &"starboard"])
+decoy_capacity = 30
+decoy_salvo = 3
+decoy_signature = 2.5
+decoy_life_s = 6.0
+mass_kg = 700.0
+power_kw = -4.0
+heat_kw = 1.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+hit_points = 12.0
+shield_mm = 6.0
+color = Color(1.0, 0.7, 0.3, 1)
+rarity = 0
+drop_weight = 10.0

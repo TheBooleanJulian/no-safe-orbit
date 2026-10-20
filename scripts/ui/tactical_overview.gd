@@ -762,6 +762,13 @@ func _refresh_weapons(sys: ShipSystems) -> void:
 			MissileSalvo.WARHEAD_NAMES[e.def.missile.warhead], " (%d a launch)" % e.def.missile_salvo if e.def.missile_salvo > 1 else "", state])
 	if lines.is_empty():
 		lines.append(CyberTheme.tint("No launchers fitted — the shipyard's Weapons palette has them.", CyberTheme.TEXT_DIM))
+	for e in sys.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER:
+			lines.append("%s %s — %d/%d flares [SPC]%s" % [e.def.display_name, e.id, sys.decoys_left(e), e.def.decoy_capacity,
+				"" if e.working() else CyberTheme.tint(" · offline", CyberTheme.TEXT_DIM)])
+		elif e.def.kind == EquipmentDefinition.Kind.JAMMER:
+			lines.append("%s %s — %s" % [e.def.display_name, e.id, CyberTheme.tint("jamming", CyberTheme.CYAN) if e.working() and not sys.switched_off.has(e.id)
+				else CyberTheme.tint("off", CyberTheme.TEXT_DIM)])
 	var mode := profile.missile_mode if profile != null else 0
 	var order: Array = profile.missile_order if profile != null else MissileSalvo.DEFAULT_ORDER
 	lines.append("Mode: %s" % CyberTheme.tint(MissileSalvo.mode_text(mode, order).to_upper(), CyberTheme.AMBER))

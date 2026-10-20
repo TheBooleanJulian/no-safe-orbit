@@ -41,6 +41,8 @@ const CATEGORY := {
 	EquipmentDefinition.Kind.GRAPPLE: &"hull",
 	EquipmentDefinition.Kind.CRAFT_MOUNT: &"combat",
 	EquipmentDefinition.Kind.MISSILE_LAUNCHER: &"combat",
+	EquipmentDefinition.Kind.DECOY_LAUNCHER: &"combat",
+	EquipmentDefinition.Kind.JAMMER: &"combat",
 }
 
 
@@ -60,6 +62,10 @@ class Job:
 
 
 # --- Costs ---------------------------------------------------------------------
+
+## A flare restocked at the yard (credits).
+const FLARE_CREDITS := 1
+
 
 static func equipment_cost(def: EquipmentDefinition) -> int:
 	var factor := RARE_FIT_FACTOR if def.rarity != Rarity.Tier.COMMON else 1.0
@@ -101,12 +107,13 @@ static func missile_needs(vessel: ShipInstance, catalog: ConstructionCatalog) ->
 	var out := {"count": 0, "credits": 0, "by_launcher": {}}
 	for e in vessel.blueprint.equipment:
 		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
-		if def == null or def.missile == null or int(fired.get(e.id, 0)) <= 0:
+		if def == null or (def.missile == null and def.kind != EquipmentDefinition.Kind.DECOY_LAUNCHER) or int(fired.get(e.id, 0)) <= 0:
 			continue
-		var n := mini(int(fired[e.id]), def.missile_capacity)
-		out.by_launcher[e.id] = [n, def.missile.unit_credits]
+		var n := mini(int(fired[e.id]), maxi(def.missile_capacity, def.decoy_capacity))
+		var unit := def.missile.unit_credits if def.missile != null else FLARE_CREDITS
+		out.by_launcher[e.id] = [n, unit]
 		out.count += n
-		out.credits += n * def.missile.unit_credits
+		out.credits += n * unit
 	return out
 
 

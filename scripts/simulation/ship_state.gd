@@ -67,6 +67,12 @@ var missile: MissileConfig
 var missile_owner: StringName = &""
 var missile_target: StringName = &""
 var missile_age: float = 0.0
+## A missile chasing a decoy (its id; -1 = the real target), or that has
+## lost its lock (jammed, or its flare burned out away from the target):
+## it coasts and self-destructs at missile_lost_at + LOST_SELF_DESTRUCT_S.
+var missile_decoy: int = -1
+var missile_lost: bool = false
+var missile_lost_at: float = 0.0
 ## A beaten ship (or its craft) left drifting: it gets no commands, fires
 ## nothing and its point defence is silent; it can still be hit.
 var derelict: bool = false
