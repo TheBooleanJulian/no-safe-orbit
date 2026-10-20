@@ -696,6 +696,17 @@ rack. They fly with the same physics as every ship and can be shot down.
   **Escort** (fly beside you), **Return**. **Risk tolerance**
   (conservative / balanced / aggressive) decides when a craft breaks off on
   its own for damage, propellant or ammunition.
+- **Strikes move on**: once the target is beaten (disabled, captured or a
+  wreck) the fighters take the nearest combat-ready enemy; with none left
+  they come home.
+- **Rearming**: an empty gun always brings a craft home, whatever its risk
+  setting. A craft that came home on its own (empty, low on fuel, hurt, or
+  nothing left to strike) goes back out once refuelled and rearmed while
+  there is a fight — "Back out after rearming" on the WING tab turns that
+  off. A craft you recall stays home.
+- **The WING tab** is a table: a row per craft (state, hull · fuel · ammo,
+  order, risk, aim, ▲ out / ▼ in; hover for its role), wing-wide launch,
+  recall, order and risk on top, and how they fly folded away.
 - Out of contact (beyond 30 km, or jammed) for 10 s, a craft falls back to
   returning home.
 - **Recon** gives the close look that shows the target's systems: without a

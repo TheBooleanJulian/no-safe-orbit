@@ -55,6 +55,10 @@ class Craft:
 	## THINK_EVERY it thinks on.
 	var held_input: ShipControlInput
 	var think_offset: int = 0
+	## It came home on its own (out of ammunition or propellant, hurt, or
+	## nothing left to fight) rather than recalled: it goes out again once
+	## refuelled and rearmed (AirWing.auto_relaunch).
+	var came_back_itself: bool = false
 
 	func is_drone() -> bool:
 		return config.cannon == null
@@ -70,6 +74,12 @@ var crafts: Array[Craft] = []
 var target_id: StringName = &""
 ## Enemy craft ids (for intercept and escort).
 var hostile_ids: Array[StringName] = []
+## Enemy ships a strike may move on to once its target is beaten (Main sets
+## the encounter's contacts; the nearest combat-ready one is taken).
+var candidate_ids: Array[StringName] = []
+## Craft that came home on their own relaunch once serviced while there is
+## something combat-ready to fight (play-test batch 6). The WING tab toggles it.
+var auto_relaunch: bool = true
 var comms_range_m: float = 30_000.0
 ## Electronic warfare hook: no contact with any craft while true.
 var jammed: bool = false
@@ -171,9 +181,43 @@ func launch_all(world: WorldSimulation) -> int:
 
 func recall_all() -> void:
 	for c in crafts:
+		c.came_back_itself = false
 		if c.status == Status.FLYING:
 			c.directive = CraftAI.Directive.RETURN
 	_note("All craft recalled")
+
+
+## Recall one craft (K on it, or its row's Recall): it stays home.
+func recall(c: Craft) -> void:
+	c.came_back_itself = false
+	if c.status == Status.FLYING:
+		c.directive = CraftAI.Directive.RETURN
+
+
+## Still worth shooting: active, not a derelict, not disabled.
+static func combat_ready(ship: ShipState) -> bool:
+	return ship != null and ship.is_active() and not ship.derelict \
+		and (ship.systems == null or ship.systems.disabled_reason() == "")
+
+
+## What strikes go for: the chosen target while it is combat-ready, else the
+## combat-ready candidate nearest the carrier (null: nothing left to fight).
+func strike_target(world: WorldSimulation) -> ShipState:
+	var chosen := world.get_ship(target_id) if target_id != &"" else null
+	if combat_ready(chosen):
+		return chosen
+	var carrier := world.get_ship(carrier_id)
+	var best: ShipState = null
+	var best_d := INF
+	for id in candidate_ids:
+		var s := world.get_ship(id)
+		if not combat_ready(s):
+			continue
+		var d := s.position.distance_to(carrier.position) if carrier != null else 0.0
+		if d < best_d:
+			best_d = d
+			best = s
+	return best
 
 
 # --- Every tick --------------------------------------------------------------------
@@ -182,7 +226,7 @@ func recall_all() -> void:
 ## Called by WorldSimulation at the start of each tick.
 func update(world: WorldSimulation, dt: float) -> void:
 	var carrier := world.get_ship(carrier_id)
-	var target := world.get_ship(target_id) if target_id != &"" else null
+	var target := strike_target(world)
 	var hostiles: Array[ShipState] = []
 	for id in hostile_ids:
 		var h := world.get_ship(id)
@@ -209,6 +253,11 @@ func update(world: WorldSimulation, dt: float) -> void:
 					c.service_left_s = maxf(c.service_left_s - dt, 0.0)
 					if c.service_left_s <= 0.0:
 						_note("%s %s" % [c.label, _resupply_from(carrier, c)])
+				elif c.came_back_itself and auto_relaunch and target != null and c.hull_fraction > 0.5 \
+						and launch_block_reason(world, c) == "":
+					c.came_back_itself = false
+					launch(world, c)
+					_note("%s back out — %s" % [c.label, target.display_name])
 			Status.FLYING:
 				_fly(world, c, carrier, target, hostiles, dt)
 
@@ -241,7 +290,12 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 		var d := CraftAI.disengage_reason(s, c.risk)
 		if d != "":
 			directive = CraftAI.Directive.RETURN
-			why = "disengaging: %s" % d
+			why = "disengaging: %s — back to refuel and rearm" % d
+			c.came_back_itself = true
+		elif directive == CraftAI.Directive.STRIKE and target == null and not c.is_drone():
+			directive = CraftAI.Directive.RETURN
+			why = "nothing left to strike — returning"
+			c.came_back_itself = true
 	if why != c.override_reason:
 		c.override_reason = why
 		if why != "":

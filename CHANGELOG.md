@@ -4,6 +4,25 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 6, part 2 — fighters that carry on, a tidy WING tab, screens that scroll (2026-10-21)
+
+#### Added
+- **Fighters move on**: once their target is beaten they strike the nearest
+  combat-ready enemy; with none left they come home.
+- **Fighters rearm on their own**: an empty gun brings a craft home at any
+  risk setting; a craft that came home by itself relaunches once refuelled
+  and rearmed while there is a fight ("Back out after rearming", on by
+  default). Recalled craft stay home.
+- **WING tab redone** as a compact table: a row per craft (state, hull ·
+  fuel · ammo, order, risk, aim, ▲ out / ▼ in), wing-wide launch / recall /
+  order / risk / back-out controls on top, roles as tooltips, "How they fly"
+  folded away. A Carrier's twelve craft fit the drawer.
+- Tests: `test_wing_batch6.gd` (3; mutation-checked on moving on).
+
+#### Fixed
+- **Screens that ran off the bottom**: every Tab-overview tab and the F1
+  controls list scroll.
+
 ### Play-test batch 6, part 1 — big-fight performance (2026-10-21)
 
 #### Fixed

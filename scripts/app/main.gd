@@ -1361,7 +1361,21 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			if why != "":
 				hud.notice("LAUNCH: " + why, world.sim_time)
 		&"craft_recall":
-			player_wing.by_id(arg).directive = CraftAI.Directive.RETURN
+			player_wing.recall(player_wing.by_id(arg))
+		&"wing_directive":
+			for c in player_wing.crafts:
+				if not c.is_drone() or int(arg) in [CraftAI.Directive.RECON, CraftAI.Directive.ESCORT, CraftAI.Directive.RETURN]:
+					c.directive = int(arg)
+		&"wing_risk":
+			for c in player_wing.crafts:
+				c.risk = int(arg)
+		&"wing_launch":
+			var n := player_wing.launch_all(world)
+			hud.notice("LAUNCH: %d craft out" % n, world.sim_time)
+		&"wing_recall":
+			player_wing.recall_all()
+		&"wing_auto":
+			player_wing.auto_relaunch = bool(arg)
 		&"craft_directive":
 			player_wing.by_id(arg[0]).directive = arg[1]
 		&"craft_risk":
@@ -1458,8 +1472,10 @@ func _link_wings() -> void:
 		for craft in c.wing.flying():
 			theirs.append(craft.id)
 	player_wing.hostile_ids = theirs
+	player_wing.candidate_ids.clear()
 	for c in encounter.contacts:
 		c.wing.hostile_ids = ours
+		player_wing.candidate_ids.append(c.id)
 
 
 func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
