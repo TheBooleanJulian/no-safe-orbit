@@ -1598,7 +1598,8 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 		EquipmentDefinition.Kind.CRAFT_MOUNT:
 			var c := e.craft
 			lines.append("CARRIES %s · %.0f t · %s · hull %.0f" % [c.display_name, c.mass_kg / 1000.0,
-				"gun %s" % c.cannon.display_name if c.cannon != null else "unarmed (recon)", c.hull_hp])
+				"gun %s" % c.cannon.display_name if c.cannon != null else "unarmed", c.hull_hp])
+			lines.append(str(CraftAI.ROLE_HELP.get(c.craft_role, "")))
 		EquipmentDefinition.Kind.DOCKING_COLLAR:
 			lines.append("GANGWAY up to %.0f m · seals in %.0f s · opens into the room behind it" % [Docking.GANGWAY_MAX_M, Docking.COLLAR_SEAL_S])
 		EquipmentDefinition.Kind.MISSILE_LAUNCHER:

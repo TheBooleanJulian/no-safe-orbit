@@ -106,7 +106,8 @@ func test_strike_closes_and_hits_the_target() -> void:
 	var hits := 0
 	var closest := INF
 	var t := 0.0
-	while t < 120.0 and f.status == AirWing.Status.FLYING:
+	# Gun runs fire on the way in only: the magazine lasts a few minutes.
+	while t < 300.0 and f.status == AirWing.Status.FLYING:
 		world.step()
 		t += DT
 		if world.has_ship(f.id):
@@ -115,8 +116,11 @@ func test_strike_closes_and_hits_the_target() -> void:
 			if ev.shooter_id == f.id and ev.target_id == &"t":
 				hits += 1
 	assert_true(hits >= 5, "the fighter lands >= 5 hits on the target (%d hits)" % hits)
-	assert_near(closest, CraftAI.STRIKE_RANGE_M, 250.0, "its gun runs bring it to its standoff range (closest, m)")
-	assert_true("\n".join(wing.log).contains("ammunition low"), "magazine spent, it breaks off on its own:\n%s" % "\n".join(wing.log))
+	assert_near(closest, float(CraftAI.RUN_IN_M[&"fighter"]), 150.0, "its gun runs bring it in to its run-in range (closest, m)")
+	# Gun runs spend propellant on every pass: it comes home when either
+	# runs low, on its own.
+	assert_true("\n".join(wing.log).contains("ammunition low") or "\n".join(wing.log).contains("propellant low"),
+		"spent, it breaks off on its own:\n%s" % "\n".join(wing.log))
 
 
 func test_strike_aims_at_the_chosen_subsystem() -> void:

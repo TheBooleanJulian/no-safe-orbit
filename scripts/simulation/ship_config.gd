@@ -76,6 +76,11 @@ extends Resource
 ## the ship AI laying the guns without a bridge crew.
 @export var cannon_extra_dispersion_rad: float = 0.0
 
+## A craft's role, which picks how CraftAI flies its directives: &"fighter"
+## (gun runs, dogfights), &"interceptor" (hunts inbound missiles and craft
+## first), &"bomber" (long, steady gun runs on ships from range), &"recon"
+## (watches, never fires), &"ew" (holds station to jam for the carrier).
+@export var craft_role: StringName = &"fighter"
 ## A craft's jammer (an EW drone): ships of its side within
 ## WorldSimulation.EW_ESCORT_M share its noise (0 = none).
 @export var jam_strength: float = 0.0

@@ -76,6 +76,13 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 			EquipmentDefinition.Kind.REACTOR:
 				if mission >= 3 and rng.randf() < minf(0.08 * m, 0.4):
 					e.def_id = &"fusion_reactor_mk2"
+			EquipmentDefinition.Kind.CRAFT_MOUNT:
+				# Fighter variety: interceptors in place of the recon drone
+				# from mission 5, bombers in the bay from mission 7.
+				if e.def_id == &"drone_rack" and mission >= 5 and rng.randf() < 0.5:
+					e.def_id = &"interceptor_rack"
+				elif e.def_id == &"fighter_bay" and mission >= 7 and rng.randf() < 0.5:
+					e.def_id = &"bomber_bay"
 	if mission >= MISSILE_RACK_FROM_MISSION:
 		_fit_launcher(bp, catalog, &"missile_rack", rng)
 	if mission >= EMP_LAUNCHER_FROM_MISSION and rng.randf() < 0.5:

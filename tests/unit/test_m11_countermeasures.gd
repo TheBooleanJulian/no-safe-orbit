@@ -230,7 +230,10 @@ func test_an_ew_drone_covers_its_carrier() -> void:
 
 
 func test_policy_auto_countermeasures() -> void:
-	assert_true(ShipPolicy.preset("Defensive").cm_auto and not ShipPolicy.preset("Hold").cm_auto, "Defensive fires flares on its own; Hold doesn't")
+	# Play-test: "flares and countermeasures should auto deploy once armed":
+	# on in every preset, Hold included (flares only defend).
+	for name in ShipPolicy.PRESETS:
+		assert_true(ShipPolicy.preset(name).cm_auto, "%s fires flares on its own" % name)
 	var p := ShipPolicy.preset("Standard")
 	assert_true(p.cm_due(3.0) and not p.cm_due(8.0) and not p.cm_due(-1.0), "inside the lead time only (%.0f s)" % p.cm_lead_s)
 	var q := ShipPolicy.from_dict(p.to_dict())

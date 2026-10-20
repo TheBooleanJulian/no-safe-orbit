@@ -10,6 +10,9 @@ extends RefCounted
 
 var id: int
 var shooter_id: StringName
+## Fired by a craft: its IFF safety interlock (this side's ships and craft
+## are never hit; "" = an ordinary round).
+var iff_side: StringName = &""
 ## Weapon that fired it (mass, penetration). Null for hand-made test rounds.
 var weapon: KineticCannonConfig
 var position: Vector3 = Vector3.ZERO

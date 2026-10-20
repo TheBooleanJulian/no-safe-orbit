@@ -41,7 +41,14 @@ const TURRET_HEIGHT_M := 1.0
 ## (m/s), and structure points of damage per joule of impact energy.
 const COLLISION_RESTITUTION := 0.2
 const COLLISION_DAMAGE_MIN_MPS := 1.0
-const COLLISION_POINTS_PER_J := 1.0 / 100_000.0
+## Ramming (play-test: "more damage to both parties, more so on the lighter
+## armoured / lower mass ship"): damage per joule of the collision's energy,
+## how sharply toughness (mass × local armour) decides who takes it (the
+## share goes as toughness^-COLLISION_SPLIT_POWER), and how far from the
+## contact (m) the blow spreads through the hull.
+const COLLISION_POINTS_PER_J := 3.0 / 100_000.0
+const COLLISION_SPLIT_POWER := 1.5
+const COLLISION_SPREAD_M := 9.0  # three cells: reaches the next module of a 2-cell block
 
 var fixed_dt: float = DEFAULT_FIXED_DT
 var tick: int = 0
@@ -848,6 +855,8 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		_next_round_id += 1
 		shot.shooter_id = ship.id
 		shot.weapon = cannon
+		if ship.systems == null and ship.config.hull_hp > 0.0 and ship.missile == null:
+			shot.iff_side = ship.side
 		shot.position = ship.position + ship.orientation * muzzle_body
 		shot.prev_position = shot.position
 		shot.velocity = ship.velocity + dir * cannon.muzzle_velocity_mps
@@ -1213,9 +1222,10 @@ func _resolve_collision(a: ShipState, b: ShipState, point: Vector3, first: bool)
 	if closing < COLLISION_DAMAGE_MIN_MPS:
 		return
 	var energy := 0.5 * (ma * mb / (ma + mb)) * closing * closing
-	# Toughness = mass × local armour: the weaker side takes the larger share.
-	var ta := ma * (_armor_at(a, point) + 10.0)
-	var tb := mb * (_armor_at(b, point) + 10.0)
+	# Toughness = mass × local armour: the weaker side takes the larger
+	# share, sharply (a fighter ramming a frigate is mostly the fighter).
+	var ta := pow(ma * (_armor_at(a, point) + 10.0), COLLISION_SPLIT_POWER)
+	var tb := pow(mb * (_armor_at(b, point) + 10.0), COLLISION_SPLIT_POWER)
 	var lines := PackedStringArray()
 	lines.append_array(_collision_damage(a, point, energy * tb / (ta + tb)))
 	lines.append_array(_collision_damage(b, point, energy * ta / (ta + tb)))
@@ -1262,12 +1272,29 @@ func _collision_damage(ship: ShipState, point: Vector3, energy_j: float) -> Pack
 		return lines
 	var sys := ship.systems
 	var m := _module_near(ship, point)
-	if m >= 0 and sys.damage_module(m, points):
+	if m >= 0 and sys.damage_module(m, points * 0.6):
 		lines.append("%s: module %s wrecked" % [ship.display_name, sys.blueprint.modules[m].id])
+	# The blow spreads: neighbouring modules share the rest, more the closer.
 	var body := ship.orientation.inverse() * (point - ship.position)
+	var com := sys.stats.center_of_mass_m
+	var near := {}
+	var weight := 0.0
+	for cell: Vector3i in sys.grid.module_at:
+		var mi: int = sys.grid.module_at[cell]
+		if mi == m:
+			continue
+		var d := (ShipGrid.cell_center_m(cell) - com).distance_to(body)
+		if d < COLLISION_SPREAD_M:
+			var w := 1.0 - d / COLLISION_SPREAD_M
+			near[mi] = maxf(float(near.get(mi, 0.0)), w)
+	for mi: int in near:
+		weight += float(near[mi])
+	for mi: int in near:
+		if sys.damage_module(mi, points * 0.4 * float(near[mi]) / maxf(weight, 1e-6)):
+			lines.append("%s: module %s wrecked" % [ship.display_name, sys.blueprint.modules[mi].id])
 	for e in sys.equipment:
-		if e.def.is_external() and not e.destroyed() and e.body_position.distance_to(body) < ShipGrid.CELL_SIZE_M * 1.5:
-			if sys.damage_equipment(e, points * 0.5):
+		if e.def.is_external() and not e.destroyed() and e.body_position.distance_to(body) < ShipGrid.CELL_SIZE_M * 2.0:
+			if sys.damage_equipment(e, points * 0.6):
 				lines.append("%s: %s %s destroyed" % [ship.display_name, e.def.display_name, e.id])
 	sys.invalidate()
 	ship.config = sys.effective_config()
@@ -1436,6 +1463,8 @@ func _resolve_round_hits(shot: ProjectileState) -> bool:
 			continue  # its own side's missile
 		if not ship.is_active():
 			continue
+		if shot.iff_side != &"" and ship.side == shot.iff_side and ship.missile == null:
+			continue  # a craft's round: its IFF interlock spares its own side
 		var t := HitTest.round_vs_ship(shot.prev_position, shot.position, ship)
 		if t >= 0.0 and ship.systems != null:
 			# Narrow phase: the real hull cells, not just the bounding box.

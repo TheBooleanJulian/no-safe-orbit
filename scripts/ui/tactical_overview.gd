@@ -769,6 +769,8 @@ func _refresh_weapons(sys: ShipSystems) -> void:
 		elif e.def.kind == EquipmentDefinition.Kind.JAMMER:
 			lines.append("%s %s — %s" % [e.def.display_name, e.id, CyberTheme.tint("jamming", CyberTheme.CYAN) if e.working() and not sys.switched_off.has(e.id)
 				else CyberTheme.tint("off", CyberTheme.TEXT_DIM)])
+	lines.append(CyberTheme.tint("Flares [SPC]: a missile that sees a flare near you may chase it instead — fire 3–5 s before impact; your policy fires them on its own once an inbound missile is armed. Too early and they burn out.", CyberTheme.TEXT_DIM))
+	lines.append(CyberTheme.tint("Jammer: beyond 3 km (full by 6 km) enemy sensor tracks of you lose confidence and their locks fail, and their missiles may lose lock and self-destruct; inside 3 km their radar burns through. Hardened masts filter it. An EW drone jams for your ship within 3 km of it.", CyberTheme.TEXT_DIM))
 	var mode := profile.missile_mode if profile != null else 0
 	var order: Array = profile.missile_order if profile != null else MissileSalvo.DEFAULT_ORDER
 	lines.append("Mode: %s" % CyberTheme.tint(MissileSalvo.mode_text(mode, order).to_upper(), CyberTheme.AMBER))
@@ -811,6 +813,12 @@ func _update_wing(wing: AirWing) -> void:
 			status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			_wing_box.add_child(status)
 			_wing_rows[c.id] = status
+			var role := Label.new()
+			role.text = "   " + str(CraftAI.ROLE_HELP.get(c.config.craft_role, ""))
+			role.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
+			role.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
+			role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			_wing_box.add_child(role)
 			var row := HFlowContainer.new()
 			var id := c.id
 			row.add_child(_picker(CraftAI.DIRECTIVE_NAMES, c.directive, func(i: int) -> void: command.emit(&"craft_directive", [id, i])))
@@ -820,6 +828,14 @@ func _update_wing(wing: AirWing) -> void:
 			row.add_child(_button("Launch", func() -> void: command.emit(&"craft_launch", id)))
 			row.add_child(_button("Recall", func() -> void: command.emit(&"craft_recall", id)))
 			_wing_box.add_child(row)
+		# How they fly: every directive and the risk setting, in a line each.
+		var how := Label.new()
+		how.text = "HOW THEY FLY\n" + "\n".join(CraftAI.DIRECTIVE_HELP) + "\n" + CraftAI.RISK_HELP \
+			+ "\nEvery craft holds fire with a friend in the line of fire, keeps apart from other craft and clear of hulls; its rounds carry an IFF interlock and never hit your side."
+		how.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
+		how.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
+		how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_wing_box.add_child(how)
 	for c in wing.crafts:
 		var label: Label = _wing_rows.get(c.id)
 		if label == null:

@@ -71,6 +71,8 @@ var missile_age: float = 0.0
 ## lost its lock (jammed, or its flare burned out away from the target):
 ## it coasts and self-destructs at missile_lost_at + LOST_SELF_DESTRUCT_S.
 var missile_decoy: int = -1
+## A craft's own flight state between ticks (CraftAI gun runs).
+var ai_state: Dictionary = {}
 var missile_lost: bool = false
 var missile_lost_at: float = 0.0
 ## A beaten ship (or its craft) left drifting: it gets no commands, fires

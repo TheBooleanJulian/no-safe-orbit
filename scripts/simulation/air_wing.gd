@@ -179,6 +179,20 @@ func update(world: WorldSimulation, dt: float) -> void:
 		var h := world.get_ship(id)
 		if h != null and h.is_active():
 			hostiles.append(h)
+	# Our side (never in the line of fire) and hostile missiles (interceptors).
+	_friends.clear()
+	_enemy_missiles.clear()
+	var side := carrier.side if carrier != null else &""
+	for id in world.ship_ids():
+		var s := world.get_ship(id)
+		if s == null or not s.is_active():
+			continue
+		if s.missile != null:
+			if s.side != side:
+				_enemy_missiles.append(s)
+		elif (side != &"" and s.side == side) or s == carrier or by_id(s.id) != null:
+			# Unaligned ships (no side) are only friends if they are ours.
+			_friends.append(s)
 	for c in crafts:
 		match c.status:
 			Status.DOCKED:
@@ -188,6 +202,10 @@ func update(world: WorldSimulation, dt: float) -> void:
 						_note("%s %s" % [c.label, _resupply_from(carrier, c)])
 			Status.FLYING:
 				_fly(world, c, carrier, target, hostiles, dt)
+
+
+var _friends: Array[ShipState] = []
+var _enemy_missiles: Array[ShipState] = []
 
 
 func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipState, hostiles: Array[ShipState], dt: float) -> void:
@@ -223,7 +241,8 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 	if carrier != null and carrier.is_active():
 		var frame := rack_frame(world, c)
 		rack_point = frame[0] + frame[1] * (RECOVER_RADIUS_M * 0.5)
-	world.set_input(c.id, CraftAI.command(s, directive, carrier, rack_point, target, hostiles, c.priority, _slot_of(c, directive)))
+	world.set_input(c.id, CraftAI.command(s, directive, carrier, rack_point, target, hostiles, c.priority, _slot_of(c, directive),
+		_friends, _enemy_missiles, dt))
 	if directive == CraftAI.Directive.RETURN and carrier != null and carrier.is_active() \
 			and s.position.distance_to(rack_point) < RECOVER_RADIUS_M \
 			and (s.velocity - carrier.velocity).length() < RECOVER_SPEED_MPS:
