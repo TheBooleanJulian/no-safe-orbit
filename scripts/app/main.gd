@@ -573,8 +573,8 @@ func fire_countermeasures() -> String:
 	return why
 
 
-## Automatic flares by policy, for the player and every live contact: when
-## a missile is within the policy's lead time.
+## Automatic flares by policy, for the player and every live contact: as
+## soon as an inbound missile is armed and within the policy's lead time.
 func _auto_countermeasures(player: ShipState) -> void:
 	var ships: Array[ShipState] = [player]
 	for c in encounter.live(world):
@@ -582,7 +582,7 @@ func _auto_countermeasures(player: ShipState) -> void:
 	for s in ships:
 		if s == null or not s.is_active() or s.derelict or s.policy == null or s.systems == null:
 			continue
-		var t := Hud.missile_inbound_time(world, s)
+		var t := Hud.missile_inbound_time(world, s, true)
 		if s.policy.cm_due(t) and not s.systems.ready_decoy_launchers().is_empty():
 			world.launch_decoys(s.id)
 			if s == player:

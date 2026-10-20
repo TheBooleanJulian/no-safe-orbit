@@ -306,8 +306,11 @@ INBOUND x.x s**. The yard restocks spent missiles at launch, cheaply.
   - **Burn-through:** it does nothing inside 3 km and is at full strength
     beyond 6 km.
   - **Counterplay:** a hardened sensor mast filters most of it.
-  - **EW drone:** the drone (rare, its own drone rack) spreads the jamming
-    to ships of its side within 3 km.
+  - **EW drone:** the drone (rare, its own drone rack) holds station
+    1.2 km out towards the threat and spreads the jamming to ships of its
+    side within 3 km.
+  - **In game:** the target card shows **JAMMED −n %** when your track of
+    it is degraded, and the WEAPONS tab and the help card (F1) explain it.
 - **Enemies.** They carry flares from mission 3 and sometimes a jammer
   from mission 6. The yard restocks flares at 1 cr each.
 
@@ -345,9 +348,14 @@ on their own bus and duck everything else, so they are always heard.
 read a contact's cargo — spare parts and crates aboard — its scrap value and
 the bounty on it, ±15 %.
 
-**Collisions:** ships that touch push apart and are damaged by the impact,
-the lighter and less armoured side more. Ships joined by a gangway, and craft
-near their own carrier, don't collide.
+**Collisions:** ships that touch push apart and are damaged by the impact.
+Ramming is a real weapon and hurts both ships: the blow is shared by
+toughness (mass × local armour, to the power 1.5), so the lighter, thinner
+side takes far more, and it spreads into the modules within three cells and
+the external systems near the impact. An 8 m/s Cutter-into-Destroyer ram
+costs the Cutter about a third of its structure and the Destroyer under
+1 %. Ships joined by a gangway, and craft near their own carrier, don't
+collide.
 
 **Rounds never expire.** Misses coast on their own orbits — around the planet
 and, half an orbit later, possibly back through you. Far from the fight they
@@ -625,7 +633,24 @@ rack. They fly with the same physics as every ship and can be shot down.
   returning home.
 - **Recon** gives the close look that shows the target's systems: without a
   drone nearby you see them only within 3 km.
-- Enemies launch their own fighter from mission 3 once hostile.
+- **Craft types** (each rack's info in the shipyard and each craft's line
+  on the WING tab say what it does):
+
+  | Craft | Carried in | Role |
+  |---|---|---|
+  | Wasp fighter | fighter bay | gun runs on the target; screens the carrier |
+  | Hornet interceptor | interceptor rack | shoots down missiles aimed at its carrier (within 4 km) first, then fights craft |
+  | Mantis bomber | bomber bay | heavy 45 mm cannon from long range; keeps its distance |
+  | Recon drone | drone rack | the close look at the target's systems; never fires |
+  | EW drone | EW drone rack | holds 1.2 km out towards the threat and jams for ships within 3 km |
+
+- **How they fly:** a craft never fires with a friend within 25 m of its
+  line of fire, its rounds carry an IFF interlock that passes through your
+  ships and craft, it keeps 70 m from other craft and 120 m clear of hulls, and
+  a strike is a gun run (run in, break off at 600 m, come round). The WING
+  tab's HOW THEY FLY block lists every directive and risk setting.
+- Enemies launch their own fighter from mission 3 once hostile,
+  interceptors from mission 5 and bombers from mission 7.
 - A craft still out when you dock is lost. Lost craft are replaced, and
   damaged ones repaired, at the station.
 

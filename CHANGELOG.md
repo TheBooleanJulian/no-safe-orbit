@@ -4,6 +4,48 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 5 — smarter craft, IFF, ramming, armed-only flares (2026-10-20)
+
+#### Added
+- **Craft never shoot their own side**: a craft holds fire while a friend
+  (its carrier, another craft of its side) is within 25 m of the line of
+  fire, and its rounds carry an IFF interlock that passes through friendly
+  ships and craft.
+- **Pathing**: craft keep 70 m from each other and 120 m clear of hulls,
+  and Strike flies gun runs — run in, fire, break off at 600 m, come round
+  — instead of hovering at standoff.
+- **New craft**: the **Hornet interceptor** (6 t, fast light gun, on an
+  interceptor rack) hunts missiles aimed at its carrier within 4 km before
+  anything else; the **Mantis bomber** (18 t, 45 mm cannon, in a bomber bay)
+  opens fire from long range and keeps its distance. The recon drone never
+  fires; the EW drone holds station 1.2 km out towards the threat. Enemies
+  field interceptors from mission 5 and bombers from mission 7.
+- **In-game explanations**: the WING tab shows what each craft's role does
+  and a HOW THEY FLY block (every directive, risk tolerance, the IFF and
+  clearance rules); the WEAPONS tab and the help card explain flares and
+  jamming; the target card shows **JAMMED −n % · burn-through < 3 km**; the
+  shipyard part info explains each craft rack.
+- Tests: `test_combat_ai.gd` (8), with mutation checks on the IFF skip,
+  the clear-shot interlock and the armed-only filter (each caught).
+
+#### Changed
+- **Ramming hurts more, and the lighter side most**: 3× the damage per
+  joule; the energy is split by (mass × local armour)^1.5, not linearly;
+  the blow spreads over modules within three cells (40 %) and external
+  systems within two cells. An 8 m/s Cutter-into-Destroyer ram: Cutter
+  −35.5 % structure over 2 modules, Destroyer −0.9 %.
+- **Auto flares wait until an inbound missile is armed** (a missile just
+  off the rail no longer triggers them), and every policy preset, Hold
+  included, now fires countermeasures on its own.
+
+#### Tests changed (and why)
+- `test_air_wing` strike: the closest approach is now the gun run's
+  run-in distance (±150 m) instead of the standoff, the run lasts up to
+  300 s, and the craft may break off for propellant as well as ammunition
+  (gun runs burn more propellant than hovering).
+- `test_m11_countermeasures` presets: every preset has auto
+  countermeasures on (Hold had them off).
+
 ### Milestone 12 — the station: sections, dealer, missions, capital ships (2026-10-20)
 
 #### Added

@@ -448,7 +448,10 @@ bounding-box hit test.
   nose guns. Spread: the gun's own plus the ship AI's.
 - **Collisions** (`_step_collisions`): bounding spheres, then hull-cell
   probes; an impulse with restitution 0.2 along the centre line, a push
-  apart, and impact energy ½μv² shared by mass × local armour.
+  apart, and impact energy ½μv² shared by (mass × local armour)^1.5;
+  3 points per 100 kJ, 60 % to the nearest module, 40 % over the modules
+  within three cells (by distance), 60 % to external systems within two
+  cells.
 - **Hull blocks**: `HullModuleDefinition.shape` (box / wedge), `legacy`.
   Wedges are solid below a plane (`ShipGrid.wedge_contains`, normal
   `wedge_normal`); `Penetration._solid_span` finds where a ray actually
@@ -650,6 +653,17 @@ bounding-box hit test.
   conservative 0.6/0.4/0.3, balanced 0.35/0.25/0.1, aggressive 0.15/0.1/0.
 - **Inspection**: the target's systems show only within 3 km of the player
   or of a recon craft.
+- **Roles and pathing (play-test batch 5)**: `ShipConfig.craft_role`
+  (fighter / interceptor / bomber / recon / ew) picks the behaviour inside
+  `CraftAI.command`; `AirWing` passes the craft's friends (same side, or
+  its own carrier and wing when unaligned) and the enemy missiles.
+  Avoidance is a velocity term added to the steering goal (separation
+  70 m from craft, 120 m from hulls, gain 0.5, ≤ 60 m/s). Fire needs
+  `clear_shot` (no friend within 25 m of the line to the target's range);
+  craft rounds carry `ProjectileState.iff_side` and skip every ship of that
+  side, hulls included (missiles are not skipped). Gun runs keep their
+  phase in `ShipState.ai_state`. `CraftAI.ROLE_HELP`, `DIRECTIVE_HELP` and
+  `RISK_HELP` are the in-game text.
 
 ## Crew and boarding (Milestone 5)
 
@@ -774,6 +788,8 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Enemy roles are fixed by place in the encounter (closer, standoff, flanker); no coordinated manoeuvres | Encounters feel the same shape each time | Later AI work |
 | Point-defence flak: a round within 1.5 m of a heavy slug (≥ 2 kg, < 1.5 km/s closing) destroys it; small and fast rounds can't be tracked | Heavy-cannon fire can be thinned by PD; autocannon and railgun fire can't | If PD lasers or interceptors arrive |
 | Auto-fire judges the aim against the primary gun's lead only | Mixed batteries auto-fire on the primary gun's solution | Per-mount fire control |
+| Craft IFF is perfect: a craft's round never hits a ship of its own side, hulls included (the clear-shot check still holds fire so rounds aren't wasted on friends) | Craft can't hurt you or each other | If IFF failure is wanted as a mechanic |
+| Craft avoidance is a local velocity nudge (no path planning around hulls) | Craft can get pinned against a large hull for a moment | If carriers get very large |
 | The escort's courier is a craft-like hull (hull points, no systems) on a fixed drift | It can't evade or be repaired | If escorts become a mainstay |
 
 ## Testing

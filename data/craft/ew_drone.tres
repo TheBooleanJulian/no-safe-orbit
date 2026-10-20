@@ -22,3 +22,4 @@ hit_box_half_extents = Vector3(1, 0.6, 1.5)
 cannon_muzzles_body = PackedVector3Array()
 hull_hp = 10.0
 jam_strength = 0.8
+craft_role = &"ew"

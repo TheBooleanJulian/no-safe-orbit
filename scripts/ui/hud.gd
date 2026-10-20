@@ -253,7 +253,10 @@ const HELP_TEXT := """FLIGHT     W/S pitch · A/D yaw · Q/E roll · R/F main en
 ASSIST     Z on/off · X cycles: hold orbit → match target → target markers (yellow, coast)
 GUNNERY    mouse aims the turrets (click captures; Esc releases) · LMB / Enter fire
            Shift zoom on/off, wheel = magnification · ◇ lead marker (needs a lock) · U next target
-MISSILES   M salvo at the U target (the ship needs a lock; M again holds) · , mode: all / conventional / EMP / nuclear / sequence
+MISSILES   M volley at the U target (one launch per pod; needs a lock) · , mode: all / conventional / EMP / nuclear / sequence
+COUNTER    Space flares (automatic once an inbound missile is armed and 4 s out) · a jammer works beyond 3 km
+           (their tracks and locks fade, their missiles may lose lock; inside 3 km radar burns through)
+ALERTS     . acknowledge the top non-critical alert
 POWER      1 SYS · 2 ENG · 3 WEP · 4 balance
 SHIP       Tab damage control, crew, power, wing · C patch damage
 CONTACTS   T target hostile · G salvage beacon · Y grappling arm · V gangway · N board / withdraw · [ / ] launch / recall craft
@@ -850,9 +853,12 @@ static func evade_chip(ship: ShipState, rel_velocity: Vector3) -> String:
 
 ## The missile arriving soonest: {time, position} (range ÷ closing speed),
 ## or {} if none is inbound.
-static func nearest_inbound_missile(world: WorldSimulation, ship: ShipState) -> Dictionary:
+## `armed_only`: only missiles past their arming time (a live threat).
+static func nearest_inbound_missile(world: WorldSimulation, ship: ShipState, armed_only: bool = false) -> Dictionary:
 	var best := {}
 	for m in world.missiles_at(ship.id):
+		if armed_only and m.missile_age < m.missile.arm_s:
+			continue
 		var r := m.position - ship.position
 		var closing := -r.dot(m.velocity - ship.velocity) / maxf(r.length(), 1.0)
 		var t := r.length() / maxf(closing, 1.0)
@@ -862,8 +868,8 @@ static func nearest_inbound_missile(world: WorldSimulation, ship: ShipState) -> 
 
 
 ## Seconds until the nearest missile after `ship` arrives, or -1.
-static func missile_inbound_time(world: WorldSimulation, ship: ShipState) -> float:
-	var m := nearest_inbound_missile(world, ship)
+static func missile_inbound_time(world: WorldSimulation, ship: ShipState, armed_only: bool = false) -> float:
+	var m := nearest_inbound_missile(world, ship, armed_only)
 	return float(m.time) if not m.is_empty() else -1.0
 
 
@@ -1017,6 +1023,10 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 		if not measured:
 			track_line += " %.0f s old" % track.age(t)
 		track_line += " · conf %d%% · %s" % [roundi(track.confidence * 100.0), "LOCK ●" if track.locked else "no lock ○"]
+		if track.jammed > 0.0:
+			# Their jammer: how much confidence it takes, and where it stops working.
+			track_line += "  JAMMED −%d%% · burn-through < %.0f km" % [
+				roundi(track.jammed * SensorTrack.JAM_CONFIDENCE_LOSS * 100.0), WorldSimulation.BURN_THROUGH_M / 1000.0]
 	var lead := _lead_solution(player, target)
 	var eta := "—"
 	if not lead.is_empty():

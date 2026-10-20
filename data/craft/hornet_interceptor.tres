@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ShipConfig" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/ship_config.gd" id="1_cfg"]
+[ext_resource type="Resource" path="res://data/weapons/interceptor_gun.tres" id="2_gun"]
+
+[resource]
+script = ExtResource("1_cfg")
+display_name = "Hornet interceptor"
+mass_kg = 6000.0
+inertia_kgm2 = Vector3(45000, 48000, 8000)
+unlimited_propellant = false
+propellant_capacity_kg = 2200.0
+main_isp_s = 320.0
+rcs_isp_s = 250.0
+thrust_forward_n = 220000.0
+thrust_reverse_n = 60000.0
+thrust_lateral_n = 70000.0
+thrust_vertical_n = 70000.0
+max_torque_nm = Vector3(330000, 330000, 90000)
+assist_max_rate_rad_s = Vector3(1.6, 1.6, 2.4)
+hit_box_center = Vector3(0, 0, 0)
+hit_box_half_extents = Vector3(3, 1.2, 4)
+cannon = ExtResource("2_gun")
+cannon_muzzles_body = PackedVector3Array(0, 0, -6)
+hull_hp = 25.0
+craft_role = &"interceptor"
