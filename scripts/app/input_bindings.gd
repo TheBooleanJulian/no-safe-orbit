@@ -53,7 +53,8 @@ const ACTIONS := [
 	[&"ack_alert", "Acknowledge the top non-critical alert"],
 	[&"tutorial", "Guided first sortie: start / skip"],
 	[&"release_mouse", "Release mouse"],
-	[&"toggle_controls", "Controls panel"],
+	[&"toggle_controls", "Controls panel, credits"],
+	[&"toggle_fullscreen", "Fullscreen / window"],
 ]
 
 enum Kind { KEYBOARD_MOUSE, GAMEPAD, NONE }

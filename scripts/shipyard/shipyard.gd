@@ -111,6 +111,7 @@ var sections: ShipyardSections
 
 func _ready() -> void:
 	InputBindings.apply_saved()
+	DisplaySettings.apply_saved()
 	theme = CyberTheme.build_theme()
 	var catalog := ConstructionCatalog.default_catalog()
 	profile = Main.get_profile()
@@ -188,6 +189,9 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if event.is_action_pressed("toggle_fullscreen"):
+		DisplaySettings.toggle_fullscreen()
 		return
 	# Builder keys act in the builder only.
 	if sections != null and sections.current != "REFIT":

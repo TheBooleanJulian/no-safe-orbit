@@ -1,0 +1,17 @@
+// steamcmd app build for No Safe Orbit (TheBooleanJulian).
+// A template: tools/steam_export.sh fills in the IDs and writes the
+// finished script to build/steam/scripts/. See docs/STEAM.md.
+"AppBuild"
+{
+	"AppID" "@APP_ID@"
+	"Desc" "No Safe Orbit @VERSION@"
+	"BuildOutput" "../output/"
+	"ContentRoot" "../"
+	"SetLive" ""
+	"Preview" "0"
+	"Depots"
+	{
+		"@WIN_DEPOT_ID@" "depot_windows.vdf"
+		"@LINUX_DEPOT_ID@" "depot_linux.vdf"
+	}
+}

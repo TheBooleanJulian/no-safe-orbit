@@ -504,6 +504,20 @@ class ships in ship dealership".
 | Capital templates (from M15), standard parts, no spawn hitch | `test_m12_shipyard` (capital), `tools/make_capital_templates.gd`, `tools/bench_hull.gd` | 960 / 2,169 / 1,954 t, validate clean, compile 6–14 ms (crew roster was ~90 ms on a 300-module hull, now 10.6 ms) |
 | Save format | `test_m12_shipyard` (schema 8), `compat_check` | v7 → v8 keeps `.v7`; COMPAT: OK |
 
+### Steam release preparation ✅ (2026-10-20)
+
+Play-test request: "prepare game for publishing on steam, under
+TheBooleanJulian". No Steamworks SDK (a separate decision); uploading
+and the store page need the account and are listed in `docs/STEAM.md`.
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Version and publisher on the executables; Windows and Linux presets | `test_release` | 0.12.0 · TheBooleanJulian · both presets export a 16.9 MB pack |
+| Credits and every licence, in game and beside the executable | `test_release` (every `data/ATTRIBUTION.md` row credited), render review | 90 kB of notices; 102 engine components |
+| UI at Steam Deck and high resolutions | render review (1280 × 800, 2560 × 1440) | `canvas_items` stretch from 1600 × 900; markers aligned |
+| Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
+| Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
+
 ### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts
 
 Done early (play-test batch 3): `Location` resource, Earth and Moon with
