@@ -20,9 +20,13 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **Only the simulation is profiled** (`tools/bench_sim.gd`, ~1 ms a tick
   with 200+ rounds; rare 10–15 ms ticks when many hits land at once).
   Rendering cost depends on the GPU and isn't measured by the checks.
-- **Missiles are new** (Milestone 7): ranges, prices, warhead strengths and
-  the enemy's firing interval are first guesses, covered by tests, not yet
-  by play. The **M** key has no gamepad default (every pad button is taken).
+- **Missiles are new** (Milestones 7 and 9): ranges, prices, warhead
+  strengths, the saturation swarm and the enemy's firing interval are first
+  guesses, covered by tests, not yet by play. **M** and **,** have no
+  gamepad default (every pad button is taken). Enemies still fire single
+  missiles, not salvos.
+- **Wrecks** drift away at 4 m/s and only the four most recent are kept;
+  they can still be shot but not salvaged again.
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the
   old large sections from blocks, but a section of odd length (the old
   3-long engine section) doesn't tile and stays as it was.

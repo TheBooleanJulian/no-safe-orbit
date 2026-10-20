@@ -65,6 +65,9 @@ var active_vessel: int = 0
 ## Tutorial.to_dict() and MissionChain.to_dict().
 var tutorial: Dictionary = {"state": "offer", "step": 0}
 var campaign: Dictionary = {"step": 0}
+## What M fires (MissileSalvo.Mode) and the sequence mode's warhead order.
+var missile_mode: int = MissileSalvo.Mode.ALL
+var missile_order: Array = MissileSalvo.DEFAULT_ORDER.duplicate()
 ## The schema the profile was read from (SCHEMA_VERSION for a new one).
 var loaded_schema: int = SCHEMA_VERSION
 ## Set by the shipyard while a new hull is on the slip (not saved): every
@@ -490,6 +493,8 @@ func to_dict() -> Dictionary:
 		"tech": tech.duplicate(),
 		"tutorial": tutorial.duplicate(),
 		"campaign": campaign.duplicate(),
+		"missile_mode": missile_mode,
+		"missile_order": missile_order.duplicate(),
 	}
 
 
@@ -551,6 +556,9 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 		for id in tk:
 			p.tech[str(id)] = clampi(int(tk[id]), 0, TechTree.MAX_LEVEL)
 	_read_v5_progress(p, d)
+	p.missile_mode = clampi(int(d.get("missile_mode", MissileSalvo.Mode.ALL)), 0, MissileSalvo.Mode.size() - 1)
+	var order: Variant = d.get("missile_order", [])
+	p.missile_order = MissileSalvo.sanitize_order(order if order is Array else [])
 	if int(version) < 4:
 		var designs: Array[ShipBlueprint] = []
 		for v in p.vessels:

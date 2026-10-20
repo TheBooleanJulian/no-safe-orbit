@@ -118,6 +118,8 @@ func _run() -> void:
 		"50%% of %d cr scrap, %d cr bounty and the %d cr mission reward paid (%d → %d)" % [scrap, bounty, goal, credits_at_start, profile.credits])
 	var next := main.world.get_ship(Main.TARGET_ID)
 	_check(next != old_target and next.display_name.begins_with("TGT-02"), "the next contact arrives (%s)" % next.display_name)
+	_check(main.world.has_ship(old_target.id) and old_target.derelict and old_target.id != Main.TARGET_ID and old_target.display_name.begins_with("WRECK"),
+		"the salvaged ship stays as a silent wreck (%s, %s)" % [old_target.id, old_target.display_name])
 	_check(next.position.distance_to(player.position) > 25000.0 and not main.track.detected,
 		"it arrives %.0f km out, beyond the sensors: no contact yet" % (next.position.distance_to(player.position) / 1000.0))
 	main.target_hostile = true

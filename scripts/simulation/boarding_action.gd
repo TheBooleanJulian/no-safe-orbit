@@ -33,7 +33,9 @@ const GANGWAY_CROSS_S := 5.0
 const HATCH_CUT_S := 20.0
 const KILL_RATE := 0.08
 const DEFENDER_BONUS := 1.25
-const MAX_TEAM := 8
+## The biggest party we can send (the crew's security and general hands
+## are the real limit).
+const MAX_TEAM := 24
 const LOG_LIMIT := 12
 
 var link: DockingLink
@@ -75,16 +77,10 @@ static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: Ship
 	b.defender = p_defender
 	b.objective = p_defender.command_room()
 	var muster := 0.0
-	for role in [CrewRoster.Role.SECURITY, CrewRoster.Role.GENERAL]:
-		for m in p_attacker.crew.members:
-			if b.team.size() >= mini(max_team, MAX_TEAM) or m.role != role or not m.available():
-				continue
-			var path := p_attacker.route(m.location, p_link.a_port.room)
-			if path.is_empty():
-				continue
-			b.team.append(m)
-			m.busy = true
-			muster = maxf(muster, (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S)
+	for m in candidates(p_attacker, p_link.a_port.room, max_team):
+		b.team.append(m)
+		m.busy = true
+		muster = maxf(muster, (p_attacker.route(m.location, p_link.a_port.room).size() - 1) * CrewRoster.ROOM_TRANSIT_S)
 	if b.team.is_empty():
 		return null
 	b.action = &"muster"
@@ -92,6 +88,21 @@ static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: Ship
 	b._rally_defenders()
 	b._note("Boarding party of %d mustering at %s (%.0f s)" % [b.team.size(), p_attacker.blueprint.rooms[p_link.a_port.room].id, muster])
 	return b
+
+
+## Who would go if a party of up to `max_team` were sent from `port_room`:
+## security first, then general crew, fit, free and able to reach it.
+static func candidates(attacker: ShipSystems, port_room: int, max_team: int = MAX_TEAM) -> Array[CrewRoster.Member]:
+	var out: Array[CrewRoster.Member] = []
+	if attacker == null or attacker.crew == null or port_room < 0:
+		return out
+	for role in [CrewRoster.Role.SECURITY, CrewRoster.Role.GENERAL]:
+		for m in attacker.crew.members:
+			if out.size() >= mini(max_team, MAX_TEAM) or m.role != role or not m.available():
+				continue
+			if not attacker.route(m.location, port_room).is_empty():
+				out.append(m)
+	return out
 
 
 func finished() -> bool:

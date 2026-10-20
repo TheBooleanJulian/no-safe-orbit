@@ -23,6 +23,12 @@ var accent: Color = CyberTheme.CYAN
 ## Room index -> fill colour (overrides pressure colouring).
 var room_overlay: Dictionary = {}
 var show_crew: bool = true
+## The ship's crew are the enemy's: drawn in red. Our boarders aboard it:
+## room index -> Array of CrewRoster.Member, drawn in their post colours.
+var hostile_crew: bool = false
+var boarders: Dictionary = {}
+## A crew member to ring (picked in the roster).
+var highlight_member: String = ""
 var show_legend: bool = false
 var interactive: bool = false
 ## Selected subject (equipment or room id) and the alert subject.
@@ -182,7 +188,8 @@ func _draw() -> void:
 				x += step
 		if systems.isolated_rooms.has(i):
 			_dashed_rect(r.grow(-2.0), CyberTheme.AMBER)
-	# Crew.
+	# Crew: a dot per person in their post's colour (red: the enemy's);
+	# a ring = wounded. Our boarders aboard follow the ship's own crew.
 	if show_crew and systems.crew != null:
 		var per_room := {}
 		for mem in systems.crew.members:
@@ -190,11 +197,27 @@ func _draw() -> void:
 				continue
 			var list: Array = per_room.get_or_add(mem.location, [])
 			list.append(mem)
+		for room in boarders:
+			if room_rects.has(room):
+				var list: Array = per_room.get_or_add(room, [])
+				for mem in boarders[room]:
+					list.append(mem)
 		for room in per_room:
 			var r: Rect2 = room_rects[room]
+			var across := maxi(int((r.size.x - 4.0) / CREW_DOT_STEP), 1)
 			var k := 0
-			for mem in per_room[room]:
-				draw_circle(r.position + Vector2(4 + (k % 6) * 5, 4 + (k / 6) * 5), 1.8, Color.WHITE if mem.fit() else CyberTheme.AMBER)
+			for mem: CrewRoster.Member in per_room[room]:
+				var ours := not hostile_crew or (boarders.has(room) and (boarders[room] as Array).has(mem))
+				var col: Color = CrewRoster.ROLE_COLORS[mem.role] if ours else CyberTheme.RED
+				var p := r.position + Vector2(5.0 + (k % across) * CREW_DOT_STEP, 5.0 + floorf(float(k) / across) * CREW_DOT_STEP)
+				if mem.fit():
+					draw_circle(p, CREW_DOT_R, col)
+				else:
+					draw_arc(p, CREW_DOT_R, 0.0, TAU, 12, col, 1.5)
+				if hostile_crew and ours:
+					draw_arc(p, CREW_DOT_R + 1.5, 0.0, TAU, 12, Color.WHITE, 1.0)
+				if mem.id == highlight_member and not hostile_crew:
+					draw_arc(p, CREW_DOT_R + 3.0, 0.0, TAU, 16, Color.WHITE, 1.5)
 				k += 1
 	# Systems.
 	for e in systems.equipment:
@@ -219,6 +242,10 @@ func _draw() -> void:
 	if show_legend:
 		draw_string(font, Vector2(PAD, size.y - 4), "■ ok  ▲ degraded  ◆ critical  ✕ destroyed  ○ off  ● crew  ▨ vented",
 			HORIZONTAL_ALIGNMENT_LEFT, size.x - PAD * 2, CyberTheme.SIZE_SMALL, CyberTheme.TEXT_DIM)
+
+
+const CREW_DOT_R := 3.0
+const CREW_DOT_STEP := 8.0
 
 
 ## State shapes: square, triangle, diamond, cross, ring.

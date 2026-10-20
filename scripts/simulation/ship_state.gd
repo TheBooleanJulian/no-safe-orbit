@@ -67,6 +67,9 @@ var missile: MissileConfig
 var missile_owner: StringName = &""
 var missile_target: StringName = &""
 var missile_age: float = 0.0
+## A beaten ship (or its craft) left drifting: it gets no commands, fires
+## nothing and its point defence is silent; it can still be hit.
+var derelict: bool = false
 
 ## Cannon state (unused when config.cannon is null). Rounds are shared by
 ## every mount; each mount has its own cooldown.

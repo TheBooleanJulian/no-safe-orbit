@@ -1093,13 +1093,39 @@ func _refresh_station_tabs() -> void:
 		for c in tab.get_children():
 			c.queue_free()
 	var berths := profile.berths(catalog)
-	_crew_tab.add_child(_station_label("[b]%s[/b] · %d / %d berths · roles change here for free; in flight Tab › CREW sends someone to a new post" % [
+	_crew_tab.add_child(_station_label("[b]%s[/b] · %d / %d berths · posts change here for free; in flight Tab › CREW sends someone to a new post" % [
 		v.name, v.crew.size(), berths]))
+	# Grouped by post, with this design's standard complement beside each.
+	var by_role := {}
 	for i in v.crew.size():
+		(by_role.get_or_add(clampi(int(v.crew[i].role), 0, CrewRoster.ROLE_NAMES.size() - 1), []) as Array).append(i)
+	var guns := 0
+	for e in v.blueprint.equipment:
+		var gdef: EquipmentDefinition = catalog.equipment.get(e.def_id)
+		if gdef != null and gdef.kind == EquipmentDefinition.Kind.CANNON:
+			guns += 1
+	var want := CrewRoster.suggested(guns)
+	var tally := PackedStringArray()
+	for r in CrewRoster.ROLE_NAMES.size():
+		var have := (by_role.get(r, []) as Array).size()
+		var col: Color = CyberTheme.AMBER if have < want[r] else CrewRoster.ROLE_COLORS[r]
+		tally.append("[color=#%s]● %s %d%s[/color]" % [col.to_html(false), CrewRoster.ROLE_SHORT[r], have, "/%d" % want[r] if want[r] > 0 else ""])
+	_crew_tab.add_child(_station_label("  ".join(tally) + "   [color=#%s](amber: short of the standard complement)[/color]" % CyberTheme.TEXT_DIM.to_html(false)))
+	var listed: Array[int] = []
+	for r in CrewRoster.ROLE_NAMES.size():
+		for i in by_role.get(r, []):
+			listed.append(i)
+	var last_role := -1
+	for i in listed:
 		var c: Dictionary = v.crew[i]
+		var post := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
+		if post != last_role:
+			last_role = post
+			_crew_tab.add_child(_station_label("[color=#%s][b]%s[/b][/color]" % [(CrewRoster.ROLE_COLORS[post] as Color).to_html(false),
+				str(CrewRoster.ROLE_NAMES[post]).to_upper()]))
 		var row := HBoxContainer.new()
 		var who := Label.new()
-		who.text = "%s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
+		who.text = "   %s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
 		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		who.clip_text = true
 		row.add_child(who)
@@ -1122,7 +1148,8 @@ func _refresh_station_tabs() -> void:
 	_crew_tab.add_child(_station_label("[b]FOR HIRE[/b] · credits %d · ★ = skill (faster repairs and treatment)" % profile.credits))
 	for i in profile.hire_pool.size():
 		var c: Dictionary = profile.hire_pool[i]
-		_crew_tab.add_child(_station_row("%s — %s %s" % [c.name, CrewRoster.ROLE_NAMES[int(c.role)], "★".repeat(int(c.skill))],
+		_crew_tab.add_child(_station_row("[color=#%s]●[/color] %s — %s %s" % [(CrewRoster.ROLE_COLORS[clampi(int(c.role), 0, 6)] as Color).to_html(false),
+			c.name, CrewRoster.ROLE_NAMES[int(c.role)], "★".repeat(int(c.skill))],
 			"Hire (%d cr)" % int(c.fee), func() -> void: _station_result(profile.hire(i, catalog)), v.crew.size() < berths and profile.credits >= int(c.fee)))
 	_vendor_tab.add_child(_station_label("[b]QUARTERMASTER OKAFOR[/b] — \"Fresh off the freighters. Cash only, no questions.\" · credits %d · new stock after every sortie" % profile.credits))
 	for i in profile.vendor_stock.size():
@@ -1496,8 +1523,9 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 					effect = "EMP: resets unhardened electronics (full strength within %.0f m), no damage" % m.effect_radius_m
 				MissileConfig.Warhead.NUCLEAR:
 					effect = "radiation, heat and EMP (full strength within %.0f m); armour facing it shields the crew" % m.effect_radius_m
-			lines.append("LAUNCHER %d × %s · [M] fires (needs a lock) · reloads in %.0f s · restocked at the yard for %d cr each" % [
-				e.missile_capacity, m.display_name, ShipSystems.LAUNCHER_RELOAD_S, m.unit_credits])
+			lines.append("LAUNCHER %d × %s%s · [M] salvo (needs a lock) · a launch every %.1f s · restocked at the yard for %d cr each" % [
+				e.missile_capacity, m.display_name, ", %d per launch" % e.missile_salvo if e.missile_salvo > 1 else "",
+				ShipSystems.LAUNCHER_CYCLE_S, m.unit_credits])
 			lines.append("MISSILE %.0f m/s² · Δv %.1f km/s · turns %.0f°/s · %s · point defence can shoot it down" % [
 				m.accel_mps2, m.delta_v_mps / 1000.0, m.turn_rate_deg_s, effect])
 	if e.emp_hardening > 0.0:

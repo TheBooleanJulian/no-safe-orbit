@@ -120,8 +120,9 @@ const EMP_INTERNAL_FACTOR := 0.5
 ## the burst is ablated.
 const NUKE_HEAT_K := 120.0
 const NUKE_HEAT_MAX_K := 400.0
-## Launcher reload between missiles (s).
-const LAUNCHER_RELOAD_S := 4.0
+## A launcher's tube cycle between launches (s): a salvo empties a rack in
+## seconds.
+const LAUNCHER_CYCLE_S := 0.4
 ## Without a working sensor mast: eyeballs and backup optics (m).
 const VISUAL_RANGE_M := 3000.0
 ## Ship AI flying without a bridge crew: fraction of thrust and turn rate.
@@ -969,7 +970,10 @@ func nuclear(exposure: float, dir_body: Vector3) -> PackedStringArray:
 ## take damage falling off with distance; rooms near the centre breach.
 func blast_at(pos_body: Vector3, radius: float, structure_fraction: float, hp: float, title: String) -> Dictionary:
 	var blast := {"pos_body": pos_body, "radius": radius, "lines": PackedStringArray([title])}
-	explosions.append(blast)
+	# Small warheads (a saturation swarm) are shown as bursts, not as big
+	# explosions with their own notices.
+	if radius >= SMALL_BLAST_M:
+		explosions.append(blast)
 	var c := ShipGrid.CELL_SIZE_M
 	var com := stats.center_of_mass_m
 	for i in modules.size():
@@ -993,18 +997,34 @@ func blast_at(pos_body: Vector3, radius: float, structure_fraction: float, hp: f
 	return blast
 
 
+## Blasts smaller than this (m) don't count as explosions for the views.
+const SMALL_BLAST_M := 6.0
+
+
 ## Missiles left in a launcher.
 func missiles_left(e: EquipmentState) -> int:
 	return maxi(e.def.missile_capacity - int(missiles_used.get(e.id, 0)), 0) if e.def.missile != null else 0
 
 
-## A launcher that can fire now (working, loaded, reloaded), or null.
-func ready_launcher() -> EquipmentState:
+## A launcher that can fire now (working, loaded, tube cycled), or null;
+## `warhead` (a MissileConfig.Warhead) picks only that kind, -1 any.
+func ready_launcher(warhead: int = -1) -> EquipmentState:
 	for e in equipment:
 		if e.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER and e.working() and missiles_left(e) > 0 \
-				and float(launcher_cooldown.get(e.id, 0.0)) <= 0.0:
+				and float(launcher_cooldown.get(e.id, 0.0)) <= 0.0 and (warhead < 0 or e.def.missile.warhead == warhead):
 			return e
 	return null
+
+
+## Missiles in launchers that can fire them (working: powered, not reset by
+## an EMP, not destroyed); `warhead` -1 = every kind.
+func missiles_of(warhead: int = -1) -> int:
+	var n := 0
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER and e.def.missile != null and e.working() \
+				and (warhead < 0 or e.def.missile.warhead == warhead):
+			n += missiles_left(e)
+	return n
 
 
 ## Missiles aboard by type (display name -> count).
