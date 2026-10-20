@@ -29,7 +29,7 @@ mouse aim. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 | ![Flight HUD in a 400 km orbit, a contact 2.5 km out](docs/screenshots/flight.jpg) | ![Gunnery: the hit cam replays a round through the enemy hull](docs/screenshots/gunnery.jpg) |
 | **Flight** — own-ship and target cards, the mission goal and tutorial offer, lead marker, radar and damage map. | **Gunnery** — fire on the ◇ lead; the hit cam replays where the round went and what it broke. |
 | ![A missile salvo climbing away from the frigate](docs/screenshots/missile_salvo.jpg) | ![Tab drawer: deck-by-deck damage control map](docs/screenshots/damage_control.jpg) |
-| **Missile salvo** — M fires every missile the mode allows; a saturation pod launches eight at a time. | **Damage control** (Tab) — every system and room by deck, with crew dots; click one for its actions. |
+| **Missile salvo** — each press of M fires one launch from every pod the mode allows; a saturation pod's launch is eight missiles. | **Damage control** (Tab) — every system and room by deck, with crew dots; click one for its actions. |
 | ![Tab drawer: crew map and roster by post](docs/screenshots/crew.jpg) | ![Debrief with the sortie summary](docs/screenshots/debrief.jpg) |
 | **Crew** (Tab › CREW) — a dot per person in their post's colour, the roster by post, orders and the boarding party. | **Debrief** — the mission result, what you dealt and took, and lessons for the shipyard. |
 | ![The shipyard: deck editor, palette, stats and hangar](docs/screenshots/shipyard.jpg) | |
@@ -168,7 +168,7 @@ godot --path .
 | Zoom for gunnery (toggle; centres on the aim, the mouse turns the view; wheel = magnification) | Shift | right stick click |
 | Next target: each ship of the encounter, then each hostile craft (lead marker only) | U | — |
 | Grappling arm: grab / release | Y | — |
-| Missile salvo at the U target (the ship needs a sensor lock); again: hold the rest | M | — |
+| Missile volley at the U target (the ship needs a sensor lock): one launch from each pod the mode allows | M | — |
 | Missile mode: all / conventional / EMP / nuclear / sequence | , | — |
 | Orbit details / details & combat log / help panels | O / P / H | — (use Tab) |
 | Target hostile on/off | T | B |
@@ -257,13 +257,15 @@ from 1 km), every value editable:
 
 **Missiles (M):** launchers (Weapons palette; external, any face but aft)
 fire guided missiles at the target picked with U — the enemy ship needs a
-sensor lock, a craft must be in sensor range. **M fires a salvo**: every
-missile aboard that the **missile mode** allows, as fast as the tubes cycle
-(a launch every 0.4 s per launcher); M again holds the rest. **,** cycles
-the mode — *all*, *conventional* (anti-ship and saturation), *EMP*,
-*nuclear*, or *sequence*: all of one warhead, then the next, in the order
-set in Tab › WEAPONS (EMP first, say, to blind their point defence before
-the anti-ship missiles arrive). The mode and order are saved.
+sensor lock, a craft must be in sensor range. **Each press of M fires a
+volley**: one launch from every pod the **missile mode** allows. A rack or
+an EMP launcher fires one missile and a saturation pod its swarm of eight.
+Press again for the next volley; a tube cycles in 0.4 s. **,** cycles the
+mode: *all*, *conventional* (anti-ship and saturation), *EMP*, *nuclear*,
+or *sequence*. In sequence mode each press fires the next warhead in the
+order set in Tab › WEAPONS, skipping any you have run out of. Put EMP
+first, say, to blind their point defence before the anti-ship missiles
+arrive. The mode and order are saved.
 A missile flies proportional navigation within its acceleration and turn
 rate, so it follows a jinking target; it arms after 1.5 s, has a proximity
 fuse and self-destructs after 150 s. Rounds and point defence shoot
@@ -275,10 +277,10 @@ INBOUND x.x s**. The yard restocks spent missiles at launch, cheaply.
 
 | Launcher | Rarity | Missiles | Warhead | Restock |
 |---|---|---|---|---|
-| Missile rack | uncommon | 12 | anti-ship: 160 mm penetrator along its flight, then an 8 m blast inside | 8 cr |
-| Saturation missile pod | rare | 48, **8 a launch** | small anti-ship: 45 mm penetrator, 3 m blast — weak alone, a swarm saturates point defence | 2 cr |
-| EMP missile launcher | rare | 6 | EMP: resets unhardened electronics, no damage | 20 cr |
-| Nuclear missile launcher | legendary | 3 | radiation, heat and EMP; no blast wave in vacuum | 150 cr |
+| Missile rack | uncommon | 12 | anti-ship: 160 mm penetrator along its flight, then an 8 m blast inside | 2 cr |
+| Saturation missile pod | rare | 48, **8 a launch** | small anti-ship: 45 mm penetrator, 3 m blast — weak alone, a swarm saturates point defence | 1 cr |
+| EMP missile launcher | rare | 6 | EMP: resets unhardened electronics, no damage | 5 cr |
+| Nuclear missile launcher | legendary | 3 | radiation, heat and EMP; no blast wave in vacuum | 30 cr |
 
 **EMP and hardening:** an EMP resets electronics — reactors, guns, point
 defence, sensors, power distribution, collars, racks, arms and launchers —

@@ -13,4 +13,4 @@ turn_rate_deg_s = 100.0
 fuse_radius_m = 150.0
 hull_hp = 8.0
 effect_radius_m = 250.0
-unit_credits = 20
+unit_credits = 5

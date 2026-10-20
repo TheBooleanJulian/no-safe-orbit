@@ -117,6 +117,8 @@ const ENEMY_REBOARD_DELAY_S := 20.0
 ## How our crew defends against boarders (chosen in Tab → CREW).
 var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
 var _jump_hold := 0.0
+## SEQUENCE missile mode: which warhead the next press of M fires.
+var _sequence_index := 0
 var _craft_views: Dictionary = {}  # craft id -> CraftView
 var _missile_views: Dictionary = {}  # missile id -> MissileView
 ## The salvo M started, still firing (null when done).
@@ -534,17 +536,34 @@ func _apply_automation(input: ShipControlInput, player: ShipState, target: ShipS
 	var c := encounter.selected_contact()
 	if policy == null or c == null or hud.selected_id != &"":
 		return
-	input.fire = policy.trigger(input.fire, c.track.locked, c.hostile, aim_error_deg(player, target, input))
+	var fightable := is_fightable(target)
+	input.fire = policy.trigger(input.fire, c.track.locked, c.hostile, aim_error_deg(player, target, input), fightable)
 	# Auto-salvo at the selected contact (manual M, or a salvo in flight, comes first).
 	if salvo == null and target != null and target.is_active() and player.systems != null:
 		var range_m := player.position.distance_to(target.position)
-		if policy.salvo_due(c.track.locked, c.track.confidence, range_m, c.hostile, world.sim_time, _auto_salvo_at):
+		if policy.salvo_due(c.track.locked, c.track.confidence, range_m, c.hostile, world.sim_time, _auto_salvo_at, fightable):
 			_auto_salvo_at = world.sim_time + policy.salvo_interval_s
 			var s := MissileSalvo.start(PLAYER_ID, c.id, policy.salvo_mode, get_profile().missile_order, policy.salvo_count)
 			if s.available(player.systems) > 0:
 				salvo = s
 				hud.notice("AUTO-SALVO — %s ×%s at %s" % [MissileSalvo.mode_text(policy.salvo_mode, get_profile().missile_order),
 					str(policy.salvo_count) if policy.salvo_count > 0 else "all", target.display_name], world.sim_time)
+
+
+## Shooter ids on the player's side: the player and its craft (their rounds
+## are drawn after incoming ones when tracers run short).
+func _own_shooters() -> Dictionary:
+	var own := {PLAYER_ID: true}
+	for c in player_wing.crafts:
+		own[c.id] = true
+	return own
+
+
+## Still a fighting ship (for automation): active, not a derelict, not
+## disabled. Wrecks and beaten hulls are left for salvage.
+static func is_fightable(ship: ShipState) -> bool:
+	return ship != null and ship.is_active() and not ship.derelict \
+		and (ship.systems == null or ship.systems.disabled_reason() == "")
 
 
 ## Zooming in: swing the camera to look at the aim point and put the cursor
@@ -1187,10 +1206,10 @@ func _show_burst(burst: Dictionary, player: ShipState) -> void:
 			hit_flashes.add_burst(burst.ship_id, burst.point_body, burst.radius, Color(0.45, 0.7, 1.0, 0.9))
 			audio.play("detonation", lerpf(-18.0, -6.0, near))
 		MissileConfig.Warhead.NUCLEAR:
-			hit_flashes.add_explosion(burst.ship_id, burst.point_body, burst.radius)
+			hit_flashes.add_explosion(burst.ship_id, burst.point_body, burst.radius, true)
 			hud.flash_white()
 			audio.play("detonation", lerpf(-10.0, 0.0, near))
-			camera.shake(3.0 * near)
+			camera.shake(5.0 * clampf(1.0 - dist / 8000.0, 0.0, 1.0))
 		_:
 			if float(burst.radius) < ShipSystems.SMALL_BLAST_M:
 				hit_flashes.add_fireball(burst.ship_id, burst.point_body, burst.radius)
@@ -1266,13 +1285,13 @@ func fire_missile() -> String:
 	elif player.systems == null or player.systems.missiles_of() == 0:
 		why = "no missiles ready (launchers empty, offline or not fitted)"
 	else:
-		var s := MissileSalvo.start(PLAYER_ID, at, p.missile_mode, p.missile_order)
-		if s.available(player.systems) == 0:
+		var s := MissileSalvo.volley(PLAYER_ID, at, p.missile_mode, p.missile_order, player.systems, _sequence_index)
+		if s.volley_ids.is_empty():
 			why = "no %s missiles ready ([,] changes the missile mode)" % MissileSalvo.mode_text(p.missile_mode, p.missile_order)
 		else:
+			_sequence_index = s.next_sequence_index
 			salvo = s
-			hud.notice("MISSILES: salvo — %d %s at %s" % [s.available(player.systems), MissileSalvo.mode_text(p.missile_mode, p.missile_order),
-				world.get_ship(at).display_name], world.sim_time)
+			hud.notice("MSL ×%d → %s" % [s.volley_missiles(player.systems), world.get_ship(at).display_name], world.sim_time)
 			_step_salvo()
 	if why != "":
 		hud.notice("MISSILE: " + why, world.sim_time)
@@ -1653,7 +1672,7 @@ func _process(delta: float) -> void:
 	_update_sky_light()
 	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
 		location.sky_body.radius_m if location.sky_body != null else 0.0)
-	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
+	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera.global_position, _own_shooters())
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track

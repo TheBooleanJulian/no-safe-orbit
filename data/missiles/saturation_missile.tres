@@ -18,4 +18,4 @@ penetration_mm = 45.0
 blast_radius_m = 3.0
 blast_structure_fraction = 0.12
 blast_hp = 8.0
-unit_credits = 2
+unit_credits = 1
