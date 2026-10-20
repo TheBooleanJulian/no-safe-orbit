@@ -204,6 +204,11 @@ func _run() -> void:
 		var earth_km: float = main.sky.sky_body_center.length() / 1000.0 if main.sky.sky_body != null else 0.0
 		_check(main.sky.sky_body != null and main.sky.sky_body.display_name == "Earth" and earth_km > 356_000.0 and earth_km < 407_000.0,
 			"Earth hangs in the lunar sky (%.0f km)" % earth_km)
+		var hidden := PlanetSky.below_horizon(main.sky.planet_center, main.world.body.radius_m, main.sky.sky_body_center)
+		var expect := 0.0 if hidden else Main.SUN_ENERGY * main.sky.sky_body_light
+		_check(absf(main.sky_light.light_energy - expect) < 1e-4 and (hidden or main.sky_light.light_energy > 0.0),
+			"earthlight on the ship by Earth's phase (%.3f of the Sun's energy, Earth %s)" % [
+				main.sky_light.light_energy / Main.SUN_ENERGY, "below the horizon" if hidden else "up"])
 		_check(main.encounter.contacts.size() == 2 and main.hud.station_name == "Lunar Shipyard",
 			"two ships to meet; the jump drive goes to the Lunar Shipyard (%d, %s)" % [main.encounter.contacts.size(), main.hud.station_name])
 		# B returns to the shipyard with the same design.

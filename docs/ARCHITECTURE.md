@@ -235,6 +235,13 @@ renderer CPU/GPU time, spike frames, a mesh census):
   phase), and hides the Sun behind it. The stars shader discards stars behind
   it. From afar, Earth's clouds are domain-warped and latitude-banded (only
   their coarse octaves survive); up close they are unchanged.
+- **Reflected light:** `CelestialFrame.reflected_fraction` (geometric albedo ×
+  (R/d)² × phase law) gives each body's light on the other; `PlanetSky`
+  maps it to shown brightness (`perceived_light`: night adaptation, full Moon
+  = 5 % of the Sun, Stevens exponent 0.5) and feeds the shader (`near_fill`
+  on the central body's night side, `far_fill` as earthshine on the far
+  body) and `Main.sky_light` (a light-only directional light on ships, 0
+  while the source is below the horizon).
 - **Stars** (`Starfield`, `shaders/stars.gdshader`): the 9,096 stars of the Yale
   Bright Star Catalogue at J2000 positions, camera-facing quads sized in pixels
   by magnitude and coloured by B−V. The shader discards stars behind the
@@ -657,7 +664,8 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Spherical central body for gravity; no J2, no third bodies (no Earth pull in lunar orbit) | Orbits never precess | If missions need ground tracks or long-duration accuracy |
 | Airless bodies: the floor is a sphere at the highest terrain (11 km on the Moon), no terrain model | Flying low over a lunar plain is as fatal as hitting a summit | If low passes or landings are wanted |
 | Moving between stations is free and instant (shipyard map) | Location is a free choice | Milestone 13 (jump fuel, brokers) |
-| One far body per sky (the Moon from Earth, Earth from the Moon), placed by a low-precision lunar series (~0.3°); no earthshine, eclipses of the Sun by it are all-or-nothing; the Sun's direction is Earth's (≤ 0.15° off at the Moon) | Close enough to look right; no eclipse gameplay | If eclipses or more bodies matter |
+| Reflected light is shown through a night-adaptation mapping (full Moon = 5 % of the Sun), not at its physical 2.4e-6; it isn't occluded by the near body's terrain or shadowed on hulls | Night is visible and readable | If an exposure/eye-adaptation model is wanted |
+| One far body per sky (the Moon from Earth, Earth from the Moon), placed by a low-precision lunar series (~0.3°); eclipses of the Sun by it are all-or-nothing; the Sun's direction is Earth's (≤ 0.15° off at the Moon) | Close enough to look right; no eclipse gameplay | If eclipses or more bodies matter |
 | Lunar rotation uses the IAU pole and W with only the largest periodic term (others ~0.3°) | Lunar geography is ~0.3° off | Not needed |
 | No atmosphere/drag: crossing 100 km = entry, vessel removed (design decision) | Skimming 100–120 km has no cost; dipping to 99 km is fatal | If aerobraking or reentry gameplay is wanted |
 | Rounds inherit the ship's CoM velocity; muzzle velocity from rotation (ω × r) ignored | Firing while turning hard is slightly more accurate than reality | When weapon mounts gain turrets |
