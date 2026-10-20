@@ -5,6 +5,8 @@ extends Node3D
 ## a view of it, rendered around a floating origin at the player ship.
 
 const PLAYER_ID := &"player"
+## The lead contact's slot id (the encounter's ships are target_01,
+## target_02, …; a slot is reused once its ship is retired as a wreck).
 const TARGET_ID := &"target_01"
 const EARTH: OrbitalBody = preload("res://data/bodies/earth.tres")
 const SHIPYARD_SCENE := "res://scenes/shipyard/shipyard.tscn"
@@ -43,8 +45,35 @@ static var debrief_pending: bool = false
 
 var world: WorldSimulation
 var celestial: CelestialFrame
-## The target shoots back (toggle with T).
-var target_hostile: bool = false
+## Every enemy ship in the current encounter, and the selected one (U).
+var encounter := Encounter.new()
+## The selected contact's state under the names the single-target code and
+## the tests use: hostility, our track of it, inbound, its air wing.
+var target_hostile: bool:
+	get:
+		var c := encounter.selected_contact()
+		return c != null and c.hostile
+var track: SensorTrack:
+	get:
+		var c := encounter.selected_contact()
+		return c.track if c != null else _no_track
+var _target_arriving: bool:
+	get:
+		var c := encounter.selected_contact()
+		return c != null and c.arriving
+	set(value):
+		var c := encounter.selected_contact()
+		if c != null:
+			c.arriving = value
+var target_wing: AirWing:
+	get:
+		var c := encounter.selected_contact()
+		return c.wing if c != null else null
+var _no_track := SensorTrack.new()
+## When the player's automation may fire its next salvo (ShipPolicy).
+var _auto_salvo_at := 0.0
+## A contact has been beaten this sortie (for the tutorial).
+var _beaten_any := false
 ## Boarding party size the player has chosen (tactical overview).
 var boarding_party_size: int = BoardingAction.MAX_TEAM
 var player_input := PlayerInput.new()
@@ -55,9 +84,8 @@ var _designs: Dictionary = {}
 var _sortie_closed := false
 ## This sortie's record, for the debrief.
 var combat_log: CombatLog
-## The player's and the target's autonomous craft (Milestone 6).
+## The player's autonomous craft (Milestone 6); each contact has its own wing.
 var player_wing: AirWing
-var target_wing: AirWing
 ## Enemy fighters launch from this mission on, once the target is hostile.
 const ENEMY_WING_FROM_MISSION := 3
 ## A contact arriving after a salvage starts this far out, closing at this
@@ -82,18 +110,10 @@ const ESCAPE_RANGE_M := 40_000.0
 const ENEMY_BOARD_FROM_MISSION := 2
 ## After we cut its gangway the enemy waits this long before trying again (s).
 const ENEMY_REBOARD_DELAY_S := 20.0
-var _enemy_reboard_at := -INF
 ## How our crew defends against boarders (chosen in Tab → CREW).
 var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
 const STATION_NAME := "Earth Shipyard"
 var _jump_hold := 0.0
-## The current target surrendered to our boarders and has been paid out;
-## it leaves once the boarders are home.
-var _prize_taken := false
-## What the player's sensors know about the target, and the target's about the player.
-var track := SensorTrack.new()
-var enemy_track := SensorTrack.new()
-var _target_arriving := false
 var _craft_views: Dictionary = {}  # craft id -> CraftView
 var _missile_views: Dictionary = {}  # missile id -> MissileView
 ## The salvo M started, still firing (null when done).
@@ -107,18 +127,15 @@ var _derelict_wings: Array[AirWing] = []
 var _wreck_count := 0
 ## An enemy boarding party is at most this big (ours: BoardingAction.MAX_TEAM).
 const ENEMY_BOARDING_TEAM := 8
-## An engaging enemy with a launcher fires when it holds a lock within this
-## range (m), at most once per interval (s).
-const ENEMY_MISSILE_RANGE_M := 12_000.0
-const ENEMY_MISSILE_INTERVAL_S := 25.0
-var _enemy_missile_at := 0.0
+## Where the encounter's ships start, relative to the player (the first of
+## a sortie; arrivals come from ARRIVAL_DISTANCE_M out).
+const CONTACT_OFFSETS := [Vector3(400, 120, -2500), Vector3(-1500, -250, -3800), Vector3(2300, 450, -4400)]
 ## The campaign's current goal and the guided first sortie (Milestone 8).
 var mission: MissionChain
 var tutorial: Tutorial
 ## The escort mission's courier (a craft-like ship of ours, unarmed).
 const COURIER_ID := &"courier"
-## The current contact has been beaten (disabled or captured) / salvaged.
-var _contact_beaten := false
+## A contact has been salvaged or taken this sortie (for the tutorial).
 var _salvaged := false
 var _wing_log_seen := {}  # AirWing -> log_count already shown
 
@@ -160,8 +177,9 @@ func _start_scenario() -> void:
 	_missile_views.clear()
 	_wrecks.clear()
 	_derelict_wings.clear()
-	target_wing = null
+	encounter = Encounter.new()
 	salvo = null
+	_beaten_any = false
 	hud.reset()
 	hit_flashes.clear()
 
@@ -177,6 +195,9 @@ func _start_scenario() -> void:
 	world.set_central_body(EARTH, Vec3d.new(0, r0, 0), Vec3d.new(0, 0, -EARTH.circular_speed(r0)))
 	world.anchor_id = PLAYER_ID
 	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
+	player.side = &"player"
+	player.policy = ShipPolicy.from_dict(vessel.policy)
+	_auto_salvo_at = 0.0
 	var systems := _new_systems(PLAYER_ID)
 	systems.tech = p.tech.duplicate()
 	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
@@ -191,19 +212,18 @@ func _start_scenario() -> void:
 	player.attach_systems(systems)
 	world.add_ship(player)
 	player_wing = AirWing.for_ship(player)
-	player_wing.target_id = TARGET_ID
 	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
 		player_wing.apply_state(vessel.wing)
 	world.wings.append(player_wing)
 	hud.player_wing = player_wing
-	_spawn_target()
+	hud.encounter = encounter
+	_spawn_view(PLAYER_ID, Color.WHITE)
+	_spawn_encounter()
 	_sortie_closed = false
 	combat_log = CombatLog.begin(player, world.sim_time)
 	if hud.debrief != null:
 		hud.debrief.visible = false
 
-	_spawn_view(PLAYER_ID, Color.WHITE)
-	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
 	mission = MissionChain.from_dict(p.campaign)
 	tutorial = Tutorial.from_dict(p.tutorial)
 	_salvaged = false
@@ -219,46 +239,71 @@ func _start_scenario() -> void:
 		EARTH.display_name, START_ALTITUDE_M / 1000.0, world.fixed_dt])
 
 
-## Next contact. The first of a sortie is already close: 2.5 km ahead and
-## off-axis, crossing the bow at ~25 m/s. One arriving after a salvage
-## (`arriving`) starts ARRIVAL_DISTANCE_M out and closes; it must be
-## detected before it engages.
-func _spawn_target(arriving: bool = false) -> void:
+## The next encounter: EnemyFactory.encounter_size(mission) ships in slots
+## target_01, target_02, …, each with its own policy and role. The first of
+## a sortie is already close (the lead 2.5 km ahead, crossing the bow at
+## ~25 m/s); one arriving after a salvage (`arriving`) starts
+## ARRIVAL_DISTANCE_M out and closes; it must be detected before it engages.
+func _spawn_encounter(arriving: bool = false) -> void:
+	var mission_no := get_profile().missions_completed + 1
+	for i in EnemyFactory.encounter_size(mission_no):
+		_spawn_contact(i, mission_no, arriving)
+	encounter.ensure_selection(world)
+	player_wing.target_id = encounter.selected
+
+
+## Ship `index` of the encounter, in slot target_<index + 1>.
+func _spawn_contact(index: int, mission_no: int, arriving: bool) -> Contact:
+	var id := StringName("target_%02d" % (index + 1))
 	var player := world.get_ship(PLAYER_ID)
-	var mission := get_profile().missions_completed + 1
 	var template := _load_template()
-	_designs[TARGET_ID] = _compile(EnemyFactory.design(mission, template, ConstructionCatalog.default_catalog()), template)
-	var class_name_word: String = (_designs[TARGET_ID].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
-	var pos := player.position + Vector3(400, 120, -2500)
+	_designs[id] = _compile(EnemyFactory.design(mission_no, template, ConstructionCatalog.default_catalog(), index), template)
+	var class_name_word: String = (_designs[id].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
+	var offset: Vector3 = CONTACT_OFFSETS[index % CONTACT_OFFSETS.size()] * (1.0 + float(index / CONTACT_OFFSETS.size()))
+	var pos := player.position + offset
 	var vel := player.velocity + Vector3(-25, 1.5, 6.0)
 	var attitude := Quaternion(Vector3.UP, 0.9)
 	if arriving:
-		var dir := (Basis(Vector3.UP, 1.3 * mission) * Vector3(0.35, 0.1, -1.0)).normalized()
-		pos = player.position + dir * ARRIVAL_DISTANCE_M
+		var dir := (Basis(Vector3.UP, 1.3 * mission_no + 0.4 * index) * Vector3(0.35, 0.1, -1.0)).normalized()
+		pos = player.position + dir * (ARRIVAL_DISTANCE_M + 1500.0 * index)
 		vel = player.velocity - dir * ARRIVAL_SPEED_MPS
 		attitude = Basis.looking_at(-dir, Vector3.UP).get_rotation_quaternion()
-	var target := ShipState.create(TARGET_ID, "TGT-%02d %s" % [mission, class_name_word], _designs[TARGET_ID].config, pos, vel, attitude)
-	target.angular_velocity = Vector3.ZERO if arriving else Vector3(0.0, 0.03, 0.01)
-	_target_arriving = arriving
-	_prize_taken = false
-	_contact_beaten = false
-	_enemy_missile_at = world.sim_time + ENEMY_MISSILE_INTERVAL_S * 0.5
-	track = SensorTrack.new()
-	enemy_track = SensorTrack.new()
-	target.attach_systems(_new_systems(TARGET_ID))
-	world.add_ship(target)
-	world.set_input(TARGET_ID, ShipControlInput.neutral())
+	var label := "TGT-%02d%s %s" % [mission_no, "" if index == 0 else "ABCDEFGH"[index % 8], class_name_word]
+	var ship := ShipState.create(id, label, _designs[id].config, pos, vel, attitude)
+	ship.angular_velocity = Vector3.ZERO if arriving else Vector3(0.0, 0.03, 0.01)
+	ship.side = &"hostile"
+	var c := Contact.create(id, index, EnemyFactory.policy(mission_no, index))
+	ship.policy = c.policy
+	c.arriving = arriving
+	c.salvo_at = world.sim_time + c.policy.salvo_interval_s * 0.5
+	ship.attach_systems(_new_systems(id))
+	world.add_ship(ship)
+	world.set_input(id, ShipControlInput.neutral())
 	# Its craft (they launch once it is hostile, from ENEMY_WING_FROM_MISSION).
-	if target_wing != null:
-		world.wings.erase(target_wing)
-		for c in target_wing.crafts:
-			if world.has_ship(c.id):
-				world.remove_ship(c.id)
-	target_wing = AirWing.for_ship(target)
-	target_wing.target_id = PLAYER_ID
-	world.wings.append(target_wing)
-	if player_wing != null:
-		player_wing.target_id = TARGET_ID
+	c.wing = AirWing.for_ship(ship)
+	c.wing.target_id = PLAYER_ID
+	world.wings.append(c.wing)
+	encounter.add(c)
+	_spawn_view(id, Color(1.0, 0.78, 0.72))
+	return c
+
+
+## The selected contact's id (&"" when there is none) and its ship.
+func target_id() -> StringName:
+	return encounter.selected
+
+
+func target_ship() -> ShipState:
+	return world.get_ship(encounter.selected) if encounter.selected != &"" else null
+
+
+## Select a contact (U cycles; the drawer's list picks one).
+func select_contact(id: StringName) -> void:
+	if encounter.select(id):
+		hud.selected_id = &""
+		player_wing.target_id = id
+		hud.reset_target()
+		hud.notice("TARGET: %s" % world.get_ship(id).display_name, world.sim_time)
 
 
 static func _intact_tank_capacity(systems: ShipSystems) -> float:
@@ -411,15 +456,20 @@ func _unhandled_input(event: InputEvent) -> void:
 	player_input.handle_event(event)
 
 
+## The encounter turns hostile (or stands down) together: fire on one of
+## its ships and they all fight. T toggles it.
 func set_target_hostile(on: bool, why: String = "") -> void:
-	target_hostile = on
+	var lead := target_ship()
+	for c in encounter.live(world):
+		c.hostile = on
+		if not on:
+			world.set_input(c.id, ShipControlInput.neutral())
 	hud.target_hostile = on
-	GameLog.info("main", "Target %s%s" % ["HOSTILE — guns free" if on else "passive", " (%s)" % why if why != "" else ""])
-	if why != "":
-		hud.notice("%s turns HOSTILE — %s" % [world.get_ship(TARGET_ID).display_name, why], world.sim_time)
-		combat_log.record(world.sim_time, "contact", "%s turned hostile: %s" % [world.get_ship(TARGET_ID).display_name, why])
-	if not on:
-		world.set_input(TARGET_ID, ShipControlInput.neutral())
+	GameLog.info("main", "Encounter %s%s" % ["HOSTILE — guns free" if on else "passive", " (%s)" % why if why != "" else ""])
+	if why != "" and lead != null:
+		var who := lead.display_name if encounter.live(world).size() <= 1 else "%s and %d more" % [lead.display_name, encounter.live(world).size() - 1]
+		hud.notice("%s turn%s HOSTILE — %s" % [who, "s" if encounter.live(world).size() <= 1 else "", why], world.sim_time)
+		combat_log.record(world.sim_time, "contact", "%s turned hostile: %s" % [who, why])
 
 
 ## Turrets train on the point under the aim cursor, at the target's range
@@ -434,7 +484,7 @@ func _aim(input: ShipControlInput, player: ShipState, target: ShipState) -> void
 	var craft := world.get_ship(hud.selected_id) if hud.selected_id != &"" else null
 	if craft != null:
 		range_m = clampf((craft.position - player.position - origin).length(), 200.0, 30_000.0)
-	elif target.is_active() and track.detected:
+	elif target != null and target.is_active() and track.detected:
 		var pos := target.position if track.in_contact else track.estimated_position(player, world.sim_time)
 		range_m = clampf((pos - player.position - origin).length(), 200.0, 30_000.0)
 	player_input.aim_range_m = range_m
@@ -444,7 +494,44 @@ func _aim(input: ShipControlInput, player: ShipState, target: ShipState) -> void
 	if craft != null:
 		input.lead_target_id = craft.id
 	else:
-		input.lead_target_id = TARGET_ID if target.is_active() and track.locked else &""
+		input.lead_target_id = target.id if target != null and target.is_active() and track.locked else &""
+
+
+## Angle (°) between where the guns are aimed and the fire-control lead on
+## `target` (180 when there is no solution).
+func aim_error_deg(player: ShipState, target: ShipState, input: ShipControlInput) -> float:
+	if target == null or not target.is_active() or player.config.cannon == null or not input.has_aim:
+		return 180.0
+	var muzzle := player.position + player.orientation * player.config.primary_muzzle()
+	var rel := target.position + target.orientation * target.config.hit_box_center - muzzle
+	var rel_v := target.velocity - player.velocity
+	var t := FireControl.intercept_time(rel, rel_v, player.config.cannon.muzzle_velocity_mps)
+	if t <= 0.0:
+		return 180.0
+	var aim := player.position + input.aim_offset - muzzle
+	return rad_to_deg(aim.angle_to(FireControl.lead_point(rel, rel_v, t)))
+
+
+## The player's automation (their vessel's ShipPolicy) on top of manual
+## control. It only ever adds fire: the trigger is pulled when the player
+## pulls it, or when auto-fire's conditions hold (ShipPolicy.trigger);
+## manual input always wins and is never blocked.
+func _apply_automation(input: ShipControlInput, player: ShipState, target: ShipState) -> void:
+	var policy := player.policy
+	var c := encounter.selected_contact()
+	if policy == null or c == null or hud.selected_id != &"":
+		return
+	input.fire = policy.trigger(input.fire, c.track.locked, c.hostile, aim_error_deg(player, target, input))
+	# Auto-salvo at the selected contact (manual M, or a salvo in flight, comes first).
+	if salvo == null and target != null and target.is_active() and player.systems != null:
+		var range_m := player.position.distance_to(target.position)
+		if policy.salvo_due(c.track.locked, c.track.confidence, range_m, c.hostile, world.sim_time, _auto_salvo_at):
+			_auto_salvo_at = world.sim_time + policy.salvo_interval_s
+			var s := MissileSalvo.start(PLAYER_ID, c.id, policy.salvo_mode, get_profile().missile_order, policy.salvo_count)
+			if s.available(player.systems) > 0:
+				salvo = s
+				hud.notice("AUTO-SALVO — %s ×%s at %s" % [MissileSalvo.mode_text(policy.salvo_mode, get_profile().missile_order),
+					str(policy.salvo_count) if policy.salvo_count > 0 else "all", target.display_name], world.sim_time)
 
 
 ## Zooming in: swing the camera to look at the aim point and put the cursor
@@ -465,23 +552,23 @@ func player_captured() -> bool:
 
 ## The enemy boards a beaten player: it lines its collar up with one of our
 ## ports, extends a gangway (V cuts it loose) and sends its party across.
-func _enemy_board(target: ShipState, player: ShipState) -> void:
-	var link := world.link_for(TARGET_ID)
+func _enemy_board(c: Contact, target: ShipState, player: ShipState) -> void:
+	var link := world.link_for(c.id)
 	if link == null:
-		if world.sim_time < _enemy_reboard_at:
-			world.set_input(TARGET_ID, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
+		if world.sim_time < c.reboard_at:
+			world.set_input(c.id, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
 			return
 		var found := Docking.best(target, player)
 		if not found.is_empty() and found.assessment.ok:
-			world.dock(TARGET_ID, PLAYER_ID)
+			world.dock(c.id, PLAYER_ID)
 			var line := "ENEMY GANGWAY — %s is coming aboard! [V] cut it loose" % target.display_name
 			hud.notice(line, world.sim_time)
 			combat_log.record(world.sim_time, "boarding", line)
-			world.set_input(TARGET_ID, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
+			world.set_input(c.id, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
 		else:
-			world.set_input(TARGET_ID, GunneryAI.dock_approach(target, player))
+			world.set_input(c.id, GunneryAI.dock_approach(target, player))
 		return
-	world.set_input(TARGET_ID, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
+	world.set_input(c.id, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
 	if link.sealed() and world.boarding_for(link) == null:
 		var party := world.start_boarding(link, ENEMY_BOARDING_TEAM)
 		if party != null:
@@ -516,8 +603,8 @@ func aim_cursor_at(offset: Vector3) -> void:
 ## the smoke tests and screen captures).
 func aim_cursor_at_lead() -> void:
 	var player := world.get_ship(PLAYER_ID)
-	var target := world.get_ship(TARGET_ID)
-	if player.config.cannon == null or not target.is_active():
+	var target := target_ship()
+	if player.config.cannon == null or target == null or not target.is_active():
 		return
 	var muzzle := player.position + player.orientation * player.config.primary_muzzle()
 	var rel := target.position + target.orientation * target.config.hit_box_center - muzzle
@@ -602,7 +689,7 @@ func _on_salvage_pressed() -> void:
 	if hud.loot.visible:
 		hud.loot.close()
 		return
-	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), world.get_ship(TARGET_ID))
+	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), target_ship())
 	if why != "":
 		hud.notice("SALVAGE BEACON: " + why, world.sim_time)
 		return
@@ -614,7 +701,7 @@ func _on_salvage_pressed() -> void:
 ## crates are opened at the beacon's odds and go into our hold. Returns
 ## the crates (a Drop each, null for an empty one).
 func drop_beacon() -> Array:
-	var target := world.get_ship(TARGET_ID)
+	var target := target_ship()
 	var p := get_profile()
 	var catalog := ConstructionCatalog.default_catalog()
 	var intact := target.systems.intact_fraction()
@@ -646,16 +733,19 @@ func drop_beacon() -> Array:
 ## bounty in credits; its stores and crates (better odds, bonus crates) go
 ## into our cargo hold. The boarders withdraw on their own; once they are
 ## home the prize crew takes it to Earth Shipyard and the next contact comes.
-func take_prize() -> Array:
-	_prize_taken = true
+func take_prize(c: Contact = null) -> Array:
+	if c == null:
+		c = encounter.selected_contact()
+	c.prize_taken = true
 	_salvaged = true
 	var met := false
-	if not _contact_beaten:
-		_contact_beaten = true
+	if not c.beaten:
+		c.beaten = true
+		_beaten_any = true
 		met = mission.contact_beaten()
 	if mission.contact_captured() or met:
 		_complete_mission()
-	var target := world.get_ship(TARGET_ID)
+	var target := world.get_ship(c.id)
 	var p := get_profile()
 	var catalog := ConstructionCatalog.default_catalog()
 	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.TAKEOVER_SCRAP_RATE * TechTree.factor("salvage", p.tech_level("salvage")))
@@ -714,27 +804,37 @@ func _record_payout(target: ShipState, summary: String, crates: Array, where: St
 	GameLog.info("main", summary)
 
 
-## The target leaves (towed or crewed off); the next contact arrives.
-## The next contact arrives. A beaten one (salvaged or taken) stays where it
-## is as a derelict wreck — its guns, point defence and craft silent — and
-## the new one takes the target's place; one that escaped is simply gone.
-func _next_contact(keep_wreck: bool = true) -> void:
+## A contact leaves the encounter (the selected one unless given). A beaten
+## one (salvaged or taken) stays where it is as a derelict wreck — its guns,
+## point defence and craft silent; one that escaped is simply gone. When no
+## live contact is left, the next encounter arrives in the freed slots.
+func _next_contact(keep_wreck: bool = true, c: Contact = null) -> void:
+	if c == null:
+		c = encounter.selected_contact()
+	if c == null:
+		return
 	if keep_wreck:
-		_retire_contact()
+		_retire_contact(c)
 	else:
-		world.remove_ship(TARGET_ID)
-		(_views[TARGET_ID] as Node).queue_free()
-		_views.erase(TARGET_ID)
+		for craft in c.wing.crafts:
+			if world.has_ship(craft.id):
+				world.remove_ship(craft.id)
+		world.wings.erase(c.wing)
+		world.remove_ship(c.id)
+		(_views[c.id] as Node).queue_free()
+		_views.erase(c.id)
+	encounter.remove(c.id)
 	hud.reset()
-	_spawn_target(true)
-	# New contact, new hull (and its own name on it).
-	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
+	if encounter.live(world).is_empty():
+		_spawn_encounter(true)
+	encounter.ensure_selection(world)
+	player_wing.target_id = encounter.selected
 
 
-func _retire_contact() -> void:
+func _retire_contact(c: Contact) -> void:
 	_wreck_count += 1
 	var new_id := StringName("wreck_%02d" % _wreck_count)
-	var wreck := world.retire_ship(TARGET_ID, new_id)
+	var wreck := world.retire_ship(c.id, new_id)
 	if wreck == null:
 		return
 	wreck.display_name = "WRECK %s" % wreck.display_name.trim_prefix("TGT-")
@@ -744,14 +844,13 @@ func _retire_contact() -> void:
 	var away := wreck.position - player.position
 	wreck.velocity = player.velocity + (away.normalized() if away.length() > 1.0 else Vector3.UP) * WRECK_DRIFT_MPS
 	wreck.angular_velocity *= 0.2
-	var view: ShipView = _views[TARGET_ID]
-	_views.erase(TARGET_ID)
+	var view: ShipView = _views[c.id]
+	_views.erase(c.id)
 	view.ship_id = new_id
 	view.name = "ShipView_%s" % new_id
 	_views[new_id] = view
-	if target_wing != null:
-		_derelict_wings.append(target_wing)
-		target_wing = null
+	if c.wing != null:
+		_derelict_wings.append(c.wing)
 	_wrecks.append(new_id)
 	hud.wreck_ids = _wrecks
 	while _wrecks.size() > MAX_WRECKS:
@@ -778,26 +877,32 @@ func cargo_over_m3() -> float:
 	return maxf(get_profile().vessel.cargo_volume_m3(ConstructionCatalog.default_catalog()) - capacity, 0.0)
 
 
-## A hostile contact is shooting at us (it fired in the last UNDER_FIRE_S):
-## no jumping out. One that has not opened fire yet does not stop the jump.
+## A hostile contact is shooting at us (one fired in the last UNDER_FIRE_S
+## and can still fight): no jumping out. One that has not opened fire yet
+## does not stop the jump.
 func in_combat() -> bool:
-	var target := world.get_ship(TARGET_ID)
-	return target.is_active() and target.systems != null and not target.systems.is_disabled() \
-		and world.sim_time - _last_enemy_fire < UNDER_FIRE_S
+	if world.sim_time - _last_enemy_fire >= UNDER_FIRE_S:
+		return false
+	for c in encounter.live(world):
+		var s := world.get_ship(c.id)
+		if c.hostile and s.systems != null and not s.systems.is_disabled():
+			return true
+	return false
 
 
-## Note hostile fire: the enemy ship's and its craft's rounds.
+## Note hostile fire: every hostile contact's rounds and its craft's.
 func _note_enemy_fire() -> void:
-	var shooters: Array[StringName] = [TARGET_ID]
-	for c in target_wing.flying():
-		shooters.append(c.id)
-	for id in shooters:
-		if not world.has_ship(id):
-			continue
-		var fired := world.get_ship(id).rounds_fired
-		if fired > int(_enemy_rounds_seen.get(id, 0)) and target_hostile:
-			_last_enemy_fire = world.sim_time
-		_enemy_rounds_seen[id] = fired
+	for c in encounter.contacts:
+		var shooters: Array[StringName] = [c.id]
+		for craft in c.wing.flying():
+			shooters.append(craft.id)
+		for id in shooters:
+			if not world.has_ship(id):
+				continue
+			var fired := world.get_ship(id).rounds_fired
+			if fired > int(_enemy_rounds_seen.get(id, 0)) and c.hostile:
+				_last_enemy_fire = world.sim_time
+			_enemy_rounds_seen[id] = fired
 
 
 ## What an emergency jump now would leave behind: craft out, boarders
@@ -908,6 +1013,25 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			p.missile_order = order
 			hud.notice("MISSILE SEQUENCE: %s" % MissileSalvo.order_text(order), world.sim_time)
 			_save_profile()
+		&"select_contact":
+			select_contact(StringName(str(arg)))
+		&"policy_preset":
+			_set_policy(ShipPolicy.preset(str(arg)))
+		&"policy_set":
+			var pol := world.get_ship(PLAYER_ID).policy
+			pol.set(str(arg[0]), arg[1])
+			pol.preset_name = "Custom"
+			_set_policy(ShipPolicy.from_dict(pol.to_dict()))
+		&"pd_order_up":
+			var pol2 := world.get_ship(PLAYER_ID).policy
+			var order := pol2.pd_order()
+			var k := order.find(StringName(str(arg)))
+			if k > 0:
+				order[k] = order[k - 1]
+				order[k - 1] = StringName(str(arg))
+			pol2.pd_priorities = order
+			pol2.preset_name = "Custom"
+			_set_policy(pol2)
 		&"vent_excess":
 			var capacity := sys.stats.cargo_m3
 			var went := get_profile().vessel.vent_excess(capacity, ConstructionCatalog.default_catalog())
@@ -916,39 +1040,55 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 				combat_log.record(world.sim_time, "cargo", "Vented %s" % ", ".join(went))
 
 
-## Sensor tracks both ways; announce a new contact.
-func _update_tracks(player: ShipState, target: ShipState, delta: float) -> void:
+## The player's automation changed (Tab › POLICY): fly it and save it with
+## the vessel.
+func _set_policy(policy: ShipPolicy) -> void:
+	var player := world.get_ship(PLAYER_ID)
+	player.policy = policy
+	get_profile().vessel.policy = policy.to_dict()
+	hud.notice("POLICY: %s" % policy.summary(), world.sim_time)
+	_save_profile()
+
+
+## Sensor tracks both ways for every contact; announce new contacts.
+func _update_tracks(player: ShipState, delta: float) -> void:
 	var dt := delta if world == null else minf(delta, 0.25)
-	if track.update(player, target, world.sim_time, dt):
-		var line := "CONTACT — %s detected at %.1f km" % [target.display_name, player.position.distance_to(target.position) / 1000.0]
-		hud.notice(line, world.sim_time)
-		combat_log.record(world.sim_time, "sensors", line)
-	if track.just_scanned and target.systems != null:
-		var est := Salvage.scan_estimate(target.systems)
-		var line := "SCAN COMPLETE — %s: ~%d spare parts, ~%d crates aboard · bounty ~%d cr" % [target.display_name,
-			roundi(est.parts * track.scan_error), roundi(est.crates * track.scan_error), roundi(est.bounty * track.scan_error)]
-		hud.notice(line, world.sim_time)
-		combat_log.record(world.sim_time, "sensors", line)
-	enemy_track.update(target, player, world.sim_time, dt)
+	for c in encounter.contacts:
+		var target := world.get_ship(c.id)
+		if target == null:
+			continue
+		if c.track.update(player, target, world.sim_time, dt):
+			var line := "CONTACT — %s detected at %.1f km" % [target.display_name, player.position.distance_to(target.position) / 1000.0]
+			hud.notice(line, world.sim_time)
+			combat_log.record(world.sim_time, "sensors", line)
+		if c.track.just_scanned and target.systems != null:
+			var est := Salvage.scan_estimate(target.systems)
+			var line := "SCAN COMPLETE — %s: ~%d spare parts, ~%d crates aboard · bounty ~%d cr" % [target.display_name,
+				roundi(est.parts * c.track.scan_error), roundi(est.crates * c.track.scan_error), roundi(est.bounty * c.track.scan_error)]
+			hud.notice(line, world.sim_time)
+			combat_log.record(world.sim_time, "sensors", line)
+		c.their_track.update(target, player, world.sim_time, dt)
 
 
-## Each wing's hostiles are the other wing's craft in flight.
+## Each side's craft hunt the other side's craft in flight.
 func _link_wings() -> void:
 	var ours: Array[StringName] = []
 	var theirs: Array[StringName] = []
 	for c in player_wing.flying():
 		ours.append(c.id)
-	for c in target_wing.flying():
-		theirs.append(c.id)
+	for c in encounter.contacts:
+		for craft in c.wing.flying():
+			theirs.append(craft.id)
 	player_wing.hostile_ids = theirs
-	target_wing.hostile_ids = ours
+	for c in encounter.contacts:
+		c.wing.hostile_ids = ours
 
 
 func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
 	var alive := {}
 	var wings: Array[AirWing] = [player_wing]
-	if target_wing != null:
-		wings.append(target_wing)
+	for c in encounter.contacts:
+		wings.append(c.wing)
 	wings.append_array(_derelict_wings)
 	for wing in wings:
 		var carrier_view: ShipView = _views.get(wing.carrier_id)
@@ -1047,7 +1187,7 @@ func _show_burst(burst: Dictionary, player: ShipState) -> void:
 func _update_docking_cam(player: ShipState, target: ShipState, alpha: float, render_origin: Vector3) -> void:
 	var link := world.link_for(PLAYER_ID)
 	var mine := Docking.collars(player.systems)
-	if not target.is_active() or mine.is_empty() or (link != null and link.sealed()) or player.position.distance_to(target.position) > DockingCam.SHOW_RANGE_M:
+	if target == null or not target.is_active() or mine.is_empty() or (link != null and link.sealed()) or player.position.distance_to(target.position) > DockingCam.SHOW_RANGE_M:
 		hud.docking_cam.visible = false
 		return
 	var found := Docking.best(player, target)
@@ -1057,16 +1197,27 @@ func _update_docking_cam(player: ShipState, target: ShipState, alpha: float, ren
 	hud.docking_cam.show_view(from, q * port.normal_body, q * Vector3.UP, found.get("assessment", {}))
 
 
-## U: pick what the lead pip and fire control work on — the target ship,
-## then each hostile craft out, in turn.
+## U: the next target — every ship of the encounter, then each hostile
+## craft out, in turn. A ship becomes the selected contact (target card,
+## missiles, salvage, gangway); a craft only takes the lead marker and fire
+## control.
 func cycle_target() -> void:
-	var ids: Array[StringName] = [&""]
-	for c in target_wing.flying():
-		if world.has_ship(c.id):
-			ids.append(c.id)
-	var i := ids.find(hud.selected_id)
-	hud.selected_id = ids[(i + 1) % ids.size()]
-	hud.notice("TARGET: %s" % (world.get_ship(TARGET_ID).display_name if hud.selected_id == &"" else String(world.get_ship(hud.selected_id).display_name)), world.sim_time)
+	var ids: Array[StringName] = []
+	for c in encounter.live(world):
+		ids.append(c.id)
+	for c in encounter.live(world):
+		for craft in c.wing.flying():
+			if world.has_ship(craft.id):
+				ids.append(craft.id)
+	if ids.is_empty():
+		return
+	var current := hud.selected_id if hud.selected_id != &"" else encounter.selected
+	var next := ids[(ids.find(current) + 1) % ids.size()]
+	if encounter.has(next):
+		select_contact(next)
+	else:
+		hud.selected_id = next
+		hud.notice("TARGET: %s (lead and fire control)" % world.get_ship(next).display_name, world.sim_time)
 
 
 ## M: a missile from the next ready launcher at the craft picked with U, or
@@ -1081,14 +1232,20 @@ func fire_missile() -> String:
 	if salvo != null and not salvo.done():
 		hud.notice("MISSILES: salvo held — %d launched" % salvo.launched, world.sim_time)
 		salvo = null
+		# Holding counts as a decision: automation waits its interval too.
+		if world.get_ship(PLAYER_ID).policy != null:
+			_auto_salvo_at = world.sim_time + world.get_ship(PLAYER_ID).policy.salvo_interval_s
 		return ""
 	var player := world.get_ship(PLAYER_ID)
-	var at := hud.selected_id if hud.selected_id != &"" and world.has_ship(hud.selected_id) else TARGET_ID
+	var at := hud.selected_id if hud.selected_id != &"" and world.has_ship(hud.selected_id) else encounter.selected
 	var p := get_profile()
 	var why := ""
-	if at == TARGET_ID and not track.locked:
-		why = "no sensor lock on %s" % world.get_ship(TARGET_ID).display_name
-	elif at != TARGET_ID and player.systems != null \
+	var contact := encounter.get_contact(at)
+	if at == &"" or not world.has_ship(at):
+		why = "no target"
+	elif contact != null and not contact.track.locked:
+		why = "no sensor lock on %s" % world.get_ship(at).display_name
+	elif contact == null and player.systems != null \
 			and world.get_ship(at).position.distance_to(player.position) > player.systems.sensor_range_m():
 		why = "that craft is outside sensor range"
 	elif player.systems == null or player.systems.missiles_of() == 0:
@@ -1115,10 +1272,25 @@ func _step_salvo() -> void:
 	if n > 0:
 		audio.play("launch")
 		combat_log.missiles_launched += n
-		if salvo.target_id == TARGET_ID and not target_hostile:
+		var c := encounter.get_contact(salvo.target_id)
+		if c != null and not c.hostile:
 			set_target_hostile(true, "missiles launched at it")
 	if salvo.done():
 		salvo = null
+
+
+## Every contact's salvo in flight: fire what has cycled.
+func _step_contact_salvos() -> void:
+	for c in encounter.contacts:
+		if c.salvo == null:
+			continue
+		var n := c.salvo.step(world)
+		if n > 0:
+			_last_enemy_fire = world.sim_time
+			if c.salvo.target_id == PLAYER_ID or c.salvo.target_id == COURIER_ID:
+				combat_log.missiles_inbound += n
+		if c.salvo.done():
+			c.salvo = null
 
 
 ## [,]: the next missile mode (all → conventional → EMP → nuclear → sequence).
@@ -1167,12 +1339,15 @@ func _spawn_courier(player: ShipState) -> void:
 	hud.escort_id = COURIER_ID
 
 
-## The escort's courier and the tutorial's prompts, each frame.
-func _update_goals(player: ShipState, target: ShipState) -> void:
-	if not _contact_beaten and target.is_active() and target.systems != null and target.systems.is_disabled():
-		_contact_beaten = true
-		if mission.contact_beaten():
-			_complete_mission()
+## Contacts beaten, the escort's courier and the tutorial's prompts, each frame.
+func _update_goals(player: ShipState) -> void:
+	for c in encounter.live(world):
+		var s := world.get_ship(c.id)
+		if not c.beaten and s.systems != null and s.systems.is_disabled():
+			c.beaten = true
+			_beaten_any = true
+			if mission.contact_beaten():
+				_complete_mission()
 	if world.has_ship(COURIER_ID) and not world.get_ship(COURIER_ID).is_active():
 		mission.escort_lost()
 		var line := "COURIER DESTROYED — %s failed" % mission.number_text()
@@ -1184,7 +1359,7 @@ func _update_goals(player: ShipState, target: ShipState) -> void:
 			"fly": player.delta_v_expended > 2.0,
 			"aim": track.locked,
 			"fire": combat_log.hits_scored > 0,
-			"disable": _contact_beaten,
+			"disable": _beaten_any,
 			"salvage": _salvaged}):
 		get_profile().tutorial = tutorial.to_dict()
 		audio.play("tick")
@@ -1202,7 +1377,7 @@ func toggle_grapple() -> void:
 		hud.notice("Grappling arm released%s" % (" — siphoned %.1f t propellant, %d rounds" % [held.siphoned_kg / 1000.0, held.siphoned_rounds]
 			if held.siphoned_kg > 0.0 or held.siphoned_rounds > 0 else ""), world.sim_time)
 		return
-	var why := world.grab(PLAYER_ID, TARGET_ID)
+	var why := world.grab(PLAYER_ID, encounter.selected)
 	if why != "":
 		hud.notice("GRAPPLE: " + why, world.sim_time)
 
@@ -1214,12 +1389,14 @@ func toggle_dock() -> void:
 		var b := world.boarding_for(link)
 		link.release()
 		if link.attacker_id != PLAYER_ID:
-			_enemy_reboard_at = world.sim_time + ENEMY_REBOARD_DELAY_S
+			var boarder := encounter.get_contact(link.attacker_id)
+			if boarder != null:
+				boarder.reboard_at = world.sim_time + ENEMY_REBOARD_DELAY_S
 			hud.notice("Enemy gangway cut loose%s" % (" — their boarders aboard are cut off!" if b != null and not b.finished() and b.room >= 0 else ""), world.sim_time)
 			return
 		hud.notice("Gangway released%s" % (" — the boarding party is cut off!" if b != null and not b.finished() and b.room >= 0 else ""), world.sim_time)
 		return
-	var found := world.dock(PLAYER_ID, TARGET_ID)
+	var found := world.dock(PLAYER_ID, encounter.selected)
 	if found.is_empty():
 		hud.notice("DOCK: no working docking collar opening into a room", world.sim_time)
 	elif not found.has("link"):
@@ -1265,82 +1442,64 @@ func start_field_repair() -> bool:
 
 func _process(delta: float) -> void:
 	var player := world.get_ship(PLAYER_ID)
-	var target := world.get_ship(TARGET_ID)
-	var target_id := TARGET_ID if target.is_active() else &""
+	encounter.ensure_selection(world)
+	var target := target_ship()
+	var aim_id := encounter.selected if target != null and target.is_active() else &""
 	if menu_open() and Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	player_input.aim_limit = get_viewport().get_visible_rect().size * 0.5 - Vector2(24, 24)
-	var command := player_input.build_input(delta, target_id, hud.docking_cam.visible)
+	var command := player_input.build_input(delta, aim_id, hud.docking_cam.visible)
 	_aim(command, player, target)
+	_apply_automation(command, player, target)
 	world.set_input(PLAYER_ID, command)
 	_note_enemy_fire()
 	if _update_jump(player, delta):
 		return
-	_update_tracks(player, target, delta)
-	# A beaten enemy that got away.
-	if target.is_active() and GunneryAI.should_flee(target) and target.position.distance_to(player.position) > ESCAPE_RANGE_M:
-		var line := "%s escaped — out of reach" % target.display_name
-		hud.notice(line, world.sim_time)
-		combat_log.record(world.sim_time, "contact", line)
-		_next_contact(false)
-		target = world.get_ship(TARGET_ID)
-	# A takeover pays out at once; the prize leaves once the boarders are home.
-	if target.is_active() and target.systems != null and target.systems.captured and not _prize_taken:
-		take_prize()
-	elif _prize_taken and target.is_active():
-		var home := true
-		for b in world.boardings:
-			if b.link.target_id == TARGET_ID and not b.finished():
-				home = false
-		if home:
-			var link := world.link_for(PLAYER_ID)
-			if link != null:
-				link.release()
-			hud.notice("Prize crew aboard %s — it holds station; the next contact comes" % target.display_name, world.sim_time)
-			_next_contact()
-			target = world.get_ship(TARGET_ID)
-	# General quarters while a hostile is about: both crews in spacesuits.
-	var quarters := target_hostile and target.is_active()
+	_update_tracks(player, delta)
+	for c in encounter.live(world):
+		var s := world.get_ship(c.id)
+		# A beaten enemy that got away.
+		if GunneryAI.should_flee(s) and s.position.distance_to(player.position) > ESCAPE_RANGE_M:
+			var line := "%s escaped — out of reach" % s.display_name
+			hud.notice(line, world.sim_time)
+			combat_log.record(world.sim_time, "contact", line)
+			_next_contact(false, c)
+		# A takeover pays out at once; the prize stays once the boarders are home.
+		elif s.systems != null and s.systems.captured and not c.prize_taken:
+			take_prize(c)
+		elif c.prize_taken:
+			var home := true
+			for b in world.boardings:
+				if b.link.target_id == c.id and not b.finished():
+					home = false
+			if home:
+				var link := world.link_for(PLAYER_ID)
+				if link != null:
+					link.release()
+				hud.notice("Prize crew aboard %s — it holds station" % s.display_name, world.sim_time)
+				_next_contact(true, c)
+	target = target_ship()
+	# General quarters while a hostile is about: every crew in spacesuits.
+	var quarters := encounter.any_hostile(world)
 	if player.systems != null and player.systems.suited != quarters:
 		player.systems.suited = quarters
 		hud.notice("General quarters — crew in spacesuits" if quarters else "Stand down — suits off", world.sim_time)
-	if target.systems != null:
-		target.systems.suited = quarters
-	var engaging := target_hostile and target.is_active() and track.detected \
-		and world.sim_time - track.detected_time >= ENGAGE_GRACE_S and enemy_track.in_contact
-	if target.is_active() and target.systems != null and target.systems.captured:
-		world.set_input(TARGET_ID, ShipControlInput.neutral())
-	elif world.link_for(TARGET_ID) != null and world.link_for(TARGET_ID).attacker_id != TARGET_ID and GunneryAI.can_break_contact(target):
-		world.set_input(TARGET_ID, GunneryAI.break_contact(target, player))
-	elif engaging and get_profile().missions_completed + 1 >= ENEMY_BOARD_FROM_MISSION and GunneryAI.wants_to_board(target, player):
-		_enemy_board(target, player)
-	elif _target_arriving and target.is_active() and not target.systems.is_disabled():
-		# Inbound: close to the standoff, nose on the player; guns only once engaging.
-		var input := GunneryAI.command(target, player) if engaging else ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
-		if not engaging:
-			CraftAI.point(target, player.position - target.position, input)
-		var away := (target.position - player.position).normalized()
-		CraftAI.steer(target, player.position + away * ENGAGE_STANDOFF_M, player.velocity, input, ARRIVAL_SPEED_MPS)
-		world.set_input(TARGET_ID, input)
-		if target.position.distance_to(player.position) < ENGAGE_STANDOFF_M + 150.0:
-			_target_arriving = false
-	elif engaging:
-		# Escorting: the contact goes for the courier while it lives.
-		var prey := world.get_ship(COURIER_ID) if world.has_ship(COURIER_ID) and world.get_ship(COURIER_ID).is_active() else player
-		world.set_input(TARGET_ID, GunneryAI.combat(target, prey, world.sim_time))
-		if enemy_track.locked and world.sim_time >= _enemy_missile_at and not target.systems.is_disabled() \
-				and target.position.distance_to(player.position) < ENEMY_MISSILE_RANGE_M:
-			_enemy_missile_at = world.sim_time + ENEMY_MISSILE_INTERVAL_S
-			if world.launch_missile(TARGET_ID, PLAYER_ID) == "":
-				_last_enemy_fire = world.sim_time
-				combat_log.missiles_inbound += 1
-		if get_profile().missions_completed + 1 >= ENEMY_WING_FROM_MISSION and not target.systems.is_disabled():
-			for c in target_wing.crafts:
-				if c.status == AirWing.Status.DOCKED and not c.is_drone() and c.service_left_s <= 0.0 and c.hull_fraction > 0.0:
-					target_wing.launch(world, c)
+	var courier := world.get_ship(COURIER_ID) if world.has_ship(COURIER_ID) and world.get_ship(COURIER_ID).is_active() else null
+	# What the enemy may shoot at: us, our craft out, an escorted courier
+	# (never a wreck); with focus fire the courier first, else the player.
+	var prey_list: Array[ShipState] = [player]
+	if courier != null:
+		prey_list.append(courier)
+	for craft in player_wing.flying():
+		if world.has_ship(craft.id):
+			prey_list.append(world.get_ship(craft.id))
+	var team_prey := courier if courier != null else player
+	for c in encounter.live(world):
+		_drive_contact(c, player, prey_list, team_prey, quarters)
 	_link_wings()
-	_update_goals(player, target)
+	_update_goals(player)
 	_step_salvo()
+	_step_contact_salvos()
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
 	if (not player.is_active() or player_captured()) and not _sortie_closed:
@@ -1369,8 +1528,10 @@ func _process(delta: float) -> void:
 		combat_log.note_hit(ev, PLAYER_ID, world.sim_time, world)
 		if ev.target_id == PLAYER_ID:
 			audio.play("ricochet" if ev.report != null and ev.report.ricochet else "hit")
-		# A passive contact fired upon by us (or our craft) fights back.
-		if ev.target_id == TARGET_ID and not target_hostile and (ev.shooter_id == PLAYER_ID or player_wing.by_id(ev.shooter_id) != null):
+		# A passive contact fired upon by us (or our craft) fights back — and
+		# its encounter with it.
+		var struck := encounter.get_contact(ev.target_id)
+		if struck != null and not struck.hostile and (ev.shooter_id == PLAYER_ID or player_wing.by_id(ev.shooter_id) != null):
 			set_target_hostile(true, "fired upon")
 	for id in world.ship_ids():
 		var s := world.get_ship(id).systems
@@ -1390,7 +1551,10 @@ func _process(delta: float) -> void:
 	for burst in world.take_bursts():
 		_show_burst(burst, player)
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
-	for wing in [player_wing, target_wing]:
+	var log_wings: Array[AirWing] = [player_wing]
+	for c in encounter.contacts:
+		log_wings.append(c.wing)
+	for wing in log_wings:
 		var seen: int = _wing_log_seen.get(wing, 0)
 		var fresh := mini(wing.log_count - seen, wing.log.size())
 		var who := "Wing" if wing == player_wing else "Enemy wing"
@@ -1428,11 +1592,12 @@ func _process(delta: float) -> void:
 	camera.fov_zoomed = player_input.zoom_fov()
 	camera.orbit = player_input.camera_orbit
 	camera.follow(_views[PLAYER_ID], delta)
-	_update_docking_cam(player, target, alpha, render_origin)
+	_update_docking_cam(player, target_ship(), alpha, render_origin)
 	var link := world.link_for(PLAYER_ID)
 	var boarding := world.boarding_for(link) if link != null and link.attacker_id == PLAYER_ID else null
-	if boarding != null and not hud.hit_cam.showing_boarding():
-		hud.hit_cam.show_boarding(boarding, _designs[TARGET_ID], target.systems, target.display_name)
+	if boarding != null and not hud.hit_cam.showing_boarding() and world.has_ship(boarding.link.target_id):
+		var boarded := world.get_ship(boarding.link.target_id)
+		hud.hit_cam.show_boarding(boarding, _designs[boarding.link.target_id], boarded.systems, boarded.display_name)
 	var continuous := world.continuous_position(render_origin)
 	dust.update_origin(continuous)
 	dust_far.update_origin(continuous)
@@ -1444,8 +1609,57 @@ func _process(delta: float) -> void:
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track
-	hud.update_display(world, PLAYER_ID, TARGET_ID, alpha, render_origin, camera, player_input)
+	hud.target_hostile = target_hostile
+	hud.update_display(world, PLAYER_ID, encounter.selected, alpha, render_origin, camera, player_input)
 	_update_audio(player)
+
+
+## One enemy ship's turn, by its policy: hold while captured, break free
+## from our gangway, board a beaten player (one at a time), close in while
+## arriving, else fight its role — whom to shoot (focus fire, never a
+## wreck), guns, missile salvos and fighters.
+func _drive_contact(c: Contact, player: ShipState, prey_list: Array[ShipState], team_prey: ShipState, quarters: bool) -> void:
+	var s := world.get_ship(c.id)
+	if s.systems != null:
+		s.systems.suited = quarters
+	var engaging := c.hostile and c.track.detected and world.sim_time - c.track.detected_time >= ENGAGE_GRACE_S \
+		and c.their_track.in_contact
+	var link := world.link_for(c.id)
+	var our_link := world.link_for(PLAYER_ID)
+	var someone_else_boarding := our_link != null and our_link.attacker_id != PLAYER_ID and our_link.attacker_id != c.id
+	if s.systems != null and s.systems.captured:
+		world.set_input(c.id, ShipControlInput.neutral())
+	elif link != null and link.attacker_id != c.id and GunneryAI.can_break_contact(s):
+		world.set_input(c.id, GunneryAI.break_contact(s, player))
+	elif engaging and not someone_else_boarding and get_profile().missions_completed + 1 >= ENEMY_BOARD_FROM_MISSION \
+			and GunneryAI.wants_to_board(s, player):
+		_enemy_board(c, s, player)
+	elif c.arriving and not s.systems.is_disabled():
+		# Inbound: close to its role's standoff, nose on the player; guns only once engaging.
+		var input := GunneryAI.command(s, player) if engaging else ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
+		if not engaging:
+			CraftAI.point(s, player.position - s.position, input)
+		var standoff := maxf(ENGAGE_STANDOFF_M, c.policy.keep_range().x)
+		var away := (s.position - player.position).normalized()
+		CraftAI.steer(s, player.position + away * standoff, player.velocity, input, ARRIVAL_SPEED_MPS)
+		world.set_input(c.id, input)
+		if s.position.distance_to(player.position) < standoff + 150.0:
+			c.arriving = false
+	elif engaging:
+		var prey := GunneryAI.choose_prey(s, prey_list, team_prey, c.policy)
+		if prey == null:
+			prey = player
+		world.set_input(c.id, GunneryAI.combat(s, prey, world.sim_time, c.policy))
+		if c.salvo == null and not s.systems.is_disabled() and c.policy.salvo_due(c.their_track.locked, c.their_track.confidence,
+				s.position.distance_to(prey.position), true, world.sim_time, c.salvo_at):
+			c.salvo_at = world.sim_time + c.policy.salvo_interval_s
+			c.salvo = MissileSalvo.start(c.id, prey.id, c.policy.salvo_mode, [], c.policy.salvo_count)
+			if c.salvo.available(s.systems) == 0:
+				c.salvo = null
+		if get_profile().missions_completed + 1 >= ENEMY_WING_FROM_MISSION and not s.systems.is_disabled():
+			for craft in c.wing.crafts:
+				if craft.status == AirWing.Status.DOCKED and not craft.is_drone() and craft.service_left_s <= 0.0 and craft.hull_fraction > 0.0:
+					c.wing.launch(world, craft)
 
 
 ## Our guns, engines, the jump drive and new danger alerts, heard aboard.

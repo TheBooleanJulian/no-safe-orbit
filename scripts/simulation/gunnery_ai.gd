@@ -64,8 +64,10 @@ const FLANK_BIAS := 0.5
 ## fighting range, jinking across the line of fire so rounds aimed at where
 ## it was miss, holding fire to cool down before the reactor throttles,
 ## and running when beaten (`fleeing`).
-static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipControlInput:
+static func combat(shooter: ShipState, target: ShipState, now: float, policy: ShipPolicy = null) -> ShipControlInput:
 	var sys := shooter.systems
+	var keep := policy.keep_range() if policy != null else Vector2(KEEP_MIN_M, KEEP_MAX_M)
+	var flank := policy.flank_bias() if policy != null else FLANK_BIAS
 	if should_flee(shooter):
 		_set_pips(sys, [2, 4, 0])  # everything into the engines
 		return flee(shooter, target)
@@ -80,9 +82,9 @@ static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipCon
 	var r := rel.length()
 	var los := inv * (rel / maxf(r, 1.0))
 	var t := Vector3.ZERO
-	if r < KEEP_MIN_M:
+	if r < keep.x:
 		t -= los * 0.7
-	elif r > KEEP_MAX_M:
+	elif r > keep.y:
 		t += los * 0.7
 	# Jink: a slow weave across the line of sight (phase from its name, so
 	# two enemies don't weave in step).
@@ -92,16 +94,38 @@ static func combat(shooter: ShipState, target: ShipState, now: float) -> ShipCon
 	var phase := float(hash(String(shooter.id)) % 100) * 0.1
 	t += side * sin(now * 0.7 + phase) * 0.8 + up * sin(now * 0.45 + phase * 2.0) * 0.5
 	# Flank: work round towards the target's stern, out of its bow arc.
-	var stern := target.position - target.forward() * (KEEP_MIN_M + KEEP_MAX_M) * 0.5
+	var stern := target.position - target.forward() * (keep.x + keep.y) * 0.5
 	var to_stern := inv * (stern - shooter.position)
 	var across := to_stern - los * to_stern.dot(los)
 	if target.forward().dot(shooter.position - target.position) > 0.0 and across.length() > 1.0:
-		t += across.normalized() * FLANK_BIAS
+		t += across.normalized() * flank
 	input.translation = t.clamp(-Vector3.ONE, Vector3.ONE)
 	input.hold_translation = false
 	if sys != null and sys.temperature_k >= ShipSystems.THROTTLE_TEMP_K - HOLD_FIRE_MARGIN_K:
 		input.fire = false
+	if policy != null and not policy.allows_fire(true):
+		input.fire = false
 	return input
+
+
+## Whom an enemy ship shoots at, among `candidates` (the player's ship, its
+## craft, an escorted courier): never a derelict or anything out of the
+## fight; with focus fire, the team's chosen prey while it's a candidate;
+## otherwise the nearest.
+static func choose_prey(shooter: ShipState, candidates: Array[ShipState], team_prey: ShipState, policy: ShipPolicy) -> ShipState:
+	var live: Array[ShipState] = []
+	for s in candidates:
+		if s != null and s.is_active() and not s.derelict:
+			live.append(s)
+	if live.is_empty():
+		return null
+	if (policy == null or policy.focus_fire) and team_prey != null and live.has(team_prey):
+		return team_prey
+	var best := live[0]
+	for s in live:
+		if s.position.distance_squared_to(shooter.position) < best.position.distance_squared_to(shooter.position):
+			best = s
+	return best
 
 
 ## Set power pips [SYS, ENG, WEP] (only when they change).

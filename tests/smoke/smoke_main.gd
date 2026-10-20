@@ -152,9 +152,12 @@ func _run() -> void:
 		"our hit on the target opens the hit cam replay (%d hits)" % (tgt.hits_taken - hits_before))
 
 	# T: the target shoots back. Within 40 s the player takes a hit, and the
-	# HUD reports what it did.
-	_press_action("toggle_target_ai")
+	# HUD reports what it did. (Our hit above may already have turned it
+	# hostile — "fired upon" — and T would then toggle it back to passive.)
+	if not main.target_hostile:
+		_press_action("toggle_target_ai")
 	await process_frame
+	_check(main.target_hostile, "the target is hostile (fired upon, or T)")
 	var t0 := main.world.sim_time
 	while player.hits_taken == 0 and main.world.sim_time - t0 < 40.0:
 		await process_frame
