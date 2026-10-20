@@ -65,6 +65,42 @@ class Job:
 
 ## A flare restocked at the yard (credits).
 const FLARE_CREDITS := 1
+## Ship dealer (Milestone 12): a ship's parts are valued at what spare parts
+## cost to buy (PlayerProfile.PARTS_LOT_PRICE / PARTS_LOT credits each), the
+## yard's hull fee added and DEALER_MARKUP on top; its standard crew are
+## hired at the usual fee. Scrapping a vessel returns SCRAP_RETURN of its
+## parts as spare parts — far below its price, so buying to scrap never pays.
+const DEALER_MARKUP := 1.25
+const SCRAP_RETURN := 0.5
+
+
+## Spare parts a whole ship to `bp` is worth (every part built new).
+static func parts_value(bp: ShipBlueprint, catalog: ConstructionCatalog) -> int:
+	var empty := ShipInstance.new()
+	empty.blueprint = ShipBlueprint.new()
+	return total_cost(refit_jobs(empty, bp, catalog))
+
+
+## Credits one spare part costs at the station.
+static func part_credits() -> float:
+	return float(PlayerProfile.PARTS_LOT_PRICE) / float(PlayerProfile.PARTS_LOT)
+
+
+## The dealer's price for a ship to `bp`, its standard crew hired: {ship,
+## crew, total, crew_count} credits.
+static func dealer_price(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Dictionary:
+	var ship := ceili((parts_value(bp, catalog) * part_credits() + PlayerProfile.NEW_HULL_FEE) * DEALER_MARKUP)
+	var grid := ShipGrid.build(bp, catalog)
+	var crew_count := CrewRoster.default_for(bp, grid, ShipStats.compute(bp, grid)).members.size()
+	var crew := crew_count * PlayerProfile.HIRE_FEE
+	return {"ship": ship, "crew": crew, "total": ship + crew, "crew_count": crew_count}
+
+
+## Spare parts scrapping `vessel` returns (its parts, less any damage).
+static func scrap_value(vessel: ShipInstance, catalog: ConstructionCatalog) -> int:
+	var parts := parts_value(vessel.blueprint, catalog)
+	var repairs := total_cost(repair_jobs(vessel, catalog))
+	return maxi(floori((parts - repairs) * SCRAP_RETURN), 0)
 
 
 static func equipment_cost(def: EquipmentDefinition) -> int:

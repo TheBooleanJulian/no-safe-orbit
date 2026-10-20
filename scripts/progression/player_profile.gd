@@ -25,7 +25,9 @@ extends RefCounted
 ## v7: where the ship is docked (location), the locations on the map
 ##     (known_locations: Earth and the Moon to start) and the encounter size
 ##     picked for the next sortie; older saves are at Earth, size 1.
-const SCHEMA_VERSION := 7
+## v8: the mission board (board, board_sortie, board_seed) and the
+##     accepted contract (active_contract); older saves get a fresh board.
+const SCHEMA_VERSION := 8
 ## Ships per encounter the map offers (EnemyFactory spawns them).
 const MAX_ENCOUNTER := 3
 ## Locations every player knows from the start (brokers sell more, M13).
@@ -80,6 +82,12 @@ var location: String = Location.DEFAULT_ID
 var known_locations: Array = STARTING_LOCATIONS.duplicate()
 ## Ships in the next encounter, 1–MAX_ENCOUNTER (picked on the map).
 var encounter_size: int = 1
+## The mission board (ContractBoard): offers, the sortie count they were
+## made for, the profile's seed for them; the accepted contract ({} = none).
+var board: Array = []
+var board_sortie: int = -1
+var board_seed: int = 0
+var active_contract: Dictionary = {}
 var missile_mode: int = MissileSalvo.Mode.ALL
 var missile_order: Array = MissileSalvo.DEFAULT_ORDER.duplicate()
 ## The schema the profile was read from (SCHEMA_VERSION for a new one).
@@ -125,6 +133,7 @@ func _init(seed_value: int = 0) -> void:
 		_rng.randomize()
 	else:
 		_rng.seed = seed_value
+	board_seed = int(_rng.seed % 2147483647)
 
 
 # --- Ownership ---------------------------------------------------------------
@@ -422,6 +431,41 @@ func commission(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
 	return ""
 
 
+## Buy a ship to `bp` from the dealer, its standard crew hired, and make it
+## the active vessel. "" or why not (paid only on success).
+func buy_ship(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
+	var price := ServiceYard.dealer_price(bp, catalog)
+	if int(price.total) > credits:
+		return "%s costs %d credits; you have %d" % [bp.name, price.total, credits]
+	credits -= int(price.total)
+	var v := ShipInstance.fresh(bp.duplicate_blueprint())
+	v.ensure_crew(catalog)
+	v.record("Bought from the dealer for %d credits (crew of %d included)" % [price.total, price.crew_count])
+	vessels.append(v)
+	active_vessel = vessels.size() - 1
+	return ""
+
+
+## Scrap vessel `index` for spare parts (ServiceYard.scrap_value); its hold
+## goes with it. Not the last vessel. Returns the parts, or -1.
+func scrap_vessel(index: int, catalog: ConstructionCatalog) -> int:
+	if index < 0 or index >= vessels.size() or vessels.size() <= 1:
+		return -1
+	var parts := ServiceYard.scrap_value(vessels[index], catalog)
+	spare_parts += parts
+	vessels.remove_at(index)
+	active_vessel = clampi(active_vessel if active_vessel < index else active_vessel - 1, 0, vessels.size() - 1)
+	return parts
+
+
+## Sorties flown in every vessel (and lost ones): the board refreshes on it.
+func sorties_flown() -> int:
+	var n := vessels_lost
+	for v in vessels:
+		n += v.sorties
+	return n
+
+
 ## Make vessel `index` the active one (flown and edited).
 func select_vessel(index: int) -> bool:
 	if index < 0 or index >= vessels.size():
@@ -512,6 +556,10 @@ func to_dict() -> Dictionary:
 		"location": location,
 		"known_locations": known_locations.duplicate(),
 		"encounter_size": encounter_size,
+		"board": board.duplicate(true),
+		"board_sortie": board_sortie,
+		"board_seed": board_seed,
+		"active_contract": active_contract.duplicate(true),
 	}
 
 
@@ -600,6 +648,22 @@ static func _read_v7_map(p: PlayerProfile, d: Dictionary) -> void:
 	var here := str(d.get("location", Location.DEFAULT_ID))
 	p.location = here if here in p.known_locations else Location.DEFAULT_ID
 	p.encounter_size = clampi(int(d.get("encounter_size", 1)), 1, MAX_ENCOUNTER)
+	_read_v8_board(p, d)
+
+
+## v8: the mission board and the accepted contract (older saves: a fresh
+## board on the next visit to the yard, no contract).
+static func _read_v8_board(p: PlayerProfile, d: Dictionary) -> void:
+	var b: Variant = d.get("board", [])
+	if b is Array:
+		for c in b:
+			if c is Dictionary and (c as Dictionary).has("goal") and (c as Dictionary).has("id"):
+				p.board.append((c as Dictionary).duplicate(true))
+	p.board_sortie = int(d.get("board_sortie", -1))
+	p.board_seed = int(d.get("board_seed", hash(str(d.get("rng", {})))))
+	var a: Variant = d.get("active_contract", {})
+	if a is Dictionary and (a as Dictionary).has("goal"):
+		p.active_contract = (a as Dictionary).duplicate(true)
 
 
 ## Move the docked vessel to the station at a known location (free until

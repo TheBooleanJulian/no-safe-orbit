@@ -105,6 +105,8 @@ var route_button: Button
 var size_buttons: Array[Button] = []
 var _map_info: RichTextLabel
 var _hangar_tabs: TabContainer
+## The station's sections (Milestone 12): the builder is REFIT, one of them.
+var sections: ShipyardSections
 
 
 func _ready() -> void:
@@ -113,6 +115,7 @@ func _ready() -> void:
 	var catalog := ConstructionCatalog.default_catalog()
 	profile = Main.get_profile()
 	profile.ensure_vessel(_load_or_null(BlueprintIO.DEFAULT_TEMPLATE))
+	ContractBoard.refresh(profile)
 	var start: ShipBlueprint = (Main.launch_blueprint if Main.launch_blueprint != null else profile.vessel.blueprint).duplicate_blueprint()
 	editor = ShipEditor.new(start, catalog)
 	editor.profile = profile
@@ -176,12 +179,18 @@ func _ready() -> void:
 	_fill_file_list(design_list, BlueprintIO.list_user())
 	deck_editor.deck = 1
 	set_tool(Tool.SELECT)
+	sections = ShipyardSections.new(self)
+	sections.build()
+	show_section("REFIT" if building_new else ShipyardSections.START)
 	_refresh()
 	_set_status("Loaded %s" % editor.blueprint.name)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	# Builder keys act in the builder only.
+	if sections != null and sections.current != "REFIT":
 		return
 	var k := event as InputEventKey
 	var key := k.keycode
@@ -501,6 +510,70 @@ func load_design(path: String) -> bool:
 	return true
 
 
+## Show one of the station's sections (ShipyardSections.SECTIONS).
+func show_section(section: String) -> void:
+	if sections != null:
+		sections.show(section)
+
+
+## DEALER: buy the template at `path` (its standard crew hired); it becomes
+## the active vessel, open in the builder's preview. True on success.
+func buy_ship(path: String) -> bool:
+	var bp := BlueprintIO.load_file(path, PackedStringArray())
+	if bp == null:
+		return false
+	var why := profile.buy_ship(bp, editor.catalog)
+	if why != "":
+		_set_status(why, true)
+		return false
+	_save_profile()
+	select_vessel(profile.active_vessel)
+	_set_status("Bought %s — it is your active vessel" % bp.name)
+	show_section("HANGAR")
+	return true
+
+
+## MISSIONS: accept contract `id` from the board (it sets the next
+## sortie's location and ship count). True on success.
+func accept_contract(id: String) -> bool:
+	var why := ContractBoard.accept(profile, id)
+	if why != "":
+		_set_status(why, true)
+		return false
+	save_and_refresh("Contract accepted: %s — launch when ready" % profile.active_contract.title)
+	_refresh_map()
+	return true
+
+
+## Save the profile, say `status` and redraw.
+func save_and_refresh(status: String) -> void:
+	_save_profile()
+	_set_status(status)
+	_refresh()
+
+
+## HANGAR: scrap the active vessel for spare parts (not the last one).
+func scrap_active() -> int:
+	var name_was := profile.vessel.name
+	var parts := profile.scrap_vessel(profile.active_vessel, editor.catalog)
+	if parts < 0:
+		_set_status("You can't scrap your last ship", true)
+		return -1
+	_save_profile()
+	select_vessel(profile.active_vessel)
+	_set_status("Scrapped %s for %d spare parts" % [name_was, parts])
+	return parts
+
+
+## ARMOURY: rearm and refuel now (otherwise the launch does it).
+func rearm_now() -> String:
+	var line := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
+	_save_profile()
+	_set_status(line if line != "" else "Nothing to restock")
+	_refresh()
+	return line
+
+
 ## Fly the current design. Refused while the design has errors or the refit
 ## (parts the hangar vessel does not have yet) cannot be paid for.
 func launch() -> bool:
@@ -562,6 +635,7 @@ func tutorial_repair_check() -> void:
 ## commissions it as another vessel in the hangar (every part built new,
 ## plus the yard's fee); the current vessel stays in the hangar.
 func start_new_ship() -> void:
+	show_section("REFIT")
 	var bp := ShipBlueprint.new()
 	bp.name = "New ship %d" % (profile.vessels.size() + 1)
 	bp.designer = "Player"
@@ -586,6 +660,8 @@ func select_vessel(index: int) -> void:
 	_save_profile()
 	_set_status("Now working on %s" % profile.vessel.name)
 	_refresh_hangar()
+	if sections != null:
+		sections.refresh()
 
 
 func _fill_vessel_picker() -> void:
@@ -651,6 +727,8 @@ func _refresh() -> void:
 	_refresh_stats()
 	_refresh_issues()
 	_refresh_hangar()
+	if sections != null:
+		sections.refresh()
 	preview.show_design(editor)
 	if iso_view != null and iso_view.visible:
 		iso_view.show_design(editor)
@@ -1119,7 +1197,7 @@ func _build_map_tab(tabs: TabContainer) -> void:
 	route_button = Button.new()
 	route_button.tooltip_text = "Where you launch from and how many ships you meet (HANGAR › MAP)"
 	CyberTheme.style_button(route_button, CyberTheme.AMBER)
-	route_button.pressed.connect(func() -> void: _hangar_tabs.current_tab = _hangar_tabs.get_tab_idx_from_control(map_tab))
+	route_button.pressed.connect(func() -> void: show_section("MAP"))
 	launch_button.get_parent().add_child(route_button)
 	launch_button.get_parent().move_child(route_button, launch_button.get_index())
 	_refresh_map()

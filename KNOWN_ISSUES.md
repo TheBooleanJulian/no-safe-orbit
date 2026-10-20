@@ -27,10 +27,11 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **Audio is silent in headless runs** (tests and checks): the dummy
   driver never retires a playback, so ShipAudio skips playing there
   (`ShipAudio.silent`); the alert and ducking logic still runs and is tested.
-- **A capital-sized hull hitches on spawn**: `ShipSystems.create` takes
-  ~90 ms for a 300-module hull, almost all of it `CrewRoster.default_for`
-  (it scans every room for every berth). Must be fixed before capital
-  ships (Milestone 15); everything else scales (see ROADMAP M10).
+- **Capital templates are plain**: generated slabs of hull blocks armed
+  with standard parts (autocannons, point defence); no sloped bows or
+  heavy guns until you refit them. Enemies don't field capital ships yet.
+- **Contracts are new** (Milestone 12): payouts and threat levels are first
+  guesses; a failed contract stays until it is met or abandoned.
 - **Missions and the tutorial are new** (Milestone 8): rewards and the
   courier's toughness are first guesses; the tutorial is verified by tests
   and the smoke run, not yet by a new player.

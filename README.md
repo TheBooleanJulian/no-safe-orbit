@@ -699,7 +699,24 @@ no usable backup. Loading an older save version first keeps a copy
 ## Shipyard
 
 **Earth Shipyard** (or the **Lunar Shipyard**) opens after a jump (hold B in
-flight). You start from the ship you were flying (the Frigate Mk I template
+flight). It is a station with sections along the top; the builder is one of
+them:
+
+| Section | What's there |
+|---|---|
+| **STATION** (opens here) | Your ship in 3D; cards for repairs, rearm, crew and the next sortie, each with a button to its section |
+| **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage. Accepting one sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
+| **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, plus the crew at the hiring fee |
+| **HANGAR** | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the hold and the bank, the service record |
+| **REFIT** | The builder below |
+| **CREW** | The roster by post, who is for hire |
+| **ARMOURY** | Rearm and refuel now (or leave it to the launch), the quartermaster's parts |
+| **REPAIRS** | Damage and what fixing it costs |
+| **UPGRADES** | Station technology |
+| **MAP** | Where you launch from, how many you meet |
+| **LOOT** | Every crate drop and its odds |
+
+In REFIT you start from the ship you were flying (the Frigate Mk I template
 by default).
 
 **Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click Earth or
