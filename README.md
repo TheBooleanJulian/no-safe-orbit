@@ -38,6 +38,106 @@ mouse aim. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 *Rendered with `godot --path . -s res://tools/capture_readme.gd` (a scratch
 profile, never your save).*
 
+## The sky is real
+
+Nothing in the sky is decoration. Each item below is computed for the
+scenario's moment, **2026-10-19 12:00 UTC**, from published astronomical
+data, and the tests check it against known values.
+
+| | |
+|---|---|
+| ![The waxing gibbous Moon seen from Earth orbit, its dark side faintly lit by earthshine](docs/screenshots/sky_moon_from_earth_orbit.jpg) | ![Earthrise over the lunar limb from 100 km](docs/screenshots/sky_earthrise.jpg) |
+| **The Moon from Earth orbit** at the deepest zoom (3°): waxing gibbous, 100° from the Sun as on that date, 401,000 km away and 0.50° across. Its night side glows faintly with **earthshine** (the "ashen light"). | **Earthrise from lunar orbit** at a normal field of view: Earth is 1.8° across, as it really is from the Moon. |
+| ![Earth from lunar orbit: Africa and Europe under swirling cloud, the night side faintly moonlit](docs/screenshots/sky_earth_from_lunar_orbit.jpg) | ![Midnight under a full Moon: Earth's night side and the hull in cool moonlight](docs/screenshots/sky_full_moon_night.jpg) |
+| **Earth from the Moon**, zoomed: real geography turned to that hour (Africa and Europe on the sunlit limb), clouds by latitude, and the phase that matches the Moon's. | **Midnight under the full Moon of 2026-10-26**: the Sun is behind Earth, so the clouds on the night side and the frigate's hull are lit only by moonlight. |
+| ![Lunar midnight under a full Earth: the far side lit by earthlight](docs/screenshots/sky_full_earth_night.jpg) | |
+| **Lunar midnight at the new Moon of 2026-10-10**: Earth is full as seen from the Moon, and its light (about 50 times a full Moon) lights the lunar night side. | |
+
+### What is modelled
+
+- **Stars:** all 9,096 stars of the Yale Bright Star Catalogue at their J2000
+  positions. Each is sized by magnitude and coloured by its B−V index, so
+  Rigel is blue-white and Betelgeuse orange. They are hidden behind the
+  planet and the Moon, and dimmed where you see them through Earth's
+  atmosphere.
+- **The Sun:** its direction comes from the Astronomical Almanac's
+  low-precision solar formula (accurate to ~0.01°). Earth's shadow is
+  modelled, so ships go dark in eclipse, and the orbit panel predicts your
+  next sunrise or sunset. The scenario starts 15° past local noon, about
+  24 minutes before sunset.
+- **Earth:** it turns at the sidereal rate from Greenwich sidereal time, so
+  the right continents are under you. The map is NASA's Blue Marble for
+  October, to match the season. On top of that: the atmosphere's limb up to
+  the 100 km Kármán line, sun glint on the oceans, and clouds that drift.
+  Seen from far off, the clouds follow Earth's real belts: cloudy at the
+  equator (the ITCZ) and at 50–60°, clearer over the ~25° subtropical
+  deserts.
+- **The Moon:**
+  - **Gravity and size:** its gravitational parameter is JPL's DE440 value
+    and its mean radius 1,737.4 km.
+  - **Orientation:** its north pole and prime meridian follow the IAU working
+    group's model (Archinal et al. 2018), including the largest periodic
+    term, the node's 18.6-year cycle. That tilts its pole 1.5° from the
+    ecliptic pole, as Cassini's laws say it should be.
+  - **Rotation:** it turns once per 27.32-day sidereal month, so the same
+    face always looks at Earth.
+  - **Surface and terrain:** the surface is NASA's LRO colour mosaic. With no
+    air, the "entry interface" is the terrain itself: 11 km above the mean
+    radius clears the highest summit.
+- **Where the Moon is:** from the Astronomical Almanac's lunar series
+  (~0.3°). From the Moon, Earth sits exactly opposite. Both show the phase
+  that the real Sun–Earth–Moon geometry gives at that moment.
+- **Moonlight and earthlight:** each body reflects sunlight onto the other
+  and onto your ship, according to:
+  - **Reflectivity and size:** its geometric albedo (Moon 0.12, Earth 0.434),
+    times (radius ÷ distance)².
+  - **Phase:** a phase law. For the Moon this is its measured curve, which
+    includes the opposition surge that makes a full Moon more than twice as
+    bright as the halves either side of it. For Earth it is a diffuse sphere.
+  - **Results:** a full Moon gives 2.45 × 10⁻⁶ of sunlight, about 0.31 lux
+    (measured: ~0.3 lux). A half Moon gives ~1/9 of a full one. Full Earth
+    seen from the Moon is ~49 times brighter than a full Moon.
+
+  The light falls on Earth's night side (or the Moon's), on ships, and on the
+  other body's dark side (earthshine). Ships only get it while the light
+  source is above the horizon.
+- **The frame:** simulation axes are tied to ICRS/J2000 through the central
+  body's pole. The start orbit is therefore a real prograde equatorial
+  orbit about Earth or the Moon.
+
+### Where it departs from reality (on purpose)
+
+- **Night brightness:** real moonlight is ~400,000 times dimmer than
+  sunlight, which would be invisible on a screen exposed for the Sun. Your
+  eyes adapt across that range by about 20 stops; the game stands in for that
+  adaptation. It shows a full Moon's light at 5 % of the Sun's, and scales
+  other levels by Stevens' brightness law (perceived ∝ luminance^0.5).
+  Night light is tinted blue, the way dark-adapted eyes see it (the
+  Purkinje shift). The physical figures above are exact; only this display
+  mapping is chosen.
+- **Simplifications** (each under 0.5°): precession, nutation, aberration and
+  light time are ignored. The Moon's position is the low-precision series,
+  and only one far body is drawn per sky. Stars are at their J2000
+  positions, with no proper motion.
+
+### How it is checked (`tests/unit/test_celestial.gd`, `test_locations.gd`)
+
+| Check | Reference | Result |
+|---|---|---|
+| Sun position, 1992-10-13 | Meeus example 25.a: RA 198.381°, Dec −7.785° | within 0.05° |
+| Sidereal time, 1987-04-10 | Meeus example 12.a: 13h 10m 46.37s | within 0.001° |
+| Moon position, 1992-04-12 | Meeus example 47.a: λ 133.16°, β −3.23°, 368,410 km | 133.26°, −3.31°, 368,077 km |
+| Total solar eclipse, 2024-04-08 18:18 UTC | the Moon in front of the Sun | 0.43° apart |
+| Full Moon, 2024-04-23 23:49 UTC | the Moon opposite the Sun | 178.4° |
+| Lunar pole | ~1.54° from the ecliptic pole (Cassini state) | 1.51° |
+| Lunar orbit at 100 km | 1.633 km/s, ~118 min | 1633.5 m/s, 117.8 min |
+| Full-Moon light | ~0.3 lux against ~127,000 lux of sunlight | 0.31 lux |
+| Half Moon vs full | ~1/9 (opposition surge) | 0.091 |
+| Full Earth from the Moon vs full Moon from Earth | ~40–60 × | 49 × |
+
+*Sky screenshots: `godot --path . -s res://tools/capture_sky.gd` (a scratch
+profile, HUD hidden). Data sources and licences: `data/ATTRIBUTION.md`.*
+
 ## Requirements
 
 - Godot **4.7.2-stable** (standard build, GDScript only — no .NET needed).
@@ -225,8 +325,9 @@ in order (the most severe recent hit wins the window).
 **Sky:** stars, Sun and the central body's rotation are real for 2026-10-19
 12:00 UTC (Yale Bright Star Catalogue, NASA Blue Marble, NASA CGI Moon Kit;
 see `data/ATTRIBUTION.md`). The Moon hangs in Earth's sky and Earth in the
-Moon's, where they really are that day, in phase — zoom (Shift, wheel) to
-see them.
+Moon's, where they really are that day, in phase, and their reflected light
+lights the night side and your hull in shadow. Zoom with Shift and the wheel
+to see them. See [The sky is real](#the-sky-is-real).
 
 **Flight assist ON** (default) damps rotation to the requested turn rate. X
 cycles three modes:

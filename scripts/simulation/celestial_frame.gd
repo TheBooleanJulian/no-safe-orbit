@@ -86,6 +86,34 @@ static func moon_geocentric_icrs(jd: float) -> Vector3:
 	return Vector3(ecl.x, cos(eps) * ecl.y - sin(eps) * ecl.z, sin(eps) * ecl.y + cos(eps) * ecl.z) * distance
 
 
+## Sunlight reflected by `body` onto an observer, as a fraction of direct
+## sunlight: geometric albedo × (radius / distance)² × phase function.
+## `body_from_observer`: observer → body (m); `sun_dir`: towards the Sun
+## (the Sun is far enough that the body and the observer see it alike).
+## Full Moon from Earth: ~2.4e-6 (~0.3 lux against ~127,000 lux of sun).
+static func reflected_fraction(body: OrbitalBody, body_from_observer: Vector3, sun_dir: Vector3) -> float:
+	var d := body_from_observer.length()
+	if d <= body.radius_m:
+		return 0.0
+	# Phase angle: Sun – body – observer.
+	var alpha := sun_dir.angle_to(-body_from_observer)
+	var r := body.radius_m / d
+	return body.geometric_albedo * r * r * phase_function(body, alpha)
+
+
+## Brightness at phase angle `alpha` (rad) relative to full phase.
+static func phase_function(body: OrbitalBody, alpha: float) -> float:
+	match body.phase_law:
+		&"lunar":
+			# The Moon's visual magnitude against phase (Allen's Astrophysical
+			# Quantities): +0.026 mag/° and +4e-9 mag/°⁴; a half moon is ~1/9
+			# of a full one, not the 1/π of a diffuse sphere.
+			var deg := rad_to_deg(alpha)
+			return pow(10.0, -0.4 * (0.026 * deg + 4.0e-9 * pow(deg, 4.0)))
+	# Lambert sphere.
+	return (sin(alpha) + (PI - alpha) * cos(alpha)) / PI
+
+
 ## Geocentric position (ICRS, m) of a body by its ephemeris id.
 static func geocentric_icrs(ephemeris: StringName, jd: float) -> Vector3:
 	match ephemeris:

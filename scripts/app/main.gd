@@ -26,6 +26,9 @@ const SUN_ENERGY := 1.4
 @onready var dust_far: DustField = $DustFieldFar
 @onready var sky: PlanetSky = $WorldEnvironment
 @onready var sun: DirectionalLight3D = $Sun
+## Moonlight (earthlight at the Moon) on ships: from the other body in the
+## sky, by its phase (PlanetSky.sky_body_light); not drawn in the sky.
+var sky_light: DirectionalLight3D
 @onready var stars: Starfield = $Starfield
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
@@ -164,6 +167,12 @@ func _ready() -> void:
 	hud.celestial = celestial
 	hud.overview.command.connect(_on_overview_command)
 	hud.station_name = location.station_name
+	sky_light = DirectionalLight3D.new()
+	sky_light.name = "SkyBodyLight"
+	sky_light.light_color = PlanetSky.NIGHT_LIGHT_COLOR
+	sky_light.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_ONLY
+	sky_light.light_energy = 0.0
+	add_child(sky_light)
 	sky.configure(location.body, location.sky_body)
 	_start_scenario()
 
@@ -1641,6 +1650,7 @@ func _process(delta: float) -> void:
 	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin)).to_vector3()
 	_update_sun(player)
 	sky.update_view(planet_center, camera, celestial, world.sim_time)
+	_update_sky_light()
 	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
 		location.sky_body.radius_m if location.sky_body != null else 0.0)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
@@ -1717,6 +1727,14 @@ func _update_audio(player: ShipState) -> void:
 	if danger != "" and danger.get_slice(" ", 1) != _alert_heard.get_slice(" ", 1):
 		audio.play("alert")
 	_alert_heard = danger
+
+
+## Light from the other body in the sky onto ships: along its direction,
+## as bright as its phase gives (0 below the horizon).
+func _update_sky_light() -> void:
+	var dir := sky.sky_body_light_dir
+	sky_light.look_at(-dir, Vector3.RIGHT if absf(dir.y) > 0.99 else Vector3.UP)
+	sky_light.light_energy = SUN_ENERGY * sky.sky_body_light
 
 
 ## Real Sun direction for the scenario date; dark while the player is in

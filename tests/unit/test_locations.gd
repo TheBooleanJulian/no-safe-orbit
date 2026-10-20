@@ -6,7 +6,8 @@ extends TestCase
 ## the Moon's shadow; profile schema 7 (where the vessel is docked, the
 ## locations known, the encounter size picked) with migration from v6; the
 ## other body in each sky (the Moon's position against Meeus's worked
-## example and the 2024 eclipse and full moon; Earth from the Moon).
+## example and the 2024 eclipse and full moon; Earth from the Moon); the
+## light each reflects onto the other by its phase (moonlight, earthlight).
 
 const TEST_PROFILE := "user://test_locations_profile.json"
 const EPOCH_UTC := "2026-10-19T12:00:00"
@@ -176,3 +177,31 @@ func test_each_sky_shows_the_other_body() -> void:
 	# Earth's map from the Moon: its north pole maps to Earth-fixed +Z.
 	var b := from_moon.body_fixed_of(earth.body, 0.0)
 	assert_vec_near(b * from_moon.icrs_to_pci(Vector3(0, 0, 1)), Vector3(0, 0, 1), 1e-5, "Earth's pole → its fixed +Z, seen from the Moon")
+
+
+func test_moonlight_and_earthlight_follow_the_phase() -> void:
+	var moon := Location.by_id("moon").body
+	var earth := Location.by_id("earth").body
+	var sun := Vector3(1, 0, 0)
+	var mean_km := 384_400_000.0
+	# Full Moon: the Sun behind the observer.
+	var full := CelestialFrame.reflected_fraction(moon, Vector3(-mean_km, 0, 0), sun)
+	var half := CelestialFrame.reflected_fraction(moon, Vector3(0, mean_km, 0), sun)
+	var new := CelestialFrame.reflected_fraction(moon, Vector3(mean_km, 0, 0), sun)
+	print("    measured: full Moon %s of sunlight (~%.2f lux of 127 000), half %.3f of full, new %s" % [
+		String.num_scientific(full), full * 127_000.0, half / full, String.num_scientific(new)])
+	assert_true(full > 1.5e-6 and full < 3.5e-6, "full-Moon light ~0.2–0.4 lux against ~127 000 lux of sun (%s)" % String.num_scientific(full))
+	assert_true(half / full > 0.08 and half / full < 0.13, "a half Moon gives ~1/9 of full-Moon light (%.3f)" % (half / full))
+	assert_true(new < full * 1e-3, "a new Moon gives (almost) none")
+	# Full Earth seen from the Moon against full Moon seen from Earth.
+	var full_earth := CelestialFrame.reflected_fraction(earth, Vector3(-mean_km, 0, 0), sun)
+	print("    measured: full Earth from the Moon %.0f × full Moon from Earth" % (full_earth / full))
+	assert_true(full_earth / full > 30.0 and full_earth / full < 70.0, "full Earth ~50 × full Moon (%.0f)" % (full_earth / full))
+	# Shown: full Moon at NIGHT_LIGHT_FULL_MOON of the Sun, compressed by phase.
+	assert_near(PlanetSky.perceived_light(full), PlanetSky.NIGHT_LIGHT_FULL_MOON, 0.005, "full-Moon light as shown")
+	assert_true(PlanetSky.perceived_light(half) < PlanetSky.perceived_light(full) * 0.4, "a half Moon shows dimmer")
+	assert_true(PlanetSky.perceived_light(full_earth) > PlanetSky.perceived_light(full) * 5.0, "earthlight shows far brighter than moonlight")
+	# Below the horizon it lights nothing.
+	var center := Vector3(0, -6_771_000.0, 0)
+	assert_true(PlanetSky.below_horizon(center, 6_371_000.0, Vector3(0, -mean_km, 0)), "under the planet: below the horizon")
+	assert_true(not PlanetSky.below_horizon(center, 6_371_000.0, Vector3(0, mean_km, 0)), "overhead: above it")
