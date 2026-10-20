@@ -154,6 +154,16 @@ func _run() -> void:
 	# T: the target shoots back. Within 40 s the player takes a hit, and the
 	# HUD reports what it did. (Our hit above may already have turned it
 	# hostile — "fired upon" — and T would then toggle it back to passive.)
+	# Scaffolding: our hits above can knock out its only gun or cut the
+	# conduit feeding it (where they land depends on frame timing), and a
+	# gunless target can't shoot back. Restore both.
+	for e in tgt.systems.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.CANNON and e.destroyed():
+			e.hp = e.max_hp
+	tgt.systems.bus_cut.clear()
+	tgt.systems.solve_power()
+	tgt.systems.invalidate()
+	tgt.config = tgt.systems.effective_config()
 	if not main.target_hostile:
 		_press_action("toggle_target_ai")
 	await process_frame
