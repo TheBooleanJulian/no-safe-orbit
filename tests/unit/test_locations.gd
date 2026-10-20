@@ -4,7 +4,10 @@ extends TestCase
 ## the celestial frame generalised to any body, unchanged for Earth, with
 ## the Moon's IAU pole ~1.5° from the ecliptic pole and its 27.3-day spin;
 ## the Moon's shadow; profile schema 7 (where the vessel is docked, the
-## locations known, the encounter size picked) with migration from v6.
+## locations known, the encounter size picked) with migration from v6; the
+## other body in each sky (the Moon's position against Meeus's worked
+## example and the 2024 eclipse and full moon; Earth from the Moon); the
+## light each reflects onto the other by its phase (moonlight, earthlight).
 
 const TEST_PROFILE := "user://test_locations_profile.json"
 const EPOCH_UTC := "2026-10-19T12:00:00"
@@ -122,3 +125,83 @@ func test_schema_7_location_and_encounter_size() -> void:
 	assert_true(bad.location == "earth" and bad.encounter_size == 3 and bad.known_locations == ["earth", "moon"],
 		"unknown locations dropped, size clamped (%s, %d, %s)" % [bad.location, bad.encounter_size, bad.known_locations])
 	_clean()
+
+
+## Ecliptic longitude and latitude (°) of an ICRS vector.
+func _ecliptic(v: Vector3, jd: float) -> Vector2:
+	var eps := deg_to_rad(23.439 - 0.0000004 * (jd - CelestialFrame.J2000_JD))
+	var e := Vector3(v.x, cos(eps) * v.y + sin(eps) * v.z, -sin(eps) * v.y + cos(eps) * v.z).normalized()
+	return Vector2(fposmod(rad_to_deg(atan2(e.y, e.x)), 360.0), rad_to_deg(asin(e.z)))
+
+
+func test_moon_position() -> void:
+	# Meeus, Astronomical Algorithms, example 47.a: 1992-04-12 0h TD.
+	var jd := 2448724.5
+	var m := CelestialFrame.moon_geocentric_icrs(jd)
+	var ecl := _ecliptic(m, jd)
+	print("    measured: λ %.2f° β %.2f° Δ %.0f km (Meeus 133.16°, −3.23°, 368 410 km)" % [ecl.x, ecl.y, m.length() / 1000.0])
+	assert_near(ecl.x, 133.163, 0.5, "lunar longitude (°)")
+	assert_near(ecl.y, -3.229, 0.3, "lunar latitude (°)")
+	assert_near(m.length() / 1000.0, 368_409.7, 1000.0, "Earth–Moon distance (km)")
+	# 2024-04-08 18:18 UTC, mid total solar eclipse: the Moon in front of the Sun.
+	var eclipse := CelestialFrame.julian_date_from_iso("2024-04-08T18:18:00")
+	var e_sep := rad_to_deg(CelestialFrame.moon_geocentric_icrs(eclipse).angle_to(CelestialFrame.sun_direction_icrs(eclipse)))
+	# 2024-04-23 23:49 UTC, full moon: opposite the Sun.
+	var full := CelestialFrame.julian_date_from_iso("2024-04-23T23:49:00")
+	var f_sep := rad_to_deg(CelestialFrame.moon_geocentric_icrs(full).angle_to(CelestialFrame.sun_direction_icrs(full)))
+	print("    measured: Moon–Sun %.2f° at the 2024-04-08 eclipse, %.2f° at the 2024-04-23 full moon" % [e_sep, f_sep])
+	assert_true(e_sep < 1.0, "eclipse: the Moon within 1° of the Sun (%.2f°)" % e_sep)
+	assert_true(f_sep > 175.0, "full moon: the Moon opposite the Sun (%.2f°)" % f_sep)
+
+
+func test_each_sky_shows_the_other_body() -> void:
+	var earth := Location.by_id("earth")
+	var moon := Location.by_id("moon")
+	assert_true(earth.sky_body == moon.body and moon.sky_body == earth.body, "Earth orbit shows the Moon; lunar orbit shows Earth")
+	var jd := CelestialFrame.julian_date_from_iso(EPOCH_UTC)
+	var from_earth := CelestialFrame.for_scenario(jd, 15.0, earth.body)
+	var from_moon := CelestialFrame.for_scenario(jd, 15.0, moon.body)
+	var moon_seen := from_earth.position_of(moon.body, 600.0)
+	var earth_seen := from_moon.position_of(earth.body, 600.0)
+	# Vector3 is single precision: ~30 m at 400 000 km.
+	assert_near(earth_seen.length(), moon_seen.length(), 100.0, "the same distance either way (m)")
+	assert_vec_near(from_moon.pci_to_icrs(earth_seen.normalized()), -from_earth.pci_to_icrs(moon_seen.normalized()), 1e-5,
+		"Earth from the Moon is exactly opposite the Moon from Earth")
+	assert_true(moon_seen.length() > 356_000_000.0 and moon_seen.length() < 407_000_000.0,
+		"the Moon is 356 000–407 000 km away (%.0f km)" % (moon_seen.length() / 1000.0))
+	# Drawing a body through another frame matches its own frame.
+	var own := from_earth.pci_to_body_fixed(1234.0)
+	var via := from_earth.body_fixed_of(earth.body, 1234.0)
+	for axis in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
+		assert_vec_near(via * axis, own * axis, 1e-5, "Earth's map through body_fixed_of matches its own frame")
+	# Earth's map from the Moon: its north pole maps to Earth-fixed +Z.
+	var b := from_moon.body_fixed_of(earth.body, 0.0)
+	assert_vec_near(b * from_moon.icrs_to_pci(Vector3(0, 0, 1)), Vector3(0, 0, 1), 1e-5, "Earth's pole → its fixed +Z, seen from the Moon")
+
+
+func test_moonlight_and_earthlight_follow_the_phase() -> void:
+	var moon := Location.by_id("moon").body
+	var earth := Location.by_id("earth").body
+	var sun := Vector3(1, 0, 0)
+	var mean_km := 384_400_000.0
+	# Full Moon: the Sun behind the observer.
+	var full := CelestialFrame.reflected_fraction(moon, Vector3(-mean_km, 0, 0), sun)
+	var half := CelestialFrame.reflected_fraction(moon, Vector3(0, mean_km, 0), sun)
+	var new := CelestialFrame.reflected_fraction(moon, Vector3(mean_km, 0, 0), sun)
+	print("    measured: full Moon %s of sunlight (~%.2f lux of 127 000), half %.3f of full, new %s" % [
+		String.num_scientific(full), full * 127_000.0, half / full, String.num_scientific(new)])
+	assert_true(full > 1.5e-6 and full < 3.5e-6, "full-Moon light ~0.2–0.4 lux against ~127 000 lux of sun (%s)" % String.num_scientific(full))
+	assert_true(half / full > 0.08 and half / full < 0.13, "a half Moon gives ~1/9 of full-Moon light (%.3f)" % (half / full))
+	assert_true(new < full * 1e-3, "a new Moon gives (almost) none")
+	# Full Earth seen from the Moon against full Moon seen from Earth.
+	var full_earth := CelestialFrame.reflected_fraction(earth, Vector3(-mean_km, 0, 0), sun)
+	print("    measured: full Earth from the Moon %.0f × full Moon from Earth" % (full_earth / full))
+	assert_true(full_earth / full > 30.0 and full_earth / full < 70.0, "full Earth ~50 × full Moon (%.0f)" % (full_earth / full))
+	# Shown: full Moon at NIGHT_LIGHT_FULL_MOON of the Sun, compressed by phase.
+	assert_near(PlanetSky.perceived_light(full), PlanetSky.NIGHT_LIGHT_FULL_MOON, 0.005, "full-Moon light as shown")
+	assert_true(PlanetSky.perceived_light(half) < PlanetSky.perceived_light(full) * 0.4, "a half Moon shows dimmer")
+	assert_true(PlanetSky.perceived_light(full_earth) > PlanetSky.perceived_light(full) * 5.0, "earthlight shows far brighter than moonlight")
+	# Below the horizon it lights nothing.
+	var center := Vector3(0, -6_771_000.0, 0)
+	assert_true(PlanetSky.below_horizon(center, 6_371_000.0, Vector3(0, -mean_km, 0)), "under the planet: below the horizon")
+	assert_true(not PlanetSky.below_horizon(center, 6_371_000.0, Vector3(0, mean_km, 0)), "overhead: above it")

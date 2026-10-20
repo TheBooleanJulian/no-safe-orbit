@@ -4,6 +4,54 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Moonlight, earthlight and earthshine (2026-10-20)
+
+#### Added
+- Reflected light by phase: `CelestialFrame.reflected_fraction` = geometric
+  albedo × (radius/distance)² × phase law (`OrbitalBody.geometric_albedo`,
+  `phase_law`: the Moon's measured curve with its opposition surge,
+  Lambert for Earth). A full Moon gives 2.45e-6 of sunlight (0.31 lux), a
+  half Moon ~1/9 of that, full Earth from the Moon ~49 × a full Moon.
+- Moonlight lights Earth's night side and ships (a second directional light,
+  `Main.sky_light`, only while the Moon is above the horizon; not drawn in
+  the sky); at the Moon, earthlight does the same; earthshine lights the far
+  body's dark side.
+- Shown brightness: night adaptation stands in for the eye's ~20 stops
+  (`PlanetSky.perceived_light`: a full Moon at 5 % of the Sun's light,
+  Stevens' law exponent 0.5), tinted for night vision (Purkinje).
+- README: "The sky is real": what is modelled, what is adjusted on purpose,
+  and the checks against published values; five sky screenshots
+  (`tools/capture_sky.gd`).
+- Tests: `test_locations` +1 (photometry and display mapping, horizon);
+  `smoke_shipyard` checks the earthlight on the ship.
+
+#### Changed
+- The night side's constant glow is lower (0.006 → 0.002 of albedo):
+  moonlight and earthlight now light it.
+
+### The Moon in Earth's sky, Earth in the Moon's (2026-10-20)
+
+#### Added
+- Each location draws the other body in its sky (`Location.sky_body`):
+  the Moon from Earth orbit (0.5° across), Earth from lunar orbit (1.8°),
+  at their real positions for the scenario date, lit by the Sun so they
+  show their phase, with their own surface maps and rotation; they pass
+  behind the near body, hide the stars behind them and block the Sun.
+- `CelestialFrame.moon_geocentric_icrs` (Astronomical Almanac
+  low-precision series), `position_of`, `body_fixed_of`;
+  `OrbitalBody.ephemeris`.
+- Earth seen from afar: clouds swirl (domain warp), follow latitude bands
+  (ITCZ, storm belts, clear subtropics) and keep ~30 % cover; from low
+  orbit they are unchanged.
+- Tests: `test_locations` +2 (the Moon against Meeus's example 47.a and the
+  2024-04-08 eclipse / 2024-04-23 full moon; Earth from the Moon opposite
+  the Moon from Earth; longitude mutation-checked); `smoke_shipyard` checks
+  Earth hangs in the lunar sky.
+
+#### Changed
+- `planet_sky.gdshader`: `surface()` takes the body (map, rotation, radius,
+  air) so the central and far body share it.
+
 ### Play-test batch 3 — map, lunar orbit, big-fight performance (2026-10-20)
 
 #### Added

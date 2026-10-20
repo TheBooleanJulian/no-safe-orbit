@@ -1,7 +1,9 @@
-[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="Location" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
 [ext_resource type="Resource" path="res://data/bodies/earth.tres" id="2_body"]
+
+[ext_resource type="Resource" path="res://data/bodies/moon.tres" id="3_sky"]
 
 [resource]
 script = ExtResource("1_loc")
@@ -9,6 +11,7 @@ id = "earth"
 display_name = "Earth orbit"
 station_name = "Earth Shipyard"
 body = ExtResource("2_body")
+sky_body = ExtResource("3_sky")
 start_altitude_m = 400000.0
 map_position = Vector2(0.32, 0.55)
 map_radius_px = 34.0

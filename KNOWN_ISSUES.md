@@ -21,8 +21,7 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   mission number. Salvo counts and intervals are first guesses.
 - **Locations are new** (2026-10-20): the Lunar Shipyard has the same
   crew, quartermaster and upgrades as Earth's (per-station stock is
-  Milestone 13); moving between stations is free; the lunar sky shows no
-  Earth (only the central body is drawn).
+  Milestone 13); moving between stations is free.
 - **With the Tab drawer open the alert banner overlaps the top of the
   moved target card** (layout; Pass A redesigns the alerts).
 - **Two looping audio streams are reported as leaked at exit** in headless

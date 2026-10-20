@@ -17,4 +17,7 @@ rotation_deg_per_day = 13.17635815
 term_amplitudes_deg = Vector3(-3.8787, 1.5419, 3.561)
 term_e0_deg = 125.045
 term_deg_per_day = -0.0529921
+geometric_albedo = 0.12
+phase_law = &"lunar"
+ephemeris = &"moon"
 surface_map = ExtResource("2_map")

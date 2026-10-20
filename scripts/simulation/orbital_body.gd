@@ -32,6 +32,14 @@ extends Resource
 @export var term_amplitudes_deg := Vector3.ZERO
 @export var term_e0_deg: float = 0.0
 @export var term_deg_per_day: float = 0.0
+## Reflected light (CelestialFrame.reflected_fraction): geometric albedo
+## (brightness at full phase relative to a white disc), and how it fades
+## with phase angle: &"lambert" (a diffuse sphere) or &"lunar" (the Moon's
+## measured curve, with its opposition surge).
+@export var geometric_albedo: float = 0.3
+@export var phase_law: StringName = &"lambert"
+## Where it is (CelestialFrame.geocentric_icrs): &"earth" or &"moon".
+@export var ephemeris: StringName = &"earth"
 ## Surface colour map: equirectangular, left edge 180° W, top edge 90° N.
 @export var surface_map: Texture2D
 
