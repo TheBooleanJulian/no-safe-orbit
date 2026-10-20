@@ -75,7 +75,7 @@ func test_every_launcher_and_hardened_part_is_valid() -> void:
 	assert_true(_catalog().equipment[&"sensor_mast_hardened"].mass_kg > _catalog().equipment[&"sensor_mast"].mass_kg, "hardening costs mass")
 	var sys := _ship(&"a", _armed(&"missile_rack")).systems
 	assert_true(_launcher(sys) != null and not sys.blueprint.equipment.is_empty(), "a rack fits the template")
-	assert_true(sys.missile_count() == {"Anti-ship missile": 4}, "four anti-ship missiles aboard (%s)" % sys.missile_count())
+	assert_true(sys.missile_count() == {"Anti-ship missile": 12}, "twelve anti-ship missiles aboard (%s)" % sys.missile_count())
 
 
 func test_guidance_hits_a_manoeuvring_target() -> void:
@@ -141,11 +141,12 @@ func test_launcher_reload_and_stock() -> void:
 	var world := _duel(&"missile_rack", 5000.0)
 	var sys := world.get_ship(&"a").systems
 	assert_true(world.launch_missile(&"a", &"b") == "", "first away")
-	assert_true(world.launch_missile(&"a", &"b") != "", "the rack is reloading")
-	for i in int(ShipSystems.LAUNCHER_RELOAD_S / DT) + 2:
+	assert_true(world.launch_missile(&"a", &"b") != "", "the tube is cycling")
+	for i in int(ShipSystems.LAUNCHER_CYCLE_S / DT) + 2:
 		world.step()
-	assert_true(world.launch_missile(&"a", &"b") == "", "reloaded: second away")
-	assert_true(sys.missiles_left(_launcher(sys)) == 2, "two left")
+	assert_true(world.launch_missile(&"a", &"b") == "", "cycled: second away")
+	var cap := _launcher(sys).def.missile_capacity
+	assert_true(sys.missiles_left(_launcher(sys)) == cap - 2, "%d left" % (cap - 2))
 	var none := WorldSimulation.new(DT)
 	none.add_ship(_ship(&"x", _bp()))
 	none.add_ship(_ship(&"y", _bp(), Vector3(0, 0, -3000)))
@@ -252,16 +253,18 @@ func test_missiles_persist_and_restock_for_credits() -> void:
 	var q := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())), PackedStringArray())
 	var again := _ship(&"p", q.vessel.blueprint)
 	again.systems.apply_condition(q.vessel.condition)
-	assert_true(again.systems.missiles_left(_launcher(again.systems)) == 1, "one missile left after the save round trip")
+	assert_true(again.systems.missiles_left(_launcher(again.systems)) == e.def.missile_capacity - 3, "three fewer after the save round trip")
+	var unit := e.def.missile.unit_credits
 	var need := ServiceYard.resupply_needs(q.vessel, cat)
-	assert_true(need.missiles == 3 and need.missile_credits == 3 * 60, "three to restock at 60 cr (%s)" % need)
-	q.credits = 130
+	assert_true(need.missiles == 3 and need.missile_credits == 3 * unit, "three to restock at %d cr (%s)" % [unit, need])
+	q.credits = 2 * unit + 1
 	var line := ServiceYard.resupply(q.vessel, q, cat)
-	assert_true(line.contains("Partly") and int(q.vessel.condition.missiles_used[e.id]) == 1 and q.credits == 10,
-		"130 cr buys two (%s)" % line)
+	assert_true(line.contains("Partly") and int(q.vessel.condition.missiles_used[e.id]) == 1 and q.credits == 1,
+		"%d cr buys two (%s)" % [2 * unit + 1, line])
 	q.credits = 500
 	ServiceYard.resupply(q.vessel, q, cat)
-	assert_true(not q.vessel.condition.has("missiles_used") and q.credits == 440, "the last one: full again")
+	assert_true(not q.vessel.condition.has("missiles_used") and q.credits == 500 - unit, "the last one: full again")
+	assert_true(unit <= 10 and cat.equipment[&"nuclear_launcher"].missile.unit_credits <= 200, "restocking is cheap")
 
 
 func test_templates_and_enemy_designs_validate() -> void:

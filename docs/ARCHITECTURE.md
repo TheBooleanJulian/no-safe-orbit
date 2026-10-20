@@ -398,6 +398,28 @@ bounding-box hit test.
   happened to the HUD and the shipyard. Schema 5 adds `tutorial` and
   `campaign` (a pilot with history is not offered the tutorial).
 
+## Salvos, wrecks and crew views (Milestone 9)
+
+- **`MissileSalvo`**: one press of M = warhead groups (`groups_for(mode,
+  order)`); `step(world)` fires every ready launcher of the current group
+  via `launch_missile(…, warhead)` and moves on when the group has nothing
+  left in working launchers (`ShipSystems.missiles_of`). Mode and order live
+  in `PlayerProfile.missile_mode / missile_order` (additive keys, schema 5).
+- **Launchers** cycle in `LAUNCHER_CYCLE_S` (0.4 s); `missile_salvo` > 1
+  launches a fanned-out swarm per launch (the saturation pod).
+- **Break-ups**: `_burst_in_space` adds a `shot_down` burst carried by the
+  nearer of the missile's target and launcher; blasts under
+  `ShipSystems.SMALL_BLAST_M` are bursts (fireballs), not explosions.
+- **Wrecks**: `WorldSimulation.retire_ship(id, new_id)` re-keys a ship and
+  its craft (same prefix), releases gangways/grapples/boardings, drops its
+  wing from the world and marks them `derelict` (neutral input, no point
+  defence). Main keeps up to `MAX_WRECKS`, nudges each clear at 4 m/s, and
+  keeps their craft views via `_derelict_wings`.
+- **Crew views**: `CrewRoster.ROLE_COLORS`; `ShipSchematic` draws a dot per
+  person by post (`hostile_crew` → red, `boarders` overlay, `highlight_member`);
+  the CREW tab is a schematic + `Tree` roster; `BoardingAction.candidates()`
+  says who a party would take.
+
 ## Missiles and EMP (Milestone 7)
 
 - **Launchers** (`EquipmentDefinition.Kind.MISSILE_LAUNCHER`, appended so

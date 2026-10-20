@@ -131,6 +131,49 @@ func remove_ship(id: StringName) -> void:
 	_ship_order.erase(id)
 
 
+## Keep a beaten ship in the world as a derelict under `new_id`, with its
+## craft (re-keyed under the same prefix, so a new ship can take the old
+## id): gangways and grapples on it let go, boardings end, its wing stops
+## flying, missiles it fired or that chase it keep their owner and quarry
+## under the new ids. Returns the wreck (null if `id` isn't there).
+func retire_ship(id: StringName, new_id: StringName) -> ShipState:
+	var ship := get_ship(id)
+	if ship == null:
+		return null
+	for link in links:
+		if link.attacker_id == id or link.target_id == id:
+			link.release()
+	for g in grapples:
+		if g.attacker_id == id or g.target_id == id:
+			g.release()
+	boardings = boardings.filter(func(b: BoardingAction) -> bool: return b.link.attacker_id != id and b.link.target_id != id)
+	var prefix := String(id) + "_"
+	var renames := {id: new_id}
+	for sid in _ship_order:
+		if String(sid).begins_with(prefix):
+			renames[sid] = StringName(String(new_id) + "_" + String(sid).substr(prefix.length()))
+	for old: StringName in renames:
+		var s: ShipState = _ships[old]
+		_ships.erase(old)
+		_inputs.erase(old)
+		_ship_order.erase(old)
+		s.id = renames[old]
+		s.derelict = s.missile == null
+		_ships[s.id] = s
+		_ship_order.append(s.id)
+	_ship_order.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
+	for m in missiles:
+		m.missile_owner = renames.get(m.missile_owner, m.missile_owner)
+		m.missile_target = renames.get(m.missile_target, m.missile_target)
+	for w in wings.duplicate():
+		if w.carrier_id == id:
+			w.carrier_id = new_id
+			for c in w.crafts:
+				c.id = renames.get(c.id, c.id)
+			wings.erase(w)
+	return ship
+
+
 ## The extending or sealed gangway involving ship `id`, or null.
 func link_for(id: StringName) -> DockingLink:
 	for link in links:
@@ -139,36 +182,48 @@ func link_for(id: StringName) -> DockingLink:
 	return null
 
 
-## Fire a missile from `shooter_id`'s next ready launcher at `target_id`.
-## "" on success, or why not.
-func launch_missile(shooter_id: StringName, target_id: StringName) -> String:
+## Fire from `shooter_id`'s next ready launcher (of `warhead`, -1 any) at
+## `target_id`: one missile, or a saturation pod's swarm. "" on success, or
+## why not.
+func launch_missile(shooter_id: StringName, target_id: StringName, warhead: int = -1) -> String:
 	var s := get_ship(shooter_id)
 	var target := get_ship(target_id)
 	if s == null or s.systems == null or not s.is_active():
 		return "no launcher"
 	if target == null or not target.is_active():
 		return "no target"
-	var e := s.systems.ready_launcher()
+	var e := s.systems.ready_launcher(warhead)
 	if e == null:
 		for x in s.systems.equipment:
 			if x.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER:
-				return "launchers empty, reloading or offline"
+				return "launchers empty, cycling or offline"
 		return "no missile launcher fitted"
 	var cfg := e.def.missile
 	var normal := Vector3(ShipGrid.FACE_NORMALS.get(s.systems.blueprint.equipment[e.index].face, Vector3i.UP))
 	var out := s.orientation * normal
-	var m := ShipState.create(StringName("%s_msl%d" % [shooter_id, _next_missile_id]), cfg.display_name, cfg.to_ship_config(),
-		s.position + s.orientation * e.body_position + out * 4.0, s.velocity + out * 15.0,
-		Quaternion(Basis.looking_at(out, Vector3.UP if absf(out.y) < 0.95 else Vector3.BACK)))
-	_next_missile_id += 1
-	m.missile = cfg
-	m.missile_owner = shooter_id
-	m.missile_target = target_id
-	add_ship(m)
-	missiles.append(m)
-	s.systems.missiles_used[e.id] = int(s.systems.missiles_used.get(e.id, 0)) + 1
-	s.systems.launcher_cooldown[e.id] = ShipSystems.LAUNCHER_RELOAD_S
-	_link_events.append("%s launched at %s (%s)" % [cfg.display_name, target.display_name, e.id])
+	var n := mini(maxi(e.def.missile_salvo, 1), s.systems.missiles_left(e))
+	for k in n:
+		# A swarm leaves fanned out a little, so it doesn't fly as one.
+		var dir := out
+		var offset := Vector3.ZERO
+		if n > 1:
+			var side := out.cross(Vector3.UP if absf(out.y) < 0.95 else Vector3.RIGHT).normalized()
+			var up := side.cross(out)
+			var a := TAU * k / n
+			dir = (out + (side * cos(a) + up * sin(a)) * 0.25).normalized()
+			offset = (side * cos(a) + up * sin(a)) * 1.5
+		var m := ShipState.create(StringName("%s_msl%d" % [shooter_id, _next_missile_id]), cfg.display_name, cfg.to_ship_config(),
+			s.position + s.orientation * e.body_position + out * 4.0 + offset, s.velocity + dir * 15.0,
+			Quaternion(Basis.looking_at(dir, Vector3.UP if absf(dir.y) < 0.95 else Vector3.BACK)))
+		_next_missile_id += 1
+		m.missile = cfg
+		m.missile_owner = shooter_id
+		m.missile_target = target_id
+		add_ship(m)
+		missiles.append(m)
+	s.systems.missiles_used[e.id] = int(s.systems.missiles_used.get(e.id, 0)) + n
+	s.systems.launcher_cooldown[e.id] = ShipSystems.LAUNCHER_CYCLE_S
+	_link_events.append("%s launched at %s (%s)" % ["%d × %s" % [n, cfg.display_name] if n > 1 else cfg.display_name, target.display_name, e.id])
 	return ""
 
 
@@ -229,10 +284,12 @@ func _step_missiles() -> void:
 		m.missile_age += fixed_dt
 		if not m.is_active():
 			_link_events.append("%s shot down" % m.display_name)
+			_burst_in_space(m, true)
 			gone.append(m.id)
 			continue
 		if m.missile_age > m.missile.lifetime_s:
 			_link_events.append("%s self-destructed (out of time)" % m.display_name)
+			_burst_in_space(m, true)
 			gone.append(m.id)
 			continue
 		var target := get_ship(m.missile_target)
@@ -246,6 +303,21 @@ func _step_missiles() -> void:
 	for id in gone:
 		missiles = missiles.filter(func(x: ShipState) -> bool: return x.id != id)
 		remove_ship(id)
+
+
+## A missile breaking up away from any hull (shot down, self-destruct): a
+## burst for the views, carried by the nearest of its target and its
+## launcher so it rides with the fight.
+func _burst_in_space(m: ShipState, broken: bool) -> void:
+	var anchor: ShipState
+	for id in [m.missile_target, m.missile_owner]:
+		var s := get_ship(id)
+		if s != null and (anchor == null or s.position.distance_to(m.position) < anchor.position.distance_to(m.position)):
+			anchor = s
+	if anchor == null:
+		return
+	_bursts.append({"ship_id": anchor.id, "point_body": anchor.orientation.inverse() * (m.position - anchor.position),
+		"radius": clampf(m.mass_kg() / 100.0, 1.5, 6.0), "kind": m.missile.warhead, "shot_down": broken})
 
 
 ## Where the missile first came within its fuse radius of `target` this
@@ -287,7 +359,7 @@ func _detonate(m: ShipState, target: ShipState) -> void:
 			ev.energy_j = 0.5 * m.mass_kg() * rel_v.length_squared()
 			ev.report = Penetration.apply(target.systems, point_body, inv * dir, cfg.penetration_mm)
 			_apply_damage(target, ev.report)
-			target.systems.blast_at(point_body, cfg.blast_radius_m, 0.6, 45.0, "%s hit — warhead detonated" % cfg.display_name)
+			target.systems.blast_at(point_body, cfg.blast_radius_m, cfg.blast_structure_fraction, cfg.blast_hp, "%s hit — warhead detonated" % cfg.display_name)
 			_apply_impulse(target, point_body, rel_v * m.mass_kg())
 			target.config = target.systems.effective_config()
 			_hit_events.append(ev)
@@ -437,8 +509,8 @@ func step() -> void:
 		ship.snapshot_previous()
 		if not ship.is_active():
 			continue
-		var input: ShipControlInput = _inputs.get(id, _neutral_input)
-		if ship.systems != null and not ship.systems.has_command() and not input.flight_assist:
+		var input: ShipControlInput = _neutral_input if ship.derelict else _inputs.get(id, _neutral_input)
+		if ship.systems != null and not ship.systems.has_command() and not input.flight_assist and not ship.derelict:
 			# Ship AI in control: it always flies with assist.
 			input = ShipControlInput.create(input.translation, input.rotation, true)
 			input.fire = _inputs.get(id, _neutral_input).fire
@@ -577,7 +649,7 @@ const PD_READY_DEG := 1.5
 ## on its own — gangway or not (automatic defences).
 func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> void:
 	var cfg := ship.config
-	if cfg.pd_gun == null or ship.systems == null:
+	if cfg.pd_gun == null or ship.systems == null or ship.derelict:
 		return
 	var gun := cfg.pd_gun
 	var inv := ship.orientation.inverse()

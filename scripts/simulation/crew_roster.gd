@@ -19,6 +19,26 @@ const ROLE_NAMES := ["command", "engineering", "damage control", "weapons", "sec
 const COMBAT_STRENGTH := [0.4, 0.4, 0.5, 0.4, 1.0, 0.2, 0.4]
 ## Abstract time to move through one room (s).
 const ROOM_TRANSIT_S := 5.0
+## Map dot colour per role (functional, like rarity colours): command gold,
+## engineering orange, damage control violet, weapons red, security teal,
+## medical green, general grey.
+const ROLE_COLORS := [Color("f5c842"), Color("ff9a3c"), Color("b98cff"), Color("ff5a5a"), Color("00d4c8"),
+	Color("6fe08a"), Color("aab4bc")]
+const ROLE_SHORT := ["CMD", "ENG", "DC", "WPN", "SEC", "MED", "GEN"]
+
+
+## The standard complement per role (as default_for fills berths), for a
+## ship with `guns` guns: what the station suggests hiring towards.
+static func suggested(guns: int) -> Array[int]:
+	return [2, 2, 2, mini(guns, 2), 4, 1, 0]
+
+
+## "● command ● engineering …" in BBCode, for map legends.
+static func role_legend() -> String:
+	var parts := PackedStringArray()
+	for r in ROLE_NAMES.size():
+		parts.append("[color=#%s]●[/color] %s" % [(ROLE_COLORS[r] as Color).to_html(false), ROLE_NAMES[r]])
+	return "  ".join(parts)
 
 
 class Member:

@@ -28,6 +28,12 @@ func explosion_count() -> int:
 	return _explosions.size()
 
 
+## A small fireball (a missile breaking up, a small warhead): an orange
+## flash growing to about 3 × `radius`, lit, gone in under a second.
+func add_fireball(ship_id: StringName, point_body: Vector3, radius: float) -> void:
+	_add(ship_id, point_body, radius, 3.0, 0.8, Color(1.0, 0.62, 0.3, 1.0), true)
+
+
 ## A ring of light expanding to `radius` (an EMP burst), riding on a ship.
 func add_burst(ship_id: StringName, point_body: Vector3, radius: float, color: Color) -> void:
 	var ring := TorusMesh.new()

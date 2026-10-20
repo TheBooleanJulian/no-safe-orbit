@@ -62,6 +62,8 @@ var _jump_flash: ColorRect
 ## under the alert banner; and the escort's courier, marked like a craft.
 var guide_lines := PackedStringArray()
 var escort_id: StringName = &""
+## Beaten contacts left drifting, marked grey (set by Main).
+var wreck_ids: Array[StringName] = []
 var guide_label: RichTextLabel
 ## A nuclear burst whitens the view (flash_white): when it started (ms).
 var _white_flash_ms := -1
@@ -240,7 +242,7 @@ const HELP_TEXT := """FLIGHT     W/S pitch · A/D yaw · Q/E roll · R/F main en
 ASSIST     Z on/off · X cycles: hold orbit → match target → target markers (yellow, coast)
 GUNNERY    mouse aims the turrets (click captures; Esc releases) · LMB / Enter fire
            Shift zoom on/off, wheel = magnification · ◇ lead marker (needs a lock) · U next target
-MISSILES   M launch at the U target (the ship needs a sensor lock) · point defence shoots them down
+MISSILES   M salvo at the U target (the ship needs a lock; M again holds) · , mode: all / conventional / EMP / nuclear / sequence
 POWER      1 SYS · 2 ENG · 3 WEP · 4 balance
 SHIP       Tab damage control, crew, power, wing · C patch damage
 CONTACTS   T target hostile · G salvage beacon · Y grappling arm · V gangway · N board / withdraw · [ / ] launch / recall craft
@@ -548,6 +550,7 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 		hit_cam.visible = false
 	if overview.visible:
 		overview.vessel = profile.vessel if profile != null else null
+		overview.profile = profile
 		var link := world.link_for(player.id)
 		overview.update_view(player, target, world.boarding_for(link) if link != null else null, boarding_party_size, t,
 			player_wing, contact and (player_wing == null or player_wing.has_close_look(world, target)))
@@ -979,6 +982,8 @@ func _boarding_lines(world: WorldSimulation, player: ShipState, target: ShipStat
 			return lines
 		var s: Dictionary = found.assessment
 		lines.append("DOCKING    %s  [V]" % ("READY — %s" % ("collar" if found.b_port.kind == &"collar" else "hull cut") if s.ok else "; ".join(s.problems)))
+		var ready := BoardingAction.candidates(player.systems, found.a_port.room, boarding_party_size).size()
+		lines.append("           then [N] boards with %d of party %d" % [ready, boarding_party_size])
 		lines.append("           port gap %.0f / %.0f m · %.2f / %.1f m/s · %.0f° / %.0f°" % [s.range, Docking.GANGWAY_MAX_M,
 			s.rel_speed, Docking.MAX_REL_SPEED_MPS, s.misalign_deg, Docking.MAX_MISALIGN_DEG])
 		return lines
@@ -991,7 +996,8 @@ func _boarding_lines(world: WorldSimulation, player: ShipState, target: ShipStat
 		return lines
 	var b := world.boarding_for(link)
 	if b == null:
-		lines.append("GANGWAY    SEALED — [N] send boarders  [V] release")
+		var going := BoardingAction.candidates(player.systems, link.a_port.room, boarding_party_size).size()
+		lines.append("GANGWAY    SEALED — [N] send %d boarder%s (party up to %d, Tab › CREW)  [V] release" % [going, "" if going == 1 else "s", boarding_party_size])
 		return lines
 	var where := "on the gangway" if b.room < 0 else target.systems.blueprint.rooms[b.room].id
 	var doing: String = {&"cut": "cutting a hatch", &"move": "moving", &"cross": "crossing", &"muster": "mustering"}.get(b.action, "")
@@ -1019,7 +1025,7 @@ func _update_weapon_strip(player: ShipState) -> void:
 		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config, player), "▮".repeat(bars) + "▯".repeat(10 - bars),
 			player.cannon_rounds, cannon.magazine_rounds, "  EMPTY" if player.cannon_rounds == 0 else ""])
 	parts.append(pd_text(player))
-	var msl := missile_text(player.systems)
+	var msl := missile_text(player.systems, MissileSalvo.mode_text(profile.missile_mode, profile.missile_order) if profile != null else "")
 	if msl != "":
 		parts.append(msl)
 	var lines := PackedStringArray(["   ·   ".join(parts)])
@@ -1032,7 +1038,7 @@ func _update_weapon_strip(player: ShipState) -> void:
 
 ## Missiles aboard on the weapon strip: "MSL anti-ship 4 · EMP 2 [M]" ("" if
 ## no launcher is fitted).
-static func missile_text(sys: ShipSystems) -> String:
+static func missile_text(sys: ShipSystems, mode: String = "") -> String:
 	if sys == null:
 		return ""
 	var counts := sys.missile_count()
@@ -1042,7 +1048,7 @@ static func missile_text(sys: ShipSystems) -> String:
 	for n: String in counts:
 		var short := n.trim_suffix(" missile")
 		parts.append("%s %d" % [short if short == short.to_upper() else short.to_lower(), counts[n]])
-	return "MSL %s [M]" % " · ".join(parts)
+	return "MSL %s [M]%s" % [" · ".join(parts), "  mode %s [,]" % mode if mode != "" else ""]
 
 
 ## Point defence on the weapon strip: mounts, what they're engaging, rounds.
@@ -1225,6 +1231,12 @@ func _update_craft_markers(world: WorldSimulation, player: ShipState, alpha: flo
 				continue
 			overlay.craft_markers.append({"pos": s.interpolated_position(alpha) - render_origin,
 				"label": "%s %s" % [c.label, HudFormat.distance(dist)], "hostile": hostile, "selected": c.id == selected_id})
+	for id in wreck_ids:
+		var w := world.get_ship(id)
+		if w == null or not w.is_active() or w.position.distance_to(player.position) > reach:
+			continue
+		overlay.craft_markers.append({"pos": w.interpolated_position(alpha) - render_origin,
+			"label": "WRECK %s" % HudFormat.distance(w.position.distance_to(player.position)), "hostile": false, "selected": false, "wreck": true})
 	if escort_id != &"" and world.has_ship(escort_id) and world.get_ship(escort_id).is_active():
 		var c := world.get_ship(escort_id)
 		overlay.craft_markers.append({"pos": c.interpolated_position(alpha) - render_origin,
@@ -1236,7 +1248,7 @@ func _update_craft_markers(world: WorldSimulation, player: ShipState, alpha: flo
 			continue
 		var ours := m.missile_owner == player.id or (player_wing != null and player_wing.by_id(m.missile_owner) != null)
 		overlay.craft_markers.append({"pos": m.interpolated_position(alpha) - render_origin,
-			"label": "MSL %s" % HudFormat.distance(dist), "hostile": not ours, "selected": false})
+			"label": "MSL %s" % HudFormat.distance(dist), "hostile": not ours, "selected": false, "minor": ours})
 
 
 ## One reticle per gun: where its barrel points, at the aim range.

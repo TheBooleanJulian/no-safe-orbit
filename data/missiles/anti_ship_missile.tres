@@ -14,4 +14,4 @@ fuse_radius_m = 5.0
 hull_hp = 6.0
 penetration_mm = 160.0
 blast_radius_m = 8.0
-unit_credits = 60
+unit_credits = 8

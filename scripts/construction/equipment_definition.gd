@@ -56,6 +56,8 @@ enum Mount { INTERNAL, EXTERNAL }
 ## Missile launchers: the missile and how many the launcher holds.
 @export var missile: MissileConfig
 @export var missile_capacity: int = 0
+## Missiles a launcher sends away at once (a saturation pod's swarm).
+@export var missile_salvo: int = 1
 ## EMP hardening (0 = exposed electronics, 1 = immune): shielded and
 ## filtered control electronics cost mass.
 @export var emp_hardening: float = 0.0

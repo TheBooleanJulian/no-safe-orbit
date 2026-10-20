@@ -51,7 +51,10 @@ var _boarding: BoardingAction
 var _boarding_name := ""
 var _boarding_done_age := 0.0
 var _room_boxes: Dictionary = {}  # room index -> StandardMaterial3D
-var _team_marker: MeshInstance3D
+## A dot per person in the boarding: ours in their post colours, the
+## defenders red (a pool, re-placed each frame).
+var _dots: Array[MeshInstance3D] = []
+var _dot_mats: Dictionary = {}  # Color -> material
 var _room_centers: Dictionary = {}  # room index -> Vector3 (body)
 const BOARDING_HOLD_S := 6.0
 
@@ -201,8 +204,8 @@ func show_boarding(boarding: BoardingAction, design: Dictionary, systems: ShipSy
 		_box(size * 0.96, center, mat)
 		_room_boxes[i] = mat
 		_room_centers[i] = center
-	_team_marker = _sphere(1.0, Vector3.ZERO, _flat(CyberTheme.CYAN, false, 3.0))
-	_team_marker.visible = false
+	_dots.clear()
+	_dot_mats.clear()
 	_focus = Vector3.ZERO
 	_orbit_axis = Vector3.UP
 	var reach := maxf((design.stats as ShipStats).hull_bounds_m.size.length() * 0.7, 30.0)
@@ -215,9 +218,13 @@ func _update_boarding(delta: float) -> void:
 	var control := b.room_control()
 	for i in _room_boxes:
 		(_room_boxes[i] as StandardMaterial3D).albedo_color = ShipSchematic.control_color(control.get(i, &""), _age)
-	_team_marker.visible = b.room >= 0 and not b.fit_team().is_empty()
-	if _team_marker.visible:
-		_team_marker.position = _room_centers.get(b.room, Vector3.ZERO) + Vector3(0, 1.5, 0)
+	var used := 0
+	if b.room >= 0:
+		used = _place_dots(b.fit_team(), b.room, used, false)
+	for room in _room_centers:
+		used = _place_dots(b.defenders_in(room), room, used, true)
+	for k in range(used, _dots.size()):
+		_dots[k].visible = false
 	var spin := Basis(_orbit_axis, 0.12 * _age)
 	_camera.look_at_from_position(_focus + spin * _cam_offset, _focus, _orbit_axis)
 	_title.text = "BOARDING — %s · %s · team %d/%d" % [_boarding_name, BoardingAction.PHASE_NAMES[b.phase].to_upper(), b.fit_team().size(), b.team.size()]
@@ -226,6 +233,26 @@ func _update_boarding(delta: float) -> void:
 		_boarding_done_age += delta
 		if _boarding_done_age > BOARDING_HOLD_S:
 			stop_boarding()
+
+
+## Dots for `people` in a ring over `room`'s centre, from pool slot `from`;
+## returns the next free slot.
+func _place_dots(people: Array, room: int, from: int, enemy: bool) -> int:
+	var center: Vector3 = _room_centers.get(room, Vector3.ZERO) + Vector3(0, 1.4 if not enemy else 0.6, 0)
+	var k := from
+	for i in people.size():
+		if k >= _dots.size():
+			_dots.append(_sphere(0.45, Vector3.ZERO, _flat(Color.WHITE, false)))
+		var col: Color = CyberTheme.RED if enemy else CrewRoster.ROLE_COLORS[(people[i] as CrewRoster.Member).role]
+		if not _dot_mats.has(col):
+			_dot_mats[col] = _flat(col, false, 2.5)
+		var a := TAU * i / maxf(people.size(), 1.0)
+		var ring := 0.9 + 0.12 * people.size()
+		_dots[k].material_override = _dot_mats[col]
+		_dots[k].position = center + Vector3(cos(a), 0, sin(a)) * ring
+		_dots[k].visible = true
+		k += 1
+	return k
 
 
 func stop_boarding() -> void:

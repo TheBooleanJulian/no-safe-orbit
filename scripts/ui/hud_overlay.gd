@@ -149,11 +149,18 @@ func _draw_craft_markers(font: Font) -> void:
 		if not _inner_rect().has_point(p):
 			continue
 		var col := COLOR_TARGET if m.hostile else COLOR_AIM
-		var d := 7.0
+		if m.get("wreck", false):
+			col = CyberTheme.TEXT_DIM
+		# Our own missiles: small, dim and unlabelled, so a swarm doesn't bury the view.
+		var minor: bool = m.get("minor", false)
+		var d := 3.5 if minor else 7.0
+		if minor:
+			col = Color(col, 0.55)
 		draw_polyline(PackedVector2Array([p + Vector2(0, -d), p + Vector2(d, 0), p + Vector2(0, d), p + Vector2(-d, 0), p + Vector2(0, -d)]), col, 1.5)
 		if m.selected:
 			_draw_bracket(p, 12.0)
-		draw_string(font, p + Vector2(10, -8), str(m.label), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
+		if not minor:
+			draw_string(font, p + Vector2(10, -8), str(m.label), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, col)
 
 
 ## Each gun's own reticle: a small ring where its barrel points. On target:

@@ -204,7 +204,25 @@ func _run() -> void:
 	unclick.pressed = false
 	Input.parse_input_event(unclick)
 
-	# M: a missile at the locked target.
+	# The CREW and WEAPONS tabs fill in (the drawer is still open).
+	drawer.show_tab("CREW")
+	await process_frame
+	await process_frame
+	_check(drawer._crew_tree.get_root() != null and drawer._crew_tree.get_root().get_child_count() >= 3,
+		"Tab › CREW lists the crew by post (%d posts)" % (drawer._crew_tree.get_root().get_child_count() if drawer._crew_tree.get_root() != null else 0))
+	drawer.show_tab("WEAPONS")
+	await process_frame
+	await process_frame
+	_check(drawer._missile_label.get_parsed_text().contains("Missile rack") and drawer._missile_label.get_parsed_text().contains("Mode: ALL"),
+		"Tab › WEAPONS shows the launchers and the missile mode")
+
+	# [,] cycles the missile mode; back to "all" after a full turn.
+	for i in MissileSalvo.Mode.size():
+		_press_action("missile_mode")
+		await process_frame
+	_check(main.get_profile().missile_mode == MissileSalvo.Mode.ALL, "[,] cycles the missile modes round to 'all'")
+
+	# M: a salvo — the whole rack — at the locked target.
 	_press_action("tactical_overview")
 	main.hud.selected_id = &""
 	var t_lock := main.world.sim_time
@@ -213,10 +231,11 @@ func _run() -> void:
 	_press_action("fire_missile")
 	await process_frame
 	await process_frame
-	var ours := main.world.missiles.filter(func(m: ShipState) -> bool: return m.missile_owner == &"player")
-	_check(main.track.locked and not ours.is_empty() and main.hud.weapon_label.text.contains("MSL"),
-		"M launches a missile at the locked target (%d in flight; strip: %s)" % [ours.size(), main.hud.weapon_label.text.get_slice("
-", 0)])
+	_check(main.track.locked and main.salvo != null and main.hud.weapon_label.text.contains("MSL"),
+		"M starts a salvo at the locked target (strip: %s)" % main.hud.weapon_label.text.get_slice("\n", 0))
+	await _run_until_sim_time(main, 12 * ShipSystems.LAUNCHER_CYCLE_S + 1.0)
+	_check(main.salvo == null and player.systems.missiles_of() == 0 and main.combat_log.missiles_launched == 12,
+		"the salvo empties the rack (%d launched)" % main.combat_log.missiles_launched)
 	Main.launch_blueprint = null
 
 	print("smoke: %d failure(s)" % _failures.size())
