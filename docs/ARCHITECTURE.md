@@ -398,6 +398,46 @@ bounding-box hit test.
   happened to the HUD and the shipyard. Schema 5 adds `tutorial` and
   `campaign` (a pilot with history is not offered the tutorial).
 
+## Encounters, policies and point defence (Milestone 10)
+
+- **`Encounter`** (`scripts/simulation/encounter.gd`) is the contact
+  registry: `Contact`s by stable id (slots `target_01…`; the lead keeps
+  `Main.TARGET_ID`, a slot is reused once its ship is retired) and the
+  selected one (`cycle`, `select`, `ensure_selection`, `live`). A
+  **`Contact`** holds what the fight keeps per enemy ship: our track of it
+  and its of us, hostility, air wing, `ShipPolicy`, salvo in flight,
+  arriving / beaten / prize state, re-board timer.
+- **`Main`** drives every live contact each frame (`_drive_contact`):
+  captured → hold, break free from our gangway, board a beaten player (one
+  contact at a time), arrive to its role's standoff, else fight its role.
+  Selection-based actions (salvage, gangway, grapple, boarding, missiles,
+  lead) use `encounter.selected`; the single-target names the HUD and tests
+  use (`target_hostile`, `track`, `_target_arriving`, `target_wing`) are
+  properties of the selected contact. The next encounter
+  (`EnemyFactory.encounter_size`) arrives when no contact is left alive.
+- **`ShipPolicy`** (Resource, `data/policies/*.tres`): discipline, PD (order,
+  range, reserve), auto-salvo, auto-fire, role and focus fire. The player's
+  is `ShipInstance.policy` (schema 6); `trigger(manual, …)` = manual OR
+  auto-fire, so automation never blocks the player. `_apply_automation`
+  feeds the aim error against the lead (`aim_error_deg`) and starts
+  auto-salvos. Enemies: `EnemyFactory.policy(mission, index)` — the
+  Standard preset with a role by place; `GunneryAI.combat(…, policy)` uses
+  its keep range, flank bias and discipline; `GunneryAI.choose_prey` skips
+  derelicts and focuses fire.
+- **Point defence** (`WorldSimulation.pd_candidates`, `_update_point_defence`):
+  hostile missiles, craft and threatening rounds sorted by the policy's
+  rank then distance; each mount takes the first allowed (range, reserve)
+  in its arc. Flak (`ProjectileState.pd_target_round`) kills the round it
+  was fired at when it passes within 1.5 m during a tick
+  (`_intercept_rounds`). `ShipState.side` keeps PD off its own side.
+- **Numbers** (`tools/bench_sim.gd`, `tools/bench_hull.gd`): a 3-hostile
+  encounter with wings and salvos runs 3.7 ms mean per tick, 17.6 ms worst
+  (1 tick in 3,600 over 8 ms — a warhead strike: penetration walk, blast and
+  a flight-config recompute). A 300-module hull: grid 3 ms, stats 6 ms,
+  validation 8 ms, systems 91 ms (crew roster 115 ms of O(berths × rooms)),
+  recompute 0.2 ms, power 1 ms, hit test 0.16 ms per round, full-length
+  penetration 7 ms.
+
 ## Salvos, wrecks and crew views (Milestone 9)
 
 - **`MissileSalvo`**: one press of M = warhead groups (`groups_for(mode,
@@ -579,7 +619,11 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | No decoys, chaff or electronic warfare against missiles | Point defence, guns and range are the only counterplay | EW pass |
 | Nuclear effects simplified: one dose number, armour as a divisor, ship-wide heat, no blast wave, no fallout or lasting radiation | A burst is a sharp, explainable event | If a strategic weapon needs more depth |
 | EMP exposure falls with the square of the distance; no line-of-sight shielding by other ships | A ship cannot hide behind another | Later |
-| Missions are a fixed chain of four goals, then patrols; one contact at a time | Little variety after the chain | Campaign content |
+| Missions are a fixed chain of four goals, then patrols | Little variety after the chain | Campaign content (M13) |
+| An encounter turns hostile together, and a contact engages only after the player has detected it | Ships can't be picked off one by one while the rest stay passive | If stealth or diplomacy arrive |
+| Enemy roles are fixed by place in the encounter (closer, standoff, flanker); no coordinated manoeuvres | Encounters feel the same shape each time | Later AI work |
+| Point-defence flak: a round within 1.5 m of a heavy slug (≥ 2 kg, < 1.5 km/s closing) destroys it; small and fast rounds can't be tracked | Heavy-cannon fire can be thinned by PD; autocannon and railgun fire can't | If PD lasers or interceptors arrive |
+| Auto-fire judges the aim against the primary gun's lead only | Mixed batteries auto-fire on the primary gun's solution | Per-mount fire control |
 | The escort's courier is a craft-like hull (hull points, no systems) on a fixed drift | It can't evade or be repaired | If escorts become a mainstay |
 
 ## Testing

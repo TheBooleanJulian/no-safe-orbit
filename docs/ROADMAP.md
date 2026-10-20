@@ -362,7 +362,32 @@ Decisions already made:
    the enemy factory).
 6. **Alerts** are redesigned in Pass A.
 
-### Milestone 10 — multi-contact encounters, ship policies, smarter AI
+### Milestone 10 — multi-contact encounters, ship policies, smarter AI ✅ (2026-10-20)
+
+Verified in `tests/unit/test_m10_contacts.gd` and `smoke_encounter.gd`
+unless noted; all existing smoke suites pass (changes to `smoke_main`
+justified in the changelog).
+
+| # | Acceptance criterion | Verified by | Result |
+|---|---|---|---|
+| 1 | Contact registry; ≥ 3 hostiles + craft, each with its own track, hostility, AI, wing, wreck state; key to cycle; full card + compact list; radar and overview show all | `test_the_encounter_registry_selects_cycles_and_reselects`, `test_each_contact_keeps_its_own_track_and_policy`, `smoke_encounter`, renders | 3 contacts at mission 7; U cycles 02 → 03 → 01; card lists the other two; radar 3; Tab › TARGET 3 buttons |
+| 2 | Missions, capture/boarding, salvage, waves, escort, tutorial against the selected contact; existing smoke suites pass | `smoke_main`, `smoke_campaign`, `smoke_boarding`, `smoke_wing`, `smoke_shipyard`, `smoke_encounter` (salvages the selected, non-lead contact; the lead untouched) | all pass |
+| 3 | Roles, focus fire, salvos by policy, player over a derelict | `test_roles_fight_at_their_own_ranges`, `test_focus_fire_and_never_a_derelict`, `test_enemy_salvos_launch_the_policy_count`, `smoke_encounter` | standoff backs off at 3 km and closes at 12 km; focus on the player over a nearer fighter; salvos of 2–4; 4 missiles inbound; standoff 4.2 km vs closer 2.4 km |
+| 4 | PD priorities, range, reserve; missile + craft + round at once | `test_point_defence_engages_in_policy_order`, `test_point_defence_respects_range_and_ammo_reserve`, `test_flak_destroys_a_heavy_slug_but_not_small_or_fast_rounds`, `test_point_defence_never_engages_its_own_side` | missile, then craft, then round; reversed order → round first; nothing beyond 600 m; below reserve only missiles |
+| 5 | Policy engine: presets, editable, saved per vessel (schema 6, migration, backup), manual override | `test_policy_presets_and_discipline`, `test_auto_fire_and_manual_override`, `test_auto_salvo_conditions`, `test_policy_round_trips_and_is_clamped`, `test_schema_6_gives_old_vessels_the_defensive_policy`, `smoke_encounter` | Tab › POLICY switches presets; manual fire under HOLD fires; v5 → v6 with `.v5` kept |
+| 6 | Bench: 3 hostiles with wings and salvos inside 8 ms; ~300-module hull spike | `test_a_three_ship_encounter_stays_inside_the_tick_budget`, `tools/bench_sim.gd`, `tools/bench_hull.gd` | 3.7 ms mean, 17.6 ms worst (1 of 3,600 ticks over 8 ms: a warhead strike); hull: validation 8 ms, compile 10 ms, systems 91 ms (crew roster — must change before capital ships), hit test 0.16 ms/round |
+| 7 | Mutation checks | see below | each fails exactly its test |
+
+Mutation-checked (`--only=test_m10`, 15 tests): sorting point-defence
+candidates by distance only fails `test_point_defence_engages_in_policy_order`;
+ignoring the salvo count fails `test_enemy_salvos_launch_the_policy_count`;
+dropping the manual trigger from `ShipPolicy.trigger` fails
+`test_auto_fire_and_manual_override`; a `cycle` that doesn't advance fails
+`test_the_encounter_registry_selects_cycles_and_reselects`. Restored: 15/15.
+
+Brief vs repo: the brief assumed point defence could already engage
+rounds — it couldn't (craft and missiles only); flak against heavy slugs was
+added, limited to what PD can plausibly track.
 
 1. A contact registry (stable ids) replaces the single hard-wired enemy. An
    encounter supports ≥ 3 hostile ships plus their craft; each contact has

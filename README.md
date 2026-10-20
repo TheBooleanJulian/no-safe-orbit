@@ -6,7 +6,7 @@ A hard-sci-fi spacecraft engineering and combat simulator, built in Godot 4.
 Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
-**Status:** Milestones 0–9 complete — design a ship in the shipyard, then fly
+**Status:** Milestones 0–10 complete — design a ship in the shipyard, then fly
 and fight it in a real-scale 400 km Earth orbit under the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
 own orbits afterwards; power, heat, pressure and propellant are simulated.
@@ -64,7 +64,7 @@ godot --path .
 | Velocity hold: orbit → match target → target markers | X | X |
 | Fire (each gun fires once it is on the aim) | Left mouse (once captured) or Enter | A |
 | Zoom for gunnery (toggle; centres on the aim, the mouse turns the view; wheel = magnification) | Shift | right stick click |
-| Next target for the lead marker (the ship, then each hostile craft) | U | — |
+| Next target: each ship of the encounter, then each hostile craft (lead marker only) | U | — |
 | Grappling arm: grab / release | Y | — |
 | Missile salvo at the U target (the ship needs a sensor lock); again: hold the rest | M | — |
 | Missile mode: all / conventional / EMP / nuclear / sequence | , | — |
@@ -120,8 +120,38 @@ fire, the aim below its face, offline, or locked). Put the cursor on the gold
 the rate of fire and with extra spread. With a gangway attached, both
 ships' primary weapons are locked; craft still fight.
 
-**Point defence:** PD turrets engage hostile craft and missiles within 2 km
-on their own (their own rounds, gangway or not) and never your own.
+**Point defence:** PD turrets engage hostile missiles, craft and big slow
+rounds on their own (their own rounds, gangway or not), never your side's.
+Your **ship policy** (Tab › POLICY) sets the order (default missiles ›
+craft › rounds), the engagement range (2 km) and an ammunition reserve
+(below 15 % of its magazine a mount keeps the rest for its first priority).
+Flak can only track heavy slugs (≥ 2 kg, closing under 1.5 km/s — the heavy
+cannon's rounds); autocannon rounds are too small and railgun slugs too fast.
+
+**Encounters:** from mission 4 two ships come at once, from mission 7
+three, each with its own role — a *closer* works in to gun range, a
+*standoff* ship holds 5–9 km off and fires missile salvos, a *flanker*
+works round to your stern — and they focus fire (an escorted courier first)
+and never waste fire on a wreck. The target card shows the selected
+contact in full and lists the others compactly (**U** selects the next);
+the radar, the world markers and Tab › TARGET show them all. Fire on one
+and the whole encounter turns hostile. Salvage, the gangway, boarding and
+missiles work on the selected contact; the next encounter arrives once the
+last ship is beaten.
+
+**Ship policy** (Tab › POLICY, saved with the vessel): automation layered
+on your controls — **manual input always wins**: your trigger and M fire
+whatever the policy says; automation only adds. Presets **Hold**,
+**Defensive** (the default: point defence only), **Standard** (auto-fire
+and auto-salvo, fire tight) and **Aggressive** (fire free, salvo everything
+from 1 km), every value editable:
+
+| Setting | What it does |
+|---|---|
+| Fire discipline | *hold*: automation never fires · *tight*: only at hostile contacts · *free*: at anything it has a solution on |
+| Auto point defence | on/off, priority order, engagement range, ammunition reserve |
+| Auto-salvo | at the selected contact when the lock quality, the range band and the interval allow: warhead mode and missiles per salvo |
+| Auto-fire | pulls the trigger while your aim is within the tolerance of the lead and you hold a lock |
 
 **Missiles (M):** launchers (Weapons palette; external, any face but aft)
 fire guided missiles at the target picked with U — the enemy ship needs a
@@ -587,16 +617,21 @@ actions: tutorial, missile salvo, crew and weapons tabs), the shipyard
 (`smoke_shipyard.gd`, including a real mouse click), the campaign loop
 (`smoke_campaign.gd`: fight → salvage → wreck stays → dock damaged →
 repair and refit → relaunch), boarding (`smoke_boarding.gd`) and the air
-wing (`smoke_wing.gd`), a 600-frame boot of the main scene, a `.pck`
+wing (`smoke_wing.gd`), a three-ship encounter (`smoke_encounter.gd`:
+selection, roles, salvos, salvaging a non-lead contact, policy, manual
+override), a 600-frame boot of the main scene, a `.pck`
 export and a boot from it. Smoke tests use a throwaway profile, never your
 save. The script fails on any test failure **and** on any Godot `ERROR:` /
 `SCRIPT ERROR` in the logs. Logs: `build/check-logs/`.
 
 Simulation frame-time profile under load (two frigates, every gun, a
-missile salvo):
+missile salvo; then a three-hostile encounter with wings and salvos), and
+a capital-hull spike (~300 modules: validation, compile, hit tests):
 
 ```bash
-godot --headless --path . -s res://tools/bench_sim.gd   # ms per tick by rounds in flight
+godot --headless --path . -s res://tools/bench_sim.gd    # ms per tick, mean and worst
+godot --headless --path . -s res://tools/bench_hull.gd   # large-hull timings
+godot --headless --path . -s res://tests/run_tests.gd -- --only=test_m10   # one test file
 ```
 
 Visual capture (needs a display; on a desktop it briefly opens a window).
@@ -628,7 +663,7 @@ scripts/presentation/  views of sim state (ships, camera, dust, planet sky, trac
 scripts/ui/            HUD
 scripts/app/           wiring: main loop, player input, logging
 tests/                 unit tests, smoke test, runner
-tools/                 run_checks.sh, bench_sim.gd, capture_screens.gd, capture_readme.gd
+tools/                 run_checks.sh, bench_sim.gd, bench_hull.gd, capture_screens.gd, capture_readme.gd
 ```
 
 Also: [`CHANGELOG.md`](CHANGELOG.md), [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
