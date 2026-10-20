@@ -297,26 +297,11 @@ Verified in `tests/unit/test_m7_weapons.gd` unless noted.
 | 3 | Anti-ship warhead: penetration and blast | `test_anti_ship_warhead_penetrates_and_blasts` | penetrates, blasts inside, credited to the shooter |
 | 4 | EMP missile; electronics hardening and recovery | `test_emp_resets_exposed_electronics_and_spares_the_hardened`, `test_emp_warhead_in_flight` | 20 s reset external, half internal, none mechanical; hardened survives a pulse that resets the plain mast; no structural damage |
 | 5 | Nuclear option: armour shields crew, heat, no momentum | `test_nuclear_armour_shields_the_crew_and_heat_spikes`, `test_nuclear_burst_imparts_no_momentum` | deaths behind bare hull, none behind 80 mm; heat = 120 K × dose; velocity unchanged |
-| 6 | Launcher stock persists and is restocked for credits | `test_missiles_persist_and_restock_for_credits`, `test_launcher_reload_and_stock` | save round trip; 60 cr each, partial when short; 4 s reload |
+| 6 | Launcher stock persists and is restocked for credits | `test_missiles_persist_and_restock_for_credits`, `test_launcher_reload_and_stock` | save round trip; 60 cr each, partial when short; 4 s reload (Milestone 9: 8 cr, 0.4 s cycle) |
 | 7 | Enemies use missiles; designs stay valid | `test_templates_and_enemy_designs_validate` | rack from mission 4, EMP sometimes from 6; all valid |
 | — | Player fires M at a locked target | `smoke_main.gd` | missile in flight, `MSL` on the strip |
 
 Simplifications: see ARCHITECTURE.md "Missiles and EMP (Milestone 7)".
-
-## Milestone 9 — Play-test batch 2: salvos, wrecks, crew ✅ (2026-10-20)
-
-GAME_DESIGN.md §17 ends at Milestone 8; this one is the user's second
-play-test list. Verified in `tests/unit/test_m9_weapons_crew.gd` unless noted.
-
-| Request | Verified by | Result |
-|---|---|---|
-| More missiles per launcher; cheap restock | `test_launchers_hold_more_and_restock_cheaply`, `test_missiles_persist_and_restock_for_credits` | 12 / 6 / 3 (+ 48 saturation); 8 / 20 / 150 / 2 cr |
-| M fires everything; modes all / conventional / EMP / nuclear / sequence | `test_salvo_modes_pick_their_warheads`, `test_a_salvo_empties_the_chosen_launchers_and_nothing_else`, `test_a_sequence_salvo_fires_in_order`, `test_missile_mode_and_order_are_saved`, `smoke_main` | rack emptied in ~5 s; EMP ×6 then conventional ×12 |
-| Missile explosions, also when shot down | `test_a_missile_shot_down_breaks_up_with_a_burst`, renders | fireball + sound on break-up and on small warheads |
-| Beaten enemies stay, silent | `test_a_beaten_ship_stays_as_a_silent_derelict`, `smoke_campaign`, `smoke_boarding` | wreck + craft re-keyed, derelict; no rounds, no PD; drifts clear |
-| Saturation missile | `test_the_saturation_pod_launches_a_swarm_of_weaker_missiles` | 8 a launch, fanned out; ~¼ of the penetration |
-| Crew management UI; crew dots | `test_the_crew_roster_helpers`, `smoke_main` (CREW tab roster), renders | map dots by post, roster tree, send-to |
-| Boarders before N; party beyond 8 | `test_boarding_parties_can_be_bigger_and_we_see_who_would_go` | limit 24; target card / CREW tab show who would go |
 
 ## Milestone 8 — Vertical-slice polish ✅ (2026-10-20)
 
@@ -333,3 +318,28 @@ damage, recover, repair and understand what happened. Verified in
 | 5 | Design system and font fallbacks | `test_design_tokens_match_the_design_system` | #050508 / #0A0E14 / #00D4C8 / #F5C842; Space Grotesk and JetBrains Mono first, with fallbacks |
 | 6 | Save/load hardening | `test_saves_keep_a_rolling_backup_and_never_leave_temp_files`, `test_a_damaged_profile_is_restored_from_its_backup`, `test_schema_5_migrates_a_v4_save_and_keeps_the_original`, compat check on a copy of the real profile | atomic + verified write, `.bak`, recovery with a message, schema 3/4 → 5 migration round-trips |
 | — | **Exit:** choose a ship, fight, take damage, recover, repair, understand | `smoke_campaign` (fight, salvage, jump, repair, refit, relaunch) with the mission reward; `smoke_main` (tutorial) | pass |
+
+## Milestone 9 — Play-test batch 2: salvos, wrecks, crew ✅ (2026-10-20)
+
+GAME_DESIGN.md §17 ends at Milestone 8; this one is the user's second
+play-test list. Verified in `tests/unit/test_m9_weapons_crew.gd` unless noted.
+
+| Request | Verified by | Result |
+|---|---|---|
+| More missiles per launcher; cheap restock | `test_launchers_hold_more_and_restock_cheaply`, `test_missiles_persist_and_restock_for_credits` | 12 / 6 / 3 (+ 48 saturation); 8 / 20 / 150 / 2 cr |
+| M fires everything; modes all / conventional / EMP / nuclear / sequence | `test_salvo_modes_pick_their_warheads`, `test_a_salvo_empties_the_chosen_launchers_and_nothing_else`, `test_a_sequence_salvo_fires_in_order`, `test_missile_mode_and_order_are_saved`, `smoke_main` | rack emptied in ~5 s; EMP ×6 then conventional ×12 |
+| Missile explosions, also when shot down | `test_a_missile_shot_down_breaks_up_with_a_burst`, renders | fireball + sound on break-up and on small warheads |
+| Beaten enemies stay, silent | `test_a_beaten_ship_stays_as_a_silent_derelict`, `smoke_campaign`, `smoke_boarding` | wreck + craft re-keyed, derelict; no rounds, no PD; drifts clear |
+| Saturation missile | `test_the_saturation_pod_launches_a_swarm_of_weaker_missiles` | 8 a launch, fanned out; ~¼ of the penetration |
+| Crew management UI; crew dots | `test_the_crew_roster_helpers`, `smoke_main` (CREW tab roster), renders | map dots by post, roster tree, send-to |
+| Boarders before N; party beyond 8 | `test_boarding_parties_can_be_bigger_and_we_see_who_would_go` | limit 24; target card / CREW tab show who would go |
+
+## Next (proposed, not started)
+
+GAME_DESIGN.md §17 has no milestones after 8. Candidates, to be chosen:
+
+- Smarter enemies: salvos, point-defence priorities, more than one ship per
+  encounter.
+- Countermeasures: decoys and electronic warfare against missiles.
+- Campaign variety beyond the fixed four-goal chain.
+- Wrecks that can be salvaged again or break up over time.

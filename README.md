@@ -453,8 +453,9 @@ every ship's docking collar is hazard-striped with a blinking beacon.
 
 4. Take the bridge and the ship surrenders: the takeover pays out at once
    (80 % scrap, double bounty, its stores and crates into your hold) and
-   your party withdraws on its own; once it is home the prize crew takes
-   the ship to Earth Shipyard. **N** orders a withdrawal at any time (an
+   your party withdraws on its own; once it is home a prize crew holds the
+   ship (it stays as a drifting wreck) and the next contact comes. **N**
+   orders a withdrawal at any time (an
    amber alert reminds you while a party is across); if the gangway is gone,
    they are stranded. The jump drive waits for them.
 
@@ -561,16 +562,29 @@ off-axis engines. Click an issue to highlight the part.
 GODOT=/path/to/godot tools/run_checks.sh
 ```
 
-Runs, headlessly: project import, unit tests (`tests/unit`), end-to-end
-smoke tests of flight (`smoke_main.gd`, through InputMap actions), the
-shipyard (`smoke_shipyard.gd`, including a real mouse click) and the
-Milestone 4 loop (`smoke_campaign.gd`: fight → salvage → dock damaged →
-repair and refit → relaunch) and the Milestone 5 boarding
-(`smoke_boarding.gd`), and a 600-frame boot of the main scene. Smoke
-tests use a throwaway profile, never your save. The script fails on any test failure **and**
-on any Godot `ERROR:` / `SCRIPT ERROR` in the logs. Logs: `build/check-logs/`.
+Runs, headlessly: project import, unit tests (`tests/unit`, one suite per
+area plus `test_m7_weapons`, `test_m8_polish` and `test_m9_weapons_crew`),
+end-to-end smoke tests of flight (`smoke_main.gd`, through InputMap
+actions: tutorial, missile salvo, crew and weapons tabs), the shipyard
+(`smoke_shipyard.gd`, including a real mouse click), the campaign loop
+(`smoke_campaign.gd`: fight → salvage → wreck stays → dock damaged →
+repair and refit → relaunch), boarding (`smoke_boarding.gd`) and the air
+wing (`smoke_wing.gd`), a 600-frame boot of the main scene, a `.pck`
+export and a boot from it. Smoke tests use a throwaway profile, never your
+save. The script fails on any test failure **and** on any Godot `ERROR:` /
+`SCRIPT ERROR` in the logs. Logs: `build/check-logs/`.
 
-Visual capture (needs a display; on a desktop it briefly opens a window):
+Simulation frame-time profile under load (two frigates, every gun, a
+missile salvo):
+
+```bash
+godot --headless --path . -s res://tools/bench_sim.gd   # ms per tick by rounds in flight
+```
+
+Visual capture (needs a display; on a desktop it briefly opens a window).
+It boots on the **real** profile (`user://profile.json`) — back it up
+first, or capture from a script that sets `PlayerProfile.path` to a scratch
+file:
 
 ```bash
 godot --path . -s res://tools/capture_screens.gd      # → build/screens/*.png
@@ -595,7 +609,7 @@ scripts/presentation/  views of sim state (ships, camera, dust, planet sky, trac
 scripts/ui/            HUD
 scripts/app/           wiring: main loop, player input, logging
 tests/                 unit tests, smoke test, runner
-tools/                 run_checks.sh, capture_screens.gd
+tools/                 run_checks.sh, bench_sim.gd, capture_screens.gd
 ```
 
 Also: [`CHANGELOG.md`](CHANGELOG.md), [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
