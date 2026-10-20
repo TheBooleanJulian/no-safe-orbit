@@ -47,11 +47,14 @@ const ACTIONS := [
 	[&"recall_craft", "Recall craft"],
 	[&"cycle_target", "Next target (ship, enemy craft)"],
 	[&"grapple", "Grappling arm: grab / release"],
-	[&"fire_missile", "Missile salvo at the target (again: hold)"],
+	[&"fire_missile", "Missile volley at the target (one launch per pod)"],
 	[&"missile_mode", "Missile mode: all / conventional / EMP / nuclear / sequence"],
+	[&"countermeasures", "Countermeasures: flares and decoys"],
+	[&"ack_alert", "Acknowledge the top non-critical alert"],
 	[&"tutorial", "Guided first sortie: start / skip"],
 	[&"release_mouse", "Release mouse"],
-	[&"toggle_controls", "Controls panel"],
+	[&"toggle_controls", "Controls panel, credits"],
+	[&"toggle_fullscreen", "Fullscreen / window"],
 ]
 
 enum Kind { KEYBOARD_MOUSE, GAMEPAD, NONE }

@@ -4,6 +4,288 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 13, part 2 — Mars, brokers, Sun-centred positions (2026-10-20)
+
+#### Added
+- **Mars**: a third location — the Martian Shipyard in a 300 km orbit
+  (3.41 km/s, 113.4 min) about Mars with its real gravity (μ 42,828 km³/s²),
+  radius, IAU pole and 24 h 37 min sol, thin dusty air (entry interface
+  125 km, a butterscotch limb, no clouds or sea glint) and the USGS/NASA
+  Viking colour mosaic (public domain). Deeper shelves (five parts up to
+  epic, ×1.5) and heavier traffic (destroyers among the frigates,
+  threat +2).
+- **Information brokers** (decision 3): places not on your map are sold as
+  charts on HANGAR › MAP — Mars for 1,500 cr. Earth and the Moon stay known
+  from the start; contracts follow you to newly charted places.
+- **Sun-centred positions**: Standish's Keplerian elements (JPL, 1800–2050)
+  for the Earth–Moon barycentre and Mars, solved in double precision
+  (`Vec3d`). They give Mars its own Sun (68° from Earth's on the scenario
+  date) and the real distance every jump pays for. Earth–Mars at the
+  scenario date: 229 million km, 64.6 t of propellant for the Frigate —
+  one full tank.
+- The map draws a line from Earth to each charted body, labelled with the
+  real distance.
+- Tests: `test_m13_mars.gd` (6): published Earth–Mars closest approaches
+  (2018, 2020, 2025: within 0.02 %), Mars's perihelion and aphelion, the
+  Sun agreeing with the Almanac up to precession, doubles vs single
+  precision (0 m vs 1.9 km for a ship at Mars), Mars's orbit, air and Sun,
+  brokers, traffic and shelves; mutation-checked on Mars's Sun and the
+  broker's charge.
+
+#### Changed
+- Jump distances are the bodies' real separation at the scenario date
+  (Earth–Moon 400,985 km: 33.9 t, was 33.7 t on a fixed 384,400 km).
+- `OrbitalBody` gains `air_color` and `clouds_and_seas` (Earth's defaults
+  unchanged). The data pack grows from 16.9 to 25.1 MB with the Mars map.
+
+#### Tests changed (and why)
+- `test_locations`: three locations in map order; the unknown-id fallback
+  uses "jupiter", since "mars" is now real.
+- `test_release`: the Mars map's attribution row joins the credited sources.
+
+### Milestone 13, part 1 — jump fuel, per-station shelves and traffic (2026-10-20)
+
+#### Added
+- **Jumps burn propellant** (`JumpDrive`, `data/jump/jump_drive.tres`):
+  ship mass × (8 kg/t + 18 kg/t per decade of distance in 1,000 km). The
+  Frigate Mk I (618 t with full tanks) pays 4.9 t to jump home within a
+  location and 33.7 t from Earth to the Moon.
+- **A jump-only reserve**: the drive's own cell, a quarter of the tankage
+  (20 t on the Frigate); engines and RCS can't burn it. Jumps take the main
+  tank first, then the reserve; the yard refills both at launch or in the
+  ARMOURY, which now shows the reserve.
+- **Refused with the reason** when the propellant can't cover a jump (map
+  and contracts: "refuel in the ARMOURY (n cr)"; accepting a contract you
+  can't reach leaves the offer up). In flight a **rescue tow** brings the
+  ship home instead — 150 cr plus 0.5 cr per tonne, or all the credits
+  there are — so nobody is stranded. The jump alert shows the cost
+  (`JUMP 3.2s 4.9t`) or the tow (`TOW 3.2s 412cr` for a dry Frigate).
+- **Per-station shelves and traffic** (`Location`): the Lunar Shipyard
+  stocks four parts up to rare at ×1.2 prices (hiring ×1.2 too); its
+  traffic mixes corvettes and frigates one threat level higher. Earth is
+  unchanged. The map shows each jump's cost and the station's terms.
+- Tests: `test_m13_jumps.gd` (7, mutation-checked on the reserve and the
+  relocation charge); `smoke_campaign` checks the jump home burns the
+  quoted propellant and that dry tanks call the tow.
+
+#### Changed
+- **Backspace (restart) when your ship is still flying is a jump home**
+  and is paid like one (it was a free way back).
+- Enemy class names follow their hull ("Merlin-class corvette").
+- Profile schema 9: the vessel's stores carry `jump_reserve_kg`; v8 saves
+  start with a full reserve and keep `.v8`.
+- The shipyard map is taller, so labels and costs don't run into the text.
+
+#### Tests changed (and why)
+- `test_m12_shipyard` schema test: expects the current schema (9), not 8.
+
+### Steam release preparation (2026-10-20)
+
+#### Added
+- Version **0.12.0** (`application/config/version`), shown in the credits.
+- Windows executable metadata — company **TheBooleanJulian**, product
+  No Safe Orbit, © 2026 TheBooleanJulian — and a **Linux** export preset.
+- **Credits & licences** in game (F1 → Credits & licences): the data
+  sources, the sound credits and Godot's MIT licence with its third-party
+  components; `tools/write_notices.gd` writes the same text as
+  `THIRD_PARTY_NOTICES.txt` for the depots.
+- **Fullscreen toggle** (F11, rebindable), remembered in
+  `user://settings.cfg`.
+- `tools/steam_export.sh` and `steam/*.vdf`: release exports for both
+  platforms and the filled-in steamcmd scripts (uploading stays manual).
+- `docs/STEAM.md`: the Steamworks steps, Auto-Cloud paths, Steam Deck
+  notes, store-page text, art sizes and the open decisions.
+- Tests: `test_release.gd` (4).
+
+#### Changed
+- The interface scales with the window from its 1600 × 900 layout
+  (`canvas_items` stretch, `expand`); rendered at 1280 × 800 and
+  2560 × 1440, HUD markers stay on their targets.
+
+#### Tests changed (and why)
+- `test_input_bindings`: fullscreen joins the keyboard-only actions.
+
+### Play-test batch 5 — smarter craft, IFF, ramming, armed-only flares (2026-10-20)
+
+#### Added
+- **Craft never shoot their own side**: a craft holds fire while a friend
+  (its carrier, another craft of its side) is within 25 m of the line of
+  fire, and its rounds carry an IFF interlock that passes through friendly
+  ships and craft.
+- **Pathing**: craft keep 70 m from each other and 120 m clear of hulls,
+  and Strike flies gun runs — run in, fire, break off at 600 m, come round
+  — instead of hovering at standoff.
+- **New craft**: the **Hornet interceptor** (6 t, fast light gun, on an
+  interceptor rack) hunts missiles aimed at its carrier within 4 km before
+  anything else; the **Mantis bomber** (18 t, 45 mm cannon, in a bomber bay)
+  opens fire from long range and keeps its distance. The recon drone never
+  fires; the EW drone holds station 1.2 km out towards the threat. Enemies
+  field interceptors from mission 5 and bombers from mission 7.
+- **In-game explanations**: the WING tab shows what each craft's role does
+  and a HOW THEY FLY block (every directive, risk tolerance, the IFF and
+  clearance rules); the WEAPONS tab and the help card explain flares and
+  jamming; the target card shows **JAMMED −n % · burn-through < 3 km**; the
+  shipyard part info explains each craft rack.
+- Tests: `test_combat_ai.gd` (8), with mutation checks on the IFF skip,
+  the clear-shot interlock and the armed-only filter (each caught).
+
+#### Changed
+- **Ramming hurts more, and the lighter side most**: 3× the damage per
+  joule; the energy is split by (mass × local armour)^1.5, not linearly;
+  the blow spreads over modules within three cells (40 %) and external
+  systems within two cells. An 8 m/s Cutter-into-Destroyer ram: Cutter
+  −35.5 % structure over 2 modules, Destroyer −0.9 %.
+- **Auto flares wait until an inbound missile is armed** (a missile just
+  off the rail no longer triggers them), and every policy preset, Hold
+  included, now fires countermeasures on its own.
+
+#### Tests changed (and why)
+- `test_air_wing` strike: the closest approach is now the gun run's
+  run-in distance (±150 m) instead of the standoff, the run lasts up to
+  300 s, and the craft may break off for propellant as well as ammunition
+  (gun runs burn more propellant than hovering).
+- `test_m11_countermeasures` presets: every preset has auto
+  countermeasures on (Hold had them off).
+
+### Milestone 12 — the station: sections, dealer, missions, capital ships (2026-10-20)
+
+#### Added
+- The shipyard is a station with eleven sections; it opens on **STATION**
+  (your ship in 3D, repair / rearm / crew / next-sortie cards) and the
+  builder is **REFIT**, one section among them (its keys and top-bar tools
+  work only there).
+- **MISSIONS**: five NPCs (navy liaison, guild factor, bounty broker,
+  salvage boss, station security) offer four seeded contracts (bounty,
+  capture, escort, defend, salvage); accepting sets the next sortie's
+  location, ship count and threat, and pays on its goal; one at a time,
+  abandonable, new offers after every sortie.
+- **DEALER**: every template for credits with a 3D preview, standard crew
+  included; **HANGAR** fleet cards and **scrap** (half the parts back, not
+  the last ship); **ARMOURY** rearm-and-refuel now.
+- **Capital ships**: Destroyer (960 t), Cruiser (2,169 t) and Carrier
+  (1,954 t, four hangars) from standard parts, generated by
+  `tools/make_capital_templates.gd`.
+- Tests: `test_m12_shipyard.gd` (7); `smoke_shipyard` drives the station
+  page, dealer, scrap, missions and armoury.
+
+#### Changed
+- Profile schema 8: the mission board and the accepted contract; v7 saves
+  get a fresh board and keep `.v7`.
+
+#### Fixed
+- Crew rosters scanned every room for every berth: a 300-module hull took
+  ~90 ms to spawn, now 10.6 ms (rooms indexed by role).
+
+#### Tests changed (and why)
+- `test_locations`: the saved schema is read from `SCHEMA_VERSION` (8).
+- `smoke_shipyard`: switches to REFIT before using the builder (the yard
+  opens on STATION).
+
+### Milestone 11 — countermeasures and electronic warfare (2026-10-20)
+
+#### Added
+- **Flare launcher** (common): 30 flares, three a launch (Space, or the
+  policy's auto-countermeasures when a missile is 4 s out), each burning
+  6 s and fanning out from the launcher's face; restocked at 1 cr a flare.
+- **Seekers**: a missile weighs each enemy flare in its cone once (seeded,
+  repeatable): chance = flare signature / (flare + ship signature ×
+  seeker discrimination). Ships are brighter when bigger and much brighter
+  at full burn. A seduced missile bursts on the flare; flares fired too
+  early burn out and the missile finds the ship again. Seekers: saturation
+  0.6 (easily fooled), anti-ship and EMP 1.0, nuclear 2.0.
+- **EW jammer** (rare, 150 kW): beyond burn-through (3 km, full by 6 km)
+  enemy tracks lose up to 75 % confidence and their locks; missiles may
+  lose lock (10 %/s at full effect, less for jam-resistant seekers) and
+  self-destruct. Hardened masts filter the noise by their hardening.
+- **EW drone** (rare, its own rack): jams for ships of its side within 3 km.
+- Enemies: flares from mission 3, a jammer on some ships from mission 6,
+  auto-flares 3.5 s out.
+- HUD: `CM 27 [SPC] · EW ■` on the weapon strip; the missile alert's key
+  chip is `[SPC]` when flares are aboard; Tab › WEAPONS lists flares and
+  the jammer. `DecoyView` draws flares (white-hot, flickering, cooling).
+- Tests: `test_m11_countermeasures.gd` (10).
+
+#### Tests changed (and why)
+- `smoke_shipyard`: the Weapons category now lists 10 parts (flare launcher
+  and jammer added).
+
+### Pass A — alerts and audio (2026-10-20)
+
+#### Added
+- `AlertQueue`: every HUD alert in a fixed grammar (a shape, a short noun,
+  one value, the bearing for threats, the key that acts on it; ≤ 26
+  characters), at most three shown, deduplicated, priority by level then
+  class, held 0.8 s after their condition clears, raised at once and
+  lowered after a steady second, non-danger ones acknowledgeable with
+  **.** (new action `ack_alert`; `countermeasures` on Space is reserved
+  for Milestone 11).
+- Non-text cues: an alarm per alert class (threat, damage, systems,
+  navigation, information; 1–3 blips by level), threat chevrons on the
+  incoming missile or round or at the screen edge towards it, the damage
+  map flashing the system the top alert is about, and a persistent STATUS
+  line (reactor, breaches, fires, vented rooms).
+- Recorded CC0 sound (Kenney's Sci-Fi, Impact and Interface packs; 21
+  files, 641 kB, `data/ATTRIBUTION.md`): guns, hits, ricochets, missile
+  launches, warheads, reactor blasts, docking, the engine and RCS loops,
+  the machinery hum and the alarms; synthesis stays as each slot's
+  fallback. Effects, Alarms and Ambience buses; an alarm ducks the others
+  by 9 dB.
+- Tests: `test_pass_a.gd` (6).
+
+#### Changed
+- The banner shows up to three alert chips instead of one sentence; the
+  attention line repeats a danger's short line; the own-ship card's alert
+  list became the STATUS line; a missile alert shows range until the
+  missile is closing in earnest, then time.
+
+#### Fixed
+- Audio streams leaked at exit in headless runs: nothing is played
+  headless, and every stream is stopped and released on exit.
+
+#### Tests changed (and why)
+- `test_sensors_and_hits`: the synthesised-sound test now builds
+  `ShipAudio` with `use_samples = false` (synthesis is the fallback).
+- `test_input_bindings`: `countermeasures` and `ack_alert` are keys only
+  (every pad button is taken), like missiles.
+- `smoke_main`: "HIT TAKEN" and the reactor id are read from the alert
+  queue (alerts are no longer sentences in the card).
+- `smoke_boarding`: the boarders alert reads `BOARD …`.
+
+### Play-test batch 4 — fixes (2026-10-20)
+
+#### Fixed
+- **M emptied every magazine:** each press now fires a volley, one launch
+  from each pod the missile mode allows (a saturation pod's launch is its
+  swarm of eight); sequence mode walks the warhead order press by press.
+  `MissileSalvo.volley`; counted salvos (AI, auto-salvo) are unchanged.
+- **Invisible enemy rounds:** tracers were capped at 512 in array order, so
+  with a dozen point-defence mounts our own rounds filled the cap and an
+  enemy railgun round could hit undrawn. Now up to 4,096, incoming rounds
+  first (`ProjectileView.draw_order`).
+- **Auto-fire and auto-salvo fired at wrecks:** automation now needs a
+  fighting target (not a derelict, not disabled: `Main.is_fightable`); the
+  player's own trigger still always fires.
+- **Slope armour:** a 1×2 wedge's plates sat at each cell's centre, a
+  quarter cell above or below the slope (gaps, floating, looking short);
+  they now lie on the slope over their own cell and butt with a slim seam.
+  Thick plates on 1×1 wedges crossed the plate on the face behind them at
+  the ridge; slope plates are trimmed by depth · tan(θ/2) where they meet a
+  flat face.
+
+#### Changed
+- Missile restock about a quarter of the price: anti-ship 2 cr, EMP 5,
+  nuclear 30, saturation 1 (refills 24 / 30 / 90 / 48 cr).
+- The nuclear burst: a 160 m white flash and a light reaching 4 km, a
+  14-lobe fireball swelling over 3.2 s, three shockwave rings and a shock
+  shell out to ~1.6 km, a violet ionisation afterglow; 8 s in all (was the
+  reactor explosion at 60 m, 4.5 s); a harder camera shake to 8 km.
+- Tests: `test_playtest4.gd` (7).
+
+#### Tests changed (and why)
+- `smoke_main`: M fires one missile from the rack, a second press the next
+  (was: the salvo empties the rack); "M starts a salvo" accepts a volley
+  already finished in the same frame.
+
 ### Moonlight, earthlight and earthshine (2026-10-20)
 
 #### Added

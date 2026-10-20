@@ -2,9 +2,9 @@ class_name SystemMap
 extends Control
 ## The shipyard's map: every known location as its body's disc, the one the
 ## vessel is docked at ringed in gold and the one under the pointer in cyan.
-## Clicking a location emits `picked`. Distances are not to scale (the Moon
-## is ~384 000 km out); the line between bodies is labelled with the real
-## figure.
+## Clicking a location emits `picked`. Distances are not to scale; the line
+## from Earth to each other body is labelled with the real figure at the
+## scenario date (Location.distance_m).
 
 signal picked(location_id: String)
 
@@ -12,22 +12,24 @@ signal picked(location_id: String)
 var known: Array = []
 ## The docked location's id.
 var docked: String = ""
+## Location id -> a short line under its name (the jump's cost).
+var notes: Dictionary = {}
 
 var _hover: String = ""
 
 const REFERENCE_WIDTH := 360.0
-const EARTH_MOON_KM := 384_400
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(0, 150)
+	custom_minimum_size = Vector2(0, 320)  # discs plus three label lines
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	tooltip_text = "Click a location to move the vessel to its station"
 
 
-func set_state(known_ids: Array, docked_id: String) -> void:
+func set_state(known_ids: Array, docked_id: String, note_by_id: Dictionary = {}) -> void:
 	known = known_ids
 	docked = docked_id
+	notes = note_by_id
 	queue_redraw()
 
 
@@ -72,15 +74,17 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), CyberTheme.BG)
 	var font := ThemeDB.fallback_font
 	var locs := _locations()
-	# Earth–Moon line, with the real distance.
-	var earth := Location.by_id("earth")
-	var moon := Location.by_id("moon")
-	if earth in locs and moon in locs:
-		var a: Vector2 = disc(earth)[0]
-		var b: Vector2 = disc(moon)[0]
-		draw_dashed_line(a, b, CyberTheme.TEXT_FAINT, 1.0, 6.0)
-		draw_string(font, (a + b) * 0.5 + Vector2(-40, -8), "%s km" % _thousands(EARTH_MOON_KM),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, CyberTheme.TEXT_DIM)
+	# A line from Earth to each other body, with the real distance.
+	var earth := Location.by_id(Location.DEFAULT_ID)
+	if earth in locs:
+		for loc in locs:
+			if loc == earth:
+				continue
+			var a: Vector2 = disc(earth)[0]
+			var b: Vector2 = disc(loc)[0]
+			draw_dashed_line(a, b, CyberTheme.TEXT_FAINT, 1.0, 6.0)
+			draw_string(font, (a + b) * 0.5 + Vector2(-40, -8), distance_text(Location.distance_m(earth, loc)),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, CyberTheme.TEXT_DIM)
 	for loc in locs:
 		var d: Array = disc(loc)
 		var c: Vector2 = d[0]
@@ -97,6 +101,16 @@ func _draw() -> void:
 		draw_string(font, c + Vector2(-r, r + 20.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, col)
 		draw_string(font, c + Vector2(-r, r + 34.0), "%s · %.0f km" % [loc.display_name, loc.start_altitude_m / 1000.0],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, CyberTheme.TEXT_DIM)
+		if notes.has(loc.id):
+			draw_string(font, c + Vector2(-r, r + 48.0), str(notes[loc.id]),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, CyberTheme.CYAN if loc.id == _hover else CyberTheme.TEXT_DIM)
+
+
+## "384 400 km", or "229 million km" past a billion metres.
+static func distance_text(m: float) -> String:
+	if m >= 1.0e9:
+		return "%s million km" % _thousands(roundi(m / 1.0e9))
+	return "%s km" % _thousands(roundi(m / 1000.0))
 
 
 static func _thousands(n: int) -> String:

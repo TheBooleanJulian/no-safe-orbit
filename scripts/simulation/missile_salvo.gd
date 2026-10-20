@@ -1,10 +1,14 @@
 class_name MissileSalvo
 extends RefCounted
-## One press of M: every missile aboard that the chosen mode allows, fired
-## as fast as the launchers cycle. Modes: everything at once, conventional
-## (anti-ship and saturation) only, EMP only, nuclear only, or a sequence —
-## all of one warhead, then all of the next, in the player's order (e.g. EMP
-## first to blind the point defence, then the anti-ship swarm).
+## Missiles fired at one target. Two kinds:
+## - A volley (`volley()`, one press of M): one launch from each pod the
+##   mode allows — a rack and an EMP launcher fire one missile each, a
+##   saturation pod its swarm of eight. Modes: every pod, conventional
+##   (anti-ship and saturation) only, EMP only, nuclear only, or a sequence:
+##   each press fires the next warhead in the player's order that is still
+##   aboard (e.g. EMP first to blind the point defence, then anti-ship).
+## - A counted salvo (`start()` with a limit, the AI and auto-salvo): that
+##   many missiles of the mode, as fast as the launchers cycle.
 
 enum Mode { ALL, CONVENTIONAL, EMP, NUCLEAR, SEQUENCE }
 const MODE_NAMES := ["all", "conventional", "EMP", "nuclear", "sequence"]
@@ -20,6 +24,9 @@ var launched: int = 0
 ## At most this many missiles (0 = every one the mode allows); a swarm
 ## launch may overshoot by the rest of its swarm.
 var limit: int = 0
+## Volley: the launchers to fire once each (ids), and those already fired.
+var volley_ids: Array[String] = []
+var fired_ids: Array[String] = []
 
 
 ## The warhead groups a mode fires, in order.
@@ -71,6 +78,44 @@ static func start(p_shooter: StringName, p_target: StringName, mode: int, order:
 	return s
 
 
+## One press of M: one launch from each loaded pod the mode allows. In
+## SEQUENCE mode the press fires the warhead at `sequence_index` in the
+## order (skipping kinds no pod holds); `next_sequence_index` says where the
+## next press starts. Empty `volley_ids` = nothing to fire.
+static func volley(p_shooter: StringName, p_target: StringName, mode: int, order: Array, sys: ShipSystems,
+		sequence_index: int = 0) -> MissileSalvo:
+	var s := MissileSalvo.new()
+	s.shooter_id = p_shooter
+	s.target_id = p_target
+	var kinds := groups_for(mode, order)
+	if mode == Mode.SEQUENCE:
+		for k in kinds.size():
+			var w: int = kinds[(sequence_index + k) % kinds.size()]
+			if not sys.loaded_launchers(w).is_empty():
+				kinds = [w]
+				s.next_sequence_index = (sequence_index + k + 1) % groups_for(mode, order).size()
+				break
+	for w in kinds:
+		for e in sys.loaded_launchers(w):
+			if not s.volley_ids.has(e.id):
+				s.volley_ids.append(e.id)
+	s.groups.assign(kinds if not s.volley_ids.is_empty() else [])
+	return s
+
+
+## SEQUENCE volleys: where the next press starts in the order.
+var next_sequence_index: int = 0
+
+
+## Missiles a volley will launch (a swarm pod counts its whole swarm).
+func volley_missiles(sys: ShipSystems) -> int:
+	var n := 0
+	for e in sys.equipment:
+		if volley_ids.has(e.id):
+			n += mini(maxi(e.def.missile_salvo, 1), sys.missiles_left(e))
+	return n
+
+
 ## Missiles aboard `sys` that this salvo would fire.
 func available(sys: ShipSystems) -> int:
 	var n := 0
@@ -88,6 +133,20 @@ func step(world: WorldSimulation) -> int:
 		groups.clear()
 		return 0
 	var n := 0
+	if not volley_ids.is_empty():
+		for id in volley_ids:
+			if fired_ids.has(id):
+				continue
+			var before := world.missiles.size()
+			if world.launch_missile(shooter_id, target_id, -1, id) == "":
+				fired_ids.append(id)
+				n += world.missiles.size() - before
+			elif shooter.systems.launcher_if_ready(id) == null and not _cycling(shooter.systems, id):
+				fired_ids.append(id)  # emptied, destroyed or offline: skip it
+		launched += n
+		if fired_ids.size() >= volley_ids.size():
+			groups.clear()
+		return n
 	while not groups.is_empty():
 		if limit > 0 and launched + n >= limit:
 			groups.clear()
@@ -108,3 +167,11 @@ func step(world: WorldSimulation) -> int:
 
 func done() -> bool:
 	return groups.is_empty()
+
+
+## A loaded, working launcher waiting for its tube to cycle.
+static func _cycling(sys: ShipSystems, id: String) -> bool:
+	for e in sys.equipment:
+		if e.id == id:
+			return e.working() and sys.missiles_left(e) > 0 and float(sys.launcher_cooldown.get(id, 0.0)) > 0.0
+	return false

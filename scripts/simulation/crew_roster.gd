@@ -87,6 +87,7 @@ static func default_for(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats) -> 
 		[Role.SECURITY, 4, [&"quarters", &"access"]],
 	]
 	var berths := stats.crew_capacity
+	_index = _rooms_by_role(bp, grid)
 	for entry in plan:
 		for k in mini(entry[1], berths - roster.members.size()):
 			roster._add(entry[0], _station(bp, grid, entry[2], k))
@@ -94,6 +95,7 @@ static func default_for(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats) -> 
 	while roster.members.size() < berths:
 		roster._add(Role.GENERAL, _station(bp, grid, [&"quarters", &"access", &"command"], n))
 		n += 1
+	_index = {}
 	return roster
 
 
@@ -105,6 +107,7 @@ static func from_plan(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, plan:
 	if bp.rooms.is_empty():
 		return roster
 	var per_role := {}
+	_index = _rooms_by_role(bp, grid)
 	for entry in plan.slice(0, stats.crew_capacity):
 		var role := clampi(int(entry.get("role", Role.GENERAL)), 0, Role.size() - 1)
 		var k: int = per_role.get(role, 0)
@@ -113,6 +116,7 @@ static func from_plan(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, plan:
 		var m := roster.members[-1]
 		m.name = str(entry.get("name", ""))
 		m.skill = clampi(int(entry.get("skill", 0)), 0, 2)
+	_index = {}
 	return roster
 
 
@@ -123,16 +127,29 @@ const STATION_ROLES := [[&"command"], [&"engineering"], [&"workshop", &"access"]
 
 ## k-th station among the rooms of the first role in `roles` that exists
 ## (spreading a role over several such rooms); the first room otherwise.
+## Uses the rooms-by-role index of the roster being built (_index_rooms);
+## without one it scans the rooms (a capital hull has hundreds: indexing
+## once makes a whole roster linear, not rooms × berths).
 static func _station(bp: ShipBlueprint, grid: ShipGrid, roles: Array, k: int) -> int:
+	var index := _index if not _index.is_empty() else _rooms_by_role(bp, grid)
 	for role in roles:
-		var rooms: Array[int] = []
-		for i in bp.rooms.size():
-			var def: RoomDefinition = grid.catalog.rooms.get(bp.rooms[i].def_id)
-			if def != null and def.role == role:
-				rooms.append(i)
+		var rooms: Array = index.get(role, [])
 		if not rooms.is_empty():
 			return rooms[k % rooms.size()]
 	return 0
+
+
+## While a roster is built: room indices by room role.
+static var _index: Dictionary = {}
+
+
+static func _rooms_by_role(bp: ShipBlueprint, grid: ShipGrid) -> Dictionary:
+	var out := {}
+	for i in bp.rooms.size():
+		var def: RoomDefinition = grid.catalog.rooms.get(bp.rooms[i].def_id)
+		if def != null:
+			(out.get_or_add(def.role, []) as Array).append(i)
+	return out
 
 
 func _add(role: int, station: int) -> void:

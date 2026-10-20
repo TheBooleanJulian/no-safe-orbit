@@ -55,8 +55,11 @@ var right_column_fits: bool = true
 var radar_fits: bool = true
 ## Level ("danger" / "caution") of the alert in the banner, "" if none.
 var top_alert_level: String = ""
-## Jump drive while [B] is held (Main): {progress, left_s, waiting} or
-## {blocked}; {} when not charging.
+## Pass A alerts: ordered, steadied, trimmed (AlertQueue).
+var alert_queue := AlertQueue.new()
+## Jump drive while [B] is held (Main): {progress, left_s, waiting, cost_kg,
+## tow (credits, when the propellant can't pay)} or {blocked}; {} when not
+## charging.
 var jump_state: Dictionary = {}
 var _jump_flash: ColorRect
 ## The current mission goal and the tutorial's prompt (set by Main), shown
@@ -251,7 +254,10 @@ const HELP_TEXT := """FLIGHT     W/S pitch · A/D yaw · Q/E roll · R/F main en
 ASSIST     Z on/off · X cycles: hold orbit → match target → target markers (yellow, coast)
 GUNNERY    mouse aims the turrets (click captures; Esc releases) · LMB / Enter fire
            Shift zoom on/off, wheel = magnification · ◇ lead marker (needs a lock) · U next target
-MISSILES   M salvo at the U target (the ship needs a lock; M again holds) · , mode: all / conventional / EMP / nuclear / sequence
+MISSILES   M volley at the U target (one launch per pod; needs a lock) · , mode: all / conventional / EMP / nuclear / sequence
+COUNTER    Space flares (automatic once an inbound missile is armed and 4 s out) · a jammer works beyond 3 km
+           (their tracks and locks fade, their missiles may lose lock; inside 3 km radar burns through)
+ALERTS     . acknowledge the top non-critical alert
 POWER      1 SYS · 2 ENG · 3 WEP · 4 balance
 SHIP       Tab damage control, crew, power, wing · C patch damage
 CONTACTS   T target hostile · G salvage beacon · Y grappling arm · V gangway · N board / withdraw · [ / ] launch / recall craft
@@ -487,13 +493,19 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	var t := world.sim_time
 	var contact := has_target and (track == null or track.detected)
 
-	var alerts := _alerts(world, player, orbit)
+	alert_queue.update(_alerts(world, player, orbit), world.sim_time)
+	var alerts := alert_queue.visible()
 	_update_own_card(world, player, orbit, input, has_target, alerts)
 	_update_orbit_panel(world, player, orbit)
 	_update_target_card(world, player, target)
 	_update_weapon_strip(player)
 	_update_details(world, player)
 	_update_banner(alerts)
+	overlay.threats = []
+	for a in alerts:
+		if a.dir_body != Vector3.ZERO:
+			overlay.threats.append({"dir": player.orientation * a.dir_body.normalized(), "label": "%s %s" % [a.noun, a.short],
+				"danger": a.level == AlertQueue.Level.DANGER})
 	_update_attention(alerts, player, get_process_delta_time())
 	_update_ticker(t)
 	_rounds_near = world.projectiles().size()
@@ -577,7 +589,7 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 # --- Own ship ----------------------------------------------------------------------
 
 func _update_own_card(world: WorldSimulation, player: ShipState, orbit: OrbitElements, input: PlayerInput,
-		has_target: bool, alerts: Array[Dictionary]) -> void:
+		has_target: bool, _alerts_shown: Array[AlertQueue.Alert]) -> void:
 	_own_heading.text = "OWN SHIP · %s" % player.config.display_name
 	var w := player.angular_velocity
 	var lines := PackedStringArray([
@@ -599,12 +611,8 @@ func _update_own_card(world: WorldSimulation, player: ShipState, orbit: OrbitEle
 		lines.append("POWER   %s %.0f/%.0f kW %s   HEAT %s %.0f K" % [pwr[0], sys.power_demand_kw - sys.power_unmet_kw,
 			sys.power_supply_kw, pwr[1], heat, sys.temperature_k])
 		lines.append("DIVERT  %s  [1-4]" % power_pips_text(sys))
-	if alerts.is_empty():
-		lines.append("ALERTS  none")
-	else:
-		for k in mini(alerts.size(), 3):
-			var a: Dictionary = alerts[k]
-			lines.append("%s %s  %s" % ["ALERTS " if k == 0 else "       ", a.glyph, a.short])
+	if sys != null:
+		lines.append("STATUS  %s" % status_text(sys))
 	flight_label.text = "\n".join(lines)
 
 
@@ -714,69 +722,65 @@ func flash_white() -> void:
 	_white_flash_ms = Time.get_ticks_msec()
 
 
-## Seconds until the nearest missile after `ship` arrives (range ÷ closing
-## speed), or -1 if none is inbound.
-static func missile_inbound_time(world: WorldSimulation, ship: ShipState) -> float:
-	var best := -1.0
-	for m in world.missiles_at(ship.id):
-		var r := m.position - ship.position
-		var closing := -r.dot(m.velocity - ship.velocity) / maxf(r.length(), 1.0)
-		var t := r.length() / maxf(closing, 1.0)
-		if best < 0.0 or t < best:
-			best = t
-	return best
-
-
-## Urgent conditions, worst first: {level ("danger"/"caution"), glyph,
-## short (card), text (banner), action, subject (system/room id or "")}.
-func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	var t := world.sim_time
+## This frame's conditions as Pass A alerts (AlertQueue grammar: a noun, a
+## value, a direction, a key chip). Every condition the HUD warns about is
+## here; AlertQueue orders, steadies and trims them.
+func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) -> Array[AlertQueue.Alert]:
+	var out: Array[AlertQueue.Alert] = []
+	const DANGER := AlertQueue.Level.DANGER
+	const CAUTION := AlertQueue.Level.CAUTION
+	const ADVISORY := AlertQueue.Level.ADVISORY
 	if not player.is_active():
-		out.append(_alert("danger", "VESSEL LOST", "VESSEL LOST AT T+%s" % HudFormat.clock(player.status_time), "[BACKSPACE] respawn · [B] station"))
+		out.append(AlertQueue.make(&"lost", &"damage", DANGER, "LOST", "", "", "[BKSP]"))
 		return out
 	if not player.config.unlimited_propellant and player.propellant_kg <= 0.0:
-		out.append(_alert("danger", "PROPELLANT EXHAUSTED", "PROPELLANT EXHAUSTED — NO THRUST, NO RCS", "[B] dock to refuel"))
-	var missile := missile_inbound_time(world, player)
-	if missile >= 0.0:
-		out.append(_alert("danger", "MISSILE INBOUND %.1f s" % missile, "MISSILE INBOUND — %.1f s" % missile,
-			"point defence · guns on it · burn across its path"))
-	var incoming := incoming_round_time(world, player)
-	if incoming >= 0.0:
-		out.append(_alert("danger", "INCOMING %.1f s" % incoming, "INCOMING ROUND — IMPACT IN %.1f s" % incoming, "evade: [W][S][A][D][R][F]"))
+		out.append(AlertQueue.make(&"prop", &"systems", DANGER, "PROP", "0", "", "[B]"))
+	var missile := nearest_inbound_missile(world, player)
+	if not missile.is_empty():
+		# Time to impact once it is closing in earnest; range until then (a
+		# missile just off the rail closes slowly and the time means nothing).
+		var msl_value := "%.1fs" % float(missile.time) if float(missile.closing) >= MISSILE_CLOSING_MPS and float(missile.time) < 100.0 \
+			else "%.1fkm" % (float(missile.range) / 1000.0)
+		var a := AlertQueue.make(&"missile", &"threat", DANGER, "MSL", msl_value, bearing_text(player, missile.position), missile_chip)
+		a.short = msl_value
+		a.dir_body = player.orientation.inverse() * ((missile.position as Vector3) - player.position)
+		out.append(a)
+	var round := nearest_incoming_round(world, player)
+	if not round.is_empty():
+		var rel_v: Vector3 = round.velocity
+		var a := AlertQueue.make(&"round", &"threat", DANGER, "RND", "%.1fs" % float(round.time),
+			bearing_text(player, round.position), evade_chip(player, rel_v))
+		a.short = a.value
+		a.dir_body = player.orientation.inverse() * ((round.position as Vector3) - player.position)
+		out.append(a)
 	if player.systems != null:
 		var reset := player.systems.disrupted()
 		if not reset.is_empty():
-			var names := PackedStringArray()
-			for d in reset:
-				names.append("%s %s %.0f s" % [d.name, d.id, d.left_s])
-			out.append(_alert("caution", "EMP RESET ×%d" % reset.size(), "EMP — RESETTING: %s" % ", ".join(names).to_upper(),
-				"they come back on their own", str(reset[0].id)))
+			out.append(AlertQueue.make(&"emp", &"systems", CAUTION, "EMP", "×%d %.0fs" % [reset.size(), reset[0].left_s], "", "",
+				str(reset[0].id)))
 	if jump_state.has("blocked"):
-		out.append(_alert("caution", "JUMP BLOCKED", "JUMP DRIVE BLOCKED — %s" % str(jump_state.blocked).to_upper(), "release [B]"))
+		out.append(AlertQueue.make(&"jump", &"nav", CAUTION, "JUMP", "blocked", "", "[B]"))
 	elif jump_state.has("progress"):
 		var waiting: PackedStringArray = jump_state.waiting
-		var bars := roundi(float(jump_state.progress) * 10.0)
-		if waiting.is_empty():
-			out.append(_alert("caution", "JUMP %.1f s" % jump_state.left_s, "DIMENSIONAL JUMP DRIVE %s %.1f s TO %s" % [
-				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s, station_name.to_upper()], "keep holding [B]"))
+		if jump_state.has("tow"):
+			out.append(AlertQueue.make(&"jump", &"nav", CAUTION, "TOW", "%.1fs %dcr" % [jump_state.left_s, int(jump_state.tow)], "", "[B]"))
+		elif waiting.is_empty():
+			out.append(AlertQueue.make(&"jump", &"nav", ADVISORY, "JUMP", "%.1fs %s" % [jump_state.left_s,
+				JumpDrive.tonnes(float(jump_state.get("cost_kg", 0.0))).replace(" ", "")]))
 		else:
-			out.append(_alert("danger", "EMERGENCY JUMP %.1f s" % jump_state.left_s, "EMERGENCY JUMP %s %.1f s — LEAVES BEHIND %s" % [
-				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s, " · ".join(waiting).to_upper()], "release [B] to wait for them"))
+			out.append(AlertQueue.make(&"jump", &"nav", DANGER, "JUMP", "%.1fs −%d" % [jump_state.left_s, waiting.size()], "", "[B]"))
 	var link := world.link_for(player.id)
 	var b := world.boarding_for(link) if link != null else null
 	if link != null and link.attacker_id != player.id:
-		var where := "ON THE GANGWAY" if b == null or b.room < 0 else "IN %s" % player.systems.blueprint.rooms[b.room].id
-		out.append(_alert("danger", "ENEMY BOARDERS", "ENEMY BOARDING — %s%s" % [where if b != null else "GANGWAY EXTENDING",
-			" · %d/%d FIT · DEFENCE: %s" % [b.fit_team().size(), b.team.size(), BoardingAction.DEFENCE_NAMES[b.defence].to_upper()] if b != null else ""],
-			"[V] cut the gangway · [Tab] CREW › defence"))
+		var where := "gangway" if b == null or b.room < 0 else player.systems.blueprint.rooms[b.room].id
+		out.append(AlertQueue.make(&"boarders", &"threat", DANGER, "BOARD", where,
+			"%d/%d" % [b.fit_team().size(), b.team.size()] if b != null else "", "[V]", where if b != null and b.room >= 0 else ""))
 	elif b != null and not b.finished() and not b.prize and b.phase == BoardingAction.Phase.ABOARD:
-		out.append(_alert("caution", "BOARDERS ACROSS", "BOARDING PARTY ON %s — %d/%d FIT" % [
-			world.get_ship(link.target_id).display_name.to_upper(), b.fit_team().size(), b.team.size()], "[N] withdraw"))
+		out.append(AlertQueue.make(&"party", &"info", CAUTION, "PARTY", "%d/%d" % [b.fit_team().size(), b.team.size()], "", "[N]"))
 	if profile != null and profile.vessel != null and player.systems != null:
 		var over := profile.vessel.cargo_volume_m3(ConstructionCatalog.default_catalog()) - player.systems.stats.cargo_m3
 		if over > 0.0:
-			out.append(_alert("caution", "HOLD +%.0f m³" % over, "CARGO HOLD OVER CAPACITY BY %.1f m³" % over, "[Tab] CARGO › vent excess"))
+			out.append(AlertQueue.make(&"hold", &"info", CAUTION, "HOLD", "+%.0fm³" % over, "", "[Tab]"))
 	var sys := player.systems
 	if sys != null:
 		var reactor := ""
@@ -785,57 +789,127 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 				reactor = e.id
 				break
 		if sys.reactor_state == ShipSystems.Reactor.SCRAM:
-			out.append(_alert("danger", "REACTOR SCRAM %.0f K" % sys.temperature_k,
-				"REACTOR SCRAM — %.0f K — NO POWER UNTIL BELOW %.0f K" % [sys.temperature_k, ShipSystems.RESTART_TEMP_K], "cut thrust · [Tab] reactor", reactor))
+			out.append(AlertQueue.make(&"reactor", &"systems", DANGER, "SCRAM", "%.0fK" % sys.temperature_k, "", "[Tab]", reactor))
 		elif sys.reactor_state == ShipSystems.Reactor.THROTTLED:
-			out.append(_alert("caution", "REACTOR THROTTLED", "REACTOR THROTTLED — OVERHEATING (%.0f K)" % sys.temperature_k, "ease off the engines · [Tab]", reactor))
+			out.append(AlertQueue.make(&"reactor", &"systems", CAUTION, "HOT", "%.0fK" % sys.temperature_k, "", "", reactor))
 		elif sys.power_unmet_kw > 0.0:
-			out.append(_alert("caution", "POWER SHORT %.0f kW" % sys.power_unmet_kw, "POWER SHORT BY %.0f kW — LOW-PRIORITY SYSTEMS SHED" % sys.power_unmet_kw, "[Tab] power"))
+			out.append(AlertQueue.make(&"power", &"systems", CAUTION, "PWR", "−%.0fkW" % sys.power_unmet_kw, "", "[Tab]"))
 		if world.weapons_locked(player.id) and player.config.cannon != null:
-			out.append(_alert("caution", "GUNS LOCKED", "GANGWAY ATTACHED — PRIMARY WEAPONS LOCKED (CRAFT STILL FIGHT)", "[V] release gangway"))
+			out.append(AlertQueue.make(&"guns_locked", &"systems", CAUTION, "GUNS", "locked", "", "[V]"))
 		if not sys.has_command():
-			out.append(_alert("caution", "SHIP AI IN CONTROL", "BRIDGE CREW LOST — SHIP AI FLYING: %d %% THRUST AND TURN RATE, GUNS AT HALF RATE" % roundi(ShipSystems.SHIP_AI_FACTOR * 100.0),
-				"[Tab] crew → cover command", sys.blueprint.rooms[sys.command_room()].id if sys.command_room() >= 0 else ""))
+			out.append(AlertQueue.make(&"bridge", &"damage", CAUTION, "BRIDGE", "lost", "", "[Tab]",
+				sys.blueprint.rooms[sys.command_room()].id if sys.command_room() >= 0 else ""))
 		for room: int in sys.fires:
 			var burning: bool = sys.rooms[room].pressurized
-			out.append(_alert("danger" if burning else "caution", "FIRE %s" % sys.blueprint.rooms[room].id,
-				"%s IN %s %s — FOAM %d LEFT" % ["FIRE" if burning else "SMOULDERING", sys._room_name(room).to_upper(), sys.blueprint.rooms[room].id, sys.foam_left(room)],
-				"damage control fighting it" if sys.foam_left(room) <= 0 else "foam suppression", sys.blueprint.rooms[room].id))
+			var rid := sys.blueprint.rooms[room].id
+			out.append(AlertQueue.make(&"fire", &"damage", DANGER if burning else CAUTION, "FIRE" if burning else "SMOKE", rid, "",
+				"" if sys.foam_left(room) <= 0 else "[Tab]", rid))
 			break
 		var sealing := sys.hull_seal_progress()
 		if sealing >= 0.0:
-			out.append(_alert("caution", "BREACH %d %%" % roundi(sealing * 100.0),
-				"HULL BREACH — %s" % ("DAMAGE CONTROL SEALING %d %%" % roundi(sealing * 100.0) if sys.room_bonus(&"workshop") > 0.0 and sys.room_bonus(&"life_support") > 0.0
-					else "NO WORKING WORKSHOP AND LIFE SUPPORT TO SEAL IT"), "[Tab] rooms"))
+			var can_seal := sys.room_bonus(&"workshop") > 0.0 and sys.room_bonus(&"life_support") > 0.0
+			out.append(AlertQueue.make(&"breach", &"damage", CAUTION, "BRCH", "%d%%" % roundi(sealing * 100.0) if can_seal else "open", "", "[Tab]"))
 		if not sys.has_gun_crew():
-			out.append(_alert("caution", "NO GUN CREW", "NO GUN CREW — AUTOLOADERS ONLY, HALF RATE OF FIRE", "[Tab] crew → cover weapons"))
+			out.append(AlertQueue.make(&"gunners", &"systems", CAUTION, "GUNNERS", "0", "", "[Tab]"))
 		for e in sys.equipment:
 			if not e.destroyed() and e.hp < 0.35 * e.max_hp:
-				out.append(_alert("caution", "%s %s %d%%" % [e.def.display_name, e.id, roundi(100.0 * e.hp / e.max_hp)],
-					"%s %s CRITICAL — %d %%" % [e.def.display_name.to_upper(), e.id, roundi(100.0 * e.hp / e.max_hp)], "[C] patch · [Tab]", e.id))
+				out.append(AlertQueue.make(&"critical", &"damage", CAUTION, e.def.display_name.get_slice(" ", 0).left(8),
+					"%d%%" % roundi(100.0 * e.hp / e.max_hp), "", "[C]", e.id))
 				break
-	if _incoming != null and t - _incoming_time < HIT_ALERT_S:
+	if _incoming != null and world.sim_time - _incoming_time < HIT_ALERT_S:
 		var subject := _incoming.destroyed_ids[0] if not _incoming.destroyed_ids.is_empty() else (_incoming.damaged_ids[0] if not _incoming.damaged_ids.is_empty() else "")
-		out.append(_alert("caution", "HIT TAKEN: %s" % _incoming.headline(), "HIT TAKEN — %s" % _incoming.headline().to_upper(), "[P] log · [Tab] damage", subject))
+		out.append(AlertQueue.make(&"hit", &"damage", ADVISORY, "HIT", _incoming.headline().get_slice(" ", 0).left(10), "", "[P]", subject))
 	if orbit != null:
 		var t_entry := orbit.time_to_radius_descending(world.body.entry_radius_m())
 		if not is_nan(t_entry):
-			out.append(_alert("caution", "ENTRY IN %s" % HudFormat.duration(t_entry), "PERIAPSIS BELOW %.0f km — ENTRY IN %s" % [
-				world.body.entry_interface_altitude_m / 1000.0, HudFormat.duration(t_entry)], "[O] orbit · burn prograde"))
-	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.level == "danger" and b.level != "danger")
+			out.append(AlertQueue.make(&"entry", &"nav", CAUTION, "ENTRY" if world.body.has_atmosphere else "TERRAIN",
+				HudFormat.duration(t_entry), "", "[O]"))
 	return out
 
 
-func _alert(level: String, short: String, text: String, action: String, subject: String = "") -> Dictionary:
-	return {"level": level, "glyph": CyberTheme.GLYPH_CRITICAL if level == "danger" else CyberTheme.GLYPH_DEGRADED,
-		"short": short, "text": text, "action": action, "subject": subject}
+## The key chip on a missile alert ("" until a countermeasure is fitted).
+var missile_chip := ""
+## Below this closing speed (m/s) a missile alert shows range, not time.
+const MISSILE_CLOSING_MPS := 30.0
 
 
-func _update_attention(alerts: Array[Dictionary], player: ShipState, delta: float) -> void:
+## Bearing of `world_pos` from the ship's nose: clockwise degrees seen from
+## above, and ↑/↓ when it is more than 15° above or below, e.g. "040↑".
+static func bearing_text(ship: ShipState, world_pos: Vector3) -> String:
+	var d := ship.orientation.inverse() * (world_pos - ship.position)
+	if d.length() < 1e-3:
+		return ""
+	var az := fposmod(rad_to_deg(atan2(d.x, -d.z)), 360.0)
+	var el := rad_to_deg(asin(clampf(d.normalized().y, -1.0, 1.0)))
+	return "%03d%s" % [roundi(az) % 360, "↑" if el > 15.0 else ("↓" if el < -15.0 else "")]
+
+
+## The translation key that moves the ship most squarely across a round's
+## path (`rel_velocity`: the round's velocity relative to ours).
+static func evade_chip(ship: ShipState, rel_velocity: Vector3) -> String:
+	var v := (ship.orientation.inverse() * rel_velocity).normalized()
+	var best := ["[D]", absf(v.x)]
+	for c in [["[R]", absf(v.y)], ["[W]", absf(v.z)]]:
+		if float(c[1]) < float(best[1]):
+			best = c
+	return best[0]
+
+
+## The missile arriving soonest: {time, position} (range ÷ closing speed),
+## or {} if none is inbound.
+## `armed_only`: only missiles past their arming time (a live threat).
+static func nearest_inbound_missile(world: WorldSimulation, ship: ShipState, armed_only: bool = false) -> Dictionary:
+	var best := {}
+	for m in world.missiles_at(ship.id):
+		if armed_only and m.missile_age < m.missile.arm_s:
+			continue
+		var r := m.position - ship.position
+		var closing := -r.dot(m.velocity - ship.velocity) / maxf(r.length(), 1.0)
+		var t := r.length() / maxf(closing, 1.0)
+		if best.is_empty() or t < float(best.time):
+			best = {"time": t, "position": m.position, "closing": closing, "range": r.length()}
+	return best
+
+
+## Seconds until the nearest missile after `ship` arrives, or -1.
+static func missile_inbound_time(world: WorldSimulation, ship: ShipState, armed_only: bool = false) -> float:
+	var m := nearest_inbound_missile(world, ship, armed_only)
+	return float(m.time) if not m.is_empty() else -1.0
+
+
+## The round on a collision course arriving soonest (straight-line closest
+## approach within the hull's radius, next 10 s; includes the ship's own
+## rounds once armed): {time, position, velocity (relative)}, or {}.
+static func nearest_incoming_round(world: WorldSimulation, ship: ShipState) -> Dictionary:
+	var radius := ship.config.hit_box_half_extents.length()
+	var best := {}
+	for shot in world.projectiles():
+		if shot.shooter_id == ship.id and shot.age_s < WorldSimulation.ARM_TIME_S:
+			continue
+		var p := shot.position - ship.position
+		var v := shot.velocity - ship.velocity
+		var vv := v.length_squared()
+		if vv < 1e-6:
+			continue
+		var t := -p.dot(v) / vv
+		if t > 0.0 and t < 10.0 and (p + v * t).length() < radius and (best.is_empty() or t < float(best.time)):
+			best = {"time": t, "position": shot.position, "velocity": v}
+	return best
+
+
+## Seconds until the nearest round on a collision course reaches `ship`, or -1.
+static func incoming_round_time(world: WorldSimulation, ship: ShipState) -> float:
+	var r := nearest_incoming_round(world, ship)
+	return float(r.time) if not r.is_empty() else -1.0
+
+
+## Danger in big letters mid-screen (the top alert's own line); otherwise
+## the field-repair hint in amber.
+func _update_attention(shown: Array[AlertQueue.Alert], player: ShipState, delta: float) -> void:
 	var text := ""
 	var color := CyberTheme.RED
-	if not alerts.is_empty() and alerts[0].level == "danger":
-		text = "%s %s\n%s" % [CyberTheme.GLYPH_CRITICAL, alerts[0].short, alerts[0].action]
+	if not shown.is_empty() and shown[0].level == AlertQueue.Level.DANGER:
+		text = "%s %s" % [shown[0].glyph(), shown[0].text()]
 	else:
 		# Finding a crew route is not free: look again twice a second.
 		_repair_hint_age += delta
@@ -844,7 +918,7 @@ func _update_attention(alerts: Array[Dictionary], player: ShipState, delta: floa
 			_repair_hint = ""
 			if player.is_active() and player.systems != null and player.systems.field_repair_block_reason() == "":
 				var e := player.systems.field_repair_target()
-				_repair_hint = "%s DAMAGED — %s %s %d %%\npress [C] to patch it" % [CyberTheme.GLYPH_DEGRADED, e.def.display_name.to_upper(), e.id, roundi(100.0 * e.hp / e.max_hp)]
+				_repair_hint = "%s PATCH %s %d%% [C]" % [CyberTheme.GLYPH_DEGRADED, e.def.display_name.get_slice(" ", 0), roundi(100.0 * e.hp / e.max_hp)]
 		text = _repair_hint
 		color = CyberTheme.AMBER
 	attention_label.visible = text != "" and not overview.visible and not loot.visible and not debrief.visible
@@ -859,22 +933,62 @@ func _update_attention(alerts: Array[Dictionary], player: ShipState, delta: floa
 	attention_label.position = Vector2((view.x - attention_label.size.x) * 0.5, view.y * 0.24)
 
 
-func _update_banner(alerts: Array[Dictionary]) -> void:
+## The banner: up to three alerts as chips on one line, coloured by the
+## most urgent; the damage map flashes what the top one is about.
+func _update_banner(shown: Array[AlertQueue.Alert]) -> void:
 	alert_subject = ""
 	top_alert_level = ""
-	if alerts.is_empty():
+	if damage_map != null:
+		damage_map.alert_id = ""
+	if shown.is_empty():
 		warning_label.visible = false
 		return
-	var a: Dictionary = alerts[0]
-	top_alert_level = a.level
+	var a: AlertQueue.Alert = shown[0]
+	top_alert_level = "danger" if a.level == AlertQueue.Level.DANGER else ("caution" if a.level == AlertQueue.Level.CAUTION else "advisory")
 	alert_subject = a.subject
-	var color := CyberTheme.RED if a.level == "danger" else CyberTheme.AMBER
-	warning_label.text = "%s %s   ·   %s" % [a.glyph, a.text, a.action]
+	if damage_map != null:
+		damage_map.alert_id = a.subject
+	var chips := PackedStringArray()
+	for s in shown:
+		chips.append("%s %s" % [s.glyph(), s.text()])
+	var color := CyberTheme.RED if a.level == AlertQueue.Level.DANGER else (CyberTheme.AMBER if a.level == AlertQueue.Level.CAUTION else CyberTheme.CYAN)
+	warning_label.text = "   ".join(chips)
 	warning_label.add_theme_color_override("font_color", color)
 	(warning_label.get_theme_stylebox("normal") as StyleBoxFlat).border_color = Color(color.r, color.g, color.b, 0.7)
 	warning_label.visible = true
 	_place_banner()
-	_orbit_forced = a.text.begins_with("PERIAPSIS")
+	_orbit_forced = alert_queue.has(&"entry")
+
+
+## Persistent status: reactor, breach, fire, vent — a glyph each (■ fine,
+## ▲ trouble, ◆ danger), plus how many alerts are acknowledged.
+func status_text(sys: ShipSystems) -> String:
+	if sys == null:
+		return ""
+	var rct := CyberTheme.GLYPH_OK
+	if sys.reactor_state == ShipSystems.Reactor.SCRAM:
+		rct = CyberTheme.GLYPH_CRITICAL
+	elif sys.reactor_state == ShipSystems.Reactor.THROTTLED:
+		rct = CyberTheme.GLYPH_DEGRADED
+	for e in sys.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.REACTOR and e.destroyed():
+			rct = CyberTheme.GLYPH_DESTROYED
+	var breached := sys.breached_count()
+	var vented := 0
+	for r in sys.rooms:
+		if not r.pressurized:
+			vented += 1
+	var fires := sys.fires.size()
+	var parts := PackedStringArray([
+		"RCT %s" % rct,
+		"BRCH %s" % (CyberTheme.GLYPH_OK if breached == 0 else "%s%d" % [CyberTheme.GLYPH_DEGRADED, breached]),
+		"FIRE %s" % (CyberTheme.GLYPH_OK if fires == 0 else "%s%d" % [CyberTheme.GLYPH_CRITICAL, fires]),
+		"VENT %s" % (CyberTheme.GLYPH_OK if vented == 0 else "%s%d" % [CyberTheme.GLYPH_DEGRADED, vented]),
+	])
+	var acked := alert_queue.all_active().filter(func(a: AlertQueue.Alert) -> bool: return a.acked).size()
+	if acked > 0:
+		parts.append("%d ack [.]" % acked)
+	return "  ".join(parts)
 
 
 # --- Target --------------------------------------------------------------------------
@@ -913,6 +1027,10 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 		if not measured:
 			track_line += " %.0f s old" % track.age(t)
 		track_line += " · conf %d%% · %s" % [roundi(track.confidence * 100.0), "LOCK ●" if track.locked else "no lock ○"]
+		if track.jammed > 0.0:
+			# Their jammer: how much confidence it takes, and where it stops working.
+			track_line += "  JAMMED −%d%% · burn-through < %.0f km" % [
+				roundi(track.jammed * SensorTrack.JAM_CONFIDENCE_LOSS * 100.0), WorldSimulation.BURN_THROUGH_M / 1000.0]
 	var lead := _lead_solution(player, target)
 	var eta := "—"
 	if not lead.is_empty():
@@ -1096,6 +1214,9 @@ func _update_weapon_strip(player: ShipState) -> void:
 		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config, player), "▮".repeat(bars) + "▯".repeat(10 - bars),
 			player.cannon_rounds, cannon.magazine_rounds, "  EMPTY" if player.cannon_rounds == 0 else ""])
 	parts.append(pd_text(player))
+	var cm := countermeasure_text(player.systems)
+	if cm != "":
+		parts.append(cm)
 	var msl := missile_text(player.systems, MissileSalvo.mode_text(profile.missile_mode, profile.missile_order) if profile != null else "")
 	if msl != "":
 		parts.append(msl)
@@ -1105,6 +1226,25 @@ func _update_weapon_strip(player: ShipState) -> void:
 	if player_wing != null and not player_wing.crafts.is_empty():
 		lines.append("WING  %s   [[] launch []] recall" % wing_text(player_wing))
 	weapon_label.text = "\n".join(lines)
+
+
+## Countermeasures on the weapon strip: "CM 27 [SPC] · EW ■" ("" if none).
+static func countermeasure_text(sys: ShipSystems) -> String:
+	if sys == null:
+		return ""
+	var bits := PackedStringArray()
+	var has_launcher := false
+	for e in sys.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER:
+			has_launcher = true
+	if has_launcher:
+		bits.append("CM %d [SPC]" % sys.decoys_aboard())
+	var jam := sys.jamming_strength()
+	for e in sys.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.JAMMER:
+			bits.append("EW %s" % (CyberTheme.GLYPH_OK if jam > 0.0 else CyberTheme.GLYPH_OFFLINE))
+			break
+	return " · ".join(bits)
 
 
 ## Missiles aboard on the weapon strip: "MSL anti-ship 4 · EMP 2 [M]" ("" if
@@ -1256,26 +1396,6 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 			"sunrise" if change.sunlit_after else "sunset", HudFormat.duration(change.time)]
 		lines.append("SUN        %s%s" % ["LIT" if lit else "ECLIPSE", when])
 	orbit_label.text = "\n".join(lines)
-
-
-## Seconds until the nearest round on a collision course reaches `ship`
-## (straight-line closest approach within the hull's radius, next 10 s;
-## includes the ship's own rounds once armed), or -1.
-static func incoming_round_time(world: WorldSimulation, ship: ShipState) -> float:
-	var radius := ship.config.hit_box_half_extents.length()
-	var best := INF
-	for shot in world.projectiles():
-		if shot.shooter_id == ship.id and shot.age_s < WorldSimulation.ARM_TIME_S:
-			continue
-		var p := shot.position - ship.position
-		var v := shot.velocity - ship.velocity
-		var vv := v.length_squared()
-		if vv < 1e-6:
-			continue
-		var t := -p.dot(v) / vv
-		if t > 0.0 and t < 10.0 and (p + v * t).length() < radius and t < best:
-			best = t
-	return best if best < INF else -1.0
 
 
 ## {time, direction} for the player's cannon against the target, or {}.

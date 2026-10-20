@@ -104,15 +104,20 @@ var map_tab: VBoxContainer
 var route_button: Button
 var size_buttons: Array[Button] = []
 var _map_info: RichTextLabel
+var _broker_box: VBoxContainer
 var _hangar_tabs: TabContainer
+## The station's sections (Milestone 12): the builder is REFIT, one of them.
+var sections: ShipyardSections
 
 
 func _ready() -> void:
 	InputBindings.apply_saved()
+	DisplaySettings.apply_saved()
 	theme = CyberTheme.build_theme()
 	var catalog := ConstructionCatalog.default_catalog()
 	profile = Main.get_profile()
 	profile.ensure_vessel(_load_or_null(BlueprintIO.DEFAULT_TEMPLATE))
+	ContractBoard.refresh(profile)
 	var start: ShipBlueprint = (Main.launch_blueprint if Main.launch_blueprint != null else profile.vessel.blueprint).duplicate_blueprint()
 	editor = ShipEditor.new(start, catalog)
 	editor.profile = profile
@@ -176,12 +181,21 @@ func _ready() -> void:
 	_fill_file_list(design_list, BlueprintIO.list_user())
 	deck_editor.deck = 1
 	set_tool(Tool.SELECT)
+	sections = ShipyardSections.new(self)
+	sections.build()
+	show_section("REFIT" if building_new else ShipyardSections.START)
 	_refresh()
 	_set_status("Loaded %s" % editor.blueprint.name)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if event.is_action_pressed("toggle_fullscreen"):
+		DisplaySettings.toggle_fullscreen()
+		return
+	# Builder keys act in the builder only.
+	if sections != null and sections.current != "REFIT":
 		return
 	var k := event as InputEventKey
 	var key := k.keycode
@@ -501,6 +515,70 @@ func load_design(path: String) -> bool:
 	return true
 
 
+## Show one of the station's sections (ShipyardSections.SECTIONS).
+func show_section(section: String) -> void:
+	if sections != null:
+		sections.show(section)
+
+
+## DEALER: buy the template at `path` (its standard crew hired); it becomes
+## the active vessel, open in the builder's preview. True on success.
+func buy_ship(path: String) -> bool:
+	var bp := BlueprintIO.load_file(path, PackedStringArray())
+	if bp == null:
+		return false
+	var why := profile.buy_ship(bp, editor.catalog)
+	if why != "":
+		_set_status(why, true)
+		return false
+	_save_profile()
+	select_vessel(profile.active_vessel)
+	_set_status("Bought %s — it is your active vessel" % bp.name)
+	show_section("HANGAR")
+	return true
+
+
+## MISSIONS: accept contract `id` from the board (it sets the next
+## sortie's location and ship count). True on success.
+func accept_contract(id: String) -> bool:
+	var why := ContractBoard.accept(profile, id)
+	if why != "":
+		_set_status(why, true)
+		return false
+	save_and_refresh("Contract accepted: %s — launch when ready" % profile.active_contract.title)
+	_refresh_map()
+	return true
+
+
+## Save the profile, say `status` and redraw.
+func save_and_refresh(status: String) -> void:
+	_save_profile()
+	_set_status(status)
+	_refresh()
+
+
+## HANGAR: scrap the active vessel for spare parts (not the last one).
+func scrap_active() -> int:
+	var name_was := profile.vessel.name
+	var parts := profile.scrap_vessel(profile.active_vessel, editor.catalog)
+	if parts < 0:
+		_set_status("You can't scrap your last ship", true)
+		return -1
+	_save_profile()
+	select_vessel(profile.active_vessel)
+	_set_status("Scrapped %s for %d spare parts" % [name_was, parts])
+	return parts
+
+
+## ARMOURY: rearm and refuel now (otherwise the launch does it).
+func rearm_now() -> String:
+	var line := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
+	_save_profile()
+	_set_status(line if line != "" else "Nothing to restock")
+	_refresh()
+	return line
+
+
 ## Fly the current design. Refused while the design has errors or the refit
 ## (parts the hangar vessel does not have yet) cannot be paid for.
 func launch() -> bool:
@@ -562,6 +640,7 @@ func tutorial_repair_check() -> void:
 ## commissions it as another vessel in the hangar (every part built new,
 ## plus the yard's fee); the current vessel stays in the hangar.
 func start_new_ship() -> void:
+	show_section("REFIT")
 	var bp := ShipBlueprint.new()
 	bp.name = "New ship %d" % (profile.vessels.size() + 1)
 	bp.designer = "Player"
@@ -586,6 +665,8 @@ func select_vessel(index: int) -> void:
 	_save_profile()
 	_set_status("Now working on %s" % profile.vessel.name)
 	_refresh_hangar()
+	if sections != null:
+		sections.refresh()
 
 
 func _fill_vessel_picker() -> void:
@@ -651,6 +732,8 @@ func _refresh() -> void:
 	_refresh_stats()
 	_refresh_issues()
 	_refresh_hangar()
+	if sections != null:
+		sections.refresh()
 	preview.show_design(editor)
 	if iso_view != null and iso_view.visible:
 		iso_view.show_design(editor)
@@ -838,7 +921,8 @@ static func category_of(kind: String, def: Resource) -> String:
 			return "Propulsion"
 		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION:
 			return "Power & thermal"
-		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE, EquipmentDefinition.Kind.MISSILE_LAUNCHER:
+		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE, EquipmentDefinition.Kind.MISSILE_LAUNCHER, \
+				EquipmentDefinition.Kind.DECOY_LAUNCHER, EquipmentDefinition.Kind.JAMMER:
 			return "Weapons"
 		EquipmentDefinition.Kind.SENSOR, EquipmentDefinition.Kind.GRAPPLE:
 			return "Sensors"
@@ -1097,6 +1181,9 @@ func _build_map_tab(tabs: TabContainer) -> void:
 	map_tab.add_child(system_map)
 	_map_info = _rich_label()
 	map_tab.add_child(_map_info)
+	_broker_box = VBoxContainer.new()
+	_broker_box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	map_tab.add_child(_broker_box)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
 	var heading := Label.new()
@@ -1118,23 +1205,38 @@ func _build_map_tab(tabs: TabContainer) -> void:
 	route_button = Button.new()
 	route_button.tooltip_text = "Where you launch from and how many ships you meet (HANGAR › MAP)"
 	CyberTheme.style_button(route_button, CyberTheme.AMBER)
-	route_button.pressed.connect(func() -> void: _hangar_tabs.current_tab = _hangar_tabs.get_tab_idx_from_control(map_tab))
+	route_button.pressed.connect(func() -> void: show_section("MAP"))
 	launch_button.get_parent().add_child(route_button)
 	launch_button.get_parent().move_child(route_button, launch_button.get_index())
 	_refresh_map()
 
 
-## Dock the vessel at a known location's station (the next launch starts in
-## its orbit). Free for now; jump costs come with Milestone 13.
+## Jump the vessel to a known location's station (the next launch starts in
+## its orbit), paying the propellant (PlayerProfile.relocate).
 func pick_location(location_id: String) -> bool:
-	var why := profile.relocate(location_id)
+	var cost := profile.jump_cost_kg(location_id, editor.catalog)
+	var why := profile.relocate(location_id, editor.catalog)
 	if why != "":
 		_set_status(why, true)
 		return false
 	_save_profile()
 	_refresh_map()
-	_set_status("Docked at %s — the next launch starts in %s" % [Location.by_id(location_id).station_name,
-		Location.by_id(location_id).display_name.to_lower()])
+	_refresh_station_tabs()
+	_set_status("Docked at %s — the jump burned %s; the next launch starts in %s" % [Location.by_id(location_id).station_name,
+		JumpDrive.tonnes(cost), Location.by_id(location_id).display_name.to_lower()])
+	return true
+
+
+## Buy a broker's charts (PlayerProfile.buy_location); the map grows.
+func buy_charts(location_id: String) -> bool:
+	var why := profile.buy_location(location_id)
+	if why != "":
+		_set_status(why, true)
+		return false
+	_save_profile()
+	_refresh_map()
+	_set_status("%s is on your map — jump there from it (%s of propellant)" % [Location.by_id(location_id).display_name,
+		JumpDrive.tonnes(profile.jump_cost_kg(location_id, editor.catalog))])
 	return true
 
 
@@ -1148,7 +1250,11 @@ func _refresh_map() -> void:
 	if system_map == null:
 		return
 	var here := Location.by_id(profile.location)
-	system_map.set_state(profile.known_locations, here.id)
+	var costs := {}
+	for id: String in profile.known_locations:
+		if id != here.id:
+			costs[id] = "jump %s" % JumpDrive.tonnes(profile.jump_cost_kg(id, editor.catalog))
+	system_map.set_state(profile.known_locations, here.id, costs)
 	var title := get_node_or_null("Margin/VBox/TopBar/Title") as Label
 	if title != null:
 		title.text = here.station_name.to_upper()
@@ -1156,6 +1262,7 @@ func _refresh_map() -> void:
 		size_buttons[i].set_pressed_no_signal(i + 1 == profile.encounter_size)
 	var n := profile.encounter_size
 	route_button.text = "◎ %s · %d SHIP%s" % [here.display_name.to_upper(), n, "" if n == 1 else "S"]
+	_refresh_brokers()
 	var b := here.body
 	_map_info.text = "[b]%s[/b] · docked
 %s
@@ -1163,7 +1270,42 @@ func _refresh_map() -> void:
 %s" % [
 		here.station_name, here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
 		"entry interface" if b.has_atmosphere else "terrain floor", b.entry_interface_altitude_m / 1000.0,
-		CyberTheme.tint("Click a body to move to its station · free until jump fuel arrives", CyberTheme.TEXT_DIM)]
+		CyberTheme.tint(_jump_note(), CyberTheme.TEXT_DIM)]
+
+
+## Information brokers: charts for the places not on the map yet.
+func _refresh_brokers() -> void:
+	if _broker_box == null:
+		return
+	for c in _broker_box.get_children():
+		c.queue_free()
+	for loc in profile.brokers():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+		var text := _rich_label()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		text.text = "[b]BROKER[/b] %s — %s\n%s" % [loc.broker_name, loc.display_name.to_upper(),
+			CyberTheme.tint(loc.broker_pitch, CyberTheme.TEXT_DIM)]
+		row.add_child(text)
+		var buy := Button.new()
+		buy.text = "Buy charts (%d cr)" % loc.broker_price
+		buy.custom_minimum_size = Vector2(200, 34)
+		buy.disabled = profile.credits < loc.broker_price
+		buy.tooltip_text = "Puts %s on your map; jumping there still costs propellant" % loc.station_name
+		CyberTheme.style_button(buy, CyberTheme.AMBER)
+		buy.pressed.connect(buy_charts.bind(loc.id))
+		row.add_child(buy)
+		_broker_box.add_child(row)
+
+
+func _jump_note() -> String:
+	var t := profile.vessel_tanks(editor.catalog)
+	var here := Location.by_id(profile.location)
+	return "Click a body to jump to its station: propellant from the tanks (%s) first, then the jump reserve (%s)
+%s: shelves ×%.2f, %d items up to %s · local traffic %s" % [
+		JumpDrive.tonnes(t.main_kg), JumpDrive.tonnes(t.reserve_kg), here.station_name, here.price_factor, here.vendor_stock_size,
+		Rarity.NAMES[here.vendor_max_rarity].to_lower(), ", ".join(Array(here.enemy_templates).map(func(f: String) -> String: return f.get_basename().split("_")[0]))]
 
 
 ## The station's people and shelves: the vessel's crew (roles, dismiss),
@@ -1597,7 +1739,8 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 		EquipmentDefinition.Kind.CRAFT_MOUNT:
 			var c := e.craft
 			lines.append("CARRIES %s · %.0f t · %s · hull %.0f" % [c.display_name, c.mass_kg / 1000.0,
-				"gun %s" % c.cannon.display_name if c.cannon != null else "unarmed (recon)", c.hull_hp])
+				"gun %s" % c.cannon.display_name if c.cannon != null else "unarmed", c.hull_hp])
+			lines.append(str(CraftAI.ROLE_HELP.get(c.craft_role, "")))
 		EquipmentDefinition.Kind.DOCKING_COLLAR:
 			lines.append("GANGWAY up to %.0f m · seals in %.0f s · opens into the room behind it" % [Docking.GANGWAY_MAX_M, Docking.COLLAR_SEAL_S])
 		EquipmentDefinition.Kind.MISSILE_LAUNCHER:
@@ -1615,6 +1758,15 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 				ShipSystems.LAUNCHER_CYCLE_S, m.unit_credits])
 			lines.append("MISSILE %.0f m/s² · Δv %.1f km/s · turns %.0f°/s · %s · point defence can shoot it down" % [
 				m.accel_mps2, m.delta_v_mps / 1000.0, m.turn_rate_deg_s, effect])
+		EquipmentDefinition.Kind.DECOY_LAUNCHER:
+			lines.append("FLARES %d · %d a launch [SPC] (or auto by policy) · burn %.0f s, signature %.1f (a frigate ≈ 1) · restocked for %d cr each" % [
+				e.decoy_capacity, e.decoy_salvo, e.decoy_life_s, e.decoy_signature, ServiceYard.FLARE_CREDITS])
+			lines.append("A missile that sees a flare near its target may chase it: fire as it closes (3–5 s out), not early — a flare that burns out lets it find you again")
+		EquipmentDefinition.Kind.JAMMER:
+			lines.append("JAMMING %.1f · enemy tracks of you lose confidence and their locks fail; missiles may lose lock — beyond %.0f km (burn-through), full beyond %.0f km; hardened masts filter it" % [
+				e.jam_strength, WorldSimulation.BURN_THROUGH_M / 1000.0, WorldSimulation.JAM_FULL_M / 1000.0])
+	if e.kind == EquipmentDefinition.Kind.SENSOR and e.emp_hardening > 0.0:
+		lines.append("EW FILTER %d %%: a hardened mast also shrugs off that much jamming" % roundi(e.emp_hardening * 100.0))
 	if e.emp_hardening > 0.0:
 		lines.append("EMP HARDENED %d %%: resets that much shorter" % roundi(e.emp_hardening * 100.0))
 	if e.rarity != Rarity.Tier.COMMON:

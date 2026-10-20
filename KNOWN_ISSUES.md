@@ -11,25 +11,40 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   upgrade costs are first guesses. Expect further tuning.
 - **Fires, coolant loops and named crew are new** and covered by tests,
   not yet by play.
-- **EW jamming exists only as a hook** for craft communications; there are
-  no decoys or electronic warfare against missiles yet — the counterplay is
-  point defence, guns and range.
+- **The release executables have not been exported or launched on the
+  development machine**: Godot's export templates aren't installed there.
+  The data pack is exported and booted on every check run; see
+  `docs/STEAM.md` §3.
+- **No application icon yet** (the Godot default is used); see
+  `docs/STEAM.md` §6.
+- **Craft roles are new** (play-test batch 5): the interceptor, bomber,
+  gun runs and avoidance distances are first guesses covered by seeded
+  tests, not yet by play. Avoidance is a local nudge, so a craft can be
+  pinned against a big hull for a moment.
+- **Countermeasures are new** (Milestone 11): flare signature and burn
+  time, seeker discrimination, jamming strength and the burn-through range
+  are first guesses, covered by seeded tests, not yet by play.
 - **Encounters of two and three ships are hard** (Milestone 10): focus fire
   and salvos from three ships wrecked the player's frigate within ~30 s of
   game time in a test render at mission 7. Since 2026-10-20 the player picks
   1, 2 or 3 ships on the shipyard map; enemy loadouts still grow with the
   mission number. Salvo counts and intervals are first guesses.
-- **Locations are new** (2026-10-20): the Lunar Shipyard has the same
-  crew, quartermaster and upgrades as Earth's (per-station stock is
-  Milestone 13); moving between stations is free.
-- **With the Tab drawer open the alert banner overlaps the top of the
-  moved target card** (layout; Pass A redesigns the alerts).
-- **Two looping audio streams are reported as leaked at exit** in headless
-  runs (the engine and RCS loops still playing when the test quits). Harmless.
-- **A capital-sized hull hitches on spawn**: `ShipSystems.create` takes
-  ~90 ms for a 300-module hull, almost all of it `CrewRoster.default_for`
-  (it scans every room for every berth). Must be fixed before capital
-  ships (Milestone 15); everything else scales (see ROADMAP M10).
+- **Surface maps are 4–5 km per texel** (Moon and Mars 4096 px, Earth
+  5400 px): from low orbit the ground looks soft, and crater rims blocky.
+  Bigger maps would cost ~180 MB of video memory each, uncompressed.
+- **Locations are new** (2026-10-20): jump costs, the reserve, the tow fee
+  and the Lunar Shipyard's prices and traffic are first guesses. Upgrades
+  are still the same at every station.
+- **With the Tab drawer open the alert banner can overlap the top of the
+  moved target card** (layout).
+- **Audio is silent in headless runs** (tests and checks): the dummy
+  driver never retires a playback, so ShipAudio skips playing there
+  (`ShipAudio.silent`); the alert and ducking logic still runs and is tested.
+- **Capital templates are plain**: generated slabs of hull blocks armed
+  with standard parts (autocannons, point defence); no sloped bows or
+  heavy guns until you refit them. Enemies don't field capital ships yet.
+- **Contracts are new** (Milestone 12): payouts and threat levels are first
+  guesses; a failed contract stays until it is met or abandoned.
 - **Missions and the tutorial are new** (Milestone 8): rewards and the
   courier's toughness are first guesses; the tutorial is verified by tests
   and the smoke run, not yet by a new player.
@@ -124,7 +139,8 @@ rare part · Earth texture 5400 × 2700.
   visually (shrinks and sheds plating), but its cells still count in the
   damage model.
 - **Sound is your own ship heard through the hull** (there is none in
-  vacuum); an enemy's reactor going up is faint. Synthesised, no audio files.
+  vacuum); an enemy's reactor going up is faint. Recorded CC0 samples,
+  synthesis for any slot without one.
 - **On a gamepad the guns aim at the screen centre**; the aim cursor follows
   the mouse.
 - **Fonts:** Space Grotesk and JetBrains Mono are used when installed;

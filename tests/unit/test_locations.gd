@@ -25,8 +25,8 @@ func test_locations_are_valid_data() -> void:
 		assert_true(loc.id not in ids, "ids are unique (%s)" % loc.id)
 		assert_true(loc.body.surface_map != null, "%s has a surface map" % loc.id)
 		ids.append(loc.id)
-	assert_true(ids == ["earth", "moon"], "Earth and the Moon, in map order (%s)" % [ids])
-	assert_true(Location.by_id("mars").id == "earth", "an unknown id falls back to Earth")
+	assert_true(ids == ["earth", "moon", "mars"], "Earth, the Moon and Mars, in map order (%s)" % [ids])
+	assert_true(Location.by_id("jupiter").id == "earth", "an unknown id falls back to Earth")
 	var earth := Location.by_id("earth")
 	assert_true(earth.station_name == "Earth Shipyard" and earth.start_altitude_m == 400_000.0 and earth.body.has_atmosphere,
 		"Earth: the shipyard, 400 km, air")
@@ -115,11 +115,12 @@ func test_schema_7_location_and_encounter_size() -> void:
 	assert_true(FileAccess.file_exists(TEST_PROFILE + ".v6"), "the v6 original is kept before migrating")
 	# Round trip at v7.
 	assert_true(q.relocate("moon") == "" and q.location == "moon", "relocate to a known location")
-	assert_true(q.relocate("mars") != "" and q.location == "moon", "an unknown location is refused")
+	assert_true(q.relocate("mars") != "" and q.location == "moon", "a location not on the map (no charts) is refused")
 	q.encounter_size = 3
 	q.save(TEST_PROFILE)
 	var r := PlayerProfile.load_file(TEST_PROFILE, PackedStringArray())
-	assert_true(r.loaded_schema == 7 and r.location == "moon" and r.encounter_size == 3, "saved and loaded at schema 7")
+	assert_true(r.loaded_schema == PlayerProfile.SCHEMA_VERSION and r.location == "moon" and r.encounter_size == 3,
+		"saved and loaded at the current schema (%d)" % r.loaded_schema)
 	# Bad values are clamped / fall back.
 	var bad := PlayerProfile.from_dict({"schema_version": 7, "location": "atlantis", "encounter_size": 9, "known_locations": ["atlantis"]}, PackedStringArray())
 	assert_true(bad.location == "earth" and bad.encounter_size == 3 and bad.known_locations == ["earth", "moon"],

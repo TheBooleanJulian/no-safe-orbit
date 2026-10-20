@@ -25,10 +25,14 @@ extends RefCounted
 ## v7: where the ship is docked (location), the locations on the map
 ##     (known_locations: Earth and the Moon to start) and the encounter size
 ##     picked for the next sortie; older saves are at Earth, size 1.
-const SCHEMA_VERSION := 7
+## v8: the mission board (board, board_sortie, board_seed) and the
+##     accepted contract (active_contract); older saves get a fresh board.
+## v9: the jump drive's reserve in the vessel's stores
+##     (condition.stores.jump_reserve_kg); older vessels start it full.
+const SCHEMA_VERSION := 9
 ## Ships per encounter the map offers (EnemyFactory spawns them).
 const MAX_ENCOUNTER := 3
-## Locations every player knows from the start (brokers sell more, M13).
+## Locations every player knows from the start (brokers sell more).
 const STARTING_LOCATIONS := ["earth", "moon"]
 ## The last good save, kept beside the profile (rolling, one deep).
 const BACKUP_SUFFIX := ".bak"
@@ -80,6 +84,12 @@ var location: String = Location.DEFAULT_ID
 var known_locations: Array = STARTING_LOCATIONS.duplicate()
 ## Ships in the next encounter, 1–MAX_ENCOUNTER (picked on the map).
 var encounter_size: int = 1
+## The mission board (ContractBoard): offers, the sortie count they were
+## made for, the profile's seed for them; the accepted contract ({} = none).
+var board: Array = []
+var board_sortie: int = -1
+var board_seed: int = 0
+var active_contract: Dictionary = {}
 var missile_mode: int = MissileSalvo.Mode.ALL
 var missile_order: Array = MissileSalvo.DEFAULT_ORDER.duplicate()
 ## The schema the profile was read from (SCHEMA_VERSION for a new one).
@@ -125,6 +135,7 @@ func _init(seed_value: int = 0) -> void:
 		_rng.randomize()
 	else:
 		_rng.seed = seed_value
+	board_seed = int(_rng.seed % 2147483647)
 
 
 # --- Ownership ---------------------------------------------------------------
@@ -306,15 +317,19 @@ func refresh_station(catalog: ConstructionCatalog) -> void:
 		var skill := 0 if _rng.randf() < 0.55 else (1 if _rng.randf() < 0.75 else 2)
 		hire_pool.append({"name": CrewNames.pick(_rng), "role": _rng.randi() % CrewRoster.Role.size(), "skill": skill,
 			"fee": HIRE_FEE + HIRE_FEE_PER_SKILL * skill})
+	# Each station's own shelves and prices (Location).
+	var here := Location.by_id(location)
+	for c in hire_pool:
+		c.fee = roundi(float(c.fee) * here.price_factor)
 	vendor_stock.clear()
 	var ids: Array = []
 	for id in ConstructionCatalog.sorted_ids(catalog.equipment):
 		var def: EquipmentDefinition = catalog.equipment[id]
-		if def.rarity != Rarity.Tier.COMMON and def.rarity <= Rarity.Tier.EPIC and not def.legacy:
+		if def.rarity != Rarity.Tier.COMMON and def.rarity <= mini(here.vendor_max_rarity, Rarity.Tier.EPIC) and not def.legacy:
 			ids.append(id)
-	for i in mini(VENDOR_STOCK_SIZE, ids.size()):
+	for i in mini(here.vendor_stock_size, ids.size()):
 		var id: StringName = ids.pop_at(_rng.randi() % ids.size())
-		vendor_stock.append({"id": String(id), "price": VENDOR_PRICES[catalog.equipment[id].rarity]})
+		vendor_stock.append({"id": String(id), "price": roundi(VENDOR_PRICES[catalog.equipment[id].rarity] * here.price_factor)})
 
 
 ## Berths on the active vessel's design.
@@ -422,6 +437,41 @@ func commission(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
 	return ""
 
 
+## Buy a ship to `bp` from the dealer, its standard crew hired, and make it
+## the active vessel. "" or why not (paid only on success).
+func buy_ship(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
+	var price := ServiceYard.dealer_price(bp, catalog)
+	if int(price.total) > credits:
+		return "%s costs %d credits; you have %d" % [bp.name, price.total, credits]
+	credits -= int(price.total)
+	var v := ShipInstance.fresh(bp.duplicate_blueprint())
+	v.ensure_crew(catalog)
+	v.record("Bought from the dealer for %d credits (crew of %d included)" % [price.total, price.crew_count])
+	vessels.append(v)
+	active_vessel = vessels.size() - 1
+	return ""
+
+
+## Scrap vessel `index` for spare parts (ServiceYard.scrap_value); its hold
+## goes with it. Not the last vessel. Returns the parts, or -1.
+func scrap_vessel(index: int, catalog: ConstructionCatalog) -> int:
+	if index < 0 or index >= vessels.size() or vessels.size() <= 1:
+		return -1
+	var parts := ServiceYard.scrap_value(vessels[index], catalog)
+	spare_parts += parts
+	vessels.remove_at(index)
+	active_vessel = clampi(active_vessel if active_vessel < index else active_vessel - 1, 0, vessels.size() - 1)
+	return parts
+
+
+## Sorties flown in every vessel (and lost ones): the board refreshes on it.
+func sorties_flown() -> int:
+	var n := vessels_lost
+	for v in vessels:
+		n += v.sorties
+	return n
+
+
 ## Make vessel `index` the active one (flown and edited).
 func select_vessel(index: int) -> bool:
 	if index < 0 or index >= vessels.size():
@@ -512,6 +562,10 @@ func to_dict() -> Dictionary:
 		"location": location,
 		"known_locations": known_locations.duplicate(),
 		"encounter_size": encounter_size,
+		"board": board.duplicate(true),
+		"board_sortie": board_sortie,
+		"board_seed": board_seed,
+		"active_contract": active_contract.duplicate(true),
 	}
 
 
@@ -600,14 +654,100 @@ static func _read_v7_map(p: PlayerProfile, d: Dictionary) -> void:
 	var here := str(d.get("location", Location.DEFAULT_ID))
 	p.location = here if here in p.known_locations else Location.DEFAULT_ID
 	p.encounter_size = clampi(int(d.get("encounter_size", 1)), 1, MAX_ENCOUNTER)
+	_read_v8_board(p, d)
 
 
-## Move the docked vessel to the station at a known location (free until
-## jump costs arrive, M13). Returns "" or why not.
-func relocate(location_id: String) -> String:
+## v8: the mission board and the accepted contract (older saves: a fresh
+## board on the next visit to the yard, no contract).
+static func _read_v8_board(p: PlayerProfile, d: Dictionary) -> void:
+	var b: Variant = d.get("board", [])
+	if b is Array:
+		for c in b:
+			if c is Dictionary and (c as Dictionary).has("goal") and (c as Dictionary).has("id"):
+				p.board.append((c as Dictionary).duplicate(true))
+	p.board_sortie = int(d.get("board_sortie", -1))
+	p.board_seed = int(d.get("board_seed", hash(str(d.get("rng", {})))))
+	var a: Variant = d.get("active_contract", {})
+	if a is Dictionary and (a as Dictionary).has("goal"):
+		p.active_contract = (a as Dictionary).duplicate(true)
+
+
+## The docked vessel's tanks: {mass_kg (with what is aboard), main_kg,
+## capacity_kg, reserve_kg, reserve_capacity_kg}. No stores = full.
+func vessel_tanks(catalog: ConstructionCatalog) -> Dictionary:
+	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
+	var stores: Dictionary = vessel.condition.get("stores", {})
+	var drive := JumpDrive.standard()
+	var reserve_cap := drive.reserve_capacity_kg(stats.propellant_capacity_kg)
+	var main := minf(float(stores.get("propellant_kg", stats.propellant_capacity_kg)), stats.propellant_capacity_kg)
+	var reserve := minf(float(stores.get("jump_reserve_kg", reserve_cap)), reserve_cap)
+	return {"mass_kg": stats.mass_kg + main + reserve, "main_kg": main, "capacity_kg": stats.propellant_capacity_kg,
+		"reserve_kg": reserve, "reserve_capacity_kg": reserve_cap}
+
+
+## Propellant (kg) the docked vessel's jump to `location_id` would burn.
+func jump_cost_kg(location_id: String, catalog: ConstructionCatalog) -> float:
+	var here := Location.by_id(location)
+	var there := Location.by_id(location_id)
+	if here.id == there.id:
+		return 0.0
+	return JumpDrive.standard().cost_kg(float(vessel_tanks(catalog).mass_kg), Location.distance_m(here, there))
+
+
+## Locations an information broker sells (not on the map yet), in map order.
+func brokers() -> Array[Location]:
+	var out: Array[Location] = []
+	for loc in Location.all():
+		if loc.id not in known_locations and loc.broker_price > 0:
+			out.append(loc)
+	return out
+
+
+## Buy a broker's charts: the location goes on the map. "" or why not.
+func buy_location(location_id: String) -> String:
+	var loc := Location.by_id(location_id)
+	if loc.id != location_id or loc.broker_price <= 0:
+		return "No broker sells charts for that"
+	if location_id in known_locations:
+		return "%s is already on your map" % loc.display_name
+	if credits < loc.broker_price:
+		return "%s wants %d credits for the charts; you have %d" % [loc.broker_name, loc.broker_price, credits]
+	credits -= loc.broker_price
+	known_locations.append(loc.id)
+	loot_log.append("Charts bought: %s (%s)" % [loc.display_name, loc.station_name])
+	return ""
+
+
+## Jump the docked vessel to the station at a known location, paying the
+## propellant from its main tank, then the drive's reserve (the yard refills
+## both, for credits, at the next launch or in the ARMOURY). Returns "" or
+## why not.
+func relocate(location_id: String, catalog: ConstructionCatalog = null) -> String:
 	if location_id not in known_locations:
 		return "That location is not on your map"
-	location = Location.by_id(location_id).id
+	var there := Location.by_id(location_id)
+	if there.id == location:
+		return ""
+	if catalog == null:
+		catalog = ConstructionCatalog.default_catalog()
+	var tanks := vessel_tanks(catalog)
+	var cost := jump_cost_kg(there.id, catalog)
+	var paid := JumpDrive.pay(float(tanks.main_kg), float(tanks.reserve_kg), cost)
+	if not paid.ok:
+		var short := ServiceYard.resupply_needs(vessel, catalog)
+		return "The jump to %s burns %s; the tanks hold %s and the reserve %s — refuel in the ARMOURY (%d cr)" % [
+			there.station_name, JumpDrive.tonnes(cost), JumpDrive.tonnes(tanks.main_kg), JumpDrive.tonnes(tanks.reserve_kg),
+			int(short.credits)]
+	var stores: Dictionary = vessel.condition.get("stores", {})
+	if stores.is_empty():
+		var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
+		stores = {"propellant_kg": stats.propellant_capacity_kg, "rounds": stats.rounds_capacity}
+	stores["propellant_kg"] = paid.main_kg
+	stores["jump_reserve_kg"] = paid.reserve_kg
+	vessel.condition["stores"] = stores
+	vessel.record("Jumped to %s: %s of propellant" % [there.station_name, JumpDrive.tonnes(cost)])
+	location = there.id
+	refresh_station(catalog)
 	return ""
 
 

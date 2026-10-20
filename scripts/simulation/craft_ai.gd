@@ -14,6 +14,22 @@ extends RefCounted
 ## Disengage (risk tolerance): below these fractions of hull / propellant /
 ## ammunition the craft returns on its own — conservative early, aggressive
 ## late (DISENGAGE).
+##
+## How each role flies them (ShipConfig.craft_role):
+##   fighter      STRIKE as gun runs: close to 250 m firing, break away to
+##                900 m off the target's flank, come round again; INTERCEPT
+##                as a pursuit with the lead.
+##   interceptor  goes for inbound missiles first (within 4 km of the
+##                carrier), then hostile craft; fast and light.
+##   bomber       STRIKE from long range: steady runs to 1.1 km with a heavy,
+##                slow-firing cannon, then breaks away; avoids dogfights.
+##   recon        never fires: holds station and watches (feeds scans).
+##   ew           never fires: holds station between the carrier and the
+##                threat, 1.2 km out, so its jamming covers the carrier.
+## Every role: never fires with a friendly ship or craft in the line of fire
+## (FRIENDLY_CLEARANCE_M), keeps apart from friendly craft (SEPARATION_M)
+## and clear of hulls (HULL_CLEARANCE_M) — its steering adds an avoidance
+## velocity.
 
 enum Directive { INTERCEPT, STRIKE, RECON, ESCORT, RETURN }
 enum Risk { CONSERVATIVE, BALANCED, AGGRESSIVE }
@@ -42,6 +58,42 @@ const MAX_CLOSING_MPS := 80.0
 ## Velocity control: reach the desired velocity in about this long (s).
 const VEL_TAU_S := 1.5
 const AIM_GAIN := 2.5
+## Hold fire with a friendly this close to the line of fire (m, beyond its hull).
+const FRIENDLY_CLEARANCE_M := 25.0
+## Avoidance: keep this far from friendly craft, and this far outside hulls.
+const SEPARATION_M := 70.0
+const HULL_CLEARANCE_M := 120.0
+const AVOID_GAIN := 0.5
+const MAX_AVOID_MPS := 60.0
+## Gun runs: run-in range by role (m), break-away distance and time.
+const RUN_IN_M := {&"fighter": 250.0, &"interceptor": 200.0, &"bomber": 1100.0}
+const BREAK_M := 600.0
+const BREAK_S := 6.0
+## Gun runs are flown slowly (m/s): every reversal costs propellant.
+const RUN_CLOSING_MPS := 40.0
+## Interceptors take inbound missiles first within this of the carrier.
+const MISSILE_SCREEN_M := 4000.0
+## EW drones hold station this far from the carrier, towards the threat.
+const EW_STATION_M := 1200.0
+## What the role and directive mean, in a line each (shown in game).
+const ROLE_HELP := {
+	&"fighter": "Fighter: gun runs on ships (in to 250 m firing, break away, come round); dogfights craft",
+	&"interceptor": "Interceptor: shoots down inbound missiles first, then hostile craft; fast, light gun",
+	&"bomber": "Bomber: long steady runs on ships with a heavy cannon from 1.1 km, then breaks away",
+	&"recon": "Recon drone: never fires; holds 1.5 km from the target and watches",
+	&"ew": "EW drone: never fires; holds 1.2 km out towards the threat so its jamming covers your ship",
+}
+const DIRECTIVE_HELP := [
+	"Intercept: engage the nearest hostile craft (interceptors: missiles first); none → screen the ship",
+	"Strike: attack the target ship (the chosen subsystem)",
+	"Recon: hold station from the target, nose on it, never fire",
+	"Escort: fly a slot beside your ship; engage hostiles that come within 2.5 km",
+	"Return: fly home to the rack and be recovered",
+]
+const RISK_HELP := "Risk: when to come home on its own — Conservative early (60 % hull), Aggressive late (15 %)"
+
+## Avoidance velocity for the craft being commanded (added by steer()).
+static var _avoid := Vector3.ZERO
 
 
 ## Why a craft should break off ("" = it can carry on).
@@ -63,7 +115,7 @@ static func steer(craft: ShipState, goal_pos: Vector3, goal_vel: Vector3, input:
 	var closing := (goal_pos - craft.position) * POS_GAIN
 	if closing.length() > max_closing:
 		closing = closing.normalized() * max_closing
-	var dv := goal_vel + closing - craft.velocity
+	var dv := goal_vel + closing + _avoid - craft.velocity
 	var body := craft.orientation.inverse() * dv
 	var m := craft.mass_kg()
 	var cfg := craft.config
@@ -120,15 +172,16 @@ static func aim_point(target: ShipState, priority: int) -> Vector3:
 
 
 ## Attack run on `target`: hold a standoff range, nose on the lead point,
-## fire inside the gunnery cone.
-static func attack(craft: ShipState, target: ShipState, standoff: float, priority: int, input: ShipControlInput, slot: int = 0) -> void:
+## fire inside the gunnery cone (if no friendly is in the way).
+static func attack(craft: ShipState, target: ShipState, standoff: float, priority: int, input: ShipControlInput, slot: int = 0,
+		friends: Array[ShipState] = [], max_closing: float = MAX_CLOSING_MPS) -> void:
 	var away := craft.position - target.position
 	if away.length() < 1.0:
 		away = Vector3.UP
 	if slot > 0:
 		# Wingmen take their own approach: fanned out around the target.
 		away = away.rotated(Vector3.UP, FORMATION_FAN_RAD * ((slot + 1) / 2) * (1.0 if slot % 2 == 1 else -1.0))
-	steer(craft, target.position + away.normalized() * standoff, target.velocity, input)
+	steer(craft, target.position + away.normalized() * standoff, target.velocity, input, max_closing)
 	var cannon := craft.config.cannon
 	if cannon == null:
 		point(craft, target.position - craft.position, input)
@@ -141,26 +194,127 @@ static func attack(craft: ShipState, target: ShipState, standoff: float, priorit
 	point(craft, aim_dir, input)
 	var d := craft.orientation.inverse() * aim_dir.normalized()
 	var error_deg := rad_to_deg(acos(clampf(-d.z, -1.0, 1.0)))
-	input.fire = t > 0.0 and error_deg < GunneryAI.FIRE_CONE_DEG * 2.0 and rel_pos.length() < GunneryAI.MAX_RANGE_M
+	input.fire = t > 0.0 and error_deg < GunneryAI.FIRE_CONE_DEG * 2.0 and rel_pos.length() < GunneryAI.MAX_RANGE_M \
+		and clear_shot(craft, aim_dir, rel_pos.length(), friends, target)
+
+
+## Gun runs on a ship: run in to the role's range firing, then break away
+## off the target's flank for BREAK_S or BREAK_M, then come round again.
+## State in craft.ai_state.
+static func gun_run(craft: ShipState, target: ShipState, priority: int, input: ShipControlInput, slot: int,
+		friends: Array[ShipState], dt: float) -> void:
+	var st := craft.ai_state
+	var run_in: float = RUN_IN_M.get(craft.config.craft_role, 250.0)
+	var to_t := target.position - craft.position
+	st.t = float(st.get("t", 0.0)) + dt
+	if str(st.get("phase", "run")) == "run":
+		attack(craft, target, run_in, priority, input, slot, friends, RUN_CLOSING_MPS)
+		if to_t.length() <= run_in * 1.2:
+			var side := to_t.cross(Vector3.UP if absf(to_t.normalized().y) < 0.9 else Vector3.RIGHT).normalized()
+			st.phase = "break"
+			st.t = 0.0
+			st.dir = side * (1.0 if slot % 2 == 0 else -1.0)
+		return
+	var break_point := target.position + (st.dir as Vector3) * BREAK_M - to_t.normalized() * 200.0
+	steer(craft, break_point, target.velocity, input, RUN_CLOSING_MPS)
+	point(craft, break_point - craft.position, input)
+	input.fire = false
+	if float(st.t) > BREAK_S or craft.position.distance_to(target.position) > BREAK_M * 0.9:
+		st.phase = "run"
+
+
+## No friendly ship or craft within FRIENDLY_CLEARANCE_M of the line of
+## fire out to `range_m`.
+static func clear_shot(craft: ShipState, aim_dir: Vector3, range_m: float, friends: Array[ShipState],
+		target: ShipState = null) -> bool:
+	if aim_dir.length_squared() < 1e-9:
+		return true
+	var dir := aim_dir.normalized()
+	for f in friends:
+		if f == craft or f == target or not f.is_active():
+			continue
+		var rel := f.position - craft.position
+		var along := rel.dot(dir)
+		if along <= 0.0 or along > range_m + 50.0:
+			continue
+		if (rel - dir * along).length() < f.config.hit_box_half_extents.length() + FRIENDLY_CLEARANCE_M:
+			return false
+	return true
+
+
+## Velocity to add to keep apart from friendly craft and clear of hulls
+## (friendly or not); `skip`: a ship it may approach (the carrier, landing).
+static func avoidance(craft: ShipState, friends: Array[ShipState], others: Array[ShipState], skip: ShipState = null) -> Vector3:
+	var push := Vector3.ZERO
+	for list: Array[ShipState] in [friends, others]:
+		for s: ShipState in list:
+			if s == craft or s == skip or s == null or not s.is_active():
+				continue
+			var rel := craft.position - s.position
+			var d := rel.length()
+			var hull := s.config.hit_box_half_extents.length()
+			var margin := hull + (HULL_CLEARANCE_M if s.systems != null else SEPARATION_M)
+			if s.systems == null and list == others:
+				continue  # hostile craft: dogfights get close on purpose
+			if d < margin and d > 1e-3:
+				push += rel / d * (margin - d) * AVOID_GAIN
+	return push.limit_length(MAX_AVOID_MPS)
 
 
 ## One tick of a directive. `rack_point` / `rack_vel`: where the craft is
 ## recovered (world, local frame). `hostiles`: enemy craft, nearest first
 ## is chosen here.
+## `friends`: ships and craft of its side (never in the line of fire; craft
+## kept apart). `missiles`: hostile missiles in flight (interceptors).
 static func command(craft: ShipState, directive: Directive, carrier: ShipState, rack_point: Vector3,
-		target: ShipState, hostiles: Array[ShipState], priority: int, slot: int = 0) -> ShipControlInput:
+		target: ShipState, hostiles: Array[ShipState], priority: int, slot: int = 0,
+		friends: Array[ShipState] = [], missiles: Array[ShipState] = [], dt: float = 1.0 / 60.0) -> ShipControlInput:
+	var others: Array[ShipState] = []
+	if target != null:
+		others.append(target)
+	_avoid = avoidance(craft, friends, others, carrier if directive == Directive.RETURN else null)
+	var input := _command(craft, directive, carrier, rack_point, target, hostiles, priority, slot, friends, missiles, dt)
+	_avoid = Vector3.ZERO
+	return input
+
+
+static func _command(craft: ShipState, directive: Directive, carrier: ShipState, rack_point: Vector3,
+		target: ShipState, hostiles: Array[ShipState], priority: int, slot: int,
+		friends: Array[ShipState], missiles: Array[ShipState], dt: float) -> ShipControlInput:
 	var input := ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
 	input.hold_translation = false
+	var role := craft.config.craft_role
 	var threat := _nearest(craft, hostiles)
+	# Interceptors take inbound missiles first.
+	if role == &"interceptor" and directive in [Directive.INTERCEPT, Directive.ESCORT] and carrier != null:
+		var best: ShipState = null
+		for m in missiles:
+			if m.is_active() and m.position.distance_to(carrier.position) < MISSILE_SCREEN_M \
+					and (best == null or m.position.distance_to(carrier.position) < best.position.distance_to(carrier.position)):
+				best = m
+		if best != null:
+			attack(craft, best, 150.0, 0, input, slot, friends)
+			return input
+	# EW drones hold a jamming station; recon and EW never fire.
+	if role == &"ew" and directive != Directive.RETURN and carrier != null and carrier.is_active():
+		var foe: ShipState = target if target != null and target.is_active() else threat
+		var toward := (foe.position - carrier.position).normalized() if foe != null else carrier.forward()
+		steer(craft, carrier.position + toward * EW_STATION_M + carrier.orientation * escort_offset(slot) * 0.2, carrier.velocity, input)
+		point(craft, toward, input)
+		return input
 	match directive:
 		Directive.STRIKE:
 			if target != null and target.is_active():
-				attack(craft, target, STRIKE_RANGE_M, priority, input, slot)
-				return input
-			directive = Directive.RETURN
+				if role == &"recon":
+					directive = Directive.RECON
+				else:
+					gun_run(craft, target, priority, input, slot, friends, dt)
+					return input
+			else:
+				directive = Directive.RETURN
 		Directive.INTERCEPT:
-			if threat != null:
-				attack(craft, threat, INTERCEPT_RANGE_M, 0, input, slot)
+			if threat != null and role != &"bomber" and role != &"recon":
+				attack(craft, threat, INTERCEPT_RANGE_M, 0, input, slot, friends)
 				return input
 			directive = Directive.ESCORT
 		Directive.RECON:
@@ -175,8 +329,8 @@ static func command(craft: ShipState, directive: Directive, carrier: ShipState, 
 	if directive == Directive.ESCORT:
 		if carrier == null or not carrier.is_active():
 			return input
-		if threat != null and threat.position.distance_to(carrier.position) < ESCORT_ENGAGE_M:
-			attack(craft, threat, INTERCEPT_RANGE_M, 0, input)
+		if threat != null and threat.position.distance_to(carrier.position) < ESCORT_ENGAGE_M and role != &"recon":
+			attack(craft, threat, INTERCEPT_RANGE_M, 0, input, slot, friends)
 			return input
 		var station := carrier.position + carrier.orientation * escort_offset(slot)
 		steer(craft, station, carrier.velocity, input)

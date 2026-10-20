@@ -70,6 +70,13 @@ func _run() -> void:
 	root.add_child(yard)
 	current_scene = yard
 	await _frames(3)
+	# The yard opens on the station page; the builder is the REFIT section.
+	_check(yard.sections.current == "STATION" and yard.sections.pages.size() == ShipyardSections.SECTIONS.size()
+		and yard.sections.station_label.get_parsed_text().contains("CREDITS"),
+		"the shipyard opens on its STATION page, %d sections" % yard.sections.pages.size())
+	yard.show_section("REFIT")
+	await _frames(2)
+	_check(yard.deck_editor.is_visible_in_tree() and not yard.sections.pages["STATION"].visible, "REFIT shows the builder")
 
 	var ed := yard.editor
 	_check(ed.blueprint.name == "Frigate Mk I" and ed.report.issues.is_empty(), "shipyard opens on the Frigate Mk I template with no issues")
@@ -93,9 +100,9 @@ func _run() -> void:
 	var weapons := PackedStringArray()
 	for i in yard.palette_list.item_count:
 		weapons.append(yard.palette_list.get_item_text(i))
-	_check(weapons.size() == 8 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Point-defence")
-		and " ".join(weapons).contains("Missile rack"),
-		"the Weapons category lists the guns, point defence and launchers: %s" % ", ".join(weapons))
+	_check(weapons.size() == 10 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Point-defence")
+		and " ".join(weapons).contains("Missile rack") and " ".join(weapons).contains("Flare launcher") and " ".join(weapons).contains("EW jammer"),
+		"the Weapons category lists the guns, point defence, launchers and countermeasures: %s" % ", ".join(weapons))
 	yard.palette_list.select(0)
 	yard.palette_list.item_selected.emit(0)
 	_check(yard.tool == Shipyard.Tool.PLACE and yard.place_kind == "equipment", "picking from the list arms the place tool")
@@ -226,9 +233,52 @@ func _run() -> void:
 		_check(back != null and back.editor.blueprint.name == "Smoke Test Frigate", "B in flight reopens the shipyard with the flown design")
 		_check(back != null and (back.get_node("Margin/VBox/TopBar/Title") as Label).text == "LUNAR SHIPYARD",
 			"the jump drive brought it to the Lunar Shipyard")
+		if back != null:
+			await _dealer_and_services(back)
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	print("smoke_shipyard: %d failure(s)" % _failures.size())
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + PlayerProfile.BACKUP_SUFFIX))
 	quit(1 if not _failures.is_empty() else 0)
+
+
+## The station's other sections, through their buttons: the DEALER sells a
+## Cutter (crew included), the HANGAR scraps it, the ARMOURY rearms.
+func _dealer_and_services(yard: Shipyard) -> void:
+	var p := yard.profile
+	yard.show_section("DEALER")
+	await _frames(2)
+	var cutter_path := ""
+	for path: String in yard.sections.dealer_rows:
+		if path.contains("cutter"):
+			cutter_path = path
+	var price := ServiceYard.dealer_price(BlueprintIO.load_file(cutter_path, PackedStringArray()), yard.editor.catalog)
+	p.credits = int(price.total) + 50
+	yard.sections.refresh()
+	var buy: Button = yard.sections.dealer_rows[cutter_path]
+	var ships := p.vessels.size()
+	_check(not buy.disabled and buy.text.contains(str(price.total)), "the dealer offers the Cutter at %d cr (%s)" % [price.total, buy.text])
+	buy.pressed.emit()
+	await _frames(2)
+	_check(p.vessels.size() == ships + 1 and p.vessel.blueprint.name == "Cutter Mk I" and p.credits == 50 and yard.sections.current == "HANGAR",
+		"bought: the Cutter is the active vessel, paid in full, and the hangar shows it")
+	var parts := p.spare_parts
+	yard.sections.refresh()
+	yard.sections.scrap_button.pressed.emit()
+	await _frames(2)
+	_check(p.vessels.size() == ships and p.spare_parts > parts, "scrapped for %d spare parts" % (p.spare_parts - parts))
+	yard.show_section("MISSIONS")
+	await _frames(2)
+	var offer: Dictionary = p.board[0]
+	(yard.sections.accept_buttons[str(offer.id)] as Button).pressed.emit()
+	await _frames(2)
+	_check(p.active_contract.get("id", "") == offer.id and p.location == offer.location and p.encounter_size == int(offer.ships),
+		"MISSIONS: accepting %s sets the next sortie (%s, %d ships)" % [offer.title, p.location, p.encounter_size])
+	yard.sections.abandon_button.pressed.emit()
+	await _frames(2)
+	_check(p.active_contract.is_empty(), "and it can be abandoned")
+	yard.show_section("ARMOURY")
+	await _frames(2)
+	_check(yard.sections.armoury_label.get_parsed_text().contains("PROPELLANT") and yard.sections.resupply_button.is_visible_in_tree(),
+		"the ARMOURY lists what needs restocking")

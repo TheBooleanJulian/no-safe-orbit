@@ -5,8 +5,13 @@ extends MultiMeshInstance3D
 ## pixels wide out to NEAR_M; further out they shrink and dim (to FAR_SCALE)
 ## so a distant exchange reads as distant. Read-only view of
 ## WorldSimulation rounds.
+##
+## Up to MAX_TRACERS are drawn, incoming rounds first (those not fired by
+## the viewer's side): a ship with a dozen point-defence mounts can have
+## more than a thousand of its own rounds out, and the round about to hit
+## it must never be the one left undrawn.
 
-const MAX_TRACERS := 512
+const MAX_TRACERS := 4096
 ## Minimum tracer width (m) and growth per metre of camera distance
 ## (≈3 px at 70° FOV / 900 px, before glow).
 const BASE_WIDTH_M := 0.5
@@ -70,18 +75,21 @@ func _ready() -> void:
 	add_child(_sparks)
 
 
+## `camera_position`: render space. `own`: shooter ids on the viewer's side
+## (drawn after everyone else's when there are more rounds than tracers).
 func sync(rounds: Array[ProjectileState], alpha: float, render_origin: Vector3,
-		viewer_velocity: Vector3, camera: Camera3D) -> void:
+		viewer_velocity: Vector3, camera_position: Vector3, own: Dictionary = {}) -> void:
+	var ordered := draw_order(rounds, own)
 	var tracers := 0
 	var sparks := 0
-	for shot in rounds:
+	for shot in ordered:
 		if tracers >= MAX_TRACERS or sparks >= MAX_TRACERS:
 			break
 		var pos := shot.interpolated_position(alpha) - render_origin
 		var rel_v := shot.velocity - viewer_velocity
 		var dir := rel_v.normalized() if rel_v.length() > 1.0 else Vector3.FORWARD
 		var up := Vector3.RIGHT if absf(dir.y) > 0.98 else Vector3.UP
-		var dist := camera.global_position.distance_to(pos)
+		var dist := camera_position.distance_to(pos)
 		var far := clampf(NEAR_M / maxf(dist, 1.0), FAR_SCALE, 1.0)
 		var width := maxf(BASE_WIDTH_M, dist * WIDTH_PER_M) * far
 		var length := clampf(rel_v.length() * 0.012, 4.0, 30.0) * far + width * 6.0
@@ -98,3 +106,26 @@ func sync(rounds: Array[ProjectileState], alpha: float, render_origin: Vector3,
 		tracers += 1
 	multimesh.visible_instance_count = tracers
 	_sparks.multimesh.visible_instance_count = sparks
+	drawn = tracers + sparks
+
+
+## Rounds drawn by the last sync (tracers and ricochet sparks).
+var drawn := 0
+
+
+## The rounds to draw, at most MAX_TRACERS: everyone else's before those of
+## `own` (shooter ids) when there are more rounds than tracers.
+static func draw_order(rounds: Array[ProjectileState], own: Dictionary) -> Array[ProjectileState]:
+	var out: Array[ProjectileState] = []
+	if rounds.size() <= MAX_TRACERS or own.is_empty():
+		out = rounds.slice(0, MAX_TRACERS)
+		return out
+	for shot in rounds:
+		if not own.has(shot.shooter_id):
+			out.append(shot)
+	for shot in rounds:
+		if out.size() >= MAX_TRACERS:
+			break
+		if own.has(shot.shooter_id):
+			out.append(shot)
+	return out.slice(0, MAX_TRACERS)

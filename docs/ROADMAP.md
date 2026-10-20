@@ -438,7 +438,19 @@ brokers, contracts, Mars and per-station stock stay in Milestone 13.
 | Earth unchanged by the generalised frame | `test_locations` (old reference values), `test_celestial` | identical to 1e-6 |
 | Save format: schema 7, migration, backup | `test_locations`, `build/compat_check.gd` | v6 → Earth, 1 ship, `.v6` kept; COMPAT: OK |
 
-### Pass A — alerts and audio (refined at the start of its session)
+### Pass A — alerts and audio ✅ (2026-10-20)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Fixed grammar: noun, one value, direction, key chip; length limit | `test_pass_a` (grammar; every HUD alert) | ≤ 26 characters, e.g. `MSL 2.4km 002`, `RND 0.4s 330 [R]` |
+| ≤ 3 visible, deduplicated, priority | `test_pass_a` (priority, dedupe) | danger › caution › advisory, then threat › damage › systems › nav › info |
+| Hysteresis, escalation, auto-clear, acknowledge | `test_pass_a` (hysteresis, acknowledge) | clears 0.8 s after its condition; up at once, down after 1 s; [.] hides a non-danger until it clears or escalates |
+| Every alert has a clear condition | `test_pass_a` (prop, round, scram, fire, jump appear and clear) | all appear and clear |
+| A sound per class; samples on buses with ducking | `test_pass_a` (sounds) | 5 alarm classes; 17 slots from samples; alarms duck effects and ambience by 9 dB |
+| Screen-edge threat indicator; damage-map flash; persistent status | render review (`build/screens/alerts_*.png`), smoke_main | chevrons on/at the edge, `STATUS RCT ■ BRCH ■ FIRE ■ VENT ■` |
+| CC0 audio, verified, budget | `data/ATTRIBUTION.md`, `test_pass_a` | Kenney CC0 packs (licence file in each), 21 files, 641 kB |
+
+Original brief:
 
 - Audit every HUD alert string; a fixed grammar replaces sentences: shape or
   icon, short noun, one value, direction where relevant, a key chip (e.g.
@@ -455,26 +467,88 @@ brokers, contracts, Mars and per-station stock stay in Milestone 13.
 - Tests: length limit, priority order, dedupe, hysteresis, every alert has
   a sound and a clear condition.
 
-### Milestone 11 — countermeasures and electronic warfare
+### Milestone 11 — countermeasures and electronic warfare ✅ (2026-10-20)
 
 Decoy launcher; missile seekers choose by signature and lose lock under
 jamming; jamming degrades sensor-track confidence; hardened masts and
 burn-through at close range as counterplay; an EW drone. Deterministic,
-seeded tests for decoys and jamming.
+seeded tests for decoys and jamming. (Play-test: "on top of PD for missile
+defence, implement flares".)
 
-### Milestone 12 — shipyard overhaul, ship dealer, economy
+| Requirement | Test | Measured |
+|---|---|---|
+| Decoy (flare) launcher, flares that fan out and burn out | `test_m11_countermeasures` (launching) | 3 a launch, 1.5 s cycle, 6 s burn |
+| Seekers choose by signature; discrimination; seeded | `test_m11` (odds, on-time, too early; seduction mutation-checked) | p = 0.71 fresh flare vs frigate; flares 3.5 s out: decoyed, unhurt; 14 s out: hit; same result twice |
+| Jamming degrades tracks; burn-through; hardened mast | `test_m11` (tracks) | 8 km: confidence 0.81 → 0.20, lock lost; 2.5 km: no effect; hardened mast keeps the lock |
+| Missiles lose lock under jamming | `test_m11` (locks) | 5/8 at 9 km against a jammer, 0/8 without |
+| EW drone | `test_m11` (drone) | covers its carrier within 3 km, not at 5 km |
+| Policy, AI, yard | `test_m11` (policy, restock) | auto-flares ≤ 4 s (Defensive/Standard/Aggressive), enemies from mission 3, 1 cr a flare |
+
+### Milestone 12 — shipyard overhaul, ship dealer, economy ✅ (2026-10-20)
 
 Shipyard submenus (Dealer, Hangar, Crew, Armoury for rearm and refuel,
 Repairs, Tech, Loot tables). Every template, incl. Cutter, Corvette and
 Frigate Mk I, purchasable for credits: price from parts plus hull with a
 markup; no buy-then-scrap arbitrage (tested). Crew bought with credits.
+Play-test: "the shipyard UI still is mainly the builder with the other
+subparts as afterthought"; "add missions NPC in shipyard"; "add capital
+class ships in ship dealership".
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Sections, the builder one of them; the station page first | `smoke_shipyard` (opens on STATION, 11 sections, REFIT shows the builder), render review | STATION · MISSIONS · DEALER · HANGAR · REFIT · CREW · ARMOURY · REPAIRS · UPGRADES · MAP · LOOT |
+| Every template for credits, crew included | `test_m12_shipyard` (for sale, buying), `smoke_shipyard` (BUY button) | Cutter 947 · Corvette 1,621 · Frigate 2,482 · Destroyer 5,243 · Cruiser 11,847 · Carrier 11,959 cr |
+| No buy-then-scrap (or scrap-and-recommission) arbitrage | `test_m12_shipyard` (every template) | scrap = 50 % of parts, worth < half the price |
+| Rearm and refuel | `smoke_shipyard` (ARMOURY) | explicit button, or at launch as before |
+| Mission givers (contracts; from M13) | `test_m12_shipyard` (board), `smoke_shipyard` (accept, abandon) | 4 seeded offers from 5 NPCs; accepting sets location, ships, threat; pays and leaves the chain alone |
+| Capital templates (from M15), standard parts, no spawn hitch | `test_m12_shipyard` (capital), `tools/make_capital_templates.gd`, `tools/bench_hull.gd` | 960 / 2,169 / 1,954 t, validate clean, compile 6–14 ms (crew roster was ~90 ms on a 300-module hull, now 10.6 ms) |
+| Save format | `test_m12_shipyard` (schema 8), `compat_check` | v7 → v8 keeps `.v7`; COMPAT: OK |
+
+### Steam release preparation ✅ (2026-10-20)
+
+Play-test request: "prepare game for publishing on steam, under
+TheBooleanJulian". No Steamworks SDK (a separate decision); uploading
+and the store page need the account and are listed in `docs/STEAM.md`.
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Version and publisher on the executables; Windows and Linux presets | `test_release` | 0.12.0 · TheBooleanJulian · both presets export a 16.9 MB pack |
+| Credits and every licence, in game and beside the executable | `test_release` (every `data/ATTRIBUTION.md` row credited), render review | 90 kB of notices; 102 engine components |
+| UI at Steam Deck and high resolutions | render review (1280 × 800, 2560 × 1440) | `canvas_items` stretch from 1600 × 900; markers aligned |
+| Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
+| Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
 ### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts
 
 Done early (play-test batch 3): `Location` resource, Earth and Moon with
 per-body config and NASA textures, the shipyard map, known locations in the
-profile. Still to do: Mars, shipyard stock and prices and an encounter table
-per location, jump costs, brokers, contracts, sun-centred precision.
+profile. Done early (Milestone 12): the contract board.
+
+Part 1 ✅ (2026-10-20) — jump fuel, per-station shelves and traffic:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Jumps cost propellant by mass and distance (data-driven) | `test_m13_jumps` (cost) | Frigate 618 t: home 4.9 t, Earth→Moon 33.7 t |
+| Main tank first, then a jump-only reserve | `test_m13_jumps` (pay, relocation; mutation-checked) | 20 t + 20 t → 0 t + 9.5 t after the Moon jump |
+| Unaffordable jumps refused with a reason | `test_m13_jumps` (map, contract) | "burns 28.9 t; tanks 10.0 t, reserve 2.0 t — refuel (88 cr)" |
+| Stranded fallback; emergency jump still works | `smoke_campaign` (dry tanks) | rescue tow 412 cr; jump home burned 4.9 t as quoted |
+| Station stock, prices, encounter table | `test_m13_jumps` (shelves, traffic) | Moon: 4 items ≤ rare, ×1.2, crew fees 400 → 480 cr; corvettes and frigates, threat +1 |
+| Save format | `test_m13_jumps` (schema 9), `compat_check` | v8 → full reserve, `.v8` kept; COMPAT: OK |
+
+Part 2 ✅ (2026-10-20) — Mars, brokers, Sun-centred positions:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Mars: per-body config, public-domain texture with its licence recorded, size controlled | `test_m13_mars` (place), render review, `data/ATTRIBUTION.md` | 3407 m/s, 113.4 min at 300 km; entry 125 km; USGS/NASA mosaic 4096 × 2048, 2.2 MB |
+| Sun-centred positions, real orbital data | `test_m13_mars` (published approaches, perihelion/aphelion, Sun vs Almanac) | 57.58 / 62.07 / 96.09 Mkm (NASA 57.59 / 62.07 / 96.08); 1.381–1.666 AU; Sun differs by precession only |
+| `Vec3d` precision proven | `test_m13_mars` (doubles) | ship at Mars: 0 m with doubles, 1,868 m with Vector3 |
+| Mars has its own Sun | `test_m13_mars` (mutation-checked) | 68.3° from Earth's on the scenario date |
+| Brokers sell locations (decision 3) | `test_m13_mars` (brokers, mutation-checked), render review | Mars 1,500 cr; contracts follow; saved |
+| Jumps pay the real distance | `test_m13_mars`, `test_m13_jumps` | Earth→Mars 229 Mkm: 64.6 t; Earth→Moon 400,985 km: 33.9 t |
+| Local traffic and shelves | `test_m13_mars` | destroyers among frigates, threat +2; 5 items ≤ epic ×1.5 |
+
+Not done: delivery and retrieve contracts (the board has bounty, capture,
+escort, defend and salvage).
 
 `Location` resource (body, start orbit, shipyard stock and prices,
 encounter table, broker). Per-body config (μ, radius, entry interface:
@@ -497,6 +571,26 @@ the ISS, Hubble and similar. Lore-first rewards. Lagrange-point objects
 become re-salvageable and break up over time.
 
 ### Milestone 15 — fleet depth
+
+Done early (Milestone 12): the capital templates (Destroyer, Cruiser,
+Carrier, generated by `tools/make_capital_templates.gd`) in the dealer; the
+crew-roster spawn hitch fixed.
+
+Done early (play-test batch 5, 2026-10-20): the interceptor and bomber as
+data with their own racks and AI roles, the EW drone's station-keeping,
+friendly-fire safety (clear shot + IFF) and craft separation.
+
+| Requirement | Test | Measured |
+|---|---|---|
+| No friendly fire between craft | `test_combat_ai` (clear shot, IFF; both mutation-checked) | hold with a friend in line; moved 80 m aside: fire; IFF round passes a friend |
+| Craft keep apart | `test_combat_ai` (escorts) | closest pair 73 m over 60 s |
+| Interceptor vs missile | `test_combat_ai` | the Hornet shoots a missile aimed at its carrier down |
+| Bomber from long range; EW station | `test_combat_ai` | bomber fires at 3.0 km; EW drone 1,212 m out, 0° off the threat line |
+| Ramming worse for the lighter ship | `test_combat_ai` | 8 m/s: Cutter −35.5 % (2 modules), Destroyer −0.9 % |
+| Auto flares only once armed | `test_combat_ai` (mutation-checked) | armed at 1.5 s; flares due at 4.0 s out |
+
+Still to do: repair and salvage drones; hangar capacity, crew complement
+and PD coverage that scale with hull size.
 
 More craft as data (interceptor, bomber, repair and salvage drones, EW
 drone); capital templates (destroyer, cruiser, carrier) in the dealer, only

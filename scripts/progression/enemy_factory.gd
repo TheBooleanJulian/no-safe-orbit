@@ -19,6 +19,10 @@ extends RefCounted
 
 const MISSILE_RACK_FROM_MISSION := 4
 const EMP_LAUNCHER_FROM_MISSION := 6
+## Countermeasures (Milestone 11): flares from mission 3, a jammer on some
+## ships from mission 6.
+const FLARES_FROM_MISSION := 3
+const JAMMER_FROM_MISSION := 6
 
 const CLASS_NAMES := ["Kestrel", "Harrier", "Shrike", "Goshawk", "Peregrine", "Merlin", "Hobby", "Saker"]
 
@@ -45,6 +49,8 @@ static func policy(mission: int, index: int) -> ShipPolicy:
 	p.salvo_min_range_m = 1500.0
 	p.salvo_max_range_m = 15000.0 if p.role == ShipPolicy.Role.STANDOFF else 12000.0
 	p.salvo_interval_s = 25.0
+	p.cm_auto = true
+	p.cm_lead_s = 3.5
 	return p
 
 
@@ -54,7 +60,7 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7919 * mission + 17 + 104_729 * variant
 	var bp := template.duplicate_blueprint()
-	bp.name = "%s-class frigate" % CLASS_NAMES[(mission - 1 + variant) % CLASS_NAMES.size()]
+	bp.name = "%s-class %s" % [CLASS_NAMES[(mission - 1 + variant) % CLASS_NAMES.size()], template.name.split(" ")[0].to_lower()]
 	var m := float(mission)
 	for e in bp.equipment:
 		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
@@ -70,10 +76,21 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 			EquipmentDefinition.Kind.REACTOR:
 				if mission >= 3 and rng.randf() < minf(0.08 * m, 0.4):
 					e.def_id = &"fusion_reactor_mk2"
+			EquipmentDefinition.Kind.CRAFT_MOUNT:
+				# Fighter variety: interceptors in place of the recon drone
+				# from mission 5, bombers in the bay from mission 7.
+				if e.def_id == &"drone_rack" and mission >= 5 and rng.randf() < 0.5:
+					e.def_id = &"interceptor_rack"
+				elif e.def_id == &"fighter_bay" and mission >= 7 and rng.randf() < 0.5:
+					e.def_id = &"bomber_bay"
 	if mission >= MISSILE_RACK_FROM_MISSION:
 		_fit_launcher(bp, catalog, &"missile_rack", rng)
 	if mission >= EMP_LAUNCHER_FROM_MISSION and rng.randf() < 0.5:
 		_fit_launcher(bp, catalog, &"emp_launcher", rng)
+	if mission >= FLARES_FROM_MISSION:
+		_fit_launcher(bp, catalog, &"flare_launcher", rng)
+	if mission >= JAMMER_FROM_MISSION and rng.randf() < 0.4:
+		_fit_launcher(bp, catalog, &"jammer", rng)
 	if mission >= 2:
 		var grid := ShipGrid.build(bp, catalog)
 		var cells: Array = grid.module_at.keys()

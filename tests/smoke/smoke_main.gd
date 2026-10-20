@@ -172,7 +172,7 @@ func _run() -> void:
 	while player.hits_taken == 0 and main.world.sim_time - t0 < 40.0:
 		await process_frame
 	await process_frame
-	_check(player.hits_taken > 0 and main.hud.flight_label.text.contains("HIT TAKEN"),
+	_check(player.hits_taken > 0 and main.hud.alert_queue.has(&"hit"),
 		"hostile target hits the player and the HUD reports it (after %.1f s)" % (main.world.sim_time - t0))
 
 	# Panels and the damage-control drawer, through the real actions.
@@ -184,7 +184,7 @@ func _run() -> void:
 	player.systems.damage_equipment(player.systems.equipment_by_id("e28"), 50.0)
 	await process_frame
 	await process_frame
-	_check(main.hud.alert_subject == "e28" or main.hud.warning_label.text.contains("e28") or main.hud.flight_label.text.contains("e28"),
+	_check(main.hud.alert_subject == "e28" or main.hud.alert_queue.all_active().any(func(a: AlertQueue.Alert) -> bool: return a.subject == "e28"),
 		"a critical reactor raises an alert naming it")
 	_press_action("tactical_overview")
 	await process_frame
@@ -235,7 +235,8 @@ func _run() -> void:
 		await process_frame
 	_check(main.get_profile().missile_mode == MissileSalvo.Mode.ALL, "[,] cycles the missile modes round to 'all'")
 
-	# M: a salvo — the whole rack — at the locked target.
+	# M: a volley — one missile from each pod (here the one rack) — at the
+	# locked target; a second press fires the next.
 	_press_action("tactical_overview")
 	main.hud.selected_id = &""
 	var t_lock := main.world.sim_time
@@ -244,11 +245,14 @@ func _run() -> void:
 	_press_action("fire_missile")
 	await process_frame
 	await process_frame
-	_check(main.track.locked and main.salvo != null and main.hud.weapon_label.text.contains("MSL"),
-		"M starts a salvo at the locked target (strip: %s)" % main.hud.weapon_label.text.get_slice("\n", 0))
-	await _run_until_sim_time(main, 12 * ShipSystems.LAUNCHER_CYCLE_S + 1.0)
-	_check(main.salvo == null and player.systems.missiles_of() == 0 and main.combat_log.missiles_launched == 12,
-		"the salvo empties the rack (%d launched)" % main.combat_log.missiles_launched)
+	_check(main.track.locked and (main.salvo != null or main.combat_log.missiles_launched > 0) and main.hud.weapon_label.text.contains("MSL"),
+		"M fires a volley at the locked target (strip: %s)" % main.hud.weapon_label.text.get_slice("\n", 0))
+	await _run_until_sim_time(main, 1.0)
+	_check(main.salvo == null and player.systems.missiles_of() == 11 and main.combat_log.missiles_launched == 1,
+		"one press, one missile from the rack (%d launched, %d left)" % [main.combat_log.missiles_launched, player.systems.missiles_of()])
+	_press_action("fire_missile")
+	await _run_until_sim_time(main, 1.0)
+	_check(main.combat_log.missiles_launched == 2 and player.systems.missiles_of() == 10, "a second press fires the next")
 	Main.launch_blueprint = null
 
 	print("smoke: %d failure(s)" % _failures.size())

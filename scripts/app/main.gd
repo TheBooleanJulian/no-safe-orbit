@@ -29,13 +29,14 @@ const SUN_ENERGY := 1.4
 ## Moonlight (earthlight at the Moon) on ships: from the other body in the
 ## sky, by its phase (PlanetSky.sky_body_light); not drawn in the sky.
 var sky_light: DirectionalLight3D
+## Flares in flight (Milestone 11).
+var decoy_view: DecoyView
 @onready var stars: Starfield = $Starfield
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 var gangways := GangwayView.new()
 var audio := ShipAudio.new()
 var _rounds_heard := 0
-var _alert_heard := ""
 
 ## Design the player flies; set by the shipyard before it switches to this
 ## scene. Null = the default template. Only used to commission the first
@@ -117,6 +118,10 @@ const ENEMY_REBOARD_DELAY_S := 20.0
 ## How our crew defends against boarders (chosen in Tab → CREW).
 var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
 var _jump_hold := 0.0
+## The jump drive's reserve (kg): only jumps burn it (JumpDrive).
+var jump_reserve_kg := 0.0
+## SEQUENCE missile mode: which warhead the next press of M fires.
+var _sequence_index := 0
 var _craft_views: Dictionary = {}  # craft id -> CraftView
 var _missile_views: Dictionary = {}  # missile id -> MissileView
 ## The salvo M started, still firing (null when done).
@@ -157,6 +162,7 @@ static func get_profile() -> PlayerProfile:
 func _ready() -> void:
 	GameLog.hold(true)
 	InputBindings.apply_saved()
+	DisplaySettings.apply_saved()
 	gangways.name = "Gangways"
 	add_child(gangways)
 	audio.name = "Audio"
@@ -167,6 +173,9 @@ func _ready() -> void:
 	hud.celestial = celestial
 	hud.overview.command.connect(_on_overview_command)
 	hud.station_name = location.station_name
+	decoy_view = DecoyView.new()
+	decoy_view.name = "DecoyView"
+	add_child(decoy_view)
 	sky_light = DirectionalLight3D.new()
 	sky_light.name = "SkyBodyLight"
 	sky_light.light_color = PlanetSky.NIGHT_LIGHT_COLOR
@@ -222,6 +231,10 @@ func _start_scenario() -> void:
 		player.propellant_kg = minf(float(stores.get("propellant_kg", player.propellant_kg)), player.propellant_kg)
 		player.propellant_kg = minf(player.propellant_kg, _intact_tank_capacity(systems))
 		player.set_rounds(mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds))
+	var reserve_cap := JumpDrive.standard().reserve_capacity_kg(player.config.propellant_capacity_kg)
+	jump_reserve_kg = reserve_cap
+	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
+		jump_reserve_kg = minf(float(vessel.condition.get("stores", {}).get("jump_reserve_kg", reserve_cap)), reserve_cap)
 	player.attach_systems(systems)
 	world.add_ship(player)
 	player_wing = AirWing.for_ship(player)
@@ -238,6 +251,7 @@ func _start_scenario() -> void:
 		hud.debrief.visible = false
 
 	mission = MissionChain.from_dict(p.campaign)
+	mission.contract = p.active_contract.duplicate()
 	tutorial = Tutorial.from_dict(p.tutorial)
 	_salvaged = false
 	if mission.goal() == MissionChain.Goal.ESCORT:
@@ -259,6 +273,11 @@ func _start_scenario() -> void:
 ## ARRIVAL_DISTANCE_M out and closes; it must be detected before it engages.
 func _spawn_encounter(arriving: bool = false) -> void:
 	var mission_no := get_profile().missions_completed + 1
+	# A contract sets how dangerous the ships are (its threat level).
+	if not get_profile().active_contract.is_empty():
+		mission_no = maxi(int(get_profile().active_contract.get("threat", mission_no)), 1)
+	# Local traffic is tougher away from home (Location.threat_bonus).
+	mission_no += location.threat_bonus
 	for i in EnemyFactory.encounter_size(get_profile().encounter_size):
 		_spawn_contact(i, mission_no, arriving)
 	encounter.ensure_selection(world)
@@ -269,7 +288,12 @@ func _spawn_encounter(arriving: bool = false) -> void:
 func _spawn_contact(index: int, mission_no: int, arriving: bool) -> Contact:
 	var id := StringName("target_%02d" % (index + 1))
 	var player := world.get_ship(PLAYER_ID)
-	var template := _load_template()
+	# The location's encounter table picks the hull (Location.enemy_template).
+	var errors := PackedStringArray()
+	var template := BlueprintIO.load_file("res://data/blueprints/" + location.enemy_template(mission_no, index), errors)
+	if template == null:
+		GameLog.error("main", "Enemy template failed to load (%s); using the default" % ", ".join(errors))
+		template = _load_template()
 	_designs[id] = _compile(EnemyFactory.design(mission_no, template, ConstructionCatalog.default_catalog(), index), template)
 	var class_name_word: String = (_designs[id].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
 	var offset: Vector3 = CONTACT_OFFSETS[index % CONTACT_OFFSETS.size()] * (1.0 + float(index / CONTACT_OFFSETS.size()))
@@ -383,6 +407,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event.is_action_pressed("restart_scenario"):
 		GameLog.info("main", "Scenario restarted")
+		# Docking first is a jump home: it is paid for like one.
+		var me := world.get_ship(PLAYER_ID)
+		if me != null and me.is_active() and not player_captured() and not _sortie_closed:
+			pay_jump_home(me)
 		close_sortie()
 		_start_scenario()
 		return
@@ -406,6 +434,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	elif event.is_action_pressed("missile_mode"):
 		cycle_missile_mode()
+	elif event.is_action_pressed("countermeasures"):
+		fire_countermeasures()
+	elif event.is_action_pressed("ack_alert"):
+		if hud.alert_queue.acknowledge():
+			audio.play("ack")
 		return
 	elif event.is_action_pressed("tutorial"):
 		toggle_tutorial()
@@ -461,6 +494,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	elif event.is_action_pressed("toggle_help"):
 		hud.toggle_help()
+		return
+	elif event.is_action_pressed("toggle_fullscreen"):
+		DisplaySettings.toggle_fullscreen()
 		return
 	elif event.is_action_pressed("toggle_controls"):
 		hud.controls.toggle()
@@ -534,17 +570,60 @@ func _apply_automation(input: ShipControlInput, player: ShipState, target: ShipS
 	var c := encounter.selected_contact()
 	if policy == null or c == null or hud.selected_id != &"":
 		return
-	input.fire = policy.trigger(input.fire, c.track.locked, c.hostile, aim_error_deg(player, target, input))
+	var fightable := is_fightable(target)
+	input.fire = policy.trigger(input.fire, c.track.locked, c.hostile, aim_error_deg(player, target, input), fightable)
 	# Auto-salvo at the selected contact (manual M, or a salvo in flight, comes first).
 	if salvo == null and target != null and target.is_active() and player.systems != null:
 		var range_m := player.position.distance_to(target.position)
-		if policy.salvo_due(c.track.locked, c.track.confidence, range_m, c.hostile, world.sim_time, _auto_salvo_at):
+		if policy.salvo_due(c.track.locked, c.track.confidence, range_m, c.hostile, world.sim_time, _auto_salvo_at, fightable):
 			_auto_salvo_at = world.sim_time + policy.salvo_interval_s
 			var s := MissileSalvo.start(PLAYER_ID, c.id, policy.salvo_mode, get_profile().missile_order, policy.salvo_count)
 			if s.available(player.systems) > 0:
 				salvo = s
 				hud.notice("AUTO-SALVO — %s ×%s at %s" % [MissileSalvo.mode_text(policy.salvo_mode, get_profile().missile_order),
 					str(policy.salvo_count) if policy.salvo_count > 0 else "all", target.display_name], world.sim_time)
+
+
+## Space: fire flares from every ready launcher (manual always works).
+func fire_countermeasures() -> String:
+	var why := world.launch_decoys(PLAYER_ID)
+	if why == "":
+		audio.play("launch", -8.0)
+	else:
+		hud.notice("FLARES: " + why, world.sim_time)
+	return why
+
+
+## Automatic flares by policy, for the player and every live contact: as
+## soon as an inbound missile is armed and within the policy's lead time.
+func _auto_countermeasures(player: ShipState) -> void:
+	var ships: Array[ShipState] = [player]
+	for c in encounter.live(world):
+		ships.append(world.get_ship(c.id))
+	for s in ships:
+		if s == null or not s.is_active() or s.derelict or s.policy == null or s.systems == null:
+			continue
+		var t := Hud.missile_inbound_time(world, s, true)
+		if s.policy.cm_due(t) and not s.systems.ready_decoy_launchers().is_empty():
+			world.launch_decoys(s.id)
+			if s == player:
+				audio.play("launch", -8.0)
+
+
+## Shooter ids on the player's side: the player and its craft (their rounds
+## are drawn after incoming ones when tracers run short).
+func _own_shooters() -> Dictionary:
+	var own := {PLAYER_ID: true}
+	for c in player_wing.crafts:
+		own[c.id] = true
+	return own
+
+
+## Still a fighting ship (for automation): active, not a derelict, not
+## disabled. Wrecks and beaten hulls are left for salvage.
+static func is_fightable(ship: ShipState) -> bool:
+	return ship != null and ship.is_active() and not ship.derelict \
+		and (ship.systems == null or ship.systems.disabled_reason() == "")
 
 
 ## Zooming in: swing the camera to look at the aim point and put the cursor
@@ -671,7 +750,7 @@ func close_sortie() -> void:
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
 		var after := player.systems.condition()
 		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds,
-			"missiles": player.systems.missile_count()}
+			"missiles": player.systems.missile_count(), "jump_reserve_kg": jump_reserve_kg}
 		lines.append_array(p.dock(after, catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	for line in lines:
@@ -933,6 +1012,37 @@ func jump_waiting() -> PackedStringArray:
 	return out
 
 
+## Propellant (kg) the jump home to the location's station costs now (the
+## base cost: no distance within a location).
+func jump_home_cost_kg(player: ShipState) -> float:
+	return JumpDrive.standard().cost_kg(player.mass_kg() + jump_reserve_kg, 0.0)
+
+
+## Pay for the jump home: the main tank, then the reserve; if they can't
+## cover it, a rescue tow brings the ship in for credits (all there are, if
+## fewer) — the ship is never stranded. Returns the log line.
+func pay_jump_home(player: ShipState) -> String:
+	var drive := JumpDrive.standard()
+	var cost := jump_home_cost_kg(player)
+	var paid := JumpDrive.pay(player.propellant_kg, jump_reserve_kg, cost)
+	var line := ""
+	if paid.ok:
+		player.propellant_kg = paid.main_kg
+		jump_reserve_kg = paid.reserve_kg
+		line = "Jump drive burned %s of propellant" % JumpDrive.tonnes(cost)
+	else:
+		var p := get_profile()
+		var fee := drive.tow_credits(player.mass_kg() + jump_reserve_kg)
+		var charged := mini(fee, p.credits)
+		p.credits -= charged
+		line = "Not enough propellant to jump (%s needed) — a rescue tow brought the ship in for %d credits%s" % [
+			JumpDrive.tonnes(cost), charged, " (all you had)" if charged < fee else ""]
+	if combat_log != null:
+		combat_log.record(world.sim_time, "jump", line)
+	GameLog.info("main", line)
+	return line
+
+
 ## Hold [B]: the dimensional jump drive charges for JUMP_HOLD_S and takes the
 ## ship home to Earth Shipyard. Not while a hostile is firing on us. Craft
 ## and boarders still out are left behind (an emergency jump — the countdown
@@ -947,9 +1057,14 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 		else:
 			_jump_hold = minf(_jump_hold + delta, JUMP_HOLD_S)
 			var waiting := jump_waiting()
-			state = {"progress": _jump_hold / JUMP_HOLD_S, "left_s": JUMP_HOLD_S - _jump_hold, "waiting": waiting}
+			var cost := jump_home_cost_kg(player)
+			state = {"progress": _jump_hold / JUMP_HOLD_S, "left_s": JUMP_HOLD_S - _jump_hold, "waiting": waiting,
+				"cost_kg": cost}
+			if not JumpDrive.pay(player.propellant_kg, jump_reserve_kg, cost).ok:
+				state["tow"] = JumpDrive.standard().tow_credits(player.mass_kg() + jump_reserve_kg)
 			if _jump_hold >= JUMP_HOLD_S:
 				hud.jump_state = {}
+				pay_jump_home(player)
 				var vented := get_profile().vessel.vent_excess(player.systems.stats.cargo_m3, ConstructionCatalog.default_catalog()) \
 					if player.systems != null else PackedStringArray()
 				if not vented.is_empty():
@@ -1072,7 +1187,7 @@ func _update_tracks(player: ShipState, delta: float) -> void:
 		var target := world.get_ship(c.id)
 		if target == null:
 			continue
-		if c.track.update(player, target, world.sim_time, dt):
+		if c.track.update(player, target, world.sim_time, dt, world.jamming_of(target)):
 			var line := "CONTACT — %s detected at %.1f km" % [target.display_name, player.position.distance_to(target.position) / 1000.0]
 			hud.notice(line, world.sim_time)
 			combat_log.record(world.sim_time, "sensors", line)
@@ -1082,7 +1197,7 @@ func _update_tracks(player: ShipState, delta: float) -> void:
 				roundi(est.parts * c.track.scan_error), roundi(est.crates * c.track.scan_error), roundi(est.bounty * c.track.scan_error)]
 			hud.notice(line, world.sim_time)
 			combat_log.record(world.sim_time, "sensors", line)
-		c.their_track.update(target, player, world.sim_time, dt)
+		c.their_track.update(target, player, world.sim_time, dt, world.jamming_of(player))
 
 
 ## Each side's craft hunt the other side's craft in flight.
@@ -1187,10 +1302,10 @@ func _show_burst(burst: Dictionary, player: ShipState) -> void:
 			hit_flashes.add_burst(burst.ship_id, burst.point_body, burst.radius, Color(0.45, 0.7, 1.0, 0.9))
 			audio.play("detonation", lerpf(-18.0, -6.0, near))
 		MissileConfig.Warhead.NUCLEAR:
-			hit_flashes.add_explosion(burst.ship_id, burst.point_body, burst.radius)
+			hit_flashes.add_explosion(burst.ship_id, burst.point_body, burst.radius, true)
 			hud.flash_white()
 			audio.play("detonation", lerpf(-10.0, 0.0, near))
-			camera.shake(3.0 * near)
+			camera.shake(5.0 * clampf(1.0 - dist / 8000.0, 0.0, 1.0))
 		_:
 			if float(burst.radius) < ShipSystems.SMALL_BLAST_M:
 				hit_flashes.add_fireball(burst.ship_id, burst.point_body, burst.radius)
@@ -1266,13 +1381,13 @@ func fire_missile() -> String:
 	elif player.systems == null or player.systems.missiles_of() == 0:
 		why = "no missiles ready (launchers empty, offline or not fitted)"
 	else:
-		var s := MissileSalvo.start(PLAYER_ID, at, p.missile_mode, p.missile_order)
-		if s.available(player.systems) == 0:
+		var s := MissileSalvo.volley(PLAYER_ID, at, p.missile_mode, p.missile_order, player.systems, _sequence_index)
+		if s.volley_ids.is_empty():
 			why = "no %s missiles ready ([,] changes the missile mode)" % MissileSalvo.mode_text(p.missile_mode, p.missile_order)
 		else:
+			_sequence_index = s.next_sequence_index
 			salvo = s
-			hud.notice("MISSILES: salvo — %d %s at %s" % [s.available(player.systems), MissileSalvo.mode_text(p.missile_mode, p.missile_order),
-				world.get_ship(at).display_name], world.sim_time)
+			hud.notice("MSL ×%d → %s" % [s.volley_missiles(player.systems), world.get_ship(at).display_name], world.sim_time)
 			_step_salvo()
 	if why != "":
 		hud.notice("MISSILE: " + why, world.sim_time)
@@ -1542,6 +1657,8 @@ func _process(delta: float) -> void:
 	_update_goals(player)
 	_step_salvo()
 	_step_contact_salvos()
+	_auto_countermeasures(player)
+	hud.missile_chip = "[SPC]" if player.systems != null and player.systems.decoys_aboard() > 0 else ""
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
 	if (not player.is_active() or player_captured()) and not _sortie_closed:
@@ -1653,7 +1770,8 @@ func _process(delta: float) -> void:
 	_update_sky_light()
 	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
 		location.sky_body.radius_m if location.sky_body != null else 0.0)
-	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
+	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera.global_position, _own_shooters())
+	decoy_view.sync(world.decoys, render_origin, camera.global_position, world.sim_time)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track
@@ -1723,10 +1841,12 @@ func _update_audio(player: ShipState) -> void:
 	audio.set_engine(burn.x)
 	audio.set_rcs(burn.y)
 	audio.set_jump(float(hud.jump_state.progress) if hud.jump_state.has("progress") else -1.0)
-	var danger := hud.warning_label.text if hud.warning_label.visible and hud.top_alert_level == "danger" else ""
-	if danger != "" and danger.get_slice(" ", 1) != _alert_heard.get_slice(" ", 1):
-		audio.play("alert")
-	_alert_heard = danger
+	# A sound per alert class as alerts appear or escalate (caution and up;
+	# an advisory has its own sound already — the clang of a hit, the spool).
+	for a in hud.alert_queue.raised:
+		if a.level >= AlertQueue.Level.CAUTION and not a.acked:
+			audio.alarm(a.cls, a.level)
+			break
 
 
 ## Light from the other body in the sky onto ships: along its direction,

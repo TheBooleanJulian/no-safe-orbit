@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+[ext_resource type="Resource" path="res://data/craft/mantis_bomber.tres" id="2_craft"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"bomber_bay"
+display_name = "Bomber bay (Mantis)"
+kind = 7
+mount = 0
+footprint_cells = Vector2i(2, 2)
+allowed_room_roles = Array[StringName]([&"hangar"])
+allowed_faces = Array[StringName]([])
+mass_kg = 21000.0
+power_kw = -10.0
+heat_kw = 0.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+color = Color(0.5, 0.95, 0.9, 1)
+craft = ExtResource("2_craft")
+rarity = 1

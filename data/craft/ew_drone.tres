@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ShipConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/ship_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+display_name = "EW drone"
+mass_kg = 1500.0
+inertia_kgm2 = Vector3(2000, 2000, 600)
+unlimited_propellant = false
+propellant_capacity_kg = 900.0
+main_isp_s = 300.0
+rcs_isp_s = 250.0
+thrust_forward_n = 30000.0
+thrust_reverse_n = 8000.0
+thrust_lateral_n = 8000.0
+thrust_vertical_n = 8000.0
+max_torque_nm = Vector3(20000, 20000, 6000)
+assist_max_rate_rad_s = Vector3(1.5, 1.5, 2.0)
+hit_box_center = Vector3(0, 0, 0)
+hit_box_half_extents = Vector3(1, 0.6, 1.5)
+cannon_muzzles_body = PackedVector3Array()
+hull_hp = 10.0
+jam_strength = 0.8
+craft_role = &"ew"

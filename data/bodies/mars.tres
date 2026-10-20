@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="OrbitalBody" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/orbital_body.gd" id="1_body"]
+[ext_resource type="Texture2D" path="res://data/mars/mdim21_color_4k.jpg" id="2_map"]
+
+[resource]
+script = ExtResource("1_body")
+display_name = "Mars"
+mu_m3_s2 = 4.282837e13
+radius_m = 3389500.0
+entry_interface_altitude_m = 125000.0
+has_atmosphere = true
+pole_ra_deg = 317.269202
+pole_dec_deg = 54.432516
+prime_meridian_deg = 176.049863
+rotation_deg_per_day = 350.891982443297
+geometric_albedo = 0.17
+phase_law = &"lambert"
+ephemeris = &"mars"
+air_color = Color(0.86, 0.62, 0.42, 1)
+clouds_and_seas = false
+surface_map = ExtResource("2_map")

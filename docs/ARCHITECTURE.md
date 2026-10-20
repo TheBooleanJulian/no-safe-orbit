@@ -185,10 +185,115 @@ and the location's central body:
 - Shipyard HANGAR › MAP (`SystemMap`): click a body → `relocate`, save; three
   toggle buttons set the encounter size. The route button beside LAUNCH
   shows both and opens the tab.
+- **Jumps (Milestone 13)**: `JumpDrive` (data `data/jump/jump_drive.tres`):
+  `cost_kg(mass, distance)` = t × (base + per-decade × log10(1 + d / 1000 km));
+  `pay(main, reserve, cost)` takes the main tank first; `tow_credits(mass)`.
+  The reserve is `reserve_fraction` of the tankage, kept in the vessel's
+  `condition.stores.jump_reserve_kg` (schema 9) and in `Main.jump_reserve_kg`
+  during a sortie. `PlayerProfile.relocate(id, catalog)` charges the docked
+  vessel (`vessel_tanks`) or refuses with the refuel price;
+  `ContractBoard.accept` refuses when it does. `Main.pay_jump_home` charges
+  the B jump and an alive-ship restart, or tows (credits, floored at 0).
+  `ServiceYard.resupply_needs` includes `reserve_kg`.
+- **Sun-centred positions (Milestone 13 part 2)**: `CelestialFrame.KEPLER_ELEMENTS`
+  (Standish, 1800–2050, J2000 ecliptic) → `heliocentric_icrs(ephemeris, jd)`
+  as `Vec3d` (Earth = barycentre − Moon / 82.3; Moon = Earth + the lunar
+  series; Mars from its elements); `separation_m` for jump distances
+  (`Location.distance_m`, at `Main.SCENARIO_EPOCH_UTC`); `sun_direction_from`
+  (the Almanac's Sun for Earth and the Moon, unchanged; the elements
+  otherwise), used by `for_scenario` and `sun_direction_pci`.
+  `geocentric_icrs` covers Mars for completeness.
+- **Brokers**: `Location.broker_price/name/pitch`;
+  `PlayerProfile.brokers()` and `buy_location()` add to `known_locations`
+  (already saved, so no schema change). Shipyard MAP lists them.
+- **Bodies**: `OrbitalBody.air_color` and `clouds_and_seas` drive the sky
+  shader's `air_color`, `has_clouds` and `far_has_clouds` (clouds and sea
+  glint off on Mars).
+- **Per station** (`Location`): `vendor_stock_size`, `vendor_max_rarity`,
+  `price_factor` (quartermaster and hiring, applied in
+  `PlayerProfile.refresh_station`), `enemy_templates` / `enemy_weights`
+  (seeded per mission and slot by `enemy_template`) and `threat_bonus`
+  (added to the mission number in `Main._spawn_encounter`).
 - `Main` reads the location in `_ready`: central body and start orbit,
   celestial frame, sky (`PlanetSky.configure(body)`: radius, entry radius,
   air on/off, surface map), stars' occlusion, eclipse, station names (HUD
   `station_name`). `EnemyFactory.encounter_size(chosen)` clamps the pick.
+
+## The station (Milestone 12, 2026-10-20)
+
+- `ShipyardSections` turns the shipyard into a station: a rail of sections
+  over full-width pages. The builder's body is the REFIT page, and the
+  builder's top-bar controls and keys work only there. The old right-hand
+  tabs' pages were moved into their sections (SERVICE → REPAIRS, CARGO &
+  HISTORY → HANGAR, QUARTERMASTER → ARMOURY, …). New pages: STATION (3D
+  preview and status cards), MISSIONS, DEALER (a 3D preview per template)
+  and the fleet cards in HANGAR.
+- Economy (`ServiceYard`): `parts_value` (a whole ship's parts) feeds
+  `dealer_price`: (parts × 2.5 cr + hull fee) × 1.25, plus crew × hiring
+  fee. `scrap_value` is (parts − repairs) × 0.5 in spare parts.
+  `PlayerProfile.buy_ship` / `scrap_vessel` use them.
+- Contracts (`ContractBoard`): seeded offers (profile `board_seed`, sorties
+  flown) from five givers. `accept` sets `active_contract`, the location
+  and the encounter size. Main runs it through `MissionChain.contract`
+  (goal, brief, reward); `complete` pays and clears it without advancing
+  the chain. The contract's `threat` replaces the mission number for enemy
+  designs. Profile schema 8.
+- Capital templates are generated (`tools/make_capital_templates.gd`) and
+  written only when the validator finds nothing. `CrewRoster` indexes
+  rooms by role once per roster, making a 300-module hull's crew linear.
+
+## Countermeasures and EW (Milestone 11, 2026-10-20)
+
+- **Flares:** `WorldSimulation.decoys` holds flares as plain records (id,
+  side, owner, position, velocity, age, life, signature). They drift in
+  the local frame, ride rebases and burn out. `launch_decoys` fires every
+  ready `DECOY_LAUNCHER` once; flare use is kept in `missiles_used`, so it
+  saves, resupplies and prices with the missiles (`ServiceYard.FLARE_CREDITS`).
+- **Seekers** (`_update_seekers`, before guidance): a missile weighs each
+  enemy flare once, when the flare is inside its cone
+  (`MissileConfig.seeker_cone_deg`) and no further than 1.5 × its target.
+  The chance is `seduction_chance` = s_flare / (s_flare + s_ship ×
+  discrimination), with `signature_of` growing with mass^(1/3) and engine
+  burn. The roll is seeded by the (missile, flare) pair. A seduced missile
+  guides on the flare and bursts on it. When its flare burns out it
+  re-acquires the ship only inside its cone, else it is lost and
+  self-destructs 3 s later.
+- **Jamming:** `jamming_of(ship)` is the ship's working `JAMMER`s plus EW
+  craft of its side within `EW_ESCORT_M`. `jam_effect` is noise × (1 −
+  resist) × a 0 → 1 ramp from `BURN_THROUGH_M` to `JAM_FULL_M`. It feeds
+  two places:
+  - `SensorTrack.update(…, jamming)`: confidence × (1 − 0.75 × effect), no
+    lock under 0.45; the resist is the best mast's EMP hardening.
+  - Missiles: a seeded 10 % × effect chance a second to lose lock (the
+    resist is `MissileConfig.jam_resist`).
+- **Automation:** `ShipPolicy.cm_auto` / `cm_lead_s` (additive keys,
+  defaults from the preset). `Main._auto_countermeasures` runs them for the
+  player and every live contact; Space fires manually (`fire_countermeasures`).
+  `DecoyView` draws flares.
+
+## Alerts and audio (Pass A, 2026-10-20)
+
+- `Hud._alerts` reports every condition each frame as an `AlertQueue.Alert`:
+  key, class (threat, damage, systems, nav, info), level (advisory,
+  caution, danger), a noun, one value, a bearing, a key chip, the
+  system or room it is about, and a body-frame direction for threats.
+- `AlertQueue` (pure logic, tested) deduplicates by key and keeps an alert
+  up for 0.8 s after its condition clears. It raises a level at once and
+  lowers it after 1 s, and shows at most three, sorted by level, class and
+  age. Non-danger alerts can be acknowledged. `raised` lists new or
+  escalated alerts so Main can sound them (`ShipAudio.alarm`).
+- What the HUD does with them: the banner shows the visible alerts as
+  chips, and the attention line repeats a danger. The overlay draws
+  threat chevrons (`HudOverlay.threats`), and the damage map flashes the
+  top alert's subject (`ShipSchematic.alert_id`). The own-ship card's
+  STATUS line is computed directly (reactor, breaches, fires, vented
+  rooms).
+- `ShipAudio` takes samples from `data/audio` (CC0, in `SAMPLES` / `ALARMS`)
+  with synthesis as the per-slot fallback. It has three buses: Effects,
+  Alarms and Ambience. An alarm plays 1–3 blips by level and ducks Effects
+  and Ambience by 9 dB until 0.8 s after its last blip. Headless runs don't
+  play anything (the dummy driver never retires playbacks); every stream
+  is stopped and released on exit.
 
 ## Frame-time performance (2026-10-20)
 
@@ -372,7 +477,10 @@ bounding-box hit test.
   nose guns. Spread: the gun's own plus the ship AI's.
 - **Collisions** (`_step_collisions`): bounding spheres, then hull-cell
   probes; an impulse with restitution 0.2 along the centre line, a push
-  apart, and impact energy ½μv² shared by mass × local armour.
+  apart, and impact energy ½μv² shared by (mass × local armour)^1.5;
+  3 points per 100 kJ, 60 % to the nearest module, 40 % over the modules
+  within three cells (by distance), 60 % to external systems within two
+  cells.
 - **Hull blocks**: `HullModuleDefinition.shape` (box / wedge), `legacy`.
   Wedges are solid below a plane (`ShipGrid.wedge_contains`, normal
   `wedge_normal`); `Penetration._solid_span` finds where a ray actually
@@ -574,6 +682,17 @@ bounding-box hit test.
   conservative 0.6/0.4/0.3, balanced 0.35/0.25/0.1, aggressive 0.15/0.1/0.
 - **Inspection**: the target's systems show only within 3 km of the player
   or of a recon craft.
+- **Roles and pathing (play-test batch 5)**: `ShipConfig.craft_role`
+  (fighter / interceptor / bomber / recon / ew) picks the behaviour inside
+  `CraftAI.command`; `AirWing` passes the craft's friends (same side, or
+  its own carrier and wing when unaligned) and the enemy missiles.
+  Avoidance is a velocity term added to the steering goal (separation
+  70 m from craft, 120 m from hulls, gain 0.5, ≤ 60 m/s). Fire needs
+  `clear_shot` (no friend within 25 m of the line to the target's range);
+  craft rounds carry `ProjectileState.iff_side` and skip every ship of that
+  side, hulls included (missiles are not skipped). Gun runs keep their
+  phase in `ShipState.ai_state`. `CraftAI.ROLE_HELP`, `DIRECTIVE_HELP` and
+  `RISK_HELP` are the in-game text.
 
 ## Crew and boarding (Milestone 5)
 
@@ -663,7 +782,10 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 |---|---|---|
 | Spherical central body for gravity; no J2, no third bodies (no Earth pull in lunar orbit) | Orbits never precess | If missions need ground tracks or long-duration accuracy |
 | Airless bodies: the floor is a sphere at the highest terrain (11 km on the Moon), no terrain model | Flying low over a lunar plain is as fatal as hitting a summit | If low passes or landings are wanted |
-| Moving between stations is free and instant (shipyard map) | Location is a free choice | Milestone 13 (jump fuel, brokers) |
+| Jump distances are the real separations on the fixed scenario date; travel is instant | Each jump always costs the same | If the calendar advances between sorties |
+| Mars has no moons in its sky and no far body; sunlight is not dimmed with distance from the Sun (43 % at Mars) | Mars looks as bright as Earth; Phobos is never seen | If outer locations arrive |
+| Planet positions from Keplerian elements (arcminutes), precession ignored between the Almanac Sun (of date) and the J2000 stars and elements (0.37° by 2026) | Mars's Sun is placed to ~0.1°; Earth's Sun to ~0.4° against the stars | If an eclipse or occultation must be exact |
+| The jump reserve has no mass and no part of its own (a quarter of the tankage, beside it) | Bigger tanks mean a bigger reserve; the reserve never slows the ship | If tank design should trade reserve for range |
 | Reflected light is shown through a night-adaptation mapping (full Moon = 5 % of the Sun), not at its physical 2.4e-6; it isn't occluded by the near body's terrain or shadowed on hulls | Night is visible and readable | If an exposure/eye-adaptation model is wanted |
 | One far body per sky (the Moon from Earth, Earth from the Moon), placed by a low-precision lunar series (~0.3°); eclipses of the Sun by it are all-or-nothing; the Sun's direction is Earth's (≤ 0.15° off at the Moon) | Close enough to look right; no eclipse gameplay | If eclipses or more bodies matter |
 | Lunar rotation uses the IAU pole and W with only the largest periodic term (others ~0.3°) | Lunar geography is ~0.3° off | Not needed |
@@ -689,7 +811,8 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | One power junction per module; no batteries, breakers or cabling; fixed shedding order | Redundancy comes from reactors and module layout only | M4/M5 (repairs, rerouting) |
 | One thermal mass per ship; radiators can't retract | An idle ship settles at ~258 K; heat can't be stored locally | When heat sinks / radiator control arrive |
 | Missiles are small `ShipState`s with a hit box and hull points; guidance turns the nose directly at its turn rate (no airframe or torque model) | They fly and die like craft; their path is predictable | If missile manoeuvre detail matters |
-| No decoys, chaff or electronic warfare against missiles | Point defence, guns and range are the only counterplay | EW pass |
+| Flares are points with a scalar signature (no IR spectrum, no chaff/radar distinction); a seeker weighs each flare once, by a seeded roll | Countermeasures are predictable and testable; timing matters, spectrum doesn't | If seeker types multiply |
+| Jamming is one noise number per side (own jammers + EW drones within 3 km), linear from burn-through (3 km) to full (6 km); no frequency agility or home-on-jam | Jamming is a range game | If EW grows into a minigame |
 | Nuclear effects simplified: one dose number, armour as a divisor, ship-wide heat, no blast wave, no fallout or lasting radiation | A burst is a sharp, explainable event | If a strategic weapon needs more depth |
 | EMP exposure falls with the square of the distance; no line-of-sight shielding by other ships | A ship cannot hide behind another | Later |
 | Missions are a fixed chain of four goals, then patrols | Little variety after the chain | Campaign content (M13) |
@@ -697,6 +820,8 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Enemy roles are fixed by place in the encounter (closer, standoff, flanker); no coordinated manoeuvres | Encounters feel the same shape each time | Later AI work |
 | Point-defence flak: a round within 1.5 m of a heavy slug (≥ 2 kg, < 1.5 km/s closing) destroys it; small and fast rounds can't be tracked | Heavy-cannon fire can be thinned by PD; autocannon and railgun fire can't | If PD lasers or interceptors arrive |
 | Auto-fire judges the aim against the primary gun's lead only | Mixed batteries auto-fire on the primary gun's solution | Per-mount fire control |
+| Craft IFF is perfect: a craft's round never hits a ship of its own side, hulls included (the clear-shot check still holds fire so rounds aren't wasted on friends) | Craft can't hurt you or each other | If IFF failure is wanted as a mechanic |
+| Craft avoidance is a local velocity nudge (no path planning around hulls) | Craft can get pinned against a large hull for a moment | If carriers get very large |
 | The escort's courier is a craft-like hull (hull points, no systems) on a fixed drift | It can't evade or be repaired | If escorts become a mainstay |
 
 ## Testing

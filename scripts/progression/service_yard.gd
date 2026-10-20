@@ -41,6 +41,8 @@ const CATEGORY := {
 	EquipmentDefinition.Kind.GRAPPLE: &"hull",
 	EquipmentDefinition.Kind.CRAFT_MOUNT: &"combat",
 	EquipmentDefinition.Kind.MISSILE_LAUNCHER: &"combat",
+	EquipmentDefinition.Kind.DECOY_LAUNCHER: &"combat",
+	EquipmentDefinition.Kind.JAMMER: &"combat",
 }
 
 
@@ -61,6 +63,46 @@ class Job:
 
 # --- Costs ---------------------------------------------------------------------
 
+## A flare restocked at the yard (credits).
+const FLARE_CREDITS := 1
+## Ship dealer (Milestone 12): a ship's parts are valued at what spare parts
+## cost to buy (PlayerProfile.PARTS_LOT_PRICE / PARTS_LOT credits each), the
+## yard's hull fee added and DEALER_MARKUP on top; its standard crew are
+## hired at the usual fee. Scrapping a vessel returns SCRAP_RETURN of its
+## parts as spare parts — far below its price, so buying to scrap never pays.
+const DEALER_MARKUP := 1.25
+const SCRAP_RETURN := 0.5
+
+
+## Spare parts a whole ship to `bp` is worth (every part built new).
+static func parts_value(bp: ShipBlueprint, catalog: ConstructionCatalog) -> int:
+	var empty := ShipInstance.new()
+	empty.blueprint = ShipBlueprint.new()
+	return total_cost(refit_jobs(empty, bp, catalog))
+
+
+## Credits one spare part costs at the station.
+static func part_credits() -> float:
+	return float(PlayerProfile.PARTS_LOT_PRICE) / float(PlayerProfile.PARTS_LOT)
+
+
+## The dealer's price for a ship to `bp`, its standard crew hired: {ship,
+## crew, total, crew_count} credits.
+static func dealer_price(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Dictionary:
+	var ship := ceili((parts_value(bp, catalog) * part_credits() + PlayerProfile.NEW_HULL_FEE) * DEALER_MARKUP)
+	var grid := ShipGrid.build(bp, catalog)
+	var crew_count := CrewRoster.default_for(bp, grid, ShipStats.compute(bp, grid)).members.size()
+	var crew := crew_count * PlayerProfile.HIRE_FEE
+	return {"ship": ship, "crew": crew, "total": ship + crew, "crew_count": crew_count}
+
+
+## Spare parts scrapping `vessel` returns (its parts, less any damage).
+static func scrap_value(vessel: ShipInstance, catalog: ConstructionCatalog) -> int:
+	var parts := parts_value(vessel.blueprint, catalog)
+	var repairs := total_cost(repair_jobs(vessel, catalog))
+	return maxi(floori((parts - repairs) * SCRAP_RETURN), 0)
+
+
 static func equipment_cost(def: EquipmentDefinition) -> int:
 	var factor := RARE_FIT_FACTOR if def.rarity != Rarity.Tier.COMMON else 1.0
 	return maxi(ceili(def.mass_kg / 1000.0 * factor), 1)
@@ -79,19 +121,23 @@ const PROPELLANT_CREDITS_PER_T := 1.0
 const ROUNDS_PER_CREDIT := 10
 
 
-## Propellant (kg) and rounds the vessel used last sortie, and what topping
-## them up costs: {propellant_kg, rounds, credits}.
+## Propellant (kg) and rounds the vessel used last sortie (and the jump
+## drive's reserve spent), and what topping them up costs:
+## {propellant_kg, reserve_kg, rounds, missiles, missile_credits, credits}.
 static func resupply_needs(vessel: ShipInstance, catalog: ConstructionCatalog) -> Dictionary:
 	var missiles := missile_needs(vessel, catalog)
 	var stores: Dictionary = vessel.condition.get("stores", {})
 	if stores.is_empty():
-		return {"propellant_kg": 0.0, "rounds": 0, "missiles": missiles.count, "missile_credits": missiles.credits,
-			"credits": missiles.credits}
+		return {"propellant_kg": 0.0, "reserve_kg": 0.0, "rounds": 0, "missiles": missiles.count,
+			"missile_credits": missiles.credits, "credits": missiles.credits}
 	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
 	var prop := maxf(stats.propellant_capacity_kg - float(stores.get("propellant_kg", stats.propellant_capacity_kg)), 0.0)
+	var reserve_cap := JumpDrive.standard().reserve_capacity_kg(stats.propellant_capacity_kg)
+	var reserve := maxf(reserve_cap - float(stores.get("jump_reserve_kg", reserve_cap)), 0.0)
 	var rounds := maxi(stats.rounds_capacity - int(stores.get("rounds", stats.rounds_capacity)), 0)
-	return {"propellant_kg": prop, "rounds": rounds, "missiles": missiles.count, "missile_credits": missiles.credits,
-		"credits": ceili(prop / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds) / ROUNDS_PER_CREDIT - 1e-9) + missiles.credits}
+	return {"propellant_kg": prop, "reserve_kg": reserve, "rounds": rounds, "missiles": missiles.count,
+		"missile_credits": missiles.credits,
+		"credits": ceili((prop + reserve) / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds) / ROUNDS_PER_CREDIT - 1e-9) + missiles.credits}
 
 
 ## Missiles fired since the last restock: {count, credits, by_launcher
@@ -101,12 +147,13 @@ static func missile_needs(vessel: ShipInstance, catalog: ConstructionCatalog) ->
 	var out := {"count": 0, "credits": 0, "by_launcher": {}}
 	for e in vessel.blueprint.equipment:
 		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
-		if def == null or def.missile == null or int(fired.get(e.id, 0)) <= 0:
+		if def == null or (def.missile == null and def.kind != EquipmentDefinition.Kind.DECOY_LAUNCHER) or int(fired.get(e.id, 0)) <= 0:
 			continue
-		var n := mini(int(fired[e.id]), def.missile_capacity)
-		out.by_launcher[e.id] = [n, def.missile.unit_credits]
+		var n := mini(int(fired[e.id]), maxi(def.missile_capacity, def.decoy_capacity))
+		var unit := def.missile.unit_credits if def.missile != null else FLARE_CREDITS
+		out.by_launcher[e.id] = [n, unit]
 		out.count += n
-		out.credits += n * def.missile.unit_credits
+		out.credits += n * unit
 	return out
 
 
@@ -122,15 +169,17 @@ static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: Cons
 		profile.credits -= int(need.credits)
 		vessel.condition.erase("stores")
 		vessel.condition.erase("missiles_used")
-		var line := "Resupplied %.1f t propellant and %d rounds%s for %d credits" % [need.propellant_kg / 1000.0, need.rounds,
+		var line := "Resupplied %.1f t propellant and %d rounds%s for %d credits" % [(need.propellant_kg + need.reserve_kg) / 1000.0, need.rounds,
 			" and %d missile%s" % [need.missiles, "" if need.missiles == 1 else "s"] if need.missiles > 0 else "", need.credits]
 		vessel.record(line)
 		return line
-	# Short of credits: as much propellant, then as many rounds, then as many
-	# missiles, as they buy.
+	# Short of credits: as much propellant (the main tank, then the jump
+	# reserve), then as many rounds, then as many missiles, as they buy.
 	var budget := float(profile.credits)
 	var kg := minf(float(need.propellant_kg), budget / PROPELLANT_CREDITS_PER_T * 1000.0)
 	budget -= ceilf(kg / 1000.0 * PROPELLANT_CREDITS_PER_T)
+	var reserve_kg := minf(float(need.reserve_kg), maxf(budget, 0.0) / PROPELLANT_CREDITS_PER_T * 1000.0)
+	budget -= ceilf(reserve_kg / 1000.0 * PROPELLANT_CREDITS_PER_T)
 	var rounds := mini(int(need.rounds), int(maxf(budget, 0.0)) * ROUNDS_PER_CREDIT)
 	budget -= ceilf(float(rounds) / ROUNDS_PER_CREDIT)
 	var stocked := 0
@@ -149,8 +198,10 @@ static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: Cons
 	if vessel.condition.has("stores"):
 		var stores: Dictionary = vessel.condition.stores
 		stores["propellant_kg"] = float(stores.get("propellant_kg", 0.0)) + kg
+		if stores.has("jump_reserve_kg"):
+			stores["jump_reserve_kg"] = float(stores.jump_reserve_kg) + reserve_kg
 		stores["rounds"] = int(stores.get("rounds", 0)) + rounds
-	var line := "Partly resupplied (credits short): %.1f t propellant, %d rounds, %d missiles" % [kg / 1000.0, rounds, stocked]
+	var line := "Partly resupplied (credits short): %.1f t propellant, %d rounds, %d missiles" % [(kg + reserve_kg) / 1000.0, rounds, stocked]
 	vessel.record(line)
 	return line
 

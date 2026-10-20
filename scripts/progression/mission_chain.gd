@@ -29,6 +29,9 @@ const PATROL := {"goal": Goal.PATROL, "title": "Patrol",
 const COURIER_HULL_HP := 1500.0
 
 var step: int = 0
+## An accepted contract (ContractBoard) runs instead of the chain's goal:
+## its goal, brief and reward; completing it doesn't move the chain on.
+var contract: Dictionary = {}
 ## This sortie: contacts beaten so far, and why the goal failed ("" = it hasn't).
 var waves_beaten: int = 0
 var failed: String = ""
@@ -45,6 +48,8 @@ func to_dict() -> Dictionary:
 
 
 func current() -> Dictionary:
+	if not contract.is_empty():
+		return contract
 	return CHAIN[step] if step < CHAIN.size() else PATROL
 
 
@@ -54,6 +59,8 @@ func goal() -> Goal:
 
 ## "MISSION 2/4" while the chain lasts, then "PATROL".
 func number_text() -> String:
+	if not contract.is_empty():
+		return "CONTRACT · %s" % ContractBoard.giver(contract).role.to_upper()
 	return "MISSION %d/%d" % [step + 1, CHAIN.size()] if step < CHAIN.size() else "PATROL"
 
 
@@ -103,7 +110,10 @@ func complete(profile: PlayerProfile) -> String:
 	profile.credits += int(m.credits)
 	profile.spare_parts += int(m.parts)
 	var line := "%s COMPLETE — %s: +%s" % [number_text(), m.title, reward_text(m)]
-	if step < CHAIN.size():
+	if not contract.is_empty():
+		contract = {}
+		profile.active_contract = {}
+	elif step < CHAIN.size():
 		step += 1
 	waves_beaten = 0
 	profile.campaign = to_dict()

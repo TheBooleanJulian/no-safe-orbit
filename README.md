@@ -7,7 +7,7 @@ Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
 **Status:** Milestones 0–10 complete — design a ship in the shipyard, then fly
-and fight it in a real-scale 400 km Earth orbit or 100 km lunar orbit (pick
+and fight it in a real-scale 400 km Earth orbit, 100 km lunar orbit or 300 km Mars orbit (pick
 the station and the encounter's size, 1–3 ships, on the shipyard map) under
 the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
@@ -29,7 +29,7 @@ mouse aim. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 | ![Flight HUD in a 400 km orbit, a contact 2.5 km out](docs/screenshots/flight.jpg) | ![Gunnery: the hit cam replays a round through the enemy hull](docs/screenshots/gunnery.jpg) |
 | **Flight** — own-ship and target cards, the mission goal and tutorial offer, lead marker, radar and damage map. | **Gunnery** — fire on the ◇ lead; the hit cam replays where the round went and what it broke. |
 | ![A missile salvo climbing away from the frigate](docs/screenshots/missile_salvo.jpg) | ![Tab drawer: deck-by-deck damage control map](docs/screenshots/damage_control.jpg) |
-| **Missile salvo** — M fires every missile the mode allows; a saturation pod launches eight at a time. | **Damage control** (Tab) — every system and room by deck, with crew dots; click one for its actions. |
+| **Missile salvo** — each press of M fires one launch from every pod the mode allows; a saturation pod's launch is eight missiles. | **Damage control** (Tab) — every system and room by deck, with crew dots; click one for its actions. |
 | ![Tab drawer: crew map and roster by post](docs/screenshots/crew.jpg) | ![Debrief with the sortie summary](docs/screenshots/debrief.jpg) |
 | **Crew** (Tab › CREW) — a dot per person in their post's colour, the roster by post, orders and the boarding party. | **Debrief** — the mission result, what you dealt and took, and lessons for the shipyard. |
 | ![The shipyard: deck editor, palette, stats and hangar](docs/screenshots/shipyard.jpg) | |
@@ -101,9 +101,18 @@ data, and the tests check it against known values.
   The light falls on Earth's night side (or the Moon's), on ships, and on the
   other body's dark side (earthshine). Ships only get it while the light
   source is above the horizon.
+- **Mars:** JPL's gravitational parameter, a 3,389.5 km mean radius, the
+  IAU pole and rotation (a 24 h 37 min sol) and the USGS/NASA Viking colour
+  mosaic. Its air is thin and dusty: a butterscotch limb, the entry
+  interface at 125 km, no clouds or seas.
+- **Where Mars and Earth are:** Sun-centred, from JPL's Keplerian elements
+  (Standish, valid 1800–2050), computed in double precision — a single
+  float can't place a ship 236 million km from the Sun to better than ~2 km.
+  At Mars the Sun is where Mars sees it. Jumps pay for the real distance on
+  the scenario date (Earth–Mars 229 million km).
 - **The frame:** simulation axes are tied to ICRS/J2000 through the central
   body's pole. The start orbit is therefore a real prograde equatorial
-  orbit about Earth or the Moon.
+  orbit about Earth, the Moon or Mars.
 
 ### Where it departs from reality (on purpose)
 
@@ -117,8 +126,10 @@ data, and the tests check it against known values.
   mapping is chosen.
 - **Simplifications** (each under 0.5°): precession, nutation, aberration and
   light time are ignored. The Moon's position is the low-precision series,
-  and only one far body is drawn per sky. Stars are at their J2000
-  positions, with no proper motion.
+  and only one far body is drawn per sky (none at Mars: Earth is a point of
+  light there, and Phobos and Deimos are not modelled). Stars are at their
+  J2000 positions, with no proper motion. Sunlight is as bright at Mars as
+  at Earth (really 43 %), the way an eye or a camera adapts.
 
 ### How it is checked (`tests/unit/test_celestial.gd`, `test_locations.gd`)
 
@@ -134,6 +145,9 @@ data, and the tests check it against known values.
 | Full-Moon light | ~0.3 lux against ~127,000 lux of sunlight | 0.31 lux |
 | Half Moon vs full | ~1/9 (opposition surge) | 0.091 |
 | Full Earth from the Moon vs full Moon from Earth | ~40–60 × | 49 × |
+| Earth–Mars closest approaches 2018-07-31, 2020-10-06, 2025-01-12 (`test_m13_mars`) | NASA: 57.59, 62.07, 96.08 million km | 57.58, 62.07, 96.09 |
+| Mars's distance from the Sun | perihelion 1.381 AU, aphelion 1.666 AU | 1.381–1.666 AU |
+| Low Mars orbit at 300 km | ~3.41 km/s, ~113 min | 3407 m/s, 113.4 min |
 
 *Sky screenshots: `godot --path . -s res://tools/capture_sky.gd` (a scratch
 profile, HUD hidden). Data sources and licences: `data/ATTRIBUTION.md`.*
@@ -149,6 +163,18 @@ Open the folder in Godot 4.7.2 and press F5, or from a terminal:
 ```bash
 godot --path .
 ```
+
+The interface is laid out for 1600 × 900 and scales with the window (down
+to the Steam Deck's 1280 × 800, up to 4K). F11 switches fullscreen and is
+remembered in `user://settings.cfg`.
+
+## Releases (Steam)
+
+Published by **TheBooleanJulian**. Windows and Linux export presets carry
+the publisher and the version (`0.12.0`); `tools/steam_export.sh` builds
+both Steam depots with `THIRD_PARTY_NOTICES.txt` (credits and the Godot
+licences, also in game under F1 → Credits & licences). The Steamworks
+steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
 
 ## Controls (rebind in game with F1; saved per user)
 
@@ -168,8 +194,10 @@ godot --path .
 | Zoom for gunnery (toggle; centres on the aim, the mouse turns the view; wheel = magnification) | Shift | right stick click |
 | Next target: each ship of the encounter, then each hostile craft (lead marker only) | U | — |
 | Grappling arm: grab / release | Y | — |
-| Missile salvo at the U target (the ship needs a sensor lock); again: hold the rest | M | — |
+| Missile volley at the U target (the ship needs a sensor lock): one launch from each pod the mode allows | M | — |
 | Missile mode: all / conventional / EMP / nuclear / sequence | , | — |
+| Countermeasures: flares from every ready launcher | Space | — |
+| Acknowledge the top non-critical alert | . | — |
 | Orbit details / details & combat log / help panels | O / P / H | — (use Tab) |
 | Target hostile on/off | T | B |
 | Drop a salvage beacon on a disabled target / close the loot window | G | D-pad up |
@@ -182,7 +210,8 @@ godot --path .
 | Launch craft / recall craft | [ / ] | paddle / Misc |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
 | Dimensional jump drive to the location's station (hold 5 s, not while under fire) | hold B | hold Start |
-| Controls panel (rebinding) | F1 | Guide |
+| Controls panel (rebinding), credits and licences | F1 | Guide |
+| Fullscreen / window (remembered) | F11 | — |
 | Guided first sortie: start / skip | F2 | — |
 
 **Propellant:** the Frigate Mk I carries 80 t — about 1.6 km/s of main-engine
@@ -257,13 +286,15 @@ from 1 km), every value editable:
 
 **Missiles (M):** launchers (Weapons palette; external, any face but aft)
 fire guided missiles at the target picked with U — the enemy ship needs a
-sensor lock, a craft must be in sensor range. **M fires a salvo**: every
-missile aboard that the **missile mode** allows, as fast as the tubes cycle
-(a launch every 0.4 s per launcher); M again holds the rest. **,** cycles
-the mode — *all*, *conventional* (anti-ship and saturation), *EMP*,
-*nuclear*, or *sequence*: all of one warhead, then the next, in the order
-set in Tab › WEAPONS (EMP first, say, to blind their point defence before
-the anti-ship missiles arrive). The mode and order are saved.
+sensor lock, a craft must be in sensor range. **Each press of M fires a
+volley**: one launch from every pod the **missile mode** allows. A rack or
+an EMP launcher fires one missile and a saturation pod its swarm of eight.
+Press again for the next volley; a tube cycles in 0.4 s. **,** cycles the
+mode: *all*, *conventional* (anti-ship and saturation), *EMP*, *nuclear*,
+or *sequence*. In sequence mode each press fires the next warhead in the
+order set in Tab › WEAPONS, skipping any you have run out of. Put EMP
+first, say, to blind their point defence before the anti-ship missiles
+arrive. The mode and order are saved.
 A missile flies proportional navigation within its acceleration and turn
 rate, so it follows a jinking target; it arms after 1.5 s, has a proximity
 fuse and self-destructs after 150 s. Rounds and point defence shoot
@@ -275,10 +306,40 @@ INBOUND x.x s**. The yard restocks spent missiles at launch, cheaply.
 
 | Launcher | Rarity | Missiles | Warhead | Restock |
 |---|---|---|---|---|
-| Missile rack | uncommon | 12 | anti-ship: 160 mm penetrator along its flight, then an 8 m blast inside | 8 cr |
-| Saturation missile pod | rare | 48, **8 a launch** | small anti-ship: 45 mm penetrator, 3 m blast — weak alone, a swarm saturates point defence | 2 cr |
-| EMP missile launcher | rare | 6 | EMP: resets unhardened electronics, no damage | 20 cr |
-| Nuclear missile launcher | legendary | 3 | radiation, heat and EMP; no blast wave in vacuum | 150 cr |
+| Missile rack | uncommon | 12 | anti-ship: 160 mm penetrator along its flight, then an 8 m blast inside | 2 cr |
+| Saturation missile pod | rare | 48, **8 a launch** | small anti-ship: 45 mm penetrator, 3 m blast — weak alone, a swarm saturates point defence | 1 cr |
+| EMP missile launcher | rare | 6 | EMP: resets unhardened electronics, no damage | 5 cr |
+| Nuclear missile launcher | legendary | 3 | radiation, heat and EMP; no blast wave in vacuum | 30 cr |
+
+**Countermeasures (Milestone 11):**
+- **Flares.** A flare launcher (common, Weapons palette) carries 30 flares
+  and fires three per launch: Space, or automatically under a policy that
+  allows it (Defensive, Standard and Aggressive do: when a missile is 4 s
+  out). Each flare is a bright heat source that burns for 6 s.
+- **How a missile sees a flare.** A missile that sees one inside its seeker
+  cone, near its target, may chase it instead. The odds are the flare's
+  signature against the ship's, weighted by the seeker:
+  - **Signatures:** a flare starts at 2.5. A frigate at rest is ≈1, and
+    engines at full burn make it ×2.5.
+  - **Seekers:** saturation missiles are fooled most easily; nuclear
+    missiles have the sharpest seekers.
+  - A seduced missile bursts harmlessly on the flare.
+- **Timing matters.** Fire as the missile closes, 3–5 s out. Flares fired
+  early burn out, and a missile with you still in its cone simply finds
+  you again.
+- **Jamming.** An EW jammer (rare, 150 kW) cuts enemy sensor-track
+  confidence, breaks their locks and makes their missiles lose lock now
+  and then:
+  - **Burn-through:** it does nothing inside 3 km and is at full strength
+    beyond 6 km.
+  - **Counterplay:** a hardened sensor mast filters most of it.
+  - **EW drone:** the drone (rare, its own drone rack) holds station
+    1.2 km out towards the threat and spreads the jamming to ships of its
+    side within 3 km.
+  - **In game:** the target card shows **JAMMED −n %** when your track of
+    it is degraded, and the WEAPONS tab and the help card (F1) explain it.
+- **Enemies.** They carry flares from mission 3 and sometimes a jammer
+  from mission 6. The yard restocks flares at 1 cr each.
 
 **EMP and hardening:** an EMP resets electronics — reactors, guns, point
 defence, sensors, power distribution, collars, racks, arms and launchers —
@@ -297,18 +358,31 @@ top. It imparts no momentum.
 From mission 4 enemies carry a missile rack and fire when they hold a lock
 inside 12 km, every ~25 s; from mission 6 some carry an EMP launcher too.
 
-**Sound:** what you hear is your own ship through the hull — guns, the
-engines' rumble (every main engine, reverse and side ones too, deeper and
-louder as the throttle opens), the RCS jets' hiss, hits taken, alarms, the
-jump drive spooling; an enemy's reactor going up is a faint thud.
+**Sound:** what you hear is your own ship through the hull, because there
+is no sound in vacuum:
+- guns, missiles leaving the tubes, the clang of hits and ricochets;
+- the engines' rumble (every main engine, reverse and side ones too,
+  louder and a touch higher as the throttle opens) and the RCS jets' hiss;
+- the machinery's hum and the jump drive spooling;
+- warheads and reactors going up (an enemy's is a faint thud);
+- an alarm for each alert class.
+
+These are recorded CC0 samples (Kenney's Sci-Fi, Impact and Interface packs;
+see `data/ATTRIBUTION.md`); any slot without one is synthesised. Alarms play
+on their own bus and duck everything else, so they are always heard.
 
 **Scans:** hold a lock (inside 10 km) with a working sensor mast for 4 s to
 read a contact's cargo — spare parts and crates aboard — its scrap value and
 the bounty on it, ±15 %.
 
-**Collisions:** ships that touch push apart and are damaged by the impact,
-the lighter and less armoured side more. Ships joined by a gangway, and craft
-near their own carrier, don't collide.
+**Collisions:** ships that touch push apart and are damaged by the impact.
+Ramming is a real weapon and hurts both ships: the blow is shared by
+toughness (mass × local armour, to the power 1.5), so the lighter, thinner
+side takes far more, and it spreads into the modules within three cells and
+the external systems near the impact. An 8 m/s Cutter-into-Destroyer ram
+costs the Cutter about a third of its structure and the Destroyer under
+1 %. Ships joined by a gangway, and craft near their own carrier, don't
+collide.
 
 **Rounds never expire.** Misses coast on their own orbits — around the planet
 and, half an orbit later, possibly back through you. Far from the fight they
@@ -415,7 +489,10 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
    with a Vent button per line and "vent excess" (cheapest first); the jump
    vents the excess itself.
 4. **Jump home**: hold **B** for 5 s — the **dimensional jump drive** to
-   Earth Shipyard. It won't charge while a hostile has fired on you in the
+   the location's station. It burns propellant (about 5 t for the Frigate:
+   the main tank first, then the drive's own reserve); with too little, a
+   **rescue tow** brings you in for credits instead. Backspace while flying
+   counts as a jump home too. It won't charge while a hostile has fired on you in the
    last 10 s (one that hasn't opened fire doesn't stop it). Craft still out
    and boarders still across are **left behind** — an emergency jump, with
    a red countdown naming them; release B to wait for them. The vessel
@@ -471,8 +548,8 @@ Kept compact so the fight stays in view:
 
 - **Own ship** (top left): assist mode, inertial (orbital) velocity, where
   the nose points relative to the velocity vector, turn rates, propellant,
-  hull, power / heat, power pips and the urgent **alerts** — each with the
-  key that acts on it.
+  hull, power / heat, power pips, and a **STATUS** line that never moves:
+  `RCT ■  BRCH ■  FIRE ■  VENT ■` (reactor, breaches, fires, vented rooms).
 - **Target** (top right): identity and the **sensor track** — `MEAS`
   (measured now), `EST` (dead-reckoned) or `STALE` (old), its confidence and
   whether you have a **lock** (needed for the ◇ lead marker; inside 10 km).
@@ -482,14 +559,32 @@ Kept compact so the fight stays in view:
 - **Weapon strip** (bottom): gun and ammunition, point defence (none
   fitted yet), the air wing. Above it, a ticker of recent events.
 - **Attention line** (centre of the screen): the worst danger in big
-  pulsing red — incoming rounds, enemy boarders, emergency jump, fire —
-  or, with none, an amber prompt when the crew can patch damage with C.
+  pulsing red (the same short line as its alert), or, with none, an amber
+  `PATCH … [C]` when the crew can patch damage.
 - **Craft markers**: small diamonds (magenta theirs, cyan ours) with range;
   U puts the lead marker on a hostile craft.
 - **On demand:** O orbit details, P details & combat log (local velocity
   axes, Δv spent, rounds up, last hit reports), H the full controls card.
-- The **alert banner** shows the most urgent condition and what to do;
-  Tab opens damage control on the system it is about.
+- **Alerts** (the banner, top centre): at most three, most urgent first.
+  Each is a few words, e.g. `◆ MSL 2.4km 002`, `◆ RND 0.4s 330 [R]`,
+  `▲ FIRE r12 [Tab]` or `▲ SCRAM 1450K [Tab]`:
+  - a shape (◆ danger, ▲ caution, ● advisory) and a short noun;
+  - one value;
+  - for threats, the bearing from the nose (clockwise, ↑/↓ when steeply
+    above or below);
+  - the key that acts on it. For a round, that's the strafe key that
+    crosses its path fastest.
+
+  How the queue behaves:
+  - They don't flicker: an alert stays up 0.8 s after its condition
+    clears. It escalates at once and only steps down after a steady second.
+  - Each class has its own alarm: threat, damage, systems, navigation,
+    information.
+  - Incoming missiles and rounds get a red chevron on the threat, or at the
+    screen edge pointing to it.
+  - The damage map flashes the system the top alert is about.
+  - **.** acknowledges the top non-critical alert; it stays hidden until it
+    clears or escalates. Tab opens damage control on the system it is about.
 - In **match-velocity** mode the prograde/retrograde markers turn yellow and
   show motion relative to the target (green = orbital).
 - States are shapes as well as colours: ■ functional · ▲ degraded ·
@@ -568,7 +663,24 @@ rack. They fly with the same physics as every ship and can be shot down.
   returning home.
 - **Recon** gives the close look that shows the target's systems: without a
   drone nearby you see them only within 3 km.
-- Enemies launch their own fighter from mission 3 once hostile.
+- **Craft types** (each rack's info in the shipyard and each craft's line
+  on the WING tab say what it does):
+
+  | Craft | Carried in | Role |
+  |---|---|---|
+  | Wasp fighter | fighter bay | gun runs on the target; screens the carrier |
+  | Hornet interceptor | interceptor rack | shoots down missiles aimed at its carrier (within 4 km) first, then fights craft |
+  | Mantis bomber | bomber bay | heavy 45 mm cannon from long range; keeps its distance |
+  | Recon drone | drone rack | the close look at the target's systems; never fires |
+  | EW drone | EW drone rack | holds 1.2 km out towards the threat and jams for ships within 3 km |
+
+- **How they fly:** a craft never fires with a friend within 25 m of its
+  line of fire, its rounds carry an IFF interlock that passes through your
+  ships and craft, it keeps 70 m from other craft and 120 m clear of hulls, and
+  a strike is a gun run (run in, break off at 600 m, come round). The WING
+  tab's HOW THEY FLY block lists every directive and risk setting.
+- Enemies launch their own fighter from mission 3 once hostile,
+  interceptors from mission 5 and bombers from mission 7.
 - A craft still out when you dock is lost. Lost craft are replaced, and
   damaged ones repaired, at the station.
 
@@ -642,13 +754,44 @@ no usable backup. Loading an older save version first keeps a copy
 ## Shipyard
 
 **Earth Shipyard** (or the **Lunar Shipyard**) opens after a jump (hold B in
-flight). You start from the ship you were flying (the Frigate Mk I template
+flight). It is a station with sections along the top; the builder is one of
+them:
+
+| Section | What's there |
+|---|---|
+| **STATION** (opens here) | Your ship in 3D; cards for repairs, rearm, crew and the next sortie, each with a button to its section |
+| **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage. Accepting one sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
+| **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, plus the crew at the hiring fee |
+| **HANGAR** | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the hold and the bank, the service record |
+| **REFIT** | The builder below |
+| **CREW** | The roster by post, who is for hire |
+| **ARMOURY** | Rearm and refuel now (or leave it to the launch), the quartermaster's parts |
+| **REPAIRS** | Damage and what fixing it costs |
+| **UPGRADES** | Station technology |
+| **MAP** | Where you launch from, how many you meet |
+| **LOOT** | Every crate drop and its odds |
+
+In REFIT you start from the ship you were flying (the Frigate Mk I template
 by default).
 
-**Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click Earth or
-the Moon to move the vessel to that station; the next launch starts in its
-orbit. Pick the encounter: **1, 2 or 3 ships**. Moving is free for now
-(jump fuel comes with Milestone 13).
+**Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click a body to
+jump the vessel to its station; the next launch starts in its orbit. Pick
+the encounter: **1, 2 or 3 ships**. Earth and the Moon are charted from the
+start; an **information broker** on the same page sells the charts for Mars
+(1,500 cr).
+
+- **Jumps cost propellant**: ship mass × (8 kg/t + 18 kg/t for every
+  tenfold of distance in 1,000 km). Frigate Mk I: 4.9 t home within a
+  location, 33.9 t Earth ↔ Moon, 64.6 t Earth → Mars (the real distances
+  on the scenario date). The map shows each jump's cost.
+- **Jump reserve**: a quarter of your tankage that only the jump drive can
+  burn, used after the main tank. The ARMOURY shows and refills it.
+- **Not enough?** The map refuses with what's missing and the refuel price;
+  a contract elsewhere can't be accepted until you can make the jump.
+- **Each station is different**: the Lunar Shipyard stocks four parts up to
+  rare at 1.2× prices (crew fees too), and its traffic mixes corvettes with
+  frigates and is one threat level tougher. The Martian Shipyard stocks five
+  up to epic at 1.5×; destroyers fly among its frigates, two levels tougher.
 
 **Hull** is built from four blocks: a 2×2×1 **pressurised block** (rooms go
 inside), 1×2×1 and 1×1×1 **sloped wedges** and a 1×2×1 **truss**. Wedges
