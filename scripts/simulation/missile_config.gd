@@ -36,6 +36,10 @@ const ISP_S := 280.0
 @export var lifetime_s: float = 150.0
 @export var penetration_mm: float = 160.0
 @export var blast_radius_m: float = 8.0
+## Anti-ship blast: structure destroyed (fraction of each module's own, at
+## the centre) and hit points to systems at the centre.
+@export var blast_structure_fraction: float = 0.6
+@export var blast_hp: float = 45.0
 @export var effect_radius_m: float = 400.0
 ## Yard price per missile at resupply (credits).
 @export var unit_credits: int = 60

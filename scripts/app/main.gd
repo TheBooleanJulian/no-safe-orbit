@@ -96,6 +96,17 @@ var enemy_track := SensorTrack.new()
 var _target_arriving := false
 var _craft_views: Dictionary = {}  # craft id -> CraftView
 var _missile_views: Dictionary = {}  # missile id -> MissileView
+## The salvo M started, still firing (null when done).
+var salvo: MissileSalvo
+## Beaten contacts left drifting (ids, oldest first) and their wings; the
+## oldest goes once there are more than MAX_WRECKS.
+const MAX_WRECKS := 4
+const WRECK_DRIFT_MPS := 4.0
+var _wrecks: Array[StringName] = []
+var _derelict_wings: Array[AirWing] = []
+var _wreck_count := 0
+## An enemy boarding party is at most this big (ours: BoardingAction.MAX_TEAM).
+const ENEMY_BOARDING_TEAM := 8
 ## An engaging enemy with a launcher fires when it holds a lock within this
 ## range (m), at most once per interval (s).
 const ENEMY_MISSILE_RANGE_M := 12_000.0
@@ -147,6 +158,10 @@ func _start_scenario() -> void:
 	for view in _missile_views.values():
 		(view as Node).queue_free()
 	_missile_views.clear()
+	_wrecks.clear()
+	_derelict_wings.clear()
+	target_wing = null
+	salvo = null
 	hud.reset()
 	hit_flashes.clear()
 
@@ -331,6 +346,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("fire_missile"):
 		fire_missile()
 		return
+	elif event.is_action_pressed("missile_mode"):
+		cycle_missile_mode()
+		return
 	elif event.is_action_pressed("tutorial"):
 		toggle_tutorial()
 		return
@@ -465,7 +483,7 @@ func _enemy_board(target: ShipState, player: ShipState) -> void:
 		return
 	world.set_input(TARGET_ID, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
 	if link.sealed() and world.boarding_for(link) == null:
-		var party := world.start_boarding(link, BoardingAction.MAX_TEAM)
+		var party := world.start_boarding(link, ENEMY_BOARDING_TEAM)
 		if party != null:
 			party.set_defence(player_defence)
 			var line := "ENEMY BOARDERS crossing (%d) — Tab → CREW: defence policy" % party.team.size()
@@ -697,13 +715,60 @@ func _record_payout(target: ShipState, summary: String, crates: Array, where: St
 
 
 ## The target leaves (towed or crewed off); the next contact arrives.
-func _next_contact() -> void:
-	world.remove_ship(TARGET_ID)
+## The next contact arrives. A beaten one (salvaged or taken) stays where it
+## is as a derelict wreck — its guns, point defence and craft silent — and
+## the new one takes the target's place; one that escaped is simply gone.
+func _next_contact(keep_wreck: bool = true) -> void:
+	if keep_wreck:
+		_retire_contact()
+	else:
+		world.remove_ship(TARGET_ID)
+		(_views[TARGET_ID] as Node).queue_free()
+		_views.erase(TARGET_ID)
 	hud.reset()
 	_spawn_target(true)
 	# New contact, new hull (and its own name on it).
-	(_views[TARGET_ID] as Node).queue_free()
 	_spawn_view(TARGET_ID, Color(1.0, 0.78, 0.72))
+
+
+func _retire_contact() -> void:
+	_wreck_count += 1
+	var new_id := StringName("wreck_%02d" % _wreck_count)
+	var wreck := world.retire_ship(TARGET_ID, new_id)
+	if wreck == null:
+		return
+	wreck.display_name = "WRECK %s" % wreck.display_name.trim_prefix("TGT-")
+	# It drifts clear of us (a prize crew or the tug nudges it off), so it
+	# doesn't sit in front of our collar or our guns.
+	var player := world.get_ship(PLAYER_ID)
+	var away := wreck.position - player.position
+	wreck.velocity = player.velocity + (away.normalized() if away.length() > 1.0 else Vector3.UP) * WRECK_DRIFT_MPS
+	wreck.angular_velocity *= 0.2
+	var view: ShipView = _views[TARGET_ID]
+	_views.erase(TARGET_ID)
+	view.ship_id = new_id
+	view.name = "ShipView_%s" % new_id
+	_views[new_id] = view
+	if target_wing != null:
+		_derelict_wings.append(target_wing)
+		target_wing = null
+	_wrecks.append(new_id)
+	hud.wreck_ids = _wrecks
+	while _wrecks.size() > MAX_WRECKS:
+		_drop_wreck(_wrecks.pop_front())
+
+
+func _drop_wreck(id: StringName) -> void:
+	for wing in _derelict_wings.duplicate():
+		if wing.carrier_id == id:
+			for c in wing.crafts:
+				if world.has_ship(c.id):
+					world.remove_ship(c.id)
+			_derelict_wings.erase(wing)
+	world.remove_ship(id)
+	if _views.has(id):
+		(_views[id] as Node).queue_free()
+		_views.erase(id)
 
 
 ## Cargo hold volume beyond its capacity (m³), 0 if it fits.
@@ -831,6 +896,18 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			if went != "":
 				hud.notice("Cargo vented: %s" % went, world.sim_time)
 				combat_log.record(world.sim_time, "cargo", "Vented %s" % went)
+		&"missile_mode":
+			set_missile_mode(int(arg))
+		&"missile_order_up":
+			var p := get_profile()
+			var order := MissileSalvo.sanitize_order(p.missile_order)
+			var i := order.find(int(arg))
+			if i > 0:
+				order[i] = order[i - 1]
+				order[i - 1] = int(arg)
+			p.missile_order = order
+			hud.notice("MISSILE SEQUENCE: %s" % MissileSalvo.order_text(order), world.sim_time)
+			_save_profile()
 		&"vent_excess":
 			var capacity := sys.stats.cargo_m3
 			var went := get_profile().vessel.vent_excess(capacity, ConstructionCatalog.default_catalog())
@@ -869,7 +946,11 @@ func _link_wings() -> void:
 
 func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
 	var alive := {}
-	for wing in [player_wing, target_wing]:
+	var wings: Array[AirWing] = [player_wing]
+	if target_wing != null:
+		wings.append(target_wing)
+	wings.append_array(_derelict_wings)
+	for wing in wings:
 		var carrier_view: ShipView = _views.get(wing.carrier_id)
 		if carrier_view != null:
 			for c in wing.crafts:
@@ -885,7 +966,7 @@ func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
 				view.craft_id = c.id
 				view.config = c.config
 				view.callsign = c.label
-				view.hostile = wing == target_wing
+				view.hostile = wing != player_wing
 				add_child(view)
 				_craft_views[c.id] = view
 			view.sync_from(ship, alpha, render_origin)
@@ -934,13 +1015,18 @@ func _sync_courier_view(alpha: float, render_origin: Vector3) -> void:
 	_courier_view.sync_from(c, alpha, render_origin)
 
 
-## A warhead going off. The anti-ship blast already shows as an explosion
-## on the struck ship (ShipSystems.blast_at); EMP is a blue ring; a nuclear
-## burst is a fireball and a white flash.
+## A warhead going off. A big anti-ship blast already shows as an explosion
+## on the struck ship (ShipSystems.blast_at), a small one as a fireball; EMP
+## is a blue ring; a nuclear burst is a fireball and a white flash. A
+## missile shot down or self-destructing breaks up in a small fireball.
 func _show_burst(burst: Dictionary, player: ShipState) -> void:
 	var ship := world.get_ship(burst.ship_id)
 	var dist := ship.position.distance_to(player.position) if ship != null else 0.0
 	var near := clampf(1.0 - dist / 3000.0, 0.0, 1.0)
+	if burst.get("shot_down", false):
+		hit_flashes.add_fireball(burst.ship_id, burst.point_body, burst.radius)
+		audio.play("detonation", lerpf(-24.0, -10.0, near))
+		return
 	match int(burst.kind):
 		MissileConfig.Warhead.EMP:
 			hit_flashes.add_burst(burst.ship_id, burst.point_body, burst.radius, Color(0.45, 0.7, 1.0, 0.9))
@@ -951,6 +1037,8 @@ func _show_burst(burst: Dictionary, player: ShipState) -> void:
 			audio.play("detonation", lerpf(-10.0, 0.0, near))
 			camera.shake(3.0 * near)
 		_:
+			if float(burst.radius) < ShipSystems.SMALL_BLAST_M:
+				hit_flashes.add_fireball(burst.ship_id, burst.point_body, burst.radius)
 			audio.play("detonation", lerpf(-16.0, -4.0, near))
 
 
@@ -984,25 +1072,66 @@ func cycle_target() -> void:
 ## M: a missile from the next ready launcher at the craft picked with U, or
 ## else the target ship — which needs a sensor lock (a craft: within sensor
 ## range). Returns "" when one is away, or why not (also a HUD notice).
+## M: a salvo — every missile the missile mode allows ([,] cycles it; Tab ›
+## WEAPONS sets the sequence) — at the craft picked with U, or else the
+## target ship, which needs a sensor lock (a craft: within sensor range). M
+## again while it is firing holds the rest. Returns "" when it started, or
+## why not (also a HUD notice).
 func fire_missile() -> String:
+	if salvo != null and not salvo.done():
+		hud.notice("MISSILES: salvo held — %d launched" % salvo.launched, world.sim_time)
+		salvo = null
+		return ""
 	var player := world.get_ship(PLAYER_ID)
 	var at := hud.selected_id if hud.selected_id != &"" and world.has_ship(hud.selected_id) else TARGET_ID
+	var p := get_profile()
 	var why := ""
 	if at == TARGET_ID and not track.locked:
 		why = "no sensor lock on %s" % world.get_ship(TARGET_ID).display_name
 	elif at != TARGET_ID and player.systems != null \
 			and world.get_ship(at).position.distance_to(player.position) > player.systems.sensor_range_m():
 		why = "that craft is outside sensor range"
+	elif player.systems == null or player.systems.missiles_of() == 0:
+		why = "no missiles ready (launchers empty, offline or not fitted)"
 	else:
-		why = world.launch_missile(PLAYER_ID, at)
+		var s := MissileSalvo.start(PLAYER_ID, at, p.missile_mode, p.missile_order)
+		if s.available(player.systems) == 0:
+			why = "no %s missiles ready ([,] changes the missile mode)" % MissileSalvo.mode_text(p.missile_mode, p.missile_order)
+		else:
+			salvo = s
+			hud.notice("MISSILES: salvo — %d %s at %s" % [s.available(player.systems), MissileSalvo.mode_text(p.missile_mode, p.missile_order),
+				world.get_ship(at).display_name], world.sim_time)
+			_step_salvo()
 	if why != "":
 		hud.notice("MISSILE: " + why, world.sim_time)
-		return why
-	audio.play("launch")
-	combat_log.missiles_launched += 1
-	if at == TARGET_ID and not target_hostile:
-		set_target_hostile(true, "missile launched at it")
-	return ""
+	return why
+
+
+## The salvo in progress: fire whatever launchers have cycled.
+func _step_salvo() -> void:
+	if salvo == null:
+		return
+	var n := salvo.step(world)
+	if n > 0:
+		audio.play("launch")
+		combat_log.missiles_launched += n
+		if salvo.target_id == TARGET_ID and not target_hostile:
+			set_target_hostile(true, "missiles launched at it")
+	if salvo.done():
+		salvo = null
+
+
+## [,]: the next missile mode (all → conventional → EMP → nuclear → sequence).
+func cycle_missile_mode() -> void:
+	var p := get_profile()
+	set_missile_mode((p.missile_mode + 1) % MissileSalvo.Mode.size())
+
+
+func set_missile_mode(mode: int) -> void:
+	var p := get_profile()
+	p.missile_mode = clampi(mode, 0, MissileSalvo.Mode.size() - 1)
+	hud.notice("MISSILE MODE: %s" % MissileSalvo.mode_text(p.missile_mode, p.missile_order), world.sim_time)
+	_save_profile()
 
 
 ## F2: start the guided first sortie (or restart it), or skip it.
@@ -1153,7 +1282,7 @@ func _process(delta: float) -> void:
 		var line := "%s escaped — out of reach" % target.display_name
 		hud.notice(line, world.sim_time)
 		combat_log.record(world.sim_time, "contact", line)
-		_next_contact()
+		_next_contact(false)
 		target = world.get_ship(TARGET_ID)
 	# A takeover pays out at once; the prize leaves once the boarders are home.
 	if target.is_active() and target.systems != null and target.systems.captured and not _prize_taken:
@@ -1167,7 +1296,7 @@ func _process(delta: float) -> void:
 			var link := world.link_for(PLAYER_ID)
 			if link != null:
 				link.release()
-			hud.notice("Prize crew takes %s to %s" % [target.display_name, STATION_NAME], world.sim_time)
+			hud.notice("Prize crew aboard %s — it holds station; the next contact comes" % target.display_name, world.sim_time)
 			_next_contact()
 			target = world.get_ship(TARGET_ID)
 	# General quarters while a hostile is about: both crews in spacesuits.
@@ -1211,6 +1340,7 @@ func _process(delta: float) -> void:
 					target_wing.launch(world, c)
 	_link_wings()
 	_update_goals(player, target)
+	_step_salvo()
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
 	if (not player.is_active() or player_captured()) and not _sortie_closed:
@@ -1225,7 +1355,12 @@ func _process(delta: float) -> void:
 			audio.play("dock")
 		elif line.begins_with("COLLISION"):
 			audio.play("hit", 4.0)
-		hud.notice(line, world.sim_time)
+		# Our own salvo announces itself once; each launch and break-up of
+		# our missiles would flood the ticker (they still go in the log).
+		var ours_routine := (line.contains(" launched at ") and not line.contains(" at %s " % player.display_name)) \
+			or (line.contains("shot down") and salvo != null)
+		if not ours_routine:
+			hud.notice(line, world.sim_time)
 		var about := "missile" if line.contains("issile") or line.contains("EMP") or line.contains("Nuclear") else "boarding"
 		GameLog.info(about, line)
 		combat_log.record(world.sim_time, about, line)

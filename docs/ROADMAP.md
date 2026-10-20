@@ -303,6 +303,21 @@ Verified in `tests/unit/test_m7_weapons.gd` unless noted.
 
 Simplifications: see ARCHITECTURE.md "Missiles and EMP (Milestone 7)".
 
+## Milestone 9 — Play-test batch 2: salvos, wrecks, crew ✅ (2026-10-20)
+
+GAME_DESIGN.md §17 ends at Milestone 8; this one is the user's second
+play-test list. Verified in `tests/unit/test_m9_weapons_crew.gd` unless noted.
+
+| Request | Verified by | Result |
+|---|---|---|
+| More missiles per launcher; cheap restock | `test_launchers_hold_more_and_restock_cheaply`, `test_missiles_persist_and_restock_for_credits` | 12 / 6 / 3 (+ 48 saturation); 8 / 20 / 150 / 2 cr |
+| M fires everything; modes all / conventional / EMP / nuclear / sequence | `test_salvo_modes_pick_their_warheads`, `test_a_salvo_empties_the_chosen_launchers_and_nothing_else`, `test_a_sequence_salvo_fires_in_order`, `test_missile_mode_and_order_are_saved`, `smoke_main` | rack emptied in ~5 s; EMP ×6 then conventional ×12 |
+| Missile explosions, also when shot down | `test_a_missile_shot_down_breaks_up_with_a_burst`, renders | fireball + sound on break-up and on small warheads |
+| Beaten enemies stay, silent | `test_a_beaten_ship_stays_as_a_silent_derelict`, `smoke_campaign`, `smoke_boarding` | wreck + craft re-keyed, derelict; no rounds, no PD; drifts clear |
+| Saturation missile | `test_the_saturation_pod_launches_a_swarm_of_weaker_missiles` | 8 a launch, fanned out; ~¼ of the penetration |
+| Crew management UI; crew dots | `test_the_crew_roster_helpers`, `smoke_main` (CREW tab roster), renders | map dots by post, roster tree, send-to |
+| Boarders before N; party beyond 8 | `test_boarding_parties_can_be_bigger_and_we_see_who_would_go` | limit 24; target card / CREW tab show who would go |
+
 ## Milestone 8 — Vertical-slice polish ✅ (2026-10-20)
 
 Spec exit criterion: a new player can design or choose a ship, fight, take

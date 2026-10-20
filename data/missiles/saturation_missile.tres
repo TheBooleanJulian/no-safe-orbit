@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="MissileConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/missile_config.gd" id="1_m"]
+
+[resource]
+script = ExtResource("1_m")
+display_name = "Saturation missile"
+warhead = 0
+mass_kg = 45.0
+accel_mps2 = 90.0
+delta_v_mps = 1200.0
+turn_rate_deg_s = 180.0
+fuse_radius_m = 4.0
+arm_s = 1.0
+hull_hp = 1.5
+lifetime_s = 100.0
+penetration_mm = 45.0
+blast_radius_m = 3.0
+blast_structure_fraction = 0.12
+blast_hp = 8.0
+unit_credits = 2

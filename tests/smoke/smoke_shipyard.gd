@@ -93,7 +93,7 @@ func _run() -> void:
 	var weapons := PackedStringArray()
 	for i in yard.palette_list.item_count:
 		weapons.append(yard.palette_list.get_item_text(i))
-	_check(weapons.size() == 7 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Point-defence")
+	_check(weapons.size() == 8 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Point-defence")
 		and " ".join(weapons).contains("Missile rack"),
 		"the Weapons category lists the guns, point defence and launchers: %s" % ", ".join(weapons))
 	yard.palette_list.select(0)

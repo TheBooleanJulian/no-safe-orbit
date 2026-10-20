@@ -19,7 +19,7 @@ extends PanelContainer
 signal command(name: StringName, arg: Variant)
 
 const COVERABLE := [CrewRoster.Role.COMMAND, CrewRoster.Role.WEAPONS, CrewRoster.Role.ENGINEERING, CrewRoster.Role.DAMAGE_CONTROL]
-const TAB_NAMES := ["DAMAGE", "CREW", "POWER", "WING", "TARGET", "CARGO"]
+const TAB_NAMES := ["DAMAGE", "CREW", "POWER", "WING", "TARGET", "CARGO", "WEAPONS"]
 const CHANNEL_FOR_KIND := {
 	EquipmentDefinition.Kind.MAIN_ENGINE: ShipSystems.Channel.ENG,
 	EquipmentDefinition.Kind.CANNON: ShipSystems.Channel.WEP,
@@ -35,9 +35,22 @@ var _selection_text: RichTextLabel
 var _actions: HFlowContainer
 var _actions_key := ""
 var _crew_label: RichTextLabel
-var _reassign_pick: OptionButton
-var _reassign_key := ""
+var _crew_map: ShipSchematic
+var _crew_deck_row: HBoxContainer
+var _crew_decks: Array[int] = []
+var _crew_tree: Tree
+var _crew_key := ""
+## The crew member picked in the roster ("" = none), and where to send them.
+var crew_selected := ""
+var _crew_pick_label: Label
+var _reassign_role: OptionButton
 var _party_label: Label
+## The profile (missile mode and order; set by the HUD).
+var profile: PlayerProfile
+var _missile_label: RichTextLabel
+var _mode_buttons: Array[Button] = []
+var _order_box: VBoxContainer
+var _order_key := ""
 var _power_label: RichTextLabel
 var _loads_box: VBoxContainer
 var _loads_key := ""
@@ -82,6 +95,7 @@ func _ready() -> void:
 	_build_wing_tab()
 	_build_target_tab()
 	_build_cargo_tab()
+	_build_weapons_tab()
 	for i in TAB_NAMES.size():
 		_tabs.set_tab_title(i, TAB_NAMES[i])
 
@@ -142,25 +156,58 @@ func _build_damage_tab() -> void:
 	box.add_child(_caption_label("Click a system or room. Amber ring = what the alert is about. C patches the next damaged system."))
 
 
+## Crew: who is where (a map with a dot per person, coloured by post), the
+## roster by post, and the orders — send someone to a new post, cover a
+## post with general crew, how to meet boarders, our boarding party.
 func _build_crew_tab() -> void:
-	var box := _tab_box()
-	_crew_label = _rich(box, 170)
-	box.add_child(_caption_label("Cover a role: the nearest free general crew member walks to that role's station."))
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_tabs.add_child(scroll)
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	scroll.add_child(box)
+	_crew_label = _rich(box, 18)
+	_crew_deck_row = HBoxContainer.new()
+	box.add_child(_crew_deck_row)
+	_crew_map = ShipSchematic.new()
+	_crew_map.custom_minimum_size = Vector2(0, 180)
+	box.add_child(_crew_map)
+	var legend := _rich(box, 16)
+	legend.text = "%s   ○ wounded" % CrewRoster.role_legend()
+	legend.add_theme_font_size_override("normal_font_size", CyberTheme.SIZE_SMALL)
+	_crew_tree = Tree.new()
+	_crew_tree.columns = 4
+	_crew_tree.column_titles_visible = true
+	for c in 4:
+		_crew_tree.set_column_title(c, ["CREW", "POST", "WHERE", "STATUS"][c])
+		_crew_tree.set_column_expand(c, c != 1)
+	_crew_tree.hide_root = true
+	_crew_tree.select_mode = Tree.SELECT_ROW
+	_crew_tree.custom_minimum_size = Vector2(0, 240)
+	_crew_tree.item_selected.connect(_on_crew_picked)
+	box.add_child(_crew_tree)
+	var send := HBoxContainer.new()
+	_crew_pick_label = Label.new()
+	_crew_pick_label.text = "Pick someone above"
+	_crew_pick_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_crew_pick_label.clip_text = true
+	send.add_child(_crew_pick_label)
+	_reassign_role = OptionButton.new()
+	for n in CrewRoster.ROLE_NAMES:
+		_reassign_role.add_item("→ " + n)
+	send.add_child(_reassign_role)
+	send.add_child(_button("Send", func() -> void:
+		if crew_selected != "":
+			command.emit(&"reassign", [crew_selected, _reassign_role.selected])))
+	box.add_child(send)
+	box.add_child(_heading("COVER A POST", CyberTheme.CYAN))
+	box.add_child(_caption_label("The nearest free general crew member walks to that post's station."))
 	var cover := GridContainer.new()
-	cover.columns = 2
+	cover.columns = 4
 	for role in COVERABLE:
-		cover.add_child(_button("Cover %s" % CrewRoster.ROLE_NAMES[role], func() -> void: command.emit(&"cover", role)))
+		cover.add_child(_button(CrewRoster.ROLE_NAMES[role], func() -> void: command.emit(&"cover", role)))
 	box.add_child(cover)
-	box.add_child(_caption_label("Reassign: pick a crew member, then their new post — they walk there."))
-	_reassign_pick = OptionButton.new()
-	box.add_child(_reassign_pick)
-	var posts := GridContainer.new()
-	posts.columns = 3
-	for role in CrewRoster.Role.size():
-		posts.add_child(_button("→ %s" % CrewRoster.ROLE_NAMES[role], func() -> void:
-			if _reassign_pick.selected >= 0:
-				command.emit(&"reassign", [_reassign_pick.get_item_metadata(_reassign_pick.selected), role])))
-	box.add_child(posts)
 	box.add_child(_heading("IF WE ARE BOARDED", CyberTheme.AMBER))
 	var defence := HBoxContainer.new()
 	for d in BoardingAction.Defence.size():
@@ -268,9 +315,10 @@ func update_view(player: ShipState, target: ShipState, boarding: BoardingAction,
 		0:
 			_refresh_damage(sys)
 		1:
-			_crew_label.text = _crew_text(sys)
-			_refresh_reassign(sys)
-			_party_label.text = "  %d of up to %d  " % [party_size, BoardingAction.MAX_TEAM]
+			_refresh_crew(sys)
+			var collars := Docking.collars(sys)
+			var can_go := BoardingAction.candidates(sys, collars[0].room if not collars.is_empty() else -1, party_size).size()
+			_party_label.text = "  %d of up to %d · %d would go now  " % [party_size, BoardingAction.MAX_TEAM, can_go]
 		2:
 			_refresh_power(sys)
 		3:
@@ -279,6 +327,8 @@ func update_view(player: ShipState, target: ShipState, boarding: BoardingAction,
 			_refresh_target(target, boarding, sim_time, close_look)
 		5:
 			_refresh_cargo(sys)
+		6:
+			_refresh_weapons(sys)
 
 
 static func power_summary(sys: ShipSystems) -> String:
@@ -456,10 +506,14 @@ func _refresh_target(target: ShipState, boarding: BoardingAction, sim_time: floa
 			lines.append(CyberTheme.tint("%s DISABLED — %s" % [CyberTheme.GLYPH_DESTROYED, target.systems.disabled_reason()], CyberTheme.MAGENTA))
 		if target.systems.crew != null:
 			lines.append("Crew %s" % target.systems.crew.summary())
+	_target_map.hostile_crew = true
+	_target_map.boarders = {}
 	if boarding != null:
 		var control := boarding.room_control()
 		for room in control:
 			_target_map.room_overlay[room] = ShipSchematic.control_color(control[room], sim_time)
+		if boarding.room >= 0:
+			_target_map.boarders[boarding.room] = boarding.fit_team()
 		lines.append("[b]BOARDING[/b] %s · team %d/%d  (cyan taken · magenta fighting · red defended)" % [
 			BoardingAction.PHASE_NAMES[boarding.phase].to_upper(), boarding.fit_team().size(), boarding.team.size()])
 		for l in boarding.log.slice(maxi(boarding.log.size() - 5, 0)):
@@ -467,52 +521,157 @@ func _refresh_target(target: ShipState, boarding: BoardingAction, sim_time: floa
 	_target_label.text = "\n".join(lines)
 
 
-## Free, fit crew to pick from (rebuilt only when that set changes).
-func _refresh_reassign(sys: ShipSystems) -> void:
-	var free := sys.crew.members.filter(func(m: CrewRoster.Member) -> bool: return m.available() and m.location >= 0) if sys.crew != null else []
-	var key := ",".join(free.map(func(m: CrewRoster.Member) -> String: return "%s:%d" % [m.id, m.role]))
-	if key == _reassign_key:
-		return
-	_reassign_key = key
-	var keep: Variant = _reassign_pick.get_item_metadata(_reassign_pick.selected) if _reassign_pick.selected >= 0 else null
-	_reassign_pick.clear()
-	for m: CrewRoster.Member in free:
-		_reassign_pick.add_item("%s — %s" % [m.label(), CrewRoster.ROLE_NAMES[m.role]])
-		_reassign_pick.set_item_metadata(_reassign_pick.item_count - 1, m.id)
-		if m.id == keep:
-			_reassign_pick.select(_reassign_pick.item_count - 1)
-
-
-func _crew_text(sys: ShipSystems) -> String:
+func _refresh_crew(sys: ShipSystems) -> void:
 	if sys.crew == null:
-		return "No crew model."
-	var command_state := CyberTheme.tint("● COMMAND OK", CyberTheme.CYAN) if sys.has_command() else CyberTheme.tint("▲ SHIP AI IN CONTROL", CyberTheme.AMBER)
-	var lines := PackedStringArray(["%s   %s" % [sys.crew.summary(), command_state]])
-	for role in CrewRoster.Role.size():
-		var fit := 0
-		var hurt := 0
-		var dead := 0
-		var where := {}
-		for m in sys.crew.members:
-			if m.role != role:
-				continue
-			match m.state:
-				CrewRoster.State.FIT:
-					fit += 1
-				CrewRoster.State.WOUNDED:
-					hurt += 1
-				_:
-					dead += 1
-			if m.location >= 0 and m.state != CrewRoster.State.DEAD:
-				where[sys.blueprint.rooms[m.location].id] = true
-		if fit + hurt + dead == 0:
-			continue
-		lines.append("%-15s %d fit%s%s  %s" % [CrewRoster.ROLE_NAMES[role], fit,
-			" · %d wounded" % hurt if hurt > 0 else "", " · %d dead" % dead if dead > 0 else "", ", ".join(where.keys())])
+		_crew_label.text = "No crew model."
+		return
+	_crew_label.text = "%s   %s" % [sys.crew.summary(),
+		CyberTheme.tint("● COMMAND OK", CyberTheme.CYAN) if sys.has_command() else CyberTheme.tint("▲ SHIP AI IN CONTROL", CyberTheme.AMBER)]
+	_crew_map.systems = sys
+	_crew_map.highlight_member = crew_selected
+	_deck_buttons_for(sys, _crew_deck_row, _crew_decks, _crew_map)
+	_crew_map.title = "CREW · ALL DECKS" if _crew_map.deck < 0 else "CREW · DECK %d" % _crew_map.deck
+	var key := ""
+	for m in sys.crew.members:
+		key += "%s%d%d%d%d|" % [m.id, m.role, m.state, m.location, int(m.busy)]
 	for id in sys.crew_orders:
-		var who := sys.crew.by_id(id)
-		lines.append(CyberTheme.tint("» %s → %s, %.0f s" % [who.label() if who != null else id, CrewRoster.ROLE_NAMES[sys.crew_orders[id].role], sys.crew_orders[id].left_s], CyberTheme.AMBER))
-	return "\n".join(lines)
+		key += "%s>%d:%d|" % [id, sys.crew_orders[id].role, ceili(sys.crew_orders[id].left_s)]
+	if key != _crew_key:
+		_crew_key = key
+		_fill_crew_tree(sys)
+
+
+## The roster as a tree: one branch per post (fit / everyone), a row per
+## person — name and skill, post, room, and what they are doing.
+func _fill_crew_tree(sys: ShipSystems) -> void:
+	_crew_tree.clear()
+	var root := _crew_tree.create_item()
+	for role in CrewRoster.Role.size():
+		var people := sys.crew.members.filter(func(m: CrewRoster.Member) -> bool: return m.role == role)
+		if people.is_empty():
+			continue
+		var fit := people.filter(func(m: CrewRoster.Member) -> bool: return m.fit()).size()
+		var head := _crew_tree.create_item(root)
+		head.set_text(0, "%s  %d/%d fit" % [str(CrewRoster.ROLE_NAMES[role]).to_upper(), fit, people.size()])
+		head.set_custom_color(0, CrewRoster.ROLE_COLORS[role])
+		head.set_metadata(0, "")
+		head.set_selectable(0, false)
+		for c in range(1, 4):
+			head.set_selectable(c, false)
+		for m: CrewRoster.Member in people:
+			var row := _crew_tree.create_item(head)
+			row.set_text(0, "● %s%s" % [m.label(), "  " + "★".repeat(m.skill) if m.skill > 0 else ""])
+			row.set_custom_color(0, CrewRoster.ROLE_COLORS[m.role] if m.state != CrewRoster.State.DEAD else CyberTheme.TEXT_FAINT)
+			row.set_text(1, CrewRoster.ROLE_SHORT[m.role])
+			row.set_text(2, "%s %s" % [sys.blueprint.rooms[m.location].id, sys.room_role(m.location)] if m.location >= 0 else "off the ship")
+			row.set_text(3, crew_status(sys, m))
+			var status_color := CyberTheme.TEXT if m.state == CrewRoster.State.FIT else (CyberTheme.AMBER if m.state == CrewRoster.State.WOUNDED else CyberTheme.RED)
+			row.set_custom_color(3, status_color)
+			row.set_metadata(0, m.id)
+			if m.id == crew_selected:
+				row.select(0)
+
+
+## What a crew member is doing, in a few words.
+static func crew_status(sys: ShipSystems, m: CrewRoster.Member) -> String:
+	if m.state == CrewRoster.State.DEAD:
+		return "killed"
+	var state := "wounded" if m.state == CrewRoster.State.WOUNDED else "fit"
+	if sys.crew_orders.has(m.id):
+		return "%s · → %s, %.0f s" % [state, CrewRoster.ROLE_NAMES[sys.crew_orders[m.id].role], sys.crew_orders[m.id].left_s]
+	if m.location < 0:
+		return "%s · boarding party" % state
+	if m.busy:
+		return "%s · on a task" % state
+	return state if m.location == m.station else "%s · away from post" % state
+
+
+func _on_crew_picked() -> void:
+	var item := _crew_tree.get_selected()
+	crew_selected = str(item.get_metadata(0)) if item != null and item.get_metadata(0) != null else ""
+	if crew_selected != "" and _sys != null and _sys.crew != null:
+		var m := _sys.crew.by_id(crew_selected)
+		_crew_pick_label.text = "%s (%s) — send to:" % [m.label(), CrewRoster.ROLE_NAMES[m.role]] if m != null else "Pick someone above"
+	else:
+		_crew_pick_label.text = "Pick someone above"
+
+
+## Deck buttons for `map` ("All decks" first), rebuilt when the decks change.
+func _deck_buttons_for(sys: ShipSystems, row: HBoxContainer, known: Array[int], map: ShipSchematic) -> void:
+	var decks: Array[int] = [-1]
+	var b := sys.grid.cell_bounds()
+	for d in range(int(b.end.y) - 1, int(b.position.y) - 1, -1):
+		decks.append(d)
+	if decks == known:
+		return
+	known.assign(decks)
+	for c in row.get_children():
+		c.queue_free()
+	for d in decks:
+		row.add_child(_button("All decks" if d < 0 else "Deck %d" % d, func() -> void: map.deck = d))
+
+
+# --- Weapons ---------------------------------------------------------------------------
+
+func _build_weapons_tab() -> void:
+	var box := _tab_box()
+	box.add_child(_heading("MISSILES — [M] salvo · [,] mode", CyberTheme.AMBER))
+	_missile_label = _rich(box, 60)
+	box.add_child(_caption_label("What one press of M fires (M again holds the rest of the salvo):"))
+	var modes := HFlowContainer.new()
+	for mode in MissileSalvo.Mode.size():
+		var b := _button(MissileSalvo.MODE_NAMES[mode], func() -> void: command.emit(&"missile_mode", mode), CyberTheme.AMBER)
+		_mode_buttons.append(b)
+		modes.add_child(b)
+	box.add_child(modes)
+	box.add_child(_heading("SEQUENCE ORDER", CyberTheme.AMBER))
+	box.add_child(_caption_label("In sequence mode every missile of the first warhead goes, then the next — e.g. EMP first to blind their point defence."))
+	_order_box = VBoxContainer.new()
+	box.add_child(_order_box)
+
+
+func _refresh_weapons(sys: ShipSystems) -> void:
+	var lines := PackedStringArray()
+	for e in sys.equipment:
+		if e.def.kind != EquipmentDefinition.Kind.MISSILE_LAUNCHER or e.def.missile == null:
+			continue
+		var state := "ready"
+		if e.destroyed():
+			state = CyberTheme.tint("✕ destroyed", CyberTheme.RED)
+		elif e.disrupted_s > 0.0:
+			state = CyberTheme.tint("▲ EMP reset %.0f s" % e.disrupted_s, CyberTheme.AMBER)
+		elif not e.powered:
+			state = CyberTheme.tint("○ no power", CyberTheme.TEXT_DIM)
+		elif sys.missiles_left(e) == 0:
+			state = CyberTheme.tint("empty", CyberTheme.TEXT_DIM)
+		lines.append("%s %s — %d/%d %s%s · %s" % [e.def.display_name, e.id, sys.missiles_left(e), e.def.missile_capacity,
+			MissileSalvo.WARHEAD_NAMES[e.def.missile.warhead], " (%d a launch)" % e.def.missile_salvo if e.def.missile_salvo > 1 else "", state])
+	if lines.is_empty():
+		lines.append(CyberTheme.tint("No launchers fitted — the shipyard's Weapons palette has them.", CyberTheme.TEXT_DIM))
+	var mode := profile.missile_mode if profile != null else 0
+	var order: Array = profile.missile_order if profile != null else MissileSalvo.DEFAULT_ORDER
+	lines.append("Mode: %s" % CyberTheme.tint(MissileSalvo.mode_text(mode, order).to_upper(), CyberTheme.AMBER))
+	_missile_label.text = "\n".join(lines)
+	for i in _mode_buttons.size():
+		_mode_buttons[i].text = ("▸ " if i == mode else "") + MissileSalvo.MODE_NAMES[i]
+	var key := MissileSalvo.order_text(order)
+	if key == _order_key:
+		return
+	_order_key = key
+	for c in _order_box.get_children():
+		c.queue_free()
+	var sorted := MissileSalvo.sanitize_order(order)
+	for i in sorted.size():
+		var row := HBoxContainer.new()
+		var l := Label.new()
+		l.text = "%d. %s" % [i + 1, MissileSalvo.WARHEAD_NAMES[sorted[i]]]
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(l)
+		var w := sorted[i]
+		var up := _button("↑ earlier", func() -> void: command.emit(&"missile_order_up", w), CyberTheme.AMBER)
+		up.disabled = i == 0
+		row.add_child(up)
+		_order_box.add_child(row)
 
 
 ## One row per craft: status line, then directive / risk / priority pickers

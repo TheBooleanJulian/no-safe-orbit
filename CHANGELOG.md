@@ -4,6 +4,30 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 9 — play-test batch 2: salvos, wrecks, crew (2026-10-20)
+
+#### Added
+- Missile salvos: M fires every missile the mode allows (all,
+  conventional, EMP, nuclear, or a sequence in a chosen order); `,` cycles
+  the mode; Tab › WEAPONS shows launchers, mode and order. Saved.
+- Saturation missile pod (rare): 48 small missiles, 8 per launch.
+- Missiles shot down or self-destructing break up in a fireball with sound;
+  small warheads show as fireballs.
+- Crew: Tab › CREW reorganised — crew map with post-coloured dots, roster
+  tree by post (who, where, status), one "send to" control; boarders shown
+  as dots on the target map and in the boarding view; the station's crew
+  list grouped by post against the standard complement.
+- The target card says how many boarders would go before N.
+
+#### Changed
+- Launchers hold more (rack 12, EMP 6, nuclear 3) and cycle a launch every
+  0.4 s; restocking is cheap (8 / 20 / 150 cr, saturation 2).
+- Beaten contacts stay as silent derelict wrecks (guns, point defence and
+  craft stop) that drift clear, instead of vanishing.
+- Boarding party limit 24 (enemy parties stay at 8).
+- Our own missiles are small unlabelled HUD markers; our launches no longer
+  flood the ticker.
+
 ### Milestone 8 — vertical-slice polish (2026-10-20)
 
 #### Added

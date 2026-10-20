@@ -48,7 +48,8 @@ godot --path .
 | Zoom for gunnery (toggle; centres on the aim, the mouse turns the view; wheel = magnification) | Shift | right stick click |
 | Next target for the lead marker (the ship, then each hostile craft) | U | — |
 | Grappling arm: grab / release | Y | — |
-| Launch missile (at the U target; the ship needs a sensor lock) | M | — |
+| Missile salvo at the U target (the ship needs a sensor lock); again: hold the rest | M | — |
+| Missile mode: all / conventional / EMP / nuclear / sequence | , | — |
 | Orbit details / details & combat log / help panels | O / P / H | — (use Tab) |
 | Target hostile on/off | T | B |
 | Drop a salvage beacon on a disabled target / close the loot window | G | D-pad up |
@@ -106,19 +107,28 @@ on their own (their own rounds, gangway or not) and never your own.
 
 **Missiles (M):** launchers (Weapons palette; external, any face but aft)
 fire guided missiles at the target picked with U — the enemy ship needs a
-sensor lock, a craft must be in sensor range. A missile flies proportional
-navigation within its acceleration and turn rate, so it follows a jinking
-target; it arms after 1.5 s, has a proximity fuse and self-destructs after
-150 s. Rounds and point defence shoot missiles down — that, and staying out
-of reach, is the counterplay. The weapon strip shows `MSL anti-ship 4 · EMP 2
-[M]`; an inbound missile raises **MISSILE INBOUND x.x s**. Launchers reload
-in 4 s; the yard restocks spent missiles at launch for credits.
+sensor lock, a craft must be in sensor range. **M fires a salvo**: every
+missile aboard that the **missile mode** allows, as fast as the tubes cycle
+(a launch every 0.4 s per launcher); M again holds the rest. **,** cycles
+the mode — *all*, *conventional* (anti-ship and saturation), *EMP*,
+*nuclear*, or *sequence*: all of one warhead, then the next, in the order
+set in Tab › WEAPONS (EMP first, say, to blind their point defence before
+the anti-ship missiles arrive). The mode and order are saved.
+A missile flies proportional navigation within its acceleration and turn
+rate, so it follows a jinking target; it arms after 1.5 s, has a proximity
+fuse and self-destructs after 150 s. Rounds and point defence shoot
+missiles down (each breaks up in a small fireball you hear) — that, and
+staying out of reach, is the counterplay. The weapon strip shows
+`MSL saturation 48 · anti-ship 12 [M]  mode all [,]`; our missiles are
+small unlabelled markers, inbound ones are labelled and raise **MISSILE
+INBOUND x.x s**. The yard restocks spent missiles at launch, cheaply.
 
 | Launcher | Rarity | Missiles | Warhead | Restock |
 |---|---|---|---|---|
-| Missile rack | uncommon | 4 | anti-ship: 160 mm penetrator along its flight, then an 8 m blast inside | 60 cr |
-| EMP missile launcher | rare | 2 | EMP: resets unhardened electronics, no damage | 180 cr |
-| Nuclear missile launcher | legendary | 1 | radiation, heat and EMP; no blast wave in vacuum | 2500 cr |
+| Missile rack | uncommon | 12 | anti-ship: 160 mm penetrator along its flight, then an 8 m blast inside | 8 cr |
+| Saturation missile pod | rare | 48, **8 a launch** | small anti-ship: 45 mm penetrator, 3 m blast — weak alone, a swarm saturates point defence | 2 cr |
+| EMP missile launcher | rare | 6 | EMP: resets unhardened electronics, no damage | 20 cr |
+| Nuclear missile launcher | legendary | 3 | radiation, heat and EMP; no blast wave in vacuum | 150 cr |
 
 **EMP and hardening:** an EMP resets electronics — reactors, guns, point
 defence, sensors, power distribution, collars, racks, arms and launchers —
@@ -227,7 +237,9 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
    Loot in the hold is at risk until you bank it, and limited by its size.
    Either way the wreck's best intact rare part comes too, the crates open
    on a spinning carousel, and the next contact arrives — each one tougher
-   (rarer guns, armour plates, RCS and reactors).
+   (rarer guns, armour plates, RCS and reactors). The beaten ship doesn't
+   vanish: it stays as a grey-marked **WRECK**, drifting clear of you, its
+   guns, point defence and craft silent (the four most recent are kept).
 3. **Loot** uses cascading weighted rarity: every crate starts Common and
    climbs a tier with 30 % / 30 % / 25 % / 20 % chances (Common 70 %,
    Uncommon 21 %, Rare 6.75 %, Epic 1.8 %, Legendary 0.45 %), then picks a part
@@ -345,8 +357,13 @@ exit holes on the hull.
   visible) with tabs — DAMAGE (deck-by-deck map; click a system or room for
   its details and actions: dispatch a repair crew, switch a load off to
   reroute power, divert power to its channel, isolate / reopen a
-  compartment), CREW (who is where, cover a lost role, boarding party
-  size), POWER (pips and every load's switch), WING, TARGET.
+  compartment), CREW (a crew map with a dot per person in their post's
+  colour — ring = wounded — and the roster by post: who, where, doing what;
+  pick someone and send them to a new post, cover a post with general crew,
+  defence policy, boarding party size and how many would go), POWER (pips
+  and every load's switch), WING, TARGET (our boarders as post-coloured dots
+  with a white ring among the defenders' red ones), CARGO, WEAPONS
+  (launchers, missile mode and sequence order).
 - **Bridge crew lost**: the ship AI flies it with half thrust and turn rate,
   assist locked on, and lays the guns at half rate with extra spread, until
   someone takes over the bridge.
@@ -420,7 +437,9 @@ anyone free to a new post (they walk there). The dead leave their berths
    collar in 10 s, or cut into any outer hull face with a room behind it in
    45 s (that room vents). A target that still has power, thrust and a crew
    in command thrusts away and tears the gangway — disable it first.
-3. **N** sends your security and general crew (up to 8). They walk to the
+3. **N** sends your security and general crew — the party size is set in
+   Tab › CREW, up to 24, and the target card says how many would go before
+   you press it (enemy parties stay at 8). They walk to the
    collar, cross, and fight room by room towards the bridge. Defenders lock
    the doors ahead (20 s to cut each; hatches your guns already destroyed
    are open) and their security falls back to hold the bridge. Fights are
