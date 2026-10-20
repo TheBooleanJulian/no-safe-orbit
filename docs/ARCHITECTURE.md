@@ -489,7 +489,9 @@ bounding-box hit test.
   more than 200 kN to hold, or ports out of reach, severs it. A target with
   power, thrust and a crew in command tries to break contact
   (`GunneryAI.break_contact`).
-- **Boarding** (`BoardingAction`): up to 8 security/general crew muster at our
+- **Boarding** (`BoardingAction`): up to 24 security/general crew (the
+  party size chosen in Tab › CREW; enemy parties at most 8;
+  `BoardingAction.candidates()` says who would go) muster at our
   collar, cross (5 s) and advance room by room towards the bridge. Defenders
   lock intact doors out of every room the boarders hold (20 s to cut); their
   security walk to the bridge (travel time; a vented route stops them). In a
@@ -600,7 +602,12 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
   instead of hanging it, and use a throwaway profile path.
 - `tools/run_checks.sh` — runs everything, exports a `.pck` with the Windows
   preset and boots the game from it, and fails on engine errors in any log.
-- `tools/capture_screens.gd` — renders scripted moments to PNG for visual review.
+- `tests/smoke/smoke_wing.gd` — the Milestone 6 exit test: launch, command
+  and recover a fighter, then lose one persistently.
+- `tools/bench_sim.gd` — simulation frame-time profile under load; the same
+  run backs `test_the_simulation_keeps_a_60_hz_budget_under_load`.
+- `tools/capture_screens.gd` — renders scripted moments to PNG for visual
+  review (on the real profile: back it up, or use a scratch profile path).
 - Mutation checks: each core rule (tidal gravity, recoil, connector matching,
   parallel axis, exterior faces, armour obliquity, junction isolation, hatch
   destruction, AI feed-forward, self-hit arming, loot pity, loot RNG
