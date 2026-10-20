@@ -634,7 +634,8 @@ func _refresh_policy() -> void:
 	var af: HBoxContainer = row.call("Auto-fire")
 	af.add_child(_button("ON" if policy.autofire_enabled else "OFF", func() -> void: set_value.call("autofire_enabled", not policy.autofire_enabled)))
 	stepper.call(row.call("Tolerance"), "autofire_tolerance_deg", policy.autofire_tolerance_deg, 0.1, "%.1f°" % policy.autofire_tolerance_deg)
-	_policy_box.add_child(_caption_label("Auto-fire pulls the trigger while your aim is on the lead within the tolerance and you hold a lock; discipline TIGHT fires only at hostile contacts, HOLD never."))
+	stepper.call(row.call("Rate of fire"), "autofire_rate", policy.autofire_rate, 0.25, "%d %% of the guns' rate" % roundi(policy.autofire_rate * 100.0))
+	_policy_box.add_child(_caption_label("Auto-fire pulls the trigger while your aim is on the lead within the tolerance and you hold a lock, at its own rate of fire (saving rounds and heat); your own trigger always fires at the full rate. Discipline TIGHT fires only at hostile contacts, HOLD never."))
 
 
 func _refresh_crew(sys: ShipSystems) -> void:

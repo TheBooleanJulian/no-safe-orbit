@@ -499,7 +499,9 @@ func _spawn_encounter(arriving: bool = false) -> void:
 	# Local traffic is tougher away from home (Location.threat_bonus).
 	mission_no += location.threat_bonus
 	for i in EnemyFactory.encounter_size(get_profile().encounter_size):
-		_spawn_contact(i, mission_no, arriving)
+		# Only the lead starts close: the others come in from range and must
+		# be found (play-test batch 6: three ships at once overwhelmed).
+		_spawn_contact(i, mission_no, arriving or i > 0)
 	encounter.ensure_selection(world)
 	player_wing.target_id = encounter.selected
 
@@ -800,7 +802,9 @@ func _apply_automation(input: ShipControlInput, player: ShipState, target: ShipS
 	if policy == null or c == null or hud.selected_id != &"":
 		return
 	var fightable := is_fightable(target)
-	input.fire = policy.trigger(input.fire, c.track.locked, c.hostile, aim_error_deg(player, target, input), fightable)
+	var manual := input.fire
+	input.fire = policy.trigger(manual, c.track.locked, c.hostile, aim_error_deg(player, target, input), fightable)
+	input.fire_rate = policy.trigger_rate(manual)
 	# Auto-salvo at the selected contact (manual M, or a salvo in flight, comes first).
 	if salvo == null and target != null and target.is_active() and player.systems != null:
 		var range_m := player.position.distance_to(target.position)

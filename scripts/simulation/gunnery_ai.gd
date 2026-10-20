@@ -105,6 +105,8 @@ static func combat(shooter: ShipState, target: ShipState, now: float, policy: Sh
 		input.fire = false
 	if policy != null and not policy.allows_fire(true):
 		input.fire = false
+	if policy != null:
+		input.fire_rate = policy.trigger_rate(false)
 	return input
 
 

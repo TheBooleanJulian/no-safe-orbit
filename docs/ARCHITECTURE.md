@@ -734,6 +734,14 @@ bounding-box hit test.
   spawned 8 m off the rack at +3 m/s), recovery (< 10 m, < 2 m/s), 40 s
   servicing, comms (30 km; jammed → fallback RETURN after 10 s), loss, and
   persistence (`ShipInstance.wing`).
+- **Fire rate (play-test batch 6)**: `ShipControlInput.fire_rate` (0.1–1)
+  stretches each gun's cooldown. `ShipPolicy.autofire_rate` with
+  `trigger_rate(manual)`: 1 for the player's hand, the policy's rate for
+  automation (Main `_apply_automation`; enemies through `GunneryAI.combat`,
+  `EnemyFactory` leads 0.7, wingmen 0.45). `EnemyFactory.kit_mission`
+  fits wingmen as for earlier missions; `Main._spawn_encounter` spawns them
+  arriving. `ShipSystems.reachable_rooms` starts from a vented bridge when
+  the crew are suited.
 - **Targets and rearming (play-test batch 6)**: `AirWing.strike_target`
   is `target_id` while `combat_ready` (active, not a derelict, not
   disabled), else the nearest combat-ready of `candidate_ids` (Main: the

@@ -36,6 +36,10 @@ static func encounter_size(chosen: int) -> int:
 ## An enemy ship's policy (ShipPolicy): the Standard preset with a role by
 ## its place in the encounter (closer, standoff, flanker, …), focus fire,
 ## and missile salvos of a few missiles inside its role's reach.
+const LEAD_FIRE_RATE := 0.7
+const WINGMAN_FIRE_RATE := 0.45
+
+
 static func policy(mission: int, index: int) -> ShipPolicy:
 	var p := ShipPolicy.preset("Standard")
 	p.preset_name = "Enemy"
@@ -51,16 +55,28 @@ static func policy(mission: int, index: int) -> ShipPolicy:
 	p.salvo_interval_s = 25.0
 	p.cm_auto = true
 	p.cm_lead_s = 3.5
+	# Their guns are automation too: the lead at 70 % of the rated rate, the
+	# wingmen at 45 % (play-test batch 6: more than one ship was too much).
+	p.autofire_rate = LEAD_FIRE_RATE if index == 0 else WINGMAN_FIRE_RATE
 	return p
 
 
+## The mission a ship is fitted as: the lead at the mission's level, the
+## wingmen as for earlier missions (the second two back, the third three) —
+## play-test batch 6: every ship of a 1v3 carried the lead's full kit.
+static func kit_mission(mission: int, variant: int) -> int:
+	return mission if variant <= 0 else maxi(mission - 1 - variant, 1)
+
+
 ## `variant` > 0: another ship of the same mission's encounter (its own
-## rolls); variant 0 is the mission's lead ship as before.
+## rolls, fitted as for an earlier mission, kit_mission); variant 0 is the
+## mission's lead ship as before.
 static func design(mission: int, template: ShipBlueprint, catalog: ConstructionCatalog, variant: int = 0) -> ShipBlueprint:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7919 * mission + 17 + 104_729 * variant
 	var bp := template.duplicate_blueprint()
 	bp.name = "%s-class %s" % [CLASS_NAMES[(mission - 1 + variant) % CLASS_NAMES.size()], template.name.split(" ")[0].to_lower()]
+	mission = kit_mission(mission, variant)
 	var m := float(mission)
 	for e in bp.equipment:
 		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)

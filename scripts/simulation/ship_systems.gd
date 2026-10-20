@@ -384,7 +384,9 @@ func reachable_rooms() -> Dictionary:
 	var start := -1
 	for i in blueprint.rooms.size():
 		var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
-		if def != null and def.role == &"command" and rooms[i].pressurized:
+		# Suited crew (general quarters) keep command of a vented bridge
+		# (play-test batch 6: one breach of the bridge disabled the ship).
+		if def != null and def.role == &"command" and (rooms[i].pressurized or suited):
 			start = i
 			break
 	var seen := {}
