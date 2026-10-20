@@ -729,7 +729,9 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 	var policy := _policy_of(ship)
 	var gun := cfg.pd_gun
 	var inv := ship.orientation.inverse()
-	var candidates: Array[Dictionary] = pd_candidates(ship) if policy.pd_enabled else []
+	var candidates: Array[Dictionary] = []
+	if policy.pd_enabled:
+		candidates = pd_candidates(ship)
 	for k in cfg.pd_mounts_body.size():
 		ship.pd_cooldowns[k] = maxf(ship.pd_cooldowns[k] - fixed_dt, 0.0)
 		ship.pd_targets[k] = ""
