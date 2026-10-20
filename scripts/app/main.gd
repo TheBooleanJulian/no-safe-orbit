@@ -160,6 +160,7 @@ static func get_profile() -> PlayerProfile:
 func _ready() -> void:
 	GameLog.hold(true)
 	InputBindings.apply_saved()
+	DisplaySettings.apply_saved()
 	gangways.name = "Gangways"
 	add_child(gangways)
 	audio.name = "Audio"
@@ -476,6 +477,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	elif event.is_action_pressed("toggle_help"):
 		hud.toggle_help()
+		return
+	elif event.is_action_pressed("toggle_fullscreen"):
+		DisplaySettings.toggle_fullscreen()
 		return
 	elif event.is_action_pressed("toggle_controls"):
 		hud.controls.toggle()

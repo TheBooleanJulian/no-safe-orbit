@@ -150,6 +150,18 @@ Open the folder in Godot 4.7.2 and press F5, or from a terminal:
 godot --path .
 ```
 
+The interface is laid out for 1600 × 900 and scales with the window (down
+to the Steam Deck's 1280 × 800, up to 4K). F11 switches fullscreen and is
+remembered in `user://settings.cfg`.
+
+## Releases (Steam)
+
+Published by **TheBooleanJulian**. Windows and Linux export presets carry
+the publisher and the version (`0.12.0`); `tools/steam_export.sh` builds
+both Steam depots with `THIRD_PARTY_NOTICES.txt` (credits and the Godot
+licences, also in game under F1 → Credits & licences). The Steamworks
+steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
+
 ## Controls (rebind in game with F1; saved per user)
 
 | Action | Keyboard / mouse | Gamepad |
@@ -184,7 +196,8 @@ godot --path .
 | Launch craft / recall craft | [ / ] | paddle / Misc |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
 | Dimensional jump drive to the location's station (hold 5 s, not while under fire) | hold B | hold Start |
-| Controls panel (rebinding) | F1 | Guide |
+| Controls panel (rebinding), credits and licences | F1 | Guide |
+| Fullscreen / window (remembered) | F11 | — |
 | Guided first sortie: start / skip | F2 | — |
 
 **Propellant:** the Frigate Mk I carries 80 t — about 1.6 km/s of main-engine

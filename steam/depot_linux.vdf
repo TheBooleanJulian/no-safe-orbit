@@ -1,0 +1,11 @@
+// Linux depot: everything tools/steam_export.sh put in build/steam/linux.
+"DepotBuild"
+{
+	"DepotID" "@LINUX_DEPOT_ID@"
+	"FileMapping"
+	{
+		"LocalPath" "linux/*"
+		"DepotPath" "."
+		"Recursive" "1"
+	}
+}

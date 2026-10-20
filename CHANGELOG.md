@@ -4,6 +4,32 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Steam release preparation (2026-10-20)
+
+#### Added
+- Version **0.12.0** (`application/config/version`), shown in the credits.
+- Windows executable metadata — company **TheBooleanJulian**, product
+  No Safe Orbit, © 2026 TheBooleanJulian — and a **Linux** export preset.
+- **Credits & licences** in game (F1 → Credits & licences): the data
+  sources, the sound credits and Godot's MIT licence with its third-party
+  components; `tools/write_notices.gd` writes the same text as
+  `THIRD_PARTY_NOTICES.txt` for the depots.
+- **Fullscreen toggle** (F11, rebindable), remembered in
+  `user://settings.cfg`.
+- `tools/steam_export.sh` and `steam/*.vdf`: release exports for both
+  platforms and the filled-in steamcmd scripts (uploading stays manual).
+- `docs/STEAM.md`: the Steamworks steps, Auto-Cloud paths, Steam Deck
+  notes, store-page text, art sizes and the open decisions.
+- Tests: `test_release.gd` (4).
+
+#### Changed
+- The interface scales with the window from its 1600 × 900 layout
+  (`canvas_items` stretch, `expand`); rendered at 1280 × 800 and
+  2560 × 1440, HUD markers stay on their targets.
+
+#### Tests changed (and why)
+- `test_input_bindings`: fullscreen joins the keyboard-only actions.
+
 ### Play-test batch 5 — smarter craft, IFF, ramming, armed-only flares (2026-10-20)
 
 #### Added

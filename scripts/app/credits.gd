@@ -1,0 +1,62 @@
+class_name Credits
+extends RefCounted
+## Credits and licences, shown in game (F1 → Credits & licences) and written
+## next to the executable as THIRD_PARTY_NOTICES.txt by tools/write_notices.gd.
+## The data sources are those of data/ATTRIBUTION.md; Godot's MIT licence and
+## its third-party components come from the engine itself.
+
+const PUBLISHER := "TheBooleanJulian"
+
+const DATA_CREDITS := [
+	"Star positions and colours: Yale Bright Star Catalogue, 5th revised ed. (Hoffleit & Warren 1991), via CDS (catalogue V/50).",
+	"Earth: NASA Blue Marble: Next Generation (Reto Stöckli, NASA Earth Observatory), via NASA's Scientific Visualization Studio. Public domain.",
+	"Moon: NASA CGI Moon Kit (Ernie Wright, USRA; Noah Petro, NASA/GSFC), from LRO LROC WAC (Arizona State University) and LOLA data, via NASA's Scientific Visualization Studio. Public domain.",
+	"Sound effects: Kenney (www.kenney.nl) — Sci-Fi Sounds, Impact Sounds, Interface Sounds. CC0 1.0.",
+]
+
+
+static func version() -> String:
+	return str(ProjectSettings.get_setting("application/config/version", ""))
+
+
+## The short credits: title, version, publisher, data sources, the engine.
+static func summary() -> String:
+	var lines := PackedStringArray()
+	lines.append("%s %s" % [str(ProjectSettings.get_setting("application/config/name", "")), version()])
+	lines.append("© 2026 %s. All rights reserved." % PUBLISHER)
+	lines.append("")
+	lines.append("DATA AND SOUND")
+	for line: String in DATA_CREDITS:
+		lines.append("• " + line)
+	lines.append("")
+	lines.append("ENGINE")
+	lines.append("Made with Godot Engine %s (godotengine.org)." % Engine.get_version_info().string)
+	return "\n".join(lines)
+
+
+## Everything, including the Godot licence and the licences of the
+## components it is built from (Godot's requirement for shipped games).
+static func full_text() -> String:
+	var lines := PackedStringArray([summary(), ""])
+	lines.append("This game uses Godot Engine, available under the following license:")
+	lines.append("")
+	lines.append(Engine.get_license_text())
+	lines.append("")
+	lines.append("THIRD-PARTY COMPONENTS OF GODOT ENGINE")
+	var licences := Engine.get_license_info()
+	for info: Dictionary in Engine.get_copyright_info():
+		lines.append("")
+		lines.append("— %s" % info.get("name", ""))
+		for part: Dictionary in info.get("parts", []):
+			for c: String in part.get("copyright", PackedStringArray()):
+				lines.append("  © %s" % c)
+			lines.append("  License: %s" % part.get("license", ""))
+	lines.append("")
+	lines.append("LICENSE TEXTS")
+	var names: Array = licences.keys()
+	names.sort()
+	for name: String in names:
+		lines.append("")
+		lines.append("— %s" % name)
+		lines.append(str(licences[name]))
+	return "\n".join(lines)

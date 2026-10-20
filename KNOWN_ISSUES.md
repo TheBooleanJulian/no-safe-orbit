@@ -11,6 +11,12 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   upgrade costs are first guesses. Expect further tuning.
 - **Fires, coolant loops and named crew are new** and covered by tests,
   not yet by play.
+- **The release executables have not been exported or launched on the
+  development machine**: Godot's export templates aren't installed there.
+  The data pack is exported and booted on every check run; see
+  `docs/STEAM.md` §3.
+- **No application icon yet** (the Godot default is used); see
+  `docs/STEAM.md` §6.
 - **Craft roles are new** (play-test batch 5): the interceptor, bomber,
   gun runs and avoidance distances are first guesses covered by seeded
   tests, not yet by play. Avoidance is a local nudge, so a craft can be

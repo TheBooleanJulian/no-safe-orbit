@@ -1,0 +1,12 @@
+// Windows depot: everything tools/steam_export.sh put in build/steam/windows.
+"DepotBuild"
+{
+	"DepotID" "@WIN_DEPOT_ID@"
+	"FileMapping"
+	{
+		"LocalPath" "windows/*"
+		"DepotPath" "."
+		"Recursive" "1"
+	}
+	"FileExclusion" "*.console.exe"
+}
