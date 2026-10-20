@@ -45,6 +45,9 @@ var gun_reticles: Array[Dictionary] = []
 var orbit_path := PackedVector3Array()
 ## Labelled points on the path: [{pos: Vector3, text: String, color: Color}].
 var orbit_markers: Array[Dictionary] = []
+## Added to every orbit_path point and marker: the path is computed a few
+## times a second, relative to where the render origin was then.
+var orbit_offset := Vector3.ZERO
 var planet_center := Vector3.ZERO
 var planet_radius := 0.0
 
@@ -195,7 +198,8 @@ func _draw_orbit_path(font: Font) -> void:
 	var cam := camera.global_position
 	var prev := Vector2.ZERO
 	var prev_ok := false
-	for point in orbit_path:
+	for p0 in orbit_path:
+		var point := p0 + orbit_offset
 		var ok := _visible(point, cam)
 		var sp := camera.unproject_position(point) if ok else Vector2.ZERO
 		if ok and prev_ok and prev.distance_to(sp) < size.length():
@@ -203,7 +207,7 @@ func _draw_orbit_path(font: Font) -> void:
 		prev = sp
 		prev_ok = ok
 	for marker in orbit_markers:
-		var pos: Vector3 = marker.pos
+		var pos: Vector3 = marker.pos + orbit_offset
 		if not _visible(pos, cam):
 			continue
 		var p := camera.unproject_position(pos)

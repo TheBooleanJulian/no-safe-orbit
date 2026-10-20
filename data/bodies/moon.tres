@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="OrbitalBody" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/orbital_body.gd" id="1_body"]
+[ext_resource type="Texture2D" path="res://data/moon/lroc_color_poles_4k.jpg" id="2_map"]
+
+[resource]
+script = ExtResource("1_body")
+display_name = "Moon"
+mu_m3_s2 = 4.902800118e12
+radius_m = 1737400.0
+entry_interface_altitude_m = 11000.0
+has_atmosphere = false
+pole_ra_deg = 269.9949
+pole_dec_deg = 66.5392
+prime_meridian_deg = 38.3213
+rotation_deg_per_day = 13.17635815
+term_amplitudes_deg = Vector3(-3.8787, 1.5419, 3.561)
+term_e0_deg = 125.045
+term_deg_per_day = -0.0529921
+surface_map = ExtResource("2_map")

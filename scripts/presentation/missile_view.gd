@@ -2,61 +2,28 @@ class_name MissileView
 extends Node3D
 ## View of a missile in flight: a slim body with fins and a bright additive
 ## exhaust while the motor burns. Read-only, like CraftView.
+##
+## Body, nose and fins are merged into one mesh (two surfaces) shared by
+## every missile on a side, and nothing casts shadows: a big salvo is dozens
+## of these, and separate parts cost a draw call each.
 
 var hostile: bool = false
 
 var _exhaust: MeshInstance3D
 
+static var _bodies: Dictionary = {}  # hostile: bool -> ArrayMesh
+static var _plume: CylinderMesh
+static var _flame: StandardMaterial3D
+
 
 func _ready() -> void:
-	var body_mat := StandardMaterial3D.new()
-	body_mat.albedo_color = Color(0.72, 0.74, 0.78)
-	body_mat.metallic = 0.6
-	body_mat.roughness = 0.4
 	var body := MeshInstance3D.new()
-	var tube := CylinderMesh.new()
-	tube.top_radius = 0.22
-	tube.bottom_radius = 0.22
-	tube.height = 2.6
-	body.mesh = tube
-	body.material_override = body_mat
-	body.rotation_degrees = Vector3(90, 0, 0)
+	body.mesh = _body_mesh(hostile)
+	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(body)
-	var nose := MeshInstance3D.new()
-	var cone := CylinderMesh.new()
-	cone.top_radius = 0.0
-	cone.bottom_radius = 0.22
-	cone.height = 0.6
-	nose.mesh = cone
-	nose.material_override = body_mat
-	nose.rotation_degrees = Vector3(-90, 0, 0)
-	nose.position = Vector3(0, 0, -1.6)
-	add_child(nose)
-	var band_mat := StandardMaterial3D.new()
-	band_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	band_mat.albedo_color = CyberTheme.MAGENTA if hostile else CyberTheme.CYAN
-	for k in 4:
-		var fin := MeshInstance3D.new()
-		var plate := BoxMesh.new()
-		plate.size = Vector3(0.04, 0.5, 0.5)
-		fin.mesh = plate
-		fin.material_override = band_mat
-		fin.position = Vector3(0, 0, 1.05)
-		fin.rotation = Vector3(0, 0, PI * 0.5 * k)
-		fin.position += fin.basis * Vector3(0, 0.35, 0)
-		add_child(fin)
-	var flame := StandardMaterial3D.new()
-	flame.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	flame.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	flame.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	flame.albedo_color = Color(1.0, 0.75, 0.45, 0.8)
-	var plume := CylinderMesh.new()
-	plume.top_radius = 0.05
-	plume.bottom_radius = 0.3
-	plume.height = 3.0
 	_exhaust = MeshInstance3D.new()
-	_exhaust.mesh = plume
-	_exhaust.material_override = flame
+	_exhaust.mesh = _plume_mesh()
+	_exhaust.material_override = _flame
 	_exhaust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_exhaust.rotation_degrees = Vector3(-90, 0, 0)
 	_exhaust.position = Vector3(0, 0, 2.8)
@@ -67,3 +34,52 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 	position = state.interpolated_position(alpha) - render_origin
 	quaternion = state.interpolated_orientation(alpha)
 	_exhaust.visible = -state.last_thrust_body.z > 1.0
+
+
+static func _body_mesh(is_hostile: bool) -> ArrayMesh:
+	if _bodies.has(is_hostile):
+		return _bodies[is_hostile]
+	var body_mat := StandardMaterial3D.new()
+	body_mat.albedo_color = Color(0.72, 0.74, 0.78)
+	body_mat.metallic = 0.6
+	body_mat.roughness = 0.4
+	var band_mat := StandardMaterial3D.new()
+	band_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	band_mat.albedo_color = CyberTheme.MAGENTA if is_hostile else CyberTheme.CYAN
+	var tube := CylinderMesh.new()
+	tube.top_radius = 0.22
+	tube.bottom_radius = 0.22
+	tube.height = 2.6
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.0
+	cone.bottom_radius = 0.22
+	cone.height = 0.6
+	var plate := BoxMesh.new()
+	plate.size = Vector3(0.04, 0.5, 0.5)
+	var shell := SurfaceTool.new()
+	shell.append_from(tube, 0, Transform3D(Basis.from_euler(Vector3(PI * 0.5, 0, 0)), Vector3.ZERO))
+	shell.append_from(cone, 0, Transform3D(Basis.from_euler(Vector3(-PI * 0.5, 0, 0)), Vector3(0, 0, -1.6)))
+	var fins := SurfaceTool.new()
+	for k in 4:
+		var b := Basis.from_euler(Vector3(0, 0, PI * 0.5 * k))
+		fins.append_from(plate, 0, Transform3D(b, Vector3(0, 0, 1.05) + b * Vector3(0, 0.35, 0)))
+	var mesh := shell.commit()
+	mesh.surface_set_material(0, body_mat)
+	fins.commit(mesh)
+	mesh.surface_set_material(1, band_mat)
+	_bodies[is_hostile] = mesh
+	return mesh
+
+
+static func _plume_mesh() -> CylinderMesh:
+	if _plume == null:
+		_flame = StandardMaterial3D.new()
+		_flame.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_flame.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_flame.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		_flame.albedo_color = Color(1.0, 0.75, 0.45, 0.8)
+		_plume = CylinderMesh.new()
+		_plume.top_radius = 0.05
+		_plume.bottom_radius = 0.3
+		_plume.height = 3.0
+	return _plume

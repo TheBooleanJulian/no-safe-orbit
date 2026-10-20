@@ -273,7 +273,7 @@ func _build_cargo_tab() -> void:
 	var box := _tab_box()
 	_cargo_label = _rich(box, 60)
 	box.add_child(_button("Vent excess (cheapest first)", func() -> void: command.emit(&"vent_excess", null), CyberTheme.AMBER))
-	box.add_child(_heading("HOLD — at risk until banked at Earth Shipyard", CyberTheme.CYAN))
+	box.add_child(_heading("HOLD — at risk until banked at the station", CyberTheme.CYAN))
 	_cargo_box = VBoxContainer.new()
 	box.add_child(_cargo_box)
 

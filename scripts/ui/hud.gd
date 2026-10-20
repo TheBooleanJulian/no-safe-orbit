@@ -22,6 +22,7 @@ const CIRCULAR_ECCENTRICITY := 1e-4
 const PATH_SAMPLES := 180
 const NEAR_PATH_DEG := 20.0
 const NEAR_PATH_SAMPLES := 80
+const PATH_REFRESH_MS := 200
 const NOTICE_S := 6.0
 const HIT_ALERT_S := 8.0
 ## Layout breakpoint: below this height the side panels shrink.
@@ -65,6 +66,8 @@ var escort_id: StringName = &""
 ## The encounter (set by Main): the target card lists the other contacts
 ## compactly; the radar and the markers show them all.
 var encounter: Encounter
+## The station the jump drive returns to (Main: the location's).
+var station_name := "Earth Shipyard"
 ## Beaten contacts left drifting, marked grey (set by Main).
 var wreck_ids: Array[StringName] = []
 var guide_label: RichTextLabel
@@ -117,6 +120,9 @@ var _orbit_forced := false
 var _strip_w := 600.0
 var _side_w := 330.0
 var _radar_size := 240.0
+var _path_origin_pci: Vec3d = null
+var _path_at_ms := 0
+var _panel_at_ms := 0
 
 
 func _ready() -> void:
@@ -251,7 +257,7 @@ SHIP       Tab damage control, crew, power, wing · C patch damage
 CONTACTS   T target hostile · G salvage beacon · Y grappling arm · V gangway · N board / withdraw · [ / ] launch / recall craft
 MISSION    the goal is shown at the top (gold) · F2 guided first sortie: start / skip
 PANELS     O orbit · P details & combat log · H this help · F1 rebind
-MISSION    hold B 5 s: jump drive to Earth Shipyard (out of combat) · Backspace restart / respawn"""
+MISSION    hold B 5 s: jump drive to the station (out of combat) · Backspace restart / respawn"""
 
 
 ## Puts a sans heading above `label` inside its parent container.
@@ -752,8 +758,8 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		var waiting: PackedStringArray = jump_state.waiting
 		var bars := roundi(float(jump_state.progress) * 10.0)
 		if waiting.is_empty():
-			out.append(_alert("caution", "JUMP %.1f s" % jump_state.left_s, "DIMENSIONAL JUMP DRIVE %s %.1f s TO EARTH SHIPYARD" % [
-				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s], "keep holding [B]"))
+			out.append(_alert("caution", "JUMP %.1f s" % jump_state.left_s, "DIMENSIONAL JUMP DRIVE %s %.1f s TO %s" % [
+				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s, station_name.to_upper()], "keep holding [B]"))
 		else:
 			out.append(_alert("danger", "EMERGENCY JUMP %.1f s" % jump_state.left_s, "EMERGENCY JUMP %s %.1f s — LEAVES BEHIND %s" % [
 				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s, " · ".join(waiting).to_upper()], "release [B] to wait for them"))
@@ -882,7 +888,7 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 	if not target.is_active():
 		_target_heading.text = "TARGET · %s" % target.display_name
 		target_label.text = "%s LOST — %s at T+%s\nHITS    %d" % [CyberTheme.GLYPH_DESTROYED,
-			"atmospheric entry" if target.status == ShipState.Status.ENTERED_ATMOSPHERE else "destroyed", HudFormat.clock(target.status_time), _hits_scored]
+			world.body.entry_word() if target.status == ShipState.Status.ENTERED_ATMOSPHERE and world.body != null else "destroyed", HudFormat.clock(target.status_time), _hits_scored]
 		return
 	var range_km := SensorTrack.range_of(player) / 1000.0
 	if track != null and not track.detected:
@@ -1213,6 +1219,11 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 	if orbit == null:
 		orbit_label.text = "NO CENTRAL BODY — INERTIAL SPACE"
 		return
+	# Readouts a few times a second (the light-change search is not cheap).
+	var now := Time.get_ticks_msec()
+	if now - _panel_at_ms < PATH_REFRESH_MS and now >= _panel_at_ms and orbit_label.text.begins_with("ORBIT"):
+		return
+	_panel_at_ms = now
 	var body := world.body
 	var lines := PackedStringArray([
 		"ORBIT      %s" % body.display_name.to_upper(),
@@ -1231,10 +1242,12 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 		lines.append("PERIAPSIS  %s" % HudFormat.altitude(orbit.periapsis_radius - body.radius_m))
 	var t_entry := orbit.time_to_radius_descending(body.entry_radius_m())
 	var entry_alt_km := body.entry_interface_altitude_m / 1000.0
+	# Airless: the floor is the highest terrain, not an atmosphere.
+	var floor_name := "ENTRY IF" if body.has_atmosphere else "TERRAIN "
 	if is_nan(t_entry):
-		lines.append("ENTRY IF   %.0f km · CLEAR" % entry_alt_km)
+		lines.append("%s   %.0f km · CLEAR" % [floor_name, entry_alt_km])
 	else:
-		lines.append("ENTRY IF   %.0f km · IN %s" % [entry_alt_km, HudFormat.duration(t_entry)])
+		lines.append("%s   %.0f km · IN %s" % [floor_name, entry_alt_km, HudFormat.duration(t_entry)])
 	if celestial != null:
 		var sun_dir := celestial.sun_direction_pci(world.sim_time)
 		var lit := CelestialFrame.sunlight_fraction(orbit.position, sun_dir, body.radius_m) >= 0.5
@@ -1333,16 +1346,29 @@ func _update_gun_reticles(player: ShipState, alpha: float, render_origin: Vector
 
 
 func _update_orbit_path(world: WorldSimulation, orbit: OrbitElements, alpha: float, render_origin: Vector3) -> void:
-	overlay.orbit_path = PackedVector3Array()
-	overlay.orbit_markers = []
 	if orbit == null:
+		overlay.orbit_path = PackedVector3Array()
+		overlay.orbit_markers = []
 		overlay.planet_radius = 0.0
+		_path_origin_pci = null
 		return
 	var body := world.body
 	# PCI position of the render origin; path points are drawn relative to it.
 	var origin_pci := world.frame.interpolated_origin(alpha).plus_v3(render_origin)
 	overlay.planet_center = Vec3d.new().minus(origin_pci).to_vector3()
 	overlay.planet_radius = body.radius_m
+	# The path itself (hundreds of Kepler solves) is recomputed a few times a
+	# second; between refreshes it is shifted by how far the origin moved.
+	var now := Time.get_ticks_msec()
+	if _path_origin_pci == null or now - _path_at_ms >= PATH_REFRESH_MS or now < _path_at_ms:
+		_path_origin_pci = origin_pci
+		_path_at_ms = now
+		_compute_orbit_path(body, orbit, origin_pci)
+	overlay.orbit_offset = _path_origin_pci.minus(origin_pci).to_vector3()
+
+
+func _compute_orbit_path(body: OrbitalBody, orbit: OrbitElements, origin_pci: Vec3d) -> void:
+	overlay.orbit_markers = []
 	var entry_r := body.entry_radius_m()
 	var path := PackedVector3Array()
 	# Dense for the first 20° (the stretch seen near the prograde marker),
@@ -1370,7 +1396,7 @@ func _update_orbit_path(world: WorldSimulation, orbit: OrbitElements, alpha: flo
 			_add_marker(orbit, origin_pci, -orbit.true_anomaly, "Pe %s" % HudFormat.altitude(orbit.periapsis_radius - body.radius_m), COLOR_APSIS)
 	if orbit.intersects_radius(entry_r) and orbit.radius > entry_r:
 		var cos_nu := clampf((orbit.semi_latus_rectum / entry_r - 1.0) / orbit.eccentricity, -1.0, 1.0)
-		_add_marker(orbit, origin_pci, -acos(cos_nu) - orbit.true_anomaly, "ENTRY %.0f km" % (body.entry_interface_altitude_m / 1000.0), CyberTheme.AMBER)
+		_add_marker(orbit, origin_pci, -acos(cos_nu) - orbit.true_anomaly, "%s %.0f km" % ["ENTRY" if body.has_atmosphere else "TERRAIN", body.entry_interface_altitude_m / 1000.0], CyberTheme.AMBER)
 
 
 func _add_marker(orbit: OrbitElements, origin_pci: Vec3d, angle: float, text: String, color: Color) -> void:

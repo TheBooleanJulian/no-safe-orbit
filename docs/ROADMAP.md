@@ -419,6 +419,25 @@ added, limited to what PD can plausibly track.
 7. Mutation checks: policy ordering, salvo count, manual override, contact
    selection.
 
+### Play-test batch 3 — map, lunar orbit, big-fight performance ✅ (2026-10-20)
+
+Requested after play: "1v3 is too hard", "it lags" with four ships' missiles,
+three ships' fighters and everyone's rounds, and "a map so the player can
+select where to launch from the shipyard (1/2/3 ship encounter), as well as
+moon orbit (and its shipyard)". Part of Milestone 13 brought forward (the
+`Location` resource, the Moon, a map and known locations); jump fuel,
+brokers, contracts, Mars and per-station stock stay in Milestone 13.
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Lag in the big fight | `tools/profile_frames.gd` (manual, needs a GPU) | 23 → 75 fps mean; p95 157 → 20 ms; frames over 50 ms 170 → 1 in 40 s |
+| Merged hull keeps every piece; redrawn on wear and wrecks | `test_render_batching` (4, wear mutation-checked) | 96 pieces → 1 mesh, 1104 / 1104 triangles |
+| Pick the encounter size, 1–3 | `smoke_shipyard` (map buttons), `test_m10_contacts`, `smoke_encounter` | 2 picked → 2 contacts |
+| Pick the station on a map; launch from its orbit; jump back to it | `smoke_shipyard` (mouse click on the Moon; location wiring mutation-checked) | 100.0 km, 1634 m/s about the Moon; Lunar Shipyard after B |
+| Real Moon: μ, radius, orbit, pole, spin, shadow | `test_locations` | 1633.5 m/s, 117.8 min; pole 1.51° from the ecliptic pole; 27.32-day spin |
+| Earth unchanged by the generalised frame | `test_locations` (old reference values), `test_celestial` | identical to 1e-6 |
+| Save format: schema 7, migration, backup | `test_locations`, `build/compat_check.gd` | v6 → Earth, 1 ship, `.v6` kept; COMPAT: OK |
+
 ### Pass A — alerts and audio (refined at the start of its session)
 
 - Audit every HUD alert string; a fixed grammar replaces sentences: shape or
@@ -451,6 +470,11 @@ Frigate Mk I, purchasable for credits: price from parts plus hull with a
 markup; no buy-then-scrap arbitrage (tested). Crew bought with credits.
 
 ### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts
+
+Done early (play-test batch 3): `Location` resource, Earth and Moon with
+per-body config and NASA textures, the shipyard map, known locations in the
+profile. Still to do: Mars, shipyard stock and prices and an encounter table
+per location, jump costs, brokers, contracts, sun-centred precision.
 
 `Location` resource (body, start orbit, shipyard stock and prices,
 encounter table, broker). Per-body config (μ, radius, entry interface:

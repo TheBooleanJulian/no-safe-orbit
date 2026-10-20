@@ -498,14 +498,35 @@ func take_hit_events() -> Array[HitEvent]:
 	return events
 
 
+## Time spent per phase of step() (ms, summed since the last
+## take_phase_ms()), for the profiling tools.
+var _phase_ms := {}
+var _phase_t0 := 0
+
+
+func _phase(name: String) -> void:
+	var now := Time.get_ticks_usec()
+	_phase_ms[name] = float(_phase_ms.get(name, 0.0)) + (now - _phase_t0) / 1000.0
+	_phase_t0 = now
+
+
+func take_phase_ms() -> Dictionary:
+	var out := _phase_ms
+	_phase_ms = {}
+	return out
+
+
 ## Run exactly one fixed tick.
 func step() -> void:
+	_phase_t0 = Time.get_ticks_usec()
 	if frame != null:
 		frame.step(fixed_dt)
 	var spawned: Array[ProjectileState] = []
 	for wing in wings:
 		wing.update(self, fixed_dt)
+	_phase("wings")
 	_guide_missiles()
+	_phase("guidance")
 	for id in _ship_order:
 		var ship: ShipState = _ships[id]
 		ship.snapshot_previous()
@@ -519,20 +540,27 @@ func step() -> void:
 		_resolve_hold(input)
 		ShipDynamics.step(ship, input, fixed_dt, frame)
 		_update_cannon(ship, input, spawned)
+		_phase("ships")
 		_update_point_defence(ship, spawned)
+		_phase("point_defence")
 		if ship.systems != null and ship.systems.tick(ship, fixed_dt):
 			ship.config = ship.systems.effective_config()
+		_phase("systems")
 	_step_missiles()
+	_phase("missiles")
 	_step_collisions()
+	_phase("collisions")
 	_step_links()
 	tick += 1
 	sim_time = tick * fixed_dt
 	_step_rounds()
+	_phase("rounds")
 	if frame != null:
 		_step_far_rounds()
 	_rounds.append_array(spawned)  # fired at end of tick; first move next tick
 	_check_entry_interface()
 	_rebase_if_needed()
+	_phase("other")
 
 
 ## Feed real elapsed time; runs whole fixed steps and returns the
@@ -683,9 +711,11 @@ func _hostile_to(ship: ShipState, other: ShipState) -> bool:
 ## not its own side's, not flak, on a course to pass within its hit box
 ## reach soon?
 func _round_threatens(ship: ShipState, shot: ProjectileState) -> bool:
-	if shot.pd_target_round >= 0 or shot.shooter_id == ship.id or _is_craft_of(shot.shooter_id, ship.id):
+	# Cheapest checks first: most rounds are too small (autocannon, flak).
+	if shot.mass_kg() < PD_ROUND_MIN_KG or shot.pd_target_round >= 0:
 		return false
-	if shot.mass_kg() < PD_ROUND_MIN_KG or (shot.velocity - ship.velocity).length() > PD_ROUND_MAX_CLOSING_MPS:
+	if (shot.velocity - ship.velocity).length_squared() > PD_ROUND_MAX_CLOSING_MPS * PD_ROUND_MAX_CLOSING_MPS \
+			or shot.shooter_id == ship.id or _is_craft_of(shot.shooter_id, ship.id):
 		return false
 	var shooter := get_ship(shot.shooter_id)
 	if shooter != null and ship.side != &"" and shooter.side == ship.side:
@@ -1052,8 +1082,46 @@ func _collision_damage(ship: ShipState, point: Vector3, energy_j: float) -> Pack
 
 ## Rounds never expire. Near the engagement they are integrated like ships;
 ## far away they coast analytically (see _step_far_rounds).
+## Rounds broadphase: every active ship in each grid cell its reach
+## overlaps — hit box, plus how far it and the fastest round move in a tick —
+## rebuilt once per tick; a round tests only the ships in its segment's
+## midpoint cell instead of every ship (rounds × ships was the tick's cost).
+const BROAD_CELL_M := 256.0
+var _broad: Dictionary = {}  # Vector3i -> Array[ShipState]
+const _NO_SHIPS: Array[ShipState] = []
+
+
+func _broad_cell(p: Vector3) -> Vector3i:
+	return Vector3i(floori(p.x / BROAD_CELL_M), floori(p.y / BROAD_CELL_M), floori(p.z / BROAD_CELL_M))
+
+
+func _build_broadphase(round_step_m: float) -> void:
+	_broad.clear()
+	for id in _ship_order:
+		var ship: ShipState = _ships[id]
+		if not ship.is_active():
+			continue
+		var center := (ship.position + ship.prev_position) * 0.5
+		var r := ship.config.hit_box_center.length() + ship.config.hit_box_half_extents.length() \
+			+ ship.position.distance_to(ship.prev_position) + round_step_m + 1.0
+		var lo := _broad_cell(center - Vector3.ONE * r)
+		var hi := _broad_cell(center + Vector3.ONE * r)
+		for x in range(lo.x, hi.x + 1):
+			for y in range(lo.y, hi.y + 1):
+				for z in range(lo.z, hi.z + 1):
+					var key := Vector3i(x, y, z)
+					if not _broad.has(key):
+						var list: Array[ShipState] = []
+						_broad[key] = list
+					(_broad[key] as Array[ShipState]).append(ship)
+
+
 func _step_rounds() -> void:
 	var half_dt := fixed_dt * 0.5
+	var fastest := 0.0
+	for shot in _rounds:
+		fastest = maxf(fastest, shot.velocity.length_squared())
+	_build_broadphase(sqrt(fastest) * fixed_dt * 1.05)
 	var entry_r2 := 0.0
 	if frame != null:
 		entry_r2 = body.entry_radius_m() * body.entry_radius_m()
@@ -1166,10 +1234,10 @@ func _to_far(shot: ProjectileState) -> void:
 func _resolve_round_hits(shot: ProjectileState) -> bool:
 	var best_t := INF
 	var best_ship: ShipState = null
-	for id in _ship_order:
-		if id == shot.shooter_id and shot.age_s < ARM_TIME_S:
+	var nearby: Array[ShipState] = _broad.get(_broad_cell((shot.prev_position + shot.position) * 0.5), _NO_SHIPS)
+	for ship in nearby:
+		if ship.id == shot.shooter_id and shot.age_s < ARM_TIME_S:
 			continue  # leaving its own muzzle
-		var ship: ShipState = _ships[id]
 		if ship.missile_owner == shot.shooter_id:
 			continue  # its own side's missile
 		if not ship.is_active():

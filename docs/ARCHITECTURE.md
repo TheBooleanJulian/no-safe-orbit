@@ -150,17 +150,70 @@ speed, apsides and prograde use the full PCI state.
 ## Real sky (CelestialFrame)
 
 `CelestialFrame` ties the simulation's planet-centred inertial (PCI) axes to the
-real sky for a scenario date (`Main.SCENARIO_EPOCH_UTC`, 2026-10-19 12:00 UTC):
+real sky for a scenario date (`Main.SCENARIO_EPOCH_UTC`, 2026-10-19 12:00 UTC)
+and the location's central body:
 
-- ICRS/J2000 → PCI: celestial north → PCI −X, vernal equinox → PCI +Y, then a
-  twist about the pole that puts the Sun where the scenario wants it relative to
-  the start point (15° behind zenith → ~24 min to sunset). The start orbit
-  (PCI +Y, moving −Z) is therefore a **prograde equatorial** orbit.
+- ICRS/J2000 → PCI: the body's equatorial frame (its north pole, and its
+  equator's ascending node on the ICRS equator, from the `OrbitalBody`'s IAU
+  pole) maps with the body's north → PCI −X, then a twist about the pole that
+  puts the Sun where the scenario wants it relative to the start point (15°
+  behind zenith → ~24 min to sunset). The start orbit (PCI +Y, moving −Z) is
+  therefore a **prograde equatorial** orbit about any body. For Earth (pole
+  ICRS +Z) this is the original mapping, tested against its old numbers.
+- The Moon's pole and prime meridian (Archinal et al. 2018) include only the
+  largest periodic term (E1, the node's 18.6-year cycle), evaluated at the
+  epoch: the pole lands 1.51° from the ecliptic pole (Cassini state ~1.54°).
 - Sun direction and Greenwich sidereal time use the Astronomical Almanac
   low-precision formulas (Sun ~0.01°), tested against Meeus's worked examples.
   Precession, nutation and aberration are ignored (< 0.4° since J2000).
-- The Earth-fixed frame (`pci_to_ecef`) turns at the sidereal rate; the sky
-  shader samples the Blue Marble map with it.
+- The body-fixed frame (`pci_to_body_fixed`, W = W0 + rate · days) turns at the
+  body's sidereal rate (for Earth W = GMST − 90°); the sky shader samples the
+  body's `surface_map` with it.
+
+## Locations and the map (2026-10-20)
+
+- `Location` (`data/locations/*.tres`, listed in `Location.FILES` so exports
+  find them): station name, `OrbitalBody`, circular start altitude, map
+  position and colour. Earth orbit (400 km, Earth Shipyard) and lunar orbit
+  (100 km, Lunar Shipyard).
+- `OrbitalBody` carries gravity (μ, radius), the entry interface (an
+  atmosphere's top, or the terrain floor for an airless body:
+  `has_atmosphere`, `entry_word()`), IAU rotation and the surface map.
+- `PlayerProfile` (schema 7) keeps `location` (where the vessel is docked),
+  `known_locations` (Earth and the Moon from the start; brokers sell more in
+  Milestone 13) and `encounter_size` (1–3). `relocate()` refuses unknown ids.
+- Shipyard HANGAR › MAP (`SystemMap`): click a body → `relocate`, save; three
+  toggle buttons set the encounter size. The route button beside LAUNCH
+  shows both and opens the tab.
+- `Main` reads the location in `_ready`: central body and start orbit,
+  celestial frame, sky (`PlanetSky.configure(body)`: radius, entry radius,
+  air on/off, surface map), stars' occlusion, eclipse, station names (HUD
+  `station_name`). `EnemyFactory.encounter_size(chosen)` clamps the pick.
+
+## Frame-time performance (2026-10-20)
+
+Measured with `tools/profile_frames.gd` (opens a window; per-section times
+from `Main.frame_ms`, per-phase tick times from `WorldSimulation.take_phase_ms`,
+renderer CPU/GPU time, spike frames, a mesh census):
+
+- **Rounds broadphase:** a uniform grid (256 m cells) of ships, rebuilt each
+  tick with each ship's swept box padded by the fastest round's step; a
+  round tests only the ships in its cell.
+- **Caches with explicit invalidation:** `ShipSystems.disabled_reason()`
+  (every state-changing entry point calls `_state_changed()`), docking hull
+  ports per ship (blueprint-only). `Docking.best()` ranks pairs on range and
+  alignment and assesses only the winner.
+- **HUD:** the orbit path (~260 Kepler solves) and the orbit panel refresh
+  every 200 ms; between refreshes the path is shifted by the render
+  origin's movement (`HudOverlay.orbit_offset`).
+- **Merged meshes:** `ShipView` hides each module and plate node and draws
+  them as one `ArrayMesh` (a surface per material) built from cached
+  ship-space triangle lists (`ShipModelBuilder.flat_arrays`); wear and
+  wrecks edit the hidden nodes, recompute only those pieces' triangles and
+  concatenate. External systems' fixed pieces are merged at build time
+  (`_merge_static`); pivots, turntables and beacons stay separate.
+  `MissileView` shares one body mesh per side.
+- **Logging:** `GameLog.hold(true)` during flight; Main flushes once a frame.
 
 ## Rendering at planetary scale
 
@@ -593,7 +646,11 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 
 | Simplification | Consequence | Revisit |
 |---|---|---|
-| Spherical Earth for gravity; no J2, no third bodies | Orbits never precess | If missions need ground tracks or long-duration accuracy |
+| Spherical central body for gravity; no J2, no third bodies (no Earth pull in lunar orbit) | Orbits never precess | If missions need ground tracks or long-duration accuracy |
+| Airless bodies: the floor is a sphere at the highest terrain (11 km on the Moon), no terrain model | Flying low over a lunar plain is as fatal as hitting a summit | If low passes or landings are wanted |
+| Moving between stations is free and instant (shipyard map) | Location is a free choice | Milestone 13 (jump fuel, brokers) |
+| Only the central body is drawn in the sky (no Earth from lunar orbit); the Sun's direction is Earth's (≤ 0.15° off at the Moon) | The lunar sky lacks Earth | Later (sky bodies) |
+| Lunar rotation uses the IAU pole and W with only the largest periodic term (others ~0.3°) | Lunar geography is ~0.3° off | Not needed |
 | No atmosphere/drag: crossing 100 km = entry, vessel removed (design decision) | Skimming 100–120 km has no cost; dipping to 99 km is fatal | If aerobraking or reentry gameplay is wanted |
 | Rounds inherit the ship's CoM velocity; muzzle velocity from rotation (ω × r) ignored | Firing while turning hard is slightly more accurate than reality | When weapon mounts gain turrets |
 | Fire control assumes straight-line relative motion, no target acceleration | A manoeuvring target defeats the lead | Missiles / AI (M6–M7) |
@@ -634,8 +691,9 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 - `tests/smoke/smoke_main.gd` — boots the real main scene and drives it via
   InputMap actions, including the hostile target hitting the player.
 - `tests/smoke/smoke_shipyard.gd` — shipyard end to end: real mouse click on
-  the deck editor, undo/redo by key, validation, save/reload, launch into
-  flight, B back.
+  the deck editor, undo/redo by key, validation, save/reload, the map (click
+  the Moon, pick two ships), launch into lunar orbit, B back to the Lunar
+  Shipyard.
 - `tests/smoke/smoke_campaign.gd` — the Milestone 4 exit test: fight, salvage
   with G, dock damaged with B, repair and refit in the shipyard, relaunch;
   then checks the profile on disk.

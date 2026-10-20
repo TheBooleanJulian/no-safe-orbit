@@ -97,6 +97,14 @@ var com_button: Button
 var _crew_tab: VBoxContainer
 var _vendor_tab: VBoxContainer
 var _tech_tab: VBoxContainer
+## HANGAR → MAP: where the vessel is docked (and launches from) and how many
+## ships the next encounter has. The route button beside LAUNCH opens it.
+var system_map: SystemMap
+var map_tab: VBoxContainer
+var route_button: Button
+var size_buttons: Array[Button] = []
+var _map_info: RichTextLabel
+var _hangar_tabs: TabContainer
 
 
 func _ready() -> void:
@@ -1039,7 +1047,7 @@ func _build_hangar_panel() -> void:
 	var row2 := HFlowContainer.new()
 	_bank_button = Button.new()
 	_bank_button.text = "Bank cargo"
-	_bank_button.tooltip_text = "Unload the hold into Earth Shipyard's bank: safe from loss"
+	_bank_button.tooltip_text = "Unload the hold into the station's bank: safe from loss"
 	_bank_button.pressed.connect(func() -> void: bank_cargo())
 	_buy_button = Button.new()
 	_buy_button.text = "Buy %d parts (%d cr)" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE]
@@ -1064,6 +1072,8 @@ func _build_hangar_panel() -> void:
 	history_box.add_child(debrief_button)
 	for b in [box, cargo_box, history_box, loot_scroll]:
 		tabs.add_child(b)
+	_hangar_tabs = tabs
+	_build_map_tab(tabs)
 	for spec in [["CREW", "_crew_tab"], ["QUARTERMASTER", "_vendor_tab"], ["UPGRADES", "_tech_tab"]]:
 		var scroll := ScrollContainer.new()
 		scroll.name = spec[0]
@@ -1077,6 +1087,83 @@ func _build_hangar_panel() -> void:
 	right.move_child(title, 1)
 	right.add_child(tabs)
 	right.move_child(tabs, 2)
+
+
+func _build_map_tab(tabs: TabContainer) -> void:
+	map_tab = VBoxContainer.new()
+	map_tab.name = "MAP"
+	system_map = SystemMap.new()
+	system_map.picked.connect(func(id: String) -> void: pick_location(id))
+	map_tab.add_child(system_map)
+	_map_info = _rich_label()
+	map_tab.add_child(_map_info)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	var heading := Label.new()
+	heading.text = "ENCOUNTER"
+	row.add_child(heading)
+	var group := ButtonGroup.new()
+	for n in range(1, PlayerProfile.MAX_ENCOUNTER + 1):
+		var b := Button.new()
+		b.text = "%d ship%s" % [n, "" if n == 1 else "s"]
+		b.toggle_mode = true
+		b.button_group = group
+		b.tooltip_text = "The next sortie meets %d hostile ship%s" % [n, "" if n == 1 else "s"]
+		CyberTheme.style_button(b, CyberTheme.AMBER if n > 1 else CyberTheme.CYAN)
+		b.pressed.connect(set_encounter_size.bind(n))
+		row.add_child(b)
+		size_buttons.append(b)
+	map_tab.add_child(row)
+	tabs.add_child(map_tab)
+	route_button = Button.new()
+	route_button.tooltip_text = "Where you launch from and how many ships you meet (HANGAR › MAP)"
+	CyberTheme.style_button(route_button, CyberTheme.AMBER)
+	route_button.pressed.connect(func() -> void: _hangar_tabs.current_tab = _hangar_tabs.get_tab_idx_from_control(map_tab))
+	launch_button.get_parent().add_child(route_button)
+	launch_button.get_parent().move_child(route_button, launch_button.get_index())
+	_refresh_map()
+
+
+## Dock the vessel at a known location's station (the next launch starts in
+## its orbit). Free for now; jump costs come with Milestone 13.
+func pick_location(location_id: String) -> bool:
+	var why := profile.relocate(location_id)
+	if why != "":
+		_set_status(why, true)
+		return false
+	_save_profile()
+	_refresh_map()
+	_set_status("Docked at %s — the next launch starts in %s" % [Location.by_id(location_id).station_name,
+		Location.by_id(location_id).display_name.to_lower()])
+	return true
+
+
+func set_encounter_size(n: int) -> void:
+	profile.encounter_size = clampi(n, 1, PlayerProfile.MAX_ENCOUNTER)
+	_save_profile()
+	_refresh_map()
+
+
+func _refresh_map() -> void:
+	if system_map == null:
+		return
+	var here := Location.by_id(profile.location)
+	system_map.set_state(profile.known_locations, here.id)
+	var title := get_node_or_null("Margin/VBox/TopBar/Title") as Label
+	if title != null:
+		title.text = here.station_name.to_upper()
+	for i in size_buttons.size():
+		size_buttons[i].set_pressed_no_signal(i + 1 == profile.encounter_size)
+	var n := profile.encounter_size
+	route_button.text = "◎ %s · %d SHIP%s" % [here.display_name.to_upper(), n, "" if n == 1 else "S"]
+	var b := here.body
+	_map_info.text = "[b]%s[/b] · docked
+%s
+%s μ %.1f km³/s² · radius %.0f km · %s %.0f km
+%s" % [
+		here.station_name, here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
+		"entry interface" if b.has_atmosphere else "terrain floor", b.entry_interface_altitude_m / 1000.0,
+		CyberTheme.tint("Click a body to move to its station · free until jump fuel arrives", CyberTheme.TEXT_DIM)]
 
 
 ## The station's people and shelves: the vessel's crew (roles, dismiss),

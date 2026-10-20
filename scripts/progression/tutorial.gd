@@ -22,7 +22,7 @@ const STEPS := [
 	{"id": "salvage", "title": "SALVAGE",
 		"text": "Press G: a salvage beacon on the wreck pays scrap and bounty and fills your hold"},
 	{"id": "jump", "title": "JUMP HOME",
-		"text": "Hold B for 5 s: the jump drive takes you to Earth Shipyard (not while under fire)"},
+		"text": "Hold B for 5 s: the jump drive takes you back to the shipyard (not while under fire)"},
 	{"id": "repair", "title": "REPAIR",
 		"text": "HANGAR ▸ SERVICE: pick a priority and press Repair, then LAUNCH ▶"},
 ]

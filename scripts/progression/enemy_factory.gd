@@ -23,11 +23,10 @@ const EMP_LAUNCHER_FROM_MISSION := 6
 const CLASS_NAMES := ["Kestrel", "Harrier", "Shrike", "Goshawk", "Peregrine", "Merlin", "Hobby", "Saker"]
 
 
-## Ships per encounter: one at first, two from mission 4, three from 7.
-static func encounter_size(mission: int) -> int:
-	if mission >= 7:
-		return 3
-	return 2 if mission >= 4 else 1
+## Ships per encounter: what the player picked on the shipyard map
+## (PlayerProfile.encounter_size), within 1–PlayerProfile.MAX_ENCOUNTER.
+static func encounter_size(chosen: int) -> int:
+	return clampi(chosen, 1, PlayerProfile.MAX_ENCOUNTER)
 
 
 ## An enemy ship's policy (ShipPolicy): the Standard preset with a role by

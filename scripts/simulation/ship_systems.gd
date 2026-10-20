@@ -210,6 +210,9 @@ var destroyed_hatches: Dictionary = {}  # hatch id -> true
 ## hostile is about) — they move through vented rooms and survive a room
 ## venting around them.
 var suited: bool = false
+## Docking.hull_ports(), cached: they depend on the blueprint only.
+var hull_port_cache: Array = []
+var hull_port_cached: bool = false
 ## Seconds damage control has spent sealing each breached room.
 var _seal_s: Dictionary = {}
 ## Earth Shipyard upgrades (TechTree id -> level); player ships only.
@@ -423,6 +426,7 @@ func breached_count() -> int:
 
 ## Returns true if this destroyed the equipment.
 func damage_equipment(e: EquipmentState, amount: float) -> bool:
+	_state_changed()
 	if e.destroyed():
 		return false
 	e.hp = maxf(e.hp - amount, 0.0)
@@ -483,6 +487,7 @@ func take_explosions() -> Array[Dictionary]:
 
 ## Returns true if this wrecked the module.
 func damage_module(index: int, amount: float) -> bool:
+	_state_changed()
 	var m := modules[index]
 	if m.wrecked():
 		return false
@@ -513,6 +518,7 @@ func destroy_hatch(id: String) -> void:
 ## Vacuum spreads from breached rooms through destroyed hatches; intact
 ## hatches seal.
 func update_pressure() -> void:
+	_state_changed()
 	var vacuum := {}
 	var queue := []
 	for i in rooms.size():
@@ -549,6 +555,7 @@ func update_pressure() -> void:
 
 ## Recompute which loads are powered on each junction network.
 func solve_power() -> void:
+	_state_changed()
 	if not blueprint.bus.is_empty():
 		_solve_bus_power()
 		return
@@ -803,6 +810,7 @@ func reassign(id: String, role: int) -> String:
 ## Advance heat and reactor state by dt, from what the ship did this tick.
 ## Returns true if anything changed that alters the flight config.
 func tick(ship: ShipState, dt: float) -> bool:
+	_state_changed()
 	var cfg := ship.config
 	var main_fraction := ShipDynamics.main_thrust_fraction(cfg, ship.last_thrust_body)
 	var t := ship.last_thrust_body
@@ -865,6 +873,7 @@ func tick(ship: ShipState, dt: float) -> bool:
 		changed = true
 	for id in launcher_cooldown.keys():
 		launcher_cooldown[id] = maxf(float(launcher_cooldown[id]) - dt, 0.0)
+	_state_changed()
 	return changed or _config == null
 
 
@@ -894,6 +903,7 @@ func disrupted() -> Array[Dictionary]:
 
 ## An EMP at `exposure` (1 = the warhead's effect radius). Returns what reset.
 func emp(exposure: float) -> PackedStringArray:
+	_state_changed()
 	var lines := PackedStringArray()
 	for e in equipment:
 		if e.destroyed() or not EquipmentDefinition.ELECTRONIC.has(e.def.kind):
@@ -930,6 +940,7 @@ func facing_armor_mm(dir_body: Vector3) -> float:
 ## A nuclear burst at `exposure` from body direction `dir_body` (towards the
 ## burst): radiation on the crew, heat, hull ablation close in, and an EMP.
 func nuclear(exposure: float, dir_body: Vector3) -> PackedStringArray:
+	_state_changed()
 	var dir := dir_body.normalized()
 	var dose := exposure / (1.0 + facing_armor_mm(dir) / 60.0)
 	var lines := PackedStringArray(["Nuclear burst: exposure %.1f, dose %.1f behind %.0f mm" % [exposure, dose, facing_armor_mm(dir)]])
@@ -1221,6 +1232,7 @@ func effective_config() -> ShipConfig:
 
 ## Something outside (crew casualties, capture) changed what the ship can do.
 func invalidate() -> void:
+	_state_changed()
 	_config = null
 
 
@@ -1353,6 +1365,7 @@ func _advance_crew_orders(dt: float) -> bool:
 ## Reactors and unpowered-by-design parts can't be switched. Returns false
 ## if it can't be.
 func set_switched_off(id: String, off: bool) -> bool:
+	_state_changed()
 	var e := equipment_by_id(id)
 	if e == null or e.def.power_kw >= 0.0:
 		return false
@@ -1367,6 +1380,7 @@ func set_switched_off(id: String, off: bool) -> bool:
 
 ## Seal a compartment off (or reopen it): crew routes avoid it.
 func set_isolated(room: int, isolated: bool) -> void:
+	_state_changed()
 	if isolated:
 		isolated_rooms[room] = true
 	else:
@@ -1490,9 +1504,20 @@ func _note(text: String) -> void:
 
 ## Why the ship can no longer fight ("" while it still can): every gun is
 ## out, the power is gone, or nobody can reach a pressurised command room.
+## Cached: the AI, the HUD and the missions ask many times a frame, and the
+## command-room search is a graph walk. Every change that can alter the
+## answer (damage, power, pressure, switches, EMP, a tick) clears it
+## (_state_changed); capture is checked live.
 func disabled_reason() -> String:
 	if captured:
 		return "captured"
+	if not _disabled_valid:
+		_disabled_cache = _compute_disabled_reason()
+		_disabled_valid = true
+	return _disabled_cache
+
+
+func _compute_disabled_reason() -> String:
 	if power_supply_kw <= 0.0:
 		return "no power"
 	if reachable_rooms().is_empty():
@@ -1500,6 +1525,15 @@ func disabled_reason() -> String:
 	if count(EquipmentDefinition.Kind.CANNON, false) > 0 and count(EquipmentDefinition.Kind.CANNON, true) == 0:
 		return "all guns out"
 	return ""
+
+
+var _disabled_valid := false
+var _disabled_cache := ""
+
+
+## Something that can change disabled_reason() happened.
+func _state_changed() -> void:
+	_disabled_valid = false
 
 
 ## Detection range: the best working (powered) sensor mast, else visual.
@@ -1581,6 +1615,7 @@ func condition() -> Dictionary:
 ## Restore a saved condition. Ids the blueprint no longer has are ignored;
 ## parts the condition does not list are new.
 func apply_condition(c: Dictionary) -> void:
+	_state_changed()
 	var eq: Dictionary = c.get("equipment", {})
 	for e in equipment:
 		e.hp = clampf(float(eq[e.id]), 0.0, 1.0) * e.max_hp if eq.has(e.id) else e.max_hp
