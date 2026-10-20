@@ -29,7 +29,9 @@ extends RefCounted
 ##     accepted contract (active_contract); older saves get a fresh board.
 ## v9: the jump drive's reserve in the vessel's stores
 ##     (condition.stores.jump_reserve_kg); older vessels start it full.
-const SCHEMA_VERSION := 9
+## v10: artifact surveys — the next sortie's survey target and the codex of
+##     objects surveyed; older saves have surveyed nothing.
+const SCHEMA_VERSION := 10
 ## Ships per encounter the map offers (EnemyFactory spawns them).
 const MAX_ENCOUNTER := 3
 ## Locations every player knows from the start (brokers sell more).
@@ -90,6 +92,10 @@ var board: Array = []
 var board_sortie: int = -1
 var board_seed: int = 0
 var active_contract: Dictionary = {}
+## Milestone 14: the artifact the next sortie surveys ("" = an ordinary
+## sortie) and the codex: artifact id -> the sortie it was surveyed on.
+var survey_target: String = ""
+var codex: Dictionary = {}
 var missile_mode: int = MissileSalvo.Mode.ALL
 var missile_order: Array = MissileSalvo.DEFAULT_ORDER.duplicate()
 ## The schema the profile was read from (SCHEMA_VERSION for a new one).
@@ -566,6 +572,8 @@ func to_dict() -> Dictionary:
 		"board_sortie": board_sortie,
 		"board_seed": board_seed,
 		"active_contract": active_contract.duplicate(true),
+		"survey_target": survey_target,
+		"codex": codex.duplicate(),
 	}
 
 
@@ -670,6 +678,14 @@ static func _read_v8_board(p: PlayerProfile, d: Dictionary) -> void:
 	var a: Variant = d.get("active_contract", {})
 	if a is Dictionary and (a as Dictionary).has("goal"):
 		p.active_contract = (a as Dictionary).duplicate(true)
+	# v10: surveys (an unknown or missing artifact is dropped).
+	var target := str(d.get("survey_target", ""))
+	p.survey_target = target if Artifact.by_id(target) != null else ""
+	var c: Variant = d.get("codex", {})
+	if c is Dictionary:
+		for id in c:
+			if Artifact.by_id(str(id)) != null:
+				p.codex[str(id)] = int(c[id])
 
 
 ## The docked vessel's tanks: {mass_kg (with what is aboard), main_kg,
@@ -692,6 +708,53 @@ func jump_cost_kg(location_id: String, catalog: ConstructionCatalog) -> float:
 	if here.id == there.id:
 		return 0.0
 	return JumpDrive.standard().cost_kg(float(vessel_tanks(catalog).mass_kg), Location.distance_m(here, there))
+
+
+# --- Artifact surveys (Milestone 14) ------------------------------------------------
+
+## Propellant (kg) a survey of `a` burns beyond an ordinary sortie: for a
+## deep-space object, the jump out and back, paid at launch with the tanks
+## full; 0 for one in a location's orbit.
+func survey_cost_kg(a: Artifact, catalog: ConstructionCatalog) -> float:
+	if not a.is_deep_space():
+		return 0.0
+	var t := vessel_tanks(catalog)
+	var full_mass := float(t.mass_kg) - float(t.main_kg) - float(t.reserve_kg) + float(t.capacity_kg) + float(t.reserve_capacity_kg)
+	return 2.0 * JumpDrive.standard().cost_kg(full_mass, a.distance_from(Location.by_id(location)))
+
+
+## Make `artifact_id` the next sortie's survey ("" cancels). "" or why not:
+## it must be surveyed from where the vessel is docked, and a deep-space
+## round trip must fit in the full tanks and reserve.
+func choose_survey(artifact_id: String, catalog: ConstructionCatalog) -> String:
+	if artifact_id == "":
+		survey_target = ""
+		return ""
+	var a := Artifact.by_id(artifact_id)
+	if a == null:
+		return "No record of that object"
+	if not a.is_deep_space() and (a.location() == null or a.location().id != location):
+		return "%s is surveyed from the %s — jump there first" % [a.display_name, a.location().station_name if a.location() != null else "?"]
+	var t := vessel_tanks(catalog)
+	var need := survey_cost_kg(a, catalog)
+	var room := float(t.capacity_kg) + float(t.reserve_capacity_kg)
+	if need > room:
+		return "The round trip to %s burns %s; full tanks and the jump reserve hold %s — it needs a ship with more tankage for its mass" % [
+			a.display_name, JumpDrive.tonnes(need), JumpDrive.tonnes(room)]
+	survey_target = a.id
+	return ""
+
+
+## A survey finished: the record goes into the codex and the fee is paid
+## (once per object). Returns the credits paid.
+func complete_survey(artifact_id: String) -> int:
+	var a := Artifact.by_id(artifact_id)
+	if a == null or codex.has(artifact_id):
+		return 0
+	codex[artifact_id] = sorties_flown()
+	credits += a.survey_credits
+	loot_log.append("Surveyed %s: +%d credits" % [a.display_name, a.survey_credits])
+	return a.survey_credits
 
 
 ## Locations an information broker sells (not on the map yet), in map order.

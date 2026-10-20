@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "voyager2"
+display_name = "Voyager 2"
+kind = &"probe"
+center = &"sun"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(5974218799.982059, -9143898571.23413, -18610443252.46955)
+v_km_s = PackedFloat64Array(4.20339147409068, -4.068052130235879, -14.09802359500245)
+horizons_id = "-32"
+horizons_source = "Voyager_2_ST+refit2022_m"
+uncertainty = "Horizons Voyager_2_ST+refit2022_m, from Deep Space Network tracking: a few kilometres."
+size_m = 13.0
+mass_kg = 720.0
+survey_credits = 2500
+launched = "1977-08-20"
+lore = "The only spacecraft to have visited Uranus (1986) and Neptune (1989), after Jupiter and Saturn. It crossed the heliopause into interstellar space on 5 November 2018. Like its twin it carries a gold-plated record of sounds and images of Earth."

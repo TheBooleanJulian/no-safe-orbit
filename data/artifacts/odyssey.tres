@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "odyssey"
+display_name = "2001 Mars Odyssey"
+kind = &"orbiter"
+center = &"mars"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(3797.275586755545, -288.1854799141518, 230.8662408061516)
+v_km_s = PackedFloat64Array(0.2620964663685592, 1.258455577251696, -3.086367985099688)
+horizons_id = "-53"
+horizons_source = "Odyssey_merged"
+uncertainty = "Horizons Odyssey_merged (reconstructed and predicted orbit): tens of metres."
+size_m = 6.0
+mass_kg = 725.0
+survey_credits = 450
+launched = "2001-04-07 (in Mars orbit since 2001-10-24)"
+lore = "The longest-working spacecraft at Mars, named after Arthur C. Clarke's 2001. Its gamma-ray spectrometer found hydrogen — water ice — just under the surface at high latitudes, and it has relayed much of the data from NASA's rovers."

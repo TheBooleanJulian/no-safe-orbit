@@ -644,6 +644,35 @@ exit holes on the hull.
   it so its collar faces yours and reels it in for V. It siphons a
   disabled or captured hulk's propellant and rounds while it holds.
 
+## Artifacts: real spacecraft to survey
+
+Eleven real objects are where NASA/JPL Horizons puts them on the scenario
+date (sources and uncertainty in `data/ATTRIBUTION.md`):
+
+| Where | Objects |
+|---|---|
+| Earth orbit | International Space Station, Hubble Space Telescope |
+| Lunar orbit | Lunar Reconnaissance Orbiter (it made the Moon map you fly over) |
+| Mars orbit | Mars Reconnaissance Orbiter, 2001 Mars Odyssey |
+| Deep space, about the Sun | Tesla Roadster (Starman), New Horizons, Voyager 1 and 2, Pioneer 10 and 11 |
+
+- **Pick one** on HANGAR › MAP › ARTIFACTS ("Survey next sortie"). Objects
+  in a body's orbit are surveyed from that body's station; deep-space ones
+  from anywhere.
+- **The sortie** starts 3 km behind it in its real orbit, with no hostile
+  traffic. Close to within 500 m, match its speed within 2 m/s and hold
+  20 s with a working sensor mast. The target card shows each condition.
+- **The reward** is a survey fee (once per object) and its record in the
+  codex, shown on the MAP.
+- **Deep space** flies about the Sun itself: its gravity, its light from
+  the right direction, its disc shrinking to a point at 172 AU. The jump
+  out and back is paid at launch and must fit in your full tanks and jump
+  reserve: the Roadster needs 20 % of the ship's mass in propellant,
+  Voyager 1 28 %. The Frigate Mk I carries 16 % — design a long-range ship.
+- **Look, don't touch:** real objects can't be damaged, grappled or
+  salvaged. JWST is left out: it sits at the Sun–Earth L2 point, which
+  needs a rotating frame the game doesn't have.
+
 ## Air wing: fighters and drones
 
 The Frigate Mk I carries a **Wasp fighter** in an internal **fighter bay**
@@ -878,7 +907,8 @@ actions: tutorial, missile salvo, crew and weapons tabs), the shipyard
 repair and refit → relaunch), boarding (`smoke_boarding.gd`) and the air
 wing (`smoke_wing.gd`), a three-ship encounter (`smoke_encounter.gd`:
 selection, roles, salvos, salvaging a non-lead contact, policy, manual
-override), a 600-frame boot of the main scene, a `.pck`
+override), artifact surveys (`smoke_survey.gd`: the ISS, Voyager 1 about
+the Sun), a 600-frame boot of the main scene, a `.pck`
 export and a boot from it. Smoke tests use a throwaway profile, never your
 save. The script fails on any test failure **and** on any Godot `ERROR:` /
 `SCRIPT ERROR` in the logs. Logs: `build/check-logs/`.

@@ -66,6 +66,12 @@ var _jump_flash: ColorRect
 ## under the alert banner; and the escort's courier, marked like a craft.
 var guide_lines := PackedStringArray()
 var escort_id: StringName = &""
+## A survey sortie (Main, Milestone 14): the artifact's id (always marked)
+## and the survey's state for the target card: {name, range_m, rel_mps,
+## need_m, need_mps, progress (0–1), done, close, slow, sensor, launched,
+## sun_au (-1 unless about the Sun)}; {} on an ordinary sortie.
+var artifact_id: StringName = &""
+var survey: Dictionary = {}
 ## The encounter (set by Main): the target card lists the other contacts
 ## compactly; the radar and the markers show them all.
 var encounter: Encounter
@@ -463,6 +469,8 @@ func reset_target() -> void:
 
 
 func reset() -> void:
+	artifact_id = &""
+	survey = {}
 	_last_hit_time = -INF
 	_hits_scored = 0
 	_outgoing = null
@@ -769,6 +777,8 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 				JumpDrive.tonnes(float(jump_state.get("cost_kg", 0.0))).replace(" ", "")]))
 		else:
 			out.append(AlertQueue.make(&"jump", &"nav", DANGER, "JUMP", "%.1fs −%d" % [jump_state.left_s, waiting.size()], "", "[B]"))
+	if not survey.is_empty() and not survey.done and float(survey.progress) > 0.0:
+		out.append(AlertQueue.make(&"survey", &"nav", ADVISORY, "SURVEY", "%d%%" % roundi(float(survey.progress) * 100.0)))
 	var link := world.link_for(player.id)
 	var b := world.boarding_for(link) if link != null else null
 	if link != null and link.attacker_id != player.id:
@@ -993,8 +1003,29 @@ func status_text(sys: ShipSystems) -> String:
 
 # --- Target --------------------------------------------------------------------------
 
+## The survey card's lines (Main.survey state): what is met, what is not.
+static func survey_text(s: Dictionary) -> String:
+	var ok := func(met: bool) -> String: return CyberTheme.GLYPH_OK if met else CyberTheme.GLYPH_OFFLINE
+	var bars := roundi(float(s.progress) * 10.0)
+	var lines := PackedStringArray([
+		"RANGE   %s %s (within %s)" % [ok.call(s.close), HudFormat.distance(float(s.range_m)), HudFormat.distance(float(s.need_m))],
+		"REL     %s %.1f m/s (match within %.0f m/s)" % [ok.call(s.slow), float(s.rel_mps), float(s.need_mps)],
+		"SENSOR  %s %s" % [ok.call(s.sensor), "mast working" if s.sensor else "mast down — repair it to survey"],
+		"SURVEY  %s %s" % ["▮".repeat(bars) + "▯".repeat(10 - bars),
+			"%s complete" % CyberTheme.GLYPH_OK if s.done else "%d%% — hold close and slow" % roundi(float(s.progress) * 100.0)],
+	])
+	var where := "launched %s" % s.launched
+	if float(s.get("sun_au", -1.0)) > 0.0:
+		where = "%.1f AU from the Sun · %s" % [float(s.sun_au), where]
+	lines.append("RECORD  %s" % where)
+	return "\n".join(lines)
+
 func _update_target_card(world: WorldSimulation, player: ShipState, target: ShipState) -> void:
 	var t := world.sim_time
+	if target == null and not survey.is_empty():
+		_target_heading.text = "SURVEY · %s" % str(survey.name).to_upper()
+		target_label.text = survey_text(survey)
+		return
 	if target == null:
 		_target_heading.text = "TARGET"
 		target_label.text = "NO TARGET"
@@ -1390,8 +1421,8 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 		lines.append("%s   %.0f km · IN %s" % [floor_name, entry_alt_km, HudFormat.duration(t_entry)])
 	if celestial != null:
 		var sun_dir := celestial.sun_direction_pci(world.sim_time)
-		var lit := CelestialFrame.sunlight_fraction(orbit.position, sun_dir, body.radius_m) >= 0.5
-		var change := CelestialFrame.next_light_change(orbit, sun_dir, body.radius_m)
+		var lit := CelestialFrame.sunlight_fraction(orbit.position, sun_dir, body.shadow_radius_m()) >= 0.5
+		var change := CelestialFrame.next_light_change(orbit, sun_dir, body.shadow_radius_m())
 		var when := "" if change.is_empty() else "  %s in %s" % [
 			"sunrise" if change.sunlit_after else "sunset", HudFormat.duration(change.time)]
 		lines.append("SUN        %s%s" % ["LIT" if lit else "ECLIPSE", when])
@@ -1435,6 +1466,11 @@ func _update_craft_markers(world: WorldSimulation, player: ShipState, alpha: flo
 			continue
 		overlay.craft_markers.append({"pos": w.interpolated_position(alpha) - render_origin,
 			"label": "WRECK %s" % HudFormat.distance(w.position.distance_to(player.position)), "hostile": false, "selected": false, "wreck": true})
+	if artifact_id != &"" and world.has_ship(artifact_id):
+		var art := world.get_ship(artifact_id)
+		overlay.craft_markers.append({"pos": art.interpolated_position(alpha) - render_origin,
+			"label": "%s %s" % [art.display_name.to_upper(), HudFormat.distance(art.position.distance_to(player.position))],
+			"hostile": false, "selected": true})
 	if escort_id != &"" and world.has_ship(escort_id) and world.get_ship(escort_id).is_active():
 		var c := world.get_ship(escort_id)
 		overlay.craft_markers.append({"pos": c.interpolated_position(alpha) - render_origin,

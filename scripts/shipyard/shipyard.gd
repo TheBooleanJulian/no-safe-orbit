@@ -105,6 +105,7 @@ var route_button: Button
 var size_buttons: Array[Button] = []
 var _map_info: RichTextLabel
 var _broker_box: VBoxContainer
+var _artifact_box: VBoxContainer
 var _hangar_tabs: TabContainer
 ## The station's sections (Milestone 12): the builder is REFIT, one of them.
 var sections: ShipyardSections
@@ -604,6 +605,16 @@ func launch() -> bool:
 	var supplied := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
 	if supplied != "":
 		GameLog.info("shipyard", supplied)
+	# A deep-space survey's round trip is paid from what is aboard now.
+	var survey := Artifact.by_id(profile.survey_target)
+	if survey != null and survey.is_deep_space():
+		var t := profile.vessel_tanks(editor.catalog)
+		var need := profile.survey_cost_kg(survey, editor.catalog)
+		if need > float(t.main_kg) + float(t.reserve_kg):
+			_save_profile()
+			_set_status("The round trip to %s burns %s; %s aboard (credits short for the refuel?) — or cancel the survey on the MAP" % [
+				survey.display_name, JumpDrive.tonnes(need), JumpDrive.tonnes(float(t.main_kg) + float(t.reserve_kg))], true)
+			return false
 	if not profile.vessel.cargo_is_empty():
 		GameLog.info("shipyard", "Launching with cargo still in the hold: %s" % profile.vessel.cargo_summary())
 	_save_profile()
@@ -1180,10 +1191,23 @@ func _build_map_tab(tabs: TabContainer) -> void:
 	system_map.picked.connect(func(id: String) -> void: pick_location(id))
 	map_tab.add_child(system_map)
 	_map_info = _rich_label()
+	_map_info.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	map_tab.add_child(_map_info)
+	# Brokers and artifacts scroll; the map and the encounter row stay put.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var lists := VBoxContainer.new()
+	lists.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lists.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	scroll.add_child(lists)
+	map_tab.add_child(scroll)
 	_broker_box = VBoxContainer.new()
 	_broker_box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
-	map_tab.add_child(_broker_box)
+	lists.add_child(_broker_box)
+	_artifact_box = VBoxContainer.new()
+	_artifact_box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	lists.add_child(_artifact_box)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
 	var heading := Label.new()
@@ -1262,7 +1286,11 @@ func _refresh_map() -> void:
 		size_buttons[i].set_pressed_no_signal(i + 1 == profile.encounter_size)
 	var n := profile.encounter_size
 	route_button.text = "◎ %s · %d SHIP%s" % [here.display_name.to_upper(), n, "" if n == 1 else "S"]
+	var surveying := Artifact.by_id(profile.survey_target)
+	if surveying != null:
+		route_button.text = "◎ SURVEY %s" % surveying.display_name.to_upper()
 	_refresh_brokers()
+	_refresh_artifacts()
 	var b := here.body
 	_map_info.text = "[b]%s[/b] · docked
 %s
@@ -1271,6 +1299,60 @@ func _refresh_map() -> void:
 		here.station_name, here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
 		"entry interface" if b.has_atmosphere else "terrain floor", b.entry_interface_altitude_m / 1000.0,
 		CyberTheme.tint(_jump_note(), CyberTheme.TEXT_DIM)]
+
+
+## Pick (or cancel, "") the next sortie's survey (PlayerProfile.choose_survey).
+func pick_survey(artifact_id: String) -> bool:
+	var why := profile.choose_survey(artifact_id, editor.catalog)
+	if why != "":
+		_set_status(why, true)
+		return false
+	_save_profile()
+	_refresh_map()
+	var a := Artifact.by_id(artifact_id)
+	_set_status("Next sortie: survey %s" % a.display_name if a != null else "Survey cancelled — the next sortie is an ordinary one")
+	return true
+
+
+## Real objects to survey (Milestone 14): where each is, what the trip
+## takes, and the record of those already surveyed.
+func _refresh_artifacts() -> void:
+	if _artifact_box == null:
+		return
+	for c in _artifact_box.get_children():
+		c.queue_free()
+	var head := _rich_label()
+	head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.text = "[b]ARTIFACTS[/b] — real objects where NASA/JPL Horizons puts them on the scenario date. Survey: close in, match speed, hold with a working sensor. Look, don't touch."
+	_artifact_box.add_child(head)
+	var here := Location.by_id(profile.location)
+	for a in Artifact.all():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+		var text := _rich_label()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var where := a.location().display_name if a.location() != null else "deep space, %s" % SystemMap.distance_text(a.distance_from(here))
+		var cost := ""
+		if a.is_deep_space():
+			var t := profile.vessel_tanks(editor.catalog)
+			cost = " · round trip %s of %s" % [JumpDrive.tonnes(profile.survey_cost_kg(a, editor.catalog)),
+				JumpDrive.tonnes(float(t.capacity_kg) + float(t.reserve_capacity_kg))]
+		var done := profile.codex.has(a.id)
+		var status := CyberTheme.tint("✔ surveyed", CyberTheme.CYAN) if done else "%d cr" % a.survey_credits
+		var line := "%s — %s · %s%s" % [a.display_name, where, status, cost]
+		if done:
+			line += "\n" + CyberTheme.tint("%s Launched %s. %s" % [a.lore, a.launched, a.uncertainty], CyberTheme.TEXT_DIM)
+		text.text = line
+		row.add_child(text)
+		var pick := Button.new()
+		var chosen := profile.survey_target == a.id
+		pick.text = "Cancel survey" if chosen else "Survey next sortie"
+		pick.custom_minimum_size = Vector2(200, 30)
+		CyberTheme.style_button(pick, CyberTheme.AMBER if chosen else CyberTheme.CYAN)
+		pick.pressed.connect(pick_survey.bind("" if chosen else a.id))
+		row.add_child(pick)
+		_artifact_box.add_child(row)
 
 
 ## Information brokers: charts for the places not on the map yet.

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "voyager1"
+display_name = "Voyager 1"
+kind = &"probe"
+center = &"sun"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(-4814828262.477093, -24696720797.14724, 5451224353.532844)
+v_km_s = PackedFloat64Array(-2.069744660836031, -16.39897443878041, 3.606216693689569)
+horizons_id = "-31"
+horizons_source = "Voyager_1_ST+refit2022_m"
+uncertainty = "Horizons Voyager_1_ST+refit2022_m, from Deep Space Network tracking: a few kilometres."
+size_m = 13.0
+mass_kg = 720.0
+survey_credits = 3000
+launched = "1977-09-05"
+lore = "The farthest human-made object. After Jupiter (1979) and Saturn (1980) it took the Pale Blue Dot photograph of Earth on 14 February 1990, and it crossed the heliopause into interstellar space on 25 August 2012. It carries a gold-plated record of sounds and images of Earth."
