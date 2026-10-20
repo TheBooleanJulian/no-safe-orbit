@@ -22,6 +22,9 @@ var hold_velocity: Vector3 = Vector3.ZERO
 var hold_target_id: StringName = &""
 ## Trigger held for the main cannon.
 var fire: bool = false
+## Share of the guns' rated rate of fire (0.1–1): automation fires slower
+## than a hand on the trigger (ShipPolicy.autofire_rate, play-test batch 6).
+var fire_rate: float = 1.0
 ## Turret aim: the point the guns train on, as an offset from the ship's
 ## position (world axes, m). Without one the turrets face the nose.
 var has_aim: bool = false

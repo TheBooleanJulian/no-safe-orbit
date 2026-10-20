@@ -518,6 +518,14 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 6 — auto-fire rate and multi-ship balance ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Guns auto-fire at a reduced rate | `test_balance_batch6` (rate rule, half rate = half the rounds) | 10 s on the trigger: 20 rounds at full rate, 10 at half |
+| Enemies not too strong beyond 1v1 | `tools/balance_sim.gd` (manual), `test_balance_batch6`, `smoke_encounter` | 1v2/1v3 lost in 14–20 s before; now 1v2 survives 480 s at m3/m7, lost 327 s at m5; 1v3 lost 188–273 s |
+| Suited crew keep a vented bridge | `test_balance_batch6` | disabled before, fighting now |
+
 ### Play-test batch 6 — performance ✅ (2026-10-21)
 
 "Lag issues are back when thousands of projectiles are fired by many

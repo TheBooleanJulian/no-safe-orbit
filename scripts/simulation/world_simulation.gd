@@ -743,6 +743,7 @@ func step() -> void:
 			# Ship AI in control: it always flies with assist.
 			input = ShipControlInput.create(input.translation, input.rotation, true)
 			input.fire = _inputs.get(id, _neutral_input).fire
+			input.fire_rate = _inputs.get(id, _neutral_input).fire_rate
 		_resolve_hold(input)
 		ShipDynamics.step(ship, input, fixed_dt, frame)
 		_update_cannon(ship, input, spawned)
@@ -879,7 +880,7 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		ship.recoil_impulse += cannon.muzzle_velocity_mps * cannon.round_mass_kg
 		ship.spend_round(cannon)
 		ship.rounds_fired += 1
-		ship.cannon_cooldowns[k] += cannon.fire_interval_s()
+		ship.cannon_cooldowns[k] += cannon.fire_interval_s() / clampf(input.fire_rate, 0.1, 1.0)
 
 
 ## Point-defence range (m) and how close to the lead a barrel must be (deg).

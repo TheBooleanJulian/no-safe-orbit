@@ -4,6 +4,35 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 6, part 3 — reduced-rate auto-fire and fairer multi-ship fights (2026-10-21)
+
+#### Added
+- **Auto-fire at a reduced rate**: a policy's auto-fire fires at its own
+  share of the guns' rate (default 50 %, POLICY tab, 25 % steps), saving
+  rounds and heat; your own trigger always fires at the full rate.
+- `tools/balance_sim.gd`: the real flight scene, headless, a scripted
+  player against 1–3 ships at missions 3, 5 and 7.
+
+#### Changed
+- **Multi-ship encounters are fairer.** Before: a scripted stock Frigate
+  lost every 1v2 and 1v3 within 14–20 s. After: 1v2 survives to the 480 s
+  limit at missions 3 and 7 (lost at 327 s at mission 5); 1v3 is lost at
+  188–273 s; 1v1 is still won in 3–10 s.
+  - Only the lead starts close; wingmen arrive from range and must be found.
+  - Wingmen are fitted as for earlier missions (mission − 2, − 3): at
+    mission 7, 109 and 106 armour plates against the lead's 140.
+  - Enemy guns fire as automation: the lead at 70 % of the rated rate,
+    wingmen at 45 %.
+
+#### Fixed
+- **A breached bridge disabled a ship whose crew were in spacesuits**: at
+  general quarters the crew now keep command of a vented bridge. This, not
+  the guns, was how most multi-ship fights were lost.
+
+#### Tests changed (and why)
+- `smoke_encounter`: checks the wingmen start far out, then brings them
+  alongside to test selection and roles as before (stated as scaffolding).
+
 ### Play-test batch 6, part 2 — fighters that carry on, a tidy WING tab, screens that scroll (2026-10-21)
 
 #### Added

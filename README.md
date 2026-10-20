@@ -261,8 +261,12 @@ cannon's rounds); autocannon rounds are too small and railgun slugs too fast.
 Each PD gun fires 300 heavy flak rounds a minute (0.3 kg, 18 mm; a slug
 within 2.6 m of one is destroyed), 200 to a magazine.
 
-**Encounters:** from mission 4 two ships come at once, from mission 7
-three, each with its own role — a *closer* works in to gun range, a
+**Encounters:** pick 1, 2 or 3 ships on the shipyard map. Only the lead
+starts close; the others come in from about 30 km and must be found
+first, so you can deal with one before the next arrives. They are fitted
+as for earlier missions (the second two back, the third three) and their
+guns fire at 45 % of the rated rate (the lead's at 70 %): enemy guns are
+automation, as yours are. Each has its own role — a *closer* works in to gun range, a
 *standoff* ship holds 5–9 km off and fires missile salvos, a *flanker*
 works round to your stern — and they focus fire (an escorted courier first)
 and never waste fire on a wreck. The target card shows the selected
@@ -738,7 +742,7 @@ Every berth (3 per crew-quarters cell) holds one named crew member with a
 role: command (bridge), engineering, damage control, weapons (magazine),
 security, medical and general crew. They are not drawn; moving between
 rooms takes 5 s per room. While a hostile is about the crew are at **general
-quarters in spacesuits**: they cross vented rooms and survive a room venting
+quarters in spacesuits**: they keep command of a vented bridge, cross vented rooms and survive a room venting
 around them (otherwise venting wounds or kills whoever is in it). No command
 crew on a pressurised bridge hands the ship to the ship AI (half thrust and
 turn rate); no weapons crew able to reach the magazine halves the guns' rate
