@@ -244,6 +244,11 @@ static func clear_shot(craft: ShipState, aim_dir: Vector3, range_m: float, frien
 
 ## Velocity to add to keep apart from friendly craft and clear of hulls
 ## (friendly or not); `skip`: a ship it may approach (the carrier, landing).
+const AVOID_EVERY := 4
+## Within this of its rack on the way home a craft stops keeping apart.
+const FINAL_APPROACH_M := 150.0
+
+
 static func avoidance(craft: ShipState, friends: Array[ShipState], others: Array[ShipState], skip: ShipState = null) -> Vector3:
 	var push := Vector3.ZERO
 	for list: Array[ShipState] in [friends, others]:
@@ -272,7 +277,18 @@ static func command(craft: ShipState, directive: Directive, carrier: ShipState, 
 	var others: Array[ShipState] = []
 	if target != null:
 		others.append(target)
-	_avoid = avoidance(craft, friends, others, carrier if directive == Directive.RETURN else null)
+	# Avoidance changes slowly: worked out every AVOID_EVERY ticks per craft
+	# (staggered), kept in between (play-test batch 6: many fighters).
+	var n := int(craft.ai_state.get("avoid_n", absi(hash(craft.id)) % AVOID_EVERY))
+	if n <= 0:
+		craft.ai_state["avoid"] = avoidance(craft, friends, others, carrier if directive == Directive.RETURN else null)
+		n = AVOID_EVERY
+	craft.ai_state["avoid_n"] = n - 1
+	_avoid = craft.ai_state.get("avoid", Vector3.ZERO)
+	# On final approach the rack wins: keeping 70 m from a wingman landing at
+	# the next rack would hold both off for ever.
+	if directive == Directive.RETURN and craft.position.distance_to(rack_point) < FINAL_APPROACH_M:
+		_avoid = Vector3.ZERO
 	var input := _command(craft, directive, carrier, rack_point, target, hostiles, priority, slot, friends, missiles, dt)
 	_avoid = Vector3.ZERO
 	return input

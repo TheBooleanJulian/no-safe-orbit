@@ -49,9 +49,17 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP if interactive else Control.MOUSE_FILTER_IGNORE
 
 
+## Redraws at most this often (s): a capital ship has hundreds of modules,
+## and its dots and blinks don't need 60 Hz (play-test batch 6).
+const REDRAW_S := 0.1
+var _since_draw := INF
+
+
 func _process(delta: float) -> void:
 	_clock += delta
-	if visible and systems != null:
+	_since_draw += delta
+	if visible and systems != null and _since_draw >= REDRAW_S:
+		_since_draw = 0.0
 		queue_redraw()
 
 

@@ -24,6 +24,18 @@ var age_s: float = 0.0
 var ricochet: bool = false
 ## A point-defence flak round aimed at round `pd_target_round` (-1 = none).
 var pd_target_round: int = -1
+## Asleep (WorldSimulation._step_rounds): for this many more ticks it can't
+## reach any ship, so it only coasts; the tidal term is settled on waking
+## from `sleep_a0` (at the start of the sleep) over `sleep_t` seconds.
+var sleep_ticks: int = 0
+var sleep_t: float = 0.0
+var sleep_a0: Vector3 = Vector3.ZERO
+## Right by a ship: skip measuring how long it could sleep for this many ticks.
+var recheck_in: int = 0
+## The tidal pull at the end of its last tick (the next tick's start), and
+## the frame's rebase count then (-1 = none kept).
+var tidal_end: Vector3 = Vector3.ZERO
+var tidal_rebase: int = -1
 
 ## Far-mode state: PCI position/velocity at sim time `far_epoch`.
 var far: bool = false

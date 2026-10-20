@@ -518,6 +518,16 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 6 — performance ✅ (2026-10-21)
+
+"Lag issues are back when thousands of projectiles are fired by many
+fighters."
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Many fighters, thousands of rounds | `tools/profile_frames.gd` (`--carrier`, `--carriers`; manual, needs a GPU) | 3-ship fight 77 → 139 fps; own Carrier vs 3 frigates ~34 → 50 fps; 4 carriers 7 → 20 fps |
+| Simulation still correct | full suite (orbits, rounds, PD, craft) | 374/374 |
+
 ### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts
 
 Done early (play-test batch 3): `Location` resource, Earth and Moon with

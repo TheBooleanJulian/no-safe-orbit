@@ -214,5 +214,7 @@ func test_the_simulation_keeps_a_60_hz_budget_under_load() -> void:
 	var peak_rounds := 0
 	for row in result.rows:
 		peak_rounds = maxi(peak_rounds, int(row.rounds))
-	assert_true(peak_rounds > 100, "a real load: %d rounds in flight" % peak_rounds)
+	# Point defence fires a third as many (heavier) rounds since play-test
+	# batch 6, so the duel piles up ~50 in 15 s where it used to reach 100+.
+	assert_true(peak_rounds > 40, "a real load: %d rounds in flight" % peak_rounds)
 	assert_less_equal(result.mean_ms, 8.0, "mean tick time (ms) with %d rounds and 12 missiles" % peak_rounds)

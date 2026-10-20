@@ -258,6 +258,8 @@ craft › rounds), the engagement range (2 km) and an ammunition reserve
 (below 15 % of its magazine a mount keeps the rest for its first priority).
 Flak can only track heavy slugs (≥ 2 kg, closing under 1.5 km/s — the heavy
 cannon's rounds); autocannon rounds are too small and railgun slugs too fast.
+Each PD gun fires 300 heavy flak rounds a minute (0.3 kg, 18 mm; a slug
+within 2.6 m of one is destroyed), 200 to a magazine.
 
 **Encounters:** from mission 4 two ships come at once, from mission 7
 three, each with its own role — a *closer* works in to gun range, a
