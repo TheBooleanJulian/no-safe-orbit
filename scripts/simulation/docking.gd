@@ -62,8 +62,12 @@ static func collars(systems: ShipSystems, need_power: bool = true) -> Array[Port
 
 
 ## Every outer hull face with a room behind it (where a gangway can cut in).
+## Cached per ship (they depend on its blueprint only).
 static func hull_ports(systems: ShipSystems) -> Array[Port]:
 	var out: Array[Port] = []
+	if systems.hull_port_cached:
+		out.assign(systems.hull_port_cache)
+		return out
 	var grid := systems.grid
 	var c := ShipGrid.CELL_SIZE_M
 	for cell: Vector3i in grid.room_at:
@@ -77,6 +81,8 @@ static func hull_ports(systems: ShipSystems) -> Array[Port]:
 			p.normal_body = Vector3(n)
 			p.room = grid.room_at[cell]
 			out.append(p)
+	systems.hull_port_cache = out.duplicate()
+	systems.hull_port_cached = true
 	return out
 
 
@@ -117,14 +123,26 @@ static func best(a: ShipState, b: ShipState) -> Dictionary:
 		return {}
 	var theirs := collars(b.systems, false)
 	theirs.append_array(hull_ports(b.systems))
+	# Rank every pair on range and alignment alone (relative speed and turn
+	# rate are the same for every pair), then assess the winner in full —
+	# the same choice as assessing every pair, without building hundreds of
+	# problem lists.
 	var best_score := INF
-	var out := {}
+	var best_pair: Array = []
 	for pa in mine:
+		var pa_w := pa.world_position(a)
+		var na := pa.world_normal(a)
 		for pb in theirs:
-			var s := assess(a, pa, b, pb)
+			var d := pb.world_position(b) - pa_w
+			var range_m := d.length()
+			var axis := d / range_m if range_m > 1e-6 else na
+			var misalign := maxf(rad_to_deg(na.angle_to(axis)), rad_to_deg(pb.world_normal(b).angle_to(-na)))
+			var pair_ok := range_m <= GANGWAY_MAX_M and misalign <= MAX_MISALIGN_DEG
 			# Acceptable beats unacceptable; a collar beats a hull cut; then range and alignment.
-			var score: float = (0.0 if s.ok else 1e6) + (0.0 if pb.kind == &"collar" else 1e3) + s.range + s.misalign_deg
+			var score: float = (0.0 if pair_ok else 1e6) + (0.0 if pb.kind == &"collar" else 1e3) + range_m + misalign
 			if score < best_score:
 				best_score = score
-				out = {"a_port": pa, "b_port": pb, "assessment": s}
-	return out
+				best_pair = [pa, pb]
+	if best_pair.is_empty():
+		return {}
+	return {"a_port": best_pair[0], "b_port": best_pair[1], "assessment": assess(a, best_pair[0], b, best_pair[1])}

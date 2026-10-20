@@ -158,10 +158,12 @@ const DOCK_STANDOFF_M := 12.0
 
 ## Close in to board a beaten ship: our best collar turned square to its
 ## best port, held DOCK_STANDOFF_M off it at its velocity.
-static func dock_approach(ship: ShipState, target: ShipState) -> ShipControlInput:
+## `found` = an already-computed Docking.best(ship, target), if the caller has one.
+static func dock_approach(ship: ShipState, target: ShipState, found: Dictionary = {}) -> ShipControlInput:
 	var input := ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
 	input.hold_translation = false
-	var found := Docking.best(ship, target)
+	if found.is_empty():
+		found = Docking.best(ship, target)
 	if found.is_empty():
 		return input
 	var pa: Docking.Port = found.a_port

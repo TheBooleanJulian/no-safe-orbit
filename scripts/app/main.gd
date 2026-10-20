@@ -152,6 +152,7 @@ static func get_profile() -> PlayerProfile:
 
 
 func _ready() -> void:
+	GameLog.hold(true)
 	InputBindings.apply_saved()
 	gangways.name = "Gangways"
 	add_child(gangways)
@@ -566,7 +567,7 @@ func _enemy_board(c: Contact, target: ShipState, player: ShipState) -> void:
 			combat_log.record(world.sim_time, "boarding", line)
 			world.set_input(c.id, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
 		else:
-			world.set_input(c.id, GunneryAI.dock_approach(target, player))
+			world.set_input(c.id, GunneryAI.dock_approach(target, player, found))
 		return
 	world.set_input(c.id, ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true))
 	if link.sealed() and world.boarding_for(link) == null:
@@ -626,6 +627,8 @@ func _notification(what: int) -> void:
 	# Quitting mid-sortie docks the ship as it is: no repairs by quitting.
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		close_sortie()
+	elif what == NOTIFICATION_EXIT_TREE:
+		GameLog.hold(false)
 
 
 ## Record how the sortie ended and save: docked with the ship's damage, or
@@ -1440,7 +1443,23 @@ func start_field_repair() -> bool:
 	return true
 
 
+## Where each frame's time went (ms, the last frame): ai (input, contacts,
+## automation), sim (world.advance), events (hits, explosions, logs),
+## views (ships, craft, missiles), scene (camera, sky, tracers, flashes),
+## hud. Read by tools/profile_frames.gd.
+var frame_ms := {}
+var _frame_t0 := 0
+
+
+func _lap(section: String) -> void:
+	var now := Time.get_ticks_usec()
+	frame_ms[section] = (now - _frame_t0) / 1000.0
+	_frame_t0 = now
+
+
 func _process(delta: float) -> void:
+	GameLog.flush()  # the last frame's lines, in one print
+	_frame_t0 = Time.get_ticks_usec()
 	var player := world.get_ship(PLAYER_ID)
 	encounter.ensure_selection(world)
 	var target := target_ship()
@@ -1494,8 +1513,19 @@ func _process(delta: float) -> void:
 		if world.has_ship(craft.id):
 			prey_list.append(world.get_ship(craft.id))
 	var team_prey := courier if courier != null else player
+	# One enemy at a time comes alongside to board a beaten player: the
+	# nearest that wants to (or the one already linked); the rest fight on.
+	var boarder: Contact = null
+	var our_link := world.link_for(PLAYER_ID)
 	for c in encounter.live(world):
-		_drive_contact(c, player, prey_list, team_prey, quarters)
+		var s := world.get_ship(c.id)
+		if our_link != null and our_link.attacker_id == c.id:
+			boarder = c
+			break
+		if boarder == null or s.position.distance_squared_to(player.position) < world.get_ship(boarder.id).position.distance_squared_to(player.position):
+			boarder = c
+	for c in encounter.live(world):
+		_drive_contact(c, player, prey_list, team_prey, quarters, c == boarder)
 	_link_wings()
 	_update_goals(player)
 	_step_salvo()
@@ -1508,7 +1538,9 @@ func _process(delta: float) -> void:
 		hud.debrief.show_debrief(p.last_debrief, "[BACKSPACE] respawn the %s here  ·  [B] back to %s" % [p.vessel.name, STATION_NAME])
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var running := player.is_active() and not player_captured() and not hud.controls.visible
+	_lap("ai")
 	var alpha := world.advance(delta) if running else 1.0
+	_lap("sim")
 	for line in world.take_link_events():
 		if line.contains("sealed") or line.contains("SEALED"):
 			audio.play("dock")
@@ -1574,6 +1606,7 @@ func _process(delta: float) -> void:
 			var struck := world.get_ship(ev.target_id)
 			hud.hit_cam.show_hit(ev, _designs[ev.target_id], struck.systems, struck.display_name)
 
+	_lap("events")
 	var render_origin := player.interpolated_position(alpha)
 	_sync_craft_views(alpha, render_origin)
 	_sync_missile_views(alpha, render_origin)
@@ -1588,6 +1621,7 @@ func _process(delta: float) -> void:
 		player_input.zoom_changed = false
 		if player_input.zoomed:
 			_center_view_on_aim(player)
+	_lap("views")
 	camera.zoomed = player_input.zoomed and not hud.overview.visible
 	camera.fov_zoomed = player_input.zoom_fov()
 	camera.orbit = player_input.camera_orbit
@@ -1610,15 +1644,18 @@ func _process(delta: float) -> void:
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track
 	hud.target_hostile = target_hostile
+	_lap("scene")
 	hud.update_display(world, PLAYER_ID, encounter.selected, alpha, render_origin, camera, player_input)
 	_update_audio(player)
+	_lap("hud")
 
 
 ## One enemy ship's turn, by its policy: hold while captured, break free
 ## from our gangway, board a beaten player (one at a time), close in while
 ## arriving, else fight its role — whom to shoot (focus fire, never a
 ## wreck), guns, missile salvos and fighters.
-func _drive_contact(c: Contact, player: ShipState, prey_list: Array[ShipState], team_prey: ShipState, quarters: bool) -> void:
+func _drive_contact(c: Contact, player: ShipState, prey_list: Array[ShipState], team_prey: ShipState, quarters: bool,
+		may_board: bool = true) -> void:
 	var s := world.get_ship(c.id)
 	if s.systems != null:
 		s.systems.suited = quarters
@@ -1631,7 +1668,7 @@ func _drive_contact(c: Contact, player: ShipState, prey_list: Array[ShipState], 
 		world.set_input(c.id, ShipControlInput.neutral())
 	elif link != null and link.attacker_id != c.id and GunneryAI.can_break_contact(s):
 		world.set_input(c.id, GunneryAI.break_contact(s, player))
-	elif engaging and not someone_else_boarding and get_profile().missions_completed + 1 >= ENEMY_BOARD_FROM_MISSION \
+	elif engaging and may_board and not someone_else_boarding and get_profile().missions_completed + 1 >= ENEMY_BOARD_FROM_MISSION \
 			and GunneryAI.wants_to_board(s, player):
 		_enemy_board(c, s, player)
 	elif c.arriving and not s.systems.is_disabled():

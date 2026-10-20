@@ -22,6 +22,7 @@ const CIRCULAR_ECCENTRICITY := 1e-4
 const PATH_SAMPLES := 180
 const NEAR_PATH_DEG := 20.0
 const NEAR_PATH_SAMPLES := 80
+const PATH_REFRESH_MS := 200
 const NOTICE_S := 6.0
 const HIT_ALERT_S := 8.0
 ## Layout breakpoint: below this height the side panels shrink.
@@ -117,6 +118,9 @@ var _orbit_forced := false
 var _strip_w := 600.0
 var _side_w := 330.0
 var _radar_size := 240.0
+var _path_origin_pci: Vec3d = null
+var _path_at_ms := 0
+var _panel_at_ms := 0
 
 
 func _ready() -> void:
@@ -1213,6 +1217,11 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 	if orbit == null:
 		orbit_label.text = "NO CENTRAL BODY — INERTIAL SPACE"
 		return
+	# Readouts a few times a second (the light-change search is not cheap).
+	var now := Time.get_ticks_msec()
+	if now - _panel_at_ms < PATH_REFRESH_MS and now >= _panel_at_ms and orbit_label.text.begins_with("ORBIT"):
+		return
+	_panel_at_ms = now
 	var body := world.body
 	var lines := PackedStringArray([
 		"ORBIT      %s" % body.display_name.to_upper(),
@@ -1333,16 +1342,29 @@ func _update_gun_reticles(player: ShipState, alpha: float, render_origin: Vector
 
 
 func _update_orbit_path(world: WorldSimulation, orbit: OrbitElements, alpha: float, render_origin: Vector3) -> void:
-	overlay.orbit_path = PackedVector3Array()
-	overlay.orbit_markers = []
 	if orbit == null:
+		overlay.orbit_path = PackedVector3Array()
+		overlay.orbit_markers = []
 		overlay.planet_radius = 0.0
+		_path_origin_pci = null
 		return
 	var body := world.body
 	# PCI position of the render origin; path points are drawn relative to it.
 	var origin_pci := world.frame.interpolated_origin(alpha).plus_v3(render_origin)
 	overlay.planet_center = Vec3d.new().minus(origin_pci).to_vector3()
 	overlay.planet_radius = body.radius_m
+	# The path itself (hundreds of Kepler solves) is recomputed a few times a
+	# second; between refreshes it is shifted by how far the origin moved.
+	var now := Time.get_ticks_msec()
+	if _path_origin_pci == null or now - _path_at_ms >= PATH_REFRESH_MS or now < _path_at_ms:
+		_path_origin_pci = origin_pci
+		_path_at_ms = now
+		_compute_orbit_path(body, orbit, origin_pci)
+	overlay.orbit_offset = _path_origin_pci.minus(origin_pci).to_vector3()
+
+
+func _compute_orbit_path(body: OrbitalBody, orbit: OrbitElements, origin_pci: Vec3d) -> void:
+	overlay.orbit_markers = []
 	var entry_r := body.entry_radius_m()
 	var path := PackedVector3Array()
 	# Dense for the first 20° (the stretch seen near the prograde marker),
