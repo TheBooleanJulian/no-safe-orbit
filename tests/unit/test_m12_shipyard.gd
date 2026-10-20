@@ -144,7 +144,7 @@ func test_schema_8_migration() -> void:
 	ContractBoard.accept(q, str(q.board[0].id))
 	q.save(path)
 	var r := PlayerProfile.load_file(path, PackedStringArray())
-	assert_true(r.loaded_schema == 8 and r.active_contract.id == q.active_contract.id and r.board.size() == q.board.size(),
-		"board and contract saved at schema 8")
+	assert_true(r.loaded_schema == PlayerProfile.SCHEMA_VERSION and r.active_contract.id == q.active_contract.id and r.board.size() == q.board.size(),
+		"board and contract saved at the current schema")
 	for s in ["", ".bak", ".tmp", ".v7"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + s))

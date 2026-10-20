@@ -4,8 +4,8 @@ extends Resource
 ## body's gravity is the only gravity there). Players pick one on the
 ## shipyard map; the sortie starts in its orbit and the jump drive brings
 ## the ship back to its station. Data lives in data/locations/*.tres.
-## Jump costs, brokers that unlock locations and per-station stock are
-## Milestone 13; for now moving between known locations is free.
+## Moving between locations costs jump propellant (JumpDrive, by distance
+## and mass); each station has its own shelves, prices and local traffic.
 
 ## Every location's file, in map order. Listed here (not scanned from the
 ## folder) so exported builds find them.
@@ -35,6 +35,26 @@ static var _all: Array[Location] = []
 ## One line for the map.
 @export_multiline var blurb: String = ""
 
+@export_group("Jumps")
+## Distance from Earth (m) the jump drive pays for; between two locations
+## the difference of theirs (see the simplifications in ARCHITECTURE).
+@export var jump_distance_m: float = 0.0
+
+@export_group("Station")
+## The quartermaster: how many items, the rarest tier stocked, and a price
+## factor on the standard prices (also on hiring fees).
+@export var vendor_stock_size: int = 3
+@export var vendor_max_rarity: int = Rarity.Tier.EPIC
+@export var price_factor: float = 1.0
+
+@export_group("Encounters")
+## Blueprint files (data/blueprints/) the local traffic is built on, and
+## their weights; each ship of an encounter rolls one.
+@export var enemy_templates: PackedStringArray = PackedStringArray(["frigate_mk1.json"])
+@export var enemy_weights: PackedFloat32Array = PackedFloat32Array([1.0])
+## Added to the mission number when arming the local traffic.
+@export var threat_bonus: int = 0
+
 
 ## Every location, in map order.
 static func all() -> Array[Location]:
@@ -52,6 +72,29 @@ static func by_id(location_id: String) -> Location:
 	return all()[0]
 
 
+## Jump distance between two locations (m).
+static func distance_m(a: Location, b: Location) -> float:
+	return absf(a.jump_distance_m - b.jump_distance_m)
+
+
+## The template file for ship `index` of an encounter at `mission`
+## (seeded: the same mission and slot always roll the same).
+func enemy_template(mission: int, index: int) -> String:
+	if enemy_templates.size() <= 1:
+		return enemy_templates[0] if enemy_templates.size() == 1 else "frigate_mk1.json"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 92_821 * mission + 613 * index + hash(id)
+	var total := 0.0
+	for i in enemy_templates.size():
+		total += enemy_weights[i] if i < enemy_weights.size() else 1.0
+	var roll := rng.randf() * total
+	for i in enemy_templates.size():
+		roll -= enemy_weights[i] if i < enemy_weights.size() else 1.0
+		if roll <= 0.0:
+			return enemy_templates[i]
+	return enemy_templates[enemy_templates.size() - 1]
+
+
 func start_radius_m() -> float:
 	return body.radius_m + start_altitude_m
 
@@ -67,4 +110,11 @@ func validate() -> PackedStringArray:
 	problems.append_array(body.validate())
 	if start_altitude_m <= body.entry_interface_altitude_m:
 		problems.append("%s: the start orbit is below the entry interface" % id)
+	if enemy_templates.is_empty():
+		problems.append("%s: no enemy templates" % id)
+	for f in enemy_templates:
+		if not FileAccess.file_exists("res://data/blueprints/" + f):
+			problems.append("%s: enemy template %s missing" % [id, f])
+	if vendor_stock_size < 0 or price_factor <= 0.0:
+		problems.append("%s: bad quartermaster settings" % id)
 	return problems

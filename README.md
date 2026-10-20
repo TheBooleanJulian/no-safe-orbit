@@ -475,7 +475,10 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
    with a Vent button per line and "vent excess" (cheapest first); the jump
    vents the excess itself.
 4. **Jump home**: hold **B** for 5 s — the **dimensional jump drive** to
-   Earth Shipyard. It won't charge while a hostile has fired on you in the
+   the location's station. It burns propellant (about 5 t for the Frigate:
+   the main tank first, then the drive's own reserve); with too little, a
+   **rescue tow** brings you in for credits instead. Backspace while flying
+   counts as a jump home too. It won't charge while a hostile has fired on you in the
    last 10 s (one that hasn't opened fire doesn't stop it). Craft still out
    and boarders still across are **left behind** — an emergency jump, with
    a red countdown naming them; release B to wait for them. The vessel
@@ -758,9 +761,19 @@ In REFIT you start from the ship you were flying (the Frigate Mk I template
 by default).
 
 **Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click Earth or
-the Moon to move the vessel to that station; the next launch starts in its
-orbit. Pick the encounter: **1, 2 or 3 ships**. Moving is free for now
-(jump fuel comes with Milestone 13).
+the Moon to jump the vessel to that station; the next launch starts in its
+orbit. Pick the encounter: **1, 2 or 3 ships**.
+
+- **Jumps cost propellant**: ship mass × (8 kg/t + 18 kg/t for every
+  tenfold of distance in 1,000 km). Frigate Mk I: 4.9 t home within a
+  location, 33.7 t Earth ↔ Moon. The map shows each jump's cost.
+- **Jump reserve**: a quarter of your tankage that only the jump drive can
+  burn, used after the main tank. The ARMOURY shows and refills it.
+- **Not enough?** The map refuses with what's missing and the refuel price;
+  a contract elsewhere can't be accepted until you can make the jump.
+- **Each station is different**: the Lunar Shipyard stocks four parts up to
+  rare at 1.2× prices (crew fees too), and its traffic mixes corvettes with
+  frigates and is one threat level tougher.
 
 **Hull** is built from four blocks: a 2×2×1 **pressurised block** (rooms go
 inside), 1×2×1 and 1×1×1 **sloped wedges** and a 1×2×1 **truss**. Wedges

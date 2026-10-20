@@ -29,9 +29,9 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   game time in a test render at mission 7. Since 2026-10-20 the player picks
   1, 2 or 3 ships on the shipyard map; enemy loadouts still grow with the
   mission number. Salvo counts and intervals are first guesses.
-- **Locations are new** (2026-10-20): the Lunar Shipyard has the same
-  crew, quartermaster and upgrades as Earth's (per-station stock is
-  Milestone 13); moving between stations is free.
+- **Locations are new** (2026-10-20): jump costs, the reserve, the tow fee
+  and the Lunar Shipyard's prices and traffic are first guesses. Upgrades
+  are still the same at every station.
 - **With the Tab drawer open the alert banner can overlap the top of the
   moved target card** (layout).
 - **Audio is silent in headless runs** (tests and checks): the dummy
