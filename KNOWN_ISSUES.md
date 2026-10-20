@@ -11,6 +11,10 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   upgrade costs are first guesses. Expect further tuning.
 - **Fires, coolant loops and named crew are new** and covered by tests,
   not yet by play.
+- **Craft roles are new** (play-test batch 5): the interceptor, bomber,
+  gun runs and avoidance distances are first guesses covered by seeded
+  tests, not yet by play. Avoidance is a local nudge, so a craft can be
+  pinned against a big hull for a moment.
 - **Countermeasures are new** (Milestone 11): flare signature and burn
   time, seeker discrimination, jamming strength and the burn-through range
   are first guesses, covered by seeded tests, not yet by play.
