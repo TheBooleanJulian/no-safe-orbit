@@ -25,6 +25,7 @@ func _run() -> void:
 	Main.profile = null
 	var p := Main.get_profile()
 	p.missions_completed = 6
+	p.encounter_size = 3
 	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
 	var rng := RandomNumberGenerator.new()
 	EnemyFactory._fit_launcher(bp, ConstructionCatalog.default_catalog(), &"missile_rack", rng)

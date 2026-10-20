@@ -103,8 +103,8 @@ func test_each_contact_keeps_its_own_track_and_policy() -> void:
 		"tracks are per contact: 2 km and 16.5 km seen, 31 km (beyond the 25 km mast) not (%s, %s, %s)" % [contacts[0].track.detected, contacts[1].track.detected, contacts[2].track.detected])
 	assert_true(contacts[0].policy.role == ShipPolicy.Role.CLOSER and contacts[1].policy.role == ShipPolicy.Role.STANDOFF
 		and contacts[2].policy.role == ShipPolicy.Role.FLANKER, "roles by place in the encounter")
-	assert_true(EnemyFactory.encounter_size(1) == 1 and EnemyFactory.encounter_size(4) == 2 and EnemyFactory.encounter_size(7) == 3,
-		"one ship, then two from mission 4, three from 7")
+	assert_true(EnemyFactory.encounter_size(0) == 1 and EnemyFactory.encounter_size(2) == 2 and EnemyFactory.encounter_size(9) == 3,
+		"the encounter is the size picked on the map, 1–3")
 	var a := EnemyFactory.design(7, _template(), _catalog(), 0)
 	var b := EnemyFactory.design(7, _template(), _catalog(), 1)
 	assert_true(a.name != b.name and not ShipValidator.validate(b, _catalog()).has_errors(), "each ship its own valid design (%s / %s)" % [a.name, b.name])
@@ -338,7 +338,8 @@ func test_schema_6_gives_old_vessels_the_defensive_policy() -> void:
 	q.vessel.policy = std.to_dict()
 	q.save(TEST_PROFILE)
 	var r := PlayerProfile.load_file(TEST_PROFILE, PackedStringArray())
-	assert_true(r.loaded_schema == 6 and ShipPolicy.from_dict(r.vessel.policy).autofire_enabled, "saved per vessel at schema 6")
+	assert_true(r.loaded_schema == PlayerProfile.SCHEMA_VERSION and ShipPolicy.from_dict(r.vessel.policy).autofire_enabled,
+		"saved per vessel at the current schema (%d)" % r.loaded_schema)
 	for s in ["", ".bak", ".tmp", ".v5"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_PROFILE + s))
 

@@ -170,6 +170,23 @@ func _run() -> void:
 	_check(path != "" and FileAccess.file_exists(path), "design saved to %s" % path)
 	_check(yard.load_design(path) and BlueprintIO.to_json(yard.editor.blueprint) == json, "reloaded design is identical")
 
+	# The map: the route button opens it; click the Moon, pick two ships.
+	_check(yard.route_button.text.contains("EARTH ORBIT") and yard.route_button.text.contains("1 SHIP"),
+		"a new player launches from Earth orbit against one ship (%s)" % yard.route_button.text)
+	yard.route_button.pressed.emit()
+	await _frames(3)
+	_check(yard.map_tab.is_visible_in_tree(), "the route button opens HANGAR › MAP")
+	var moon_at: Vector2 = yard.system_map.disc(Location.by_id("moon"))[0]
+	await _click(yard.system_map, moon_at)
+	await _frames(2)
+	var title := yard.get_node("Margin/VBox/TopBar/Title") as Label
+	_check(yard.profile.location == "moon" and title.text == "LUNAR SHIPYARD" and yard.route_button.text.contains("LUNAR ORBIT"),
+		"clicking the Moon docks the vessel at the Lunar Shipyard (%s · %s)" % [title.text, yard.route_button.text])
+	yard.size_buttons[1].pressed.emit()
+	var saved := PlayerProfile.load_file(PlayerProfile.path, PackedStringArray())
+	_check(yard.profile.encounter_size == 2 and saved.location == "moon" and saved.encounter_size == 2,
+		"two ships picked; both choices saved (%s, %d)" % [saved.location, saved.encounter_size])
+
 	# Launch and fly it.
 	var expected_mass := yard.editor.stats.mass_kg
 	_check(yard.launch(), "launch() accepted the valid design")
@@ -180,6 +197,12 @@ func _run() -> void:
 		var player := main.world.get_ship(Main.PLAYER_ID)
 		_check(player.config.display_name == "Smoke Test Frigate" and absf(player.config.mass_kg - expected_mass) < 1e-3,
 			"player flies the launched design (%s, %.1f t)" % [player.config.display_name, player.config.mass_kg / 1000.0])
+		var alt := main.world.altitude_of(player)
+		var speed := main.world.pci_velocity(player.velocity).length()
+		_check(main.world.body.display_name == "Moon" and absf(alt - 100_000.0) < 500.0 and absf(speed - 1633.0) < 5.0,
+			"launched into lunar orbit: %s, %.1f km, %.0f m/s" % [main.world.body.display_name, alt / 1000.0, speed])
+		_check(main.encounter.contacts.size() == 2 and main.hud.station_name == "Lunar Shipyard",
+			"two ships to meet; the jump drive goes to the Lunar Shipyard (%d, %s)" % [main.encounter.contacts.size(), main.hud.station_name])
 		# B returns to the shipyard with the same design.
 		# Hold B: the jump drive charges for 5 s (sped up here).
 		Engine.time_scale = 8.0
@@ -193,6 +216,8 @@ func _run() -> void:
 		await _frames(4)
 		var back := current_scene as Shipyard
 		_check(back != null and back.editor.blueprint.name == "Smoke Test Frigate", "B in flight reopens the shipyard with the flown design")
+		_check(back != null and (back.get_node("Margin/VBox/TopBar/Title") as Label).text == "LUNAR SHIPYARD",
+			"the jump drive brought it to the Lunar Shipyard")
 
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	print("smoke_shipyard: %d failure(s)" % _failures.size())

@@ -53,6 +53,7 @@ func _run() -> void:
 	Main.profile = null
 	var profile := Main.get_profile()
 	profile.missions_completed = 6
+	profile.encounter_size = 3
 	var main: Main = (load("res://scenes/main/main.tscn") as PackedScene).instantiate()
 	root.add_child(main)
 	await process_frame
@@ -62,7 +63,7 @@ func _run() -> void:
 
 	var ids := main.encounter.contacts.map(func(c: Contact) -> StringName: return c.id)
 	_check(ids == [&"target_01", &"target_02", &"target_03"] and main.encounter.selected == &"target_01",
-		"mission 7: three contacts in slots target_01..03, the lead selected (%s)" % [ids])
+		"three picked on the map: contacts in slots target_01..03, the lead selected (%s)" % [ids])
 	var roles := main.encounter.contacts.map(func(c: Contact) -> String: return ShipPolicy.ROLE_NAMES[c.policy.role])
 	_check(roles == ["closer", "standoff", "flanker"], "roles by place: %s" % [roles])
 	await process_frame

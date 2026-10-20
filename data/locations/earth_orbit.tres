@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
+[ext_resource type="Resource" path="res://data/bodies/earth.tres" id="2_body"]
+
+[resource]
+script = ExtResource("1_loc")
+id = "earth"
+display_name = "Earth orbit"
+station_name = "Earth Shipyard"
+body = ExtResource("2_body")
+start_altitude_m = 400000.0
+map_position = Vector2(0.32, 0.55)
+map_radius_px = 34.0
+map_color = Color(0.22, 0.42, 0.78, 1)
+blurb = "Low Earth orbit, 400 km · 7.67 km/s · 92 min period. Home yard; traffic and pirates."

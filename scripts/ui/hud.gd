@@ -66,6 +66,8 @@ var escort_id: StringName = &""
 ## The encounter (set by Main): the target card lists the other contacts
 ## compactly; the radar and the markers show them all.
 var encounter: Encounter
+## The station the jump drive returns to (Main: the location's).
+var station_name := "Earth Shipyard"
 ## Beaten contacts left drifting, marked grey (set by Main).
 var wreck_ids: Array[StringName] = []
 var guide_label: RichTextLabel
@@ -255,7 +257,7 @@ SHIP       Tab damage control, crew, power, wing · C patch damage
 CONTACTS   T target hostile · G salvage beacon · Y grappling arm · V gangway · N board / withdraw · [ / ] launch / recall craft
 MISSION    the goal is shown at the top (gold) · F2 guided first sortie: start / skip
 PANELS     O orbit · P details & combat log · H this help · F1 rebind
-MISSION    hold B 5 s: jump drive to Earth Shipyard (out of combat) · Backspace restart / respawn"""
+MISSION    hold B 5 s: jump drive to the station (out of combat) · Backspace restart / respawn"""
 
 
 ## Puts a sans heading above `label` inside its parent container.
@@ -756,8 +758,8 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		var waiting: PackedStringArray = jump_state.waiting
 		var bars := roundi(float(jump_state.progress) * 10.0)
 		if waiting.is_empty():
-			out.append(_alert("caution", "JUMP %.1f s" % jump_state.left_s, "DIMENSIONAL JUMP DRIVE %s %.1f s TO EARTH SHIPYARD" % [
-				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s], "keep holding [B]"))
+			out.append(_alert("caution", "JUMP %.1f s" % jump_state.left_s, "DIMENSIONAL JUMP DRIVE %s %.1f s TO %s" % [
+				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s, station_name.to_upper()], "keep holding [B]"))
 		else:
 			out.append(_alert("danger", "EMERGENCY JUMP %.1f s" % jump_state.left_s, "EMERGENCY JUMP %s %.1f s — LEAVES BEHIND %s" % [
 				"▮".repeat(bars) + "▯".repeat(10 - bars), jump_state.left_s, " · ".join(waiting).to_upper()], "release [B] to wait for them"))
@@ -886,7 +888,7 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 	if not target.is_active():
 		_target_heading.text = "TARGET · %s" % target.display_name
 		target_label.text = "%s LOST — %s at T+%s\nHITS    %d" % [CyberTheme.GLYPH_DESTROYED,
-			"atmospheric entry" if target.status == ShipState.Status.ENTERED_ATMOSPHERE else "destroyed", HudFormat.clock(target.status_time), _hits_scored]
+			world.body.entry_word() if target.status == ShipState.Status.ENTERED_ATMOSPHERE and world.body != null else "destroyed", HudFormat.clock(target.status_time), _hits_scored]
 		return
 	var range_km := SensorTrack.range_of(player) / 1000.0
 	if track != null and not track.detected:
@@ -1240,10 +1242,12 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 		lines.append("PERIAPSIS  %s" % HudFormat.altitude(orbit.periapsis_radius - body.radius_m))
 	var t_entry := orbit.time_to_radius_descending(body.entry_radius_m())
 	var entry_alt_km := body.entry_interface_altitude_m / 1000.0
+	# Airless: the floor is the highest terrain, not an atmosphere.
+	var floor_name := "ENTRY IF" if body.has_atmosphere else "TERRAIN "
 	if is_nan(t_entry):
-		lines.append("ENTRY IF   %.0f km · CLEAR" % entry_alt_km)
+		lines.append("%s   %.0f km · CLEAR" % [floor_name, entry_alt_km])
 	else:
-		lines.append("ENTRY IF   %.0f km · IN %s" % [entry_alt_km, HudFormat.duration(t_entry)])
+		lines.append("%s   %.0f km · IN %s" % [floor_name, entry_alt_km, HudFormat.duration(t_entry)])
 	if celestial != null:
 		var sun_dir := celestial.sun_direction_pci(world.sim_time)
 		var lit := CelestialFrame.sunlight_fraction(orbit.position, sun_dir, body.radius_m) >= 0.5
@@ -1392,7 +1396,7 @@ func _compute_orbit_path(body: OrbitalBody, orbit: OrbitElements, origin_pci: Ve
 			_add_marker(orbit, origin_pci, -orbit.true_anomaly, "Pe %s" % HudFormat.altitude(orbit.periapsis_radius - body.radius_m), COLOR_APSIS)
 	if orbit.intersects_radius(entry_r) and orbit.radius > entry_r:
 		var cos_nu := clampf((orbit.semi_latus_rectum / entry_r - 1.0) / orbit.eccentricity, -1.0, 1.0)
-		_add_marker(orbit, origin_pci, -acos(cos_nu) - orbit.true_anomaly, "ENTRY %.0f km" % (body.entry_interface_altitude_m / 1000.0), CyberTheme.AMBER)
+		_add_marker(orbit, origin_pci, -acos(cos_nu) - orbit.true_anomaly, "%s %.0f km" % ["ENTRY" if body.has_atmosphere else "TERRAIN", body.entry_interface_altitude_m / 1000.0], CyberTheme.AMBER)
 
 
 func _add_marker(orbit: OrbitElements, origin_pci: Vec3d, angle: float, text: String, color: Color) -> void:

@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="OrbitalBody" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="OrbitalBody" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/simulation/orbital_body.gd" id="1_body"]
+[ext_resource type="Texture2D" path="res://data/earth/blue_marble_oct_5400.jpg" id="2_map"]
 
 [resource]
 script = ExtResource("1_body")
@@ -8,3 +9,9 @@ display_name = "Earth"
 mu_m3_s2 = 3.986004418e14
 radius_m = 6371000.0
 entry_interface_altitude_m = 100000.0
+has_atmosphere = true
+pole_ra_deg = 0.0
+pole_dec_deg = 90.0
+prime_meridian_deg = 190.46061837
+rotation_deg_per_day = 360.98564736629
+surface_map = ExtResource("2_map")

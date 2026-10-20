@@ -8,12 +8,13 @@ const PLAYER_ID := &"player"
 ## The lead contact's slot id (the encounter's ships are target_01,
 ## target_02, …; a slot is reused once its ship is retired as a wreck).
 const TARGET_ID := &"target_01"
-const EARTH: OrbitalBody = preload("res://data/bodies/earth.tres")
 const SHIPYARD_SCENE := "res://scenes/shipyard/shipyard.tscn"
 const SHIP_VIEW_SCENE: PackedScene = preload("res://scenes/ships/ship_view.tscn")
-## Scenario: prograde equatorial orbit at ISS-like altitude, on the day side.
-const START_ALTITUDE_M := 400_000.0
-## Real sky date (UTC): sets the Sun, the stars' orientation and Earth's spin.
+## Where this sortie flies (the profile's location, picked on the shipyard
+## map): its body, start orbit (prograde, equatorial, on the day side) and
+## station.
+var location: Location
+## Real sky date (UTC): sets the Sun, the stars' orientation and the body's spin.
 const SCENARIO_EPOCH_UTC := "2026-10-19T12:00:00"
 ## Sun's in-plane angle behind the start zenith: ~24 minutes before sunset.
 const SUN_ANGLE_FROM_UP_DEG := 15.0
@@ -97,7 +98,7 @@ const ENGAGE_STANDOFF_M := 2500.0
 const ENGAGE_GRACE_S := 5.0
 ## Aim point distance without a contact (m).
 const DEFAULT_AIM_RANGE_M := 2000.0
-## Dimensional jump drive: hold [B] this long (s) to jump to Earth Shipyard.
+## Dimensional jump drive: hold [B] this long (s) to jump to the location's station.
 const JUMP_HOLD_S := 5.0
 ## The jump drive is blocked while a hostile has fired on us this recently.
 const UNDER_FIRE_S := 10.0
@@ -112,7 +113,6 @@ const ENEMY_BOARD_FROM_MISSION := 2
 const ENEMY_REBOARD_DELAY_S := 20.0
 ## How our crew defends against boarders (chosen in Tab → CREW).
 var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
-const STATION_NAME := "Earth Shipyard"
 var _jump_hold := 0.0
 var _craft_views: Dictionary = {}  # craft id -> CraftView
 var _missile_views: Dictionary = {}  # missile id -> MissileView
@@ -158,11 +158,13 @@ func _ready() -> void:
 	add_child(gangways)
 	audio.name = "Audio"
 	add_child(audio)
-	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG)
+	location = Location.by_id(get_profile().location)
+	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG, location.body)
 	stars.build(celestial)
 	hud.celestial = celestial
 	hud.overview.command.connect(_on_overview_command)
-	sky.configure(EARTH)
+	hud.station_name = location.station_name
+	sky.configure(location.body)
 	_start_scenario()
 
 
@@ -192,8 +194,9 @@ func _start_scenario() -> void:
 	_designs[PLAYER_ID] = _compile(vessel.blueprint, template)
 
 	world = WorldSimulation.new()
-	var r0 := EARTH.radius_m + START_ALTITUDE_M
-	world.set_central_body(EARTH, Vec3d.new(0, r0, 0), Vec3d.new(0, 0, -EARTH.circular_speed(r0)))
+	var body := location.body
+	var r0 := location.start_radius_m()
+	world.set_central_body(body, Vec3d.new(0, r0, 0), Vec3d.new(0, 0, -body.circular_speed(r0)))
 	world.anchor_id = PLAYER_ID
 	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
 	player.side = &"player"
@@ -237,17 +240,17 @@ func _start_scenario() -> void:
 		PlayerProfile.load_notice = ""
 	GameLog.info("main", "Orbital sandbox ready: player flies '%s' (%.0f t), %s orbit at %.0f km, fixed dt %.4f s" % [
 		_designs[PLAYER_ID].config.display_name, _designs[PLAYER_ID].config.mass_kg / 1000.0,
-		EARTH.display_name, START_ALTITUDE_M / 1000.0, world.fixed_dt])
+		location.body.display_name, location.start_altitude_m / 1000.0, world.fixed_dt])
 
 
-## The next encounter: EnemyFactory.encounter_size(mission) ships in slots
+## The next encounter: the size picked on the shipyard map, in slots
 ## target_01, target_02, …, each with its own policy and role. The first of
 ## a sortie is already close (the lead 2.5 km ahead, crossing the bow at
 ## ~25 m/s); one arriving after a salvage (`arriving`) starts
 ## ARRIVAL_DISTANCE_M out and closes; it must be detected before it engages.
 func _spawn_encounter(arriving: bool = false) -> void:
 	var mission_no := get_profile().missions_completed + 1
-	for i in EnemyFactory.encounter_size(mission_no):
+	for i in EnemyFactory.encounter_size(get_profile().encounter_size):
 		_spawn_contact(i, mission_no, arriving)
 	encounter.ensure_selection(world)
 	player_wing.target_id = encounter.selected
@@ -672,7 +675,7 @@ func close_sortie() -> void:
 			combat_log.objectives.append("✕ %s %s — failed: %s" % [mission.number_text(), mission.current().title, mission.failed])
 		elif combat_log.objectives.is_empty():
 			combat_log.objectives.append("▲ %s %s — not met yet: %s" % [mission.number_text(), mission.current().title, mission.current().brief])
-		var outcome := "vessel captured by boarders" if player_captured() else ("vessel lost" if not player.is_active() else "jumped home to %s" % STATION_NAME)
+		var outcome := "vessel captured by boarders" if player_captured() else ("vessel lost" if not player.is_active() else "jumped home to %s" % location.station_name)
 		combat_log.finish(player, outcome, world.sim_time, lines)
 		p.last_debrief = combat_log.to_dict()
 		var path := combat_log.save()
@@ -726,7 +729,7 @@ func drop_beacon() -> Array:
 		"Wreck %d%% intact · the station's tug brings it in" % roundi(intact * 100.0),
 		"+%d cr scrap (%d%% of %d) · +%d cr bounty" % [scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), Salvage.scrap_value(target.systems), bounty],
 		"%d crate%s · %d%% chance of loot each · into the cargo hold — banked at %s when you jump home" % [crates.size(), "" if crates.size() == 1 else "s",
-			roundi(Salvage.BEACON_LOOT_CHANCE * 100.0), STATION_NAME],
+			roundi(Salvage.BEACON_LOOT_CHANCE * 100.0), location.station_name],
 	]), crates, p)
 	_next_contact()
 	return crates
@@ -767,7 +770,7 @@ func take_prize(c: Contact = null) -> Array:
 		target.display_name, scrap, roundi(Salvage.TAKEOVER_SCRAP_RATE * 100.0), bounty, parts, crates.size()]
 	_record_payout(target, summary, crates, "in the hold")
 	var lines := PackedStringArray([
-		"Bridge taken · boarders withdrawing · prize crew to %s" % STATION_NAME,
+		"Bridge taken · boarders withdrawing · prize crew to %s" % location.station_name,
 		"+%d cr scrap (%d%% of %d) · +%d cr bounty (×2 captured)" % [scrap, roundi(Salvage.TAKEOVER_SCRAP_RATE * 100.0),
 			Salvage.scrap_value(target.systems), bounty],
 		"+%d spare parts from its stores · %d crates · %d%% chance of loot each — into the cargo hold" % [parts, crates.size(),
@@ -943,7 +946,7 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 				if not vented.is_empty():
 					combat_log.record(world.sim_time, "jump", "Vented before the jump: %s" % ", ".join(vented))
 				combat_log.record(world.sim_time, "jump", "%sump to %s%s" % [
-					"Emergency j" if not waiting.is_empty() else "Dimensional j", STATION_NAME,
+					"Emergency j" if not waiting.is_empty() else "Dimensional j", location.station_name,
 					" — left behind: %s" % ", ".join(waiting) if not waiting.is_empty() else ""])
 				tutorial.observe({"jump": true})
 				open_shipyard()
@@ -1535,7 +1538,7 @@ func _process(delta: float) -> void:
 	if (not player.is_active() or player_captured()) and not _sortie_closed:
 		close_sortie()
 		var p := get_profile()
-		hud.debrief.show_debrief(p.last_debrief, "[BACKSPACE] respawn the %s here  ·  [B] back to %s" % [p.vessel.name, STATION_NAME])
+		hud.debrief.show_debrief(p.last_debrief, "[BACKSPACE] respawn the %s here  ·  [B] back to %s" % [p.vessel.name, location.station_name])
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var running := player.is_active() and not player_captured() and not hud.controls.visible
 	_lap("ai")
@@ -1638,7 +1641,7 @@ func _process(delta: float) -> void:
 	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin)).to_vector3()
 	_update_sun(player)
 	sky.update_view(planet_center, camera, celestial, world.sim_time)
-	stars.update_view(camera, planet_center, EARTH)
+	stars.update_view(camera, planet_center, world.body)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
@@ -1720,4 +1723,4 @@ func _update_audio(player: ShipState) -> void:
 func _update_sun(player: ShipState) -> void:
 	var dir := celestial.sun_direction_pci(world.sim_time)
 	sun.look_at(-dir, Vector3.RIGHT if absf(dir.y) > 0.99 else Vector3.UP)
-	sun.light_energy = SUN_ENERGY * CelestialFrame.sunlight_fraction(world.pci_position(player.position), dir, EARTH.radius_m)
+	sun.light_energy = SUN_ENERGY * CelestialFrame.sunlight_fraction(world.pci_position(player.position), dir, world.body.radius_m)

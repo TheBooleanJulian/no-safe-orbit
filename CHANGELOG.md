@@ -4,6 +4,65 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 3 — map, lunar orbit, big-fight performance (2026-10-20)
+
+#### Added
+- **Map** (shipyard HANGAR › MAP; the route button beside LAUNCH opens it):
+  click a body to dock at its station and launch from its orbit; pick the
+  next encounter's size, **1, 2 or 3 ships** (was set by the mission
+  number: two from mission 4, three from 7). Moving between stations is
+  free until jump fuel arrives (Milestone 13).
+- **Lunar orbit and the Lunar Shipyard**: a 100 km circular orbit
+  (1.63 km/s, 118 min) about the Moon at real scale (JPL DE440 μ, mean
+  radius 1,737.4 km). No air: no limb glow, haze, clouds or glint; the
+  "entry interface" is the terrain floor, 11 km up (the highest summit is
+  10.8 km), shown as TERRAIN and called a terrain impact. NASA SVS CGI Moon
+  Kit colour map (public domain, `data/ATTRIBUTION.md`).
+- `Location` resource (`data/locations/`: station, body, start orbit, map
+  position) and `OrbitalBody` rotation data (IAU pole and prime meridian,
+  the Moon with its largest periodic term), atmosphere flag and surface map.
+- `SystemMap` control; `tools/profile_frames.gd` (rendered frame-time
+  profile of a frigate against three ships with wings and salvos).
+- Tests: `test_locations.gd` (5), `test_render_batching.gd` (4);
+  `smoke_shipyard` drives the map (click the Moon, pick 2 ships), launches
+  into lunar orbit against two ships and jumps back to the Lunar Shipyard.
+
+#### Changed
+- Profile schema 7: `location`, `known_locations` (Earth and the Moon to
+  start) and `encounter_size`; older saves are docked at Earth with one
+  ship, and the v6 file is kept as `.v6`.
+- `CelestialFrame` works for any body (`for_scenario(…, body)`;
+  `pci_to_ecef` is now `pci_to_body_fixed`); Earth's numbers are unchanged
+  (tested against the previous values). The sky shader's `earth_map` is
+  `surface_map`, with a `has_air` switch.
+- Station names come from the location (HUD jump alert, debrief, prize
+  crew, salvage notices, shipyard title); fixed strings say "the station".
+
+#### Performance (frigate vs three ships, 50 missiles, 4 craft, ~380 rounds in flight; RTX 3060 Ti, 1600×900, vsync off)
+- Before (dev, 20838b8): **23 fps** mean, 95th percentile 157 ms, 170 frames
+  over 50 ms in 40 s. After: **75 fps** mean, 95th percentile 20 ms, one
+  frame over 50 ms (`tools/profile_frames.gd`).
+- Rounds use a uniform-grid broadphase instead of testing every ship;
+  `ShipSystems.disabled_reason()` is cached until the ship's state changes;
+  docking hull ports are cached and `Docking.best()` assesses only the best
+  pair; only one enemy at a time comes alongside to board.
+- HUD orbit path and orbit panel refresh 5 × a second (were ~2 ms a frame).
+- Each ship's hull modules and armour plates draw as one merged mesh
+  (rebuilt from cached triangles when a plate wears or a module wrecks);
+  external systems' fixed pieces are merged; missiles share one mesh per
+  side and cast no shadows. Draw calls ~1,600 → ~760.
+- During flight, `GameLog` prints a frame's lines in one call (a debug
+  build flushes stdout on every print; through a pipe that cost ~15 ms a
+  line here).
+
+#### Tests changed (and why)
+- `test_m10_contacts`: the encounter size is now the player's pick, not the
+  mission's (`encounter_size(0/2/9)` → 1/2/3); the schema assertion reads
+  `SCHEMA_VERSION` instead of 6.
+- `smoke_encounter`: picks three ships (`encounter_size = 3`) instead of
+  relying on mission 7.
+- `test_celestial`: `pci_to_ecef` renamed `pci_to_body_fixed`; same checks.
+
 ### Milestone 10 — multi-contact encounters, ship policies, smarter AI (2026-10-20)
 
 #### Added

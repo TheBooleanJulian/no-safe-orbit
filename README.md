@@ -7,7 +7,9 @@ Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
 **Status:** Milestones 0–10 complete — design a ship in the shipyard, then fly
-and fight it in a real-scale 400 km Earth orbit under the real sky. Rounds
+and fight it in a real-scale 400 km Earth orbit or 100 km lunar orbit (pick
+the station and the encounter's size, 1–3 ships, on the shipyard map) under
+the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
 own orbits afterwards; power, heat, pressure and propellant are simulated.
 Guided missiles (anti-ship, saturation swarms, EMP, nuclear) fly salvos that
@@ -79,7 +81,7 @@ godot --path .
 | Tactical overview (ship map, power, crew, damage control, air wing) | Tab | left stick click |
 | Launch craft / recall craft | [ / ] | paddle / Misc |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
-| Dimensional jump drive to Earth Shipyard (hold 5 s, not while under fire) | hold B | hold Start |
+| Dimensional jump drive to the location's station (hold 5 s, not while under fire) | hold B | hold Start |
 | Controls panel (rebinding) | F1 | Guide |
 | Guided first sortie: start / skip | F2 | — |
 
@@ -220,8 +222,9 @@ spins the ship it strikes. A round that punches through keeps going, slower.
 the round's path through the hull and every module it damaged or destroyed,
 in order (the most severe recent hit wins the window).
 
-**Sky:** stars, Sun and Earth's rotation are real for 2026-10-19 12:00 UTC
-(Yale Bright Star Catalogue, NASA Blue Marble; see `data/ATTRIBUTION.md`).
+**Sky:** stars, Sun and the central body's rotation are real for 2026-10-19
+12:00 UTC (Yale Bright Star Catalogue, NASA Blue Marble, NASA CGI Moon Kit;
+see `data/ATTRIBUTION.md`).
 
 **Flight assist ON** (default) damps rotation to the requested turn rate. X
 cycles three modes:
@@ -244,6 +247,10 @@ courses: how near and in how long (and COLLISION COURSE inside 50 m).
 orbit, retrograde to lower it. The **entry interface is 100 km** (the Kármán
 line). If your periapsis drops below it, the HUD warns you and counts down.
 Crossing it ends the flight; Backspace restarts.
+
+**Lunar orbit** (Lunar Shipyard): 100 km circular at 1.63 km/s (period
+≈118 min). The Moon has no air: the floor is the highest terrain, 11 km up
+(TERRAIN on the orbit panel); dipping below it is a crash.
 
 HUD markers: white reticle = where the nose points; green ring = orbital
 prograde (where you're actually going), green ⊗ = retrograde; thin green line =
@@ -531,8 +538,14 @@ no usable backup. Loading an older save version first keeps a copy
 
 ## Shipyard
 
-**Earth Shipyard** opens after a jump (hold B in flight). You start from the
-ship you were flying (the Frigate Mk I template by default).
+**Earth Shipyard** (or the **Lunar Shipyard**) opens after a jump (hold B in
+flight). You start from the ship you were flying (the Frigate Mk I template
+by default).
+
+**Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click Earth or
+the Moon to move the vessel to that station; the next launch starts in its
+orbit. Pick the encounter: **1, 2 or 3 ships**. Moving is free for now
+(jump fuel comes with Milestone 13).
 
 **Hull** is built from four blocks: a 2×2×1 **pressurised block** (rooms go
 inside), 1×2×1 and 1×1×1 **sloped wedges** and a 1×2×1 **truss**. Wedges
@@ -650,11 +663,12 @@ xvfb-run -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compati
 
 ```text
 data/                  data, not code: catalog/ (parts), blueprints/ (templates),
-                       weapons/, bodies/ (Earth), ships/ (test fixture)
+                       weapons/, bodies/ (Earth, Moon), locations/ (map),
+                       earth/ and moon/ (surface maps), ships/ (test fixture)
 docs/                  GAME_DESIGN (source-of-truth spec), ARCHITECTURE, ROADMAP,
                        screenshots/ (README images)
 scenes/                main (flight), shipyard, ships, ui
-shaders/               planet_sky (Earth, 100 km limb, sun, stars)
+shaders/               planet_sky (central body, atmosphere limb, sun), stars
 scripts/simulation/    authoritative flight sim — no rendering, no Input singleton
 scripts/construction/  blueprint model, validation, derived stats, JSON I/O
 scripts/shipyard/      ship editor logic and shipyard UI

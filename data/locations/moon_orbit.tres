@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
+[ext_resource type="Resource" path="res://data/bodies/moon.tres" id="2_body"]
+
+[resource]
+script = ExtResource("1_loc")
+id = "moon"
+display_name = "Lunar orbit"
+station_name = "Lunar Shipyard"
+body = ExtResource("2_body")
+start_altitude_m = 100000.0
+map_position = Vector2(0.7, 0.36)
+map_radius_px = 14.0
+map_color = Color(0.6, 0.6, 0.58, 1)
+blurb = "Low lunar orbit, 100 km · 1.63 km/s · 118 min period. No air: the floor is the terrain, 11 km up at the highest."

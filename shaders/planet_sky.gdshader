@@ -1,4 +1,5 @@
-// Earth, the entry-interface limb and the Sun, ray-traced per pixel.
+// The central body (Earth, the Moon…), its atmosphere's limb and the Sun,
+// ray-traced per pixel.
 // A real-scale planet cannot be a mesh (the limb would need thousands of
 // segments and the sphere sits far beyond any depth range). Drawn as the sky
 // it is always behind ships, which is correct: nothing in play is ever below
@@ -12,12 +13,14 @@ uniform vec3 planet_center = vec3(0.0, -6771000.0, 0.0);
 uniform float planet_radius = 6371000.0;
 // Entry interface (Kármán line): the visible top of the atmosphere glow.
 uniform float entry_radius = 6471000.0;
+// 1 with an atmosphere (limb glow, haze, clouds, sea glint), 0 airless.
+uniform float has_air = 1.0;
 // Angle subtended by one screen pixel (rad), for anti-aliasing.
 uniform float pixel_angle = 0.0013;
-// PCI → Earth-fixed rotation (turns with Earth; CelestialFrame.pci_to_ecef).
-uniform mat3 pci_to_ecef = mat3(1.0);
+// PCI → body-fixed rotation (turns with the body; CelestialFrame.pci_to_body_fixed).
+uniform mat3 pci_to_body = mat3(1.0);
 // Real geography: equirectangular, left edge 180° W, top edge 90° N.
-uniform sampler2D earth_map : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D surface_map : source_color, filter_linear_mipmap, repeat_enable;
 // Simulation time (s), drifts the clouds.
 uniform float cloud_time = 0.0;
 
@@ -82,19 +85,19 @@ float fbm(vec3 p, int octaves, float wavelength_m, float footprint_m) {
 }
 
 vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m) {
-	vec3 e = pci_to_ecef * n;  // Earth-fixed: z = north pole, x = Greenwich
+	vec3 e = pci_to_body * n;  // body-fixed: z = north pole, x = prime meridian
 	vec2 uv = vec2(atan(e.y, e.x) / TAU + 0.5, 0.5 - asin(clamp(e.z, -1.0, 1.0)) / PI);
 	// Explicit LOD from the pixel footprint: no mip seam at the date line.
-	float texel_m = TAU * planet_radius / float(textureSize(earth_map, 0).x);
-	vec3 map = textureLod(earth_map, uv, max(log2(footprint_m / texel_m), 0.0)).rgb;
+	float texel_m = TAU * planet_radius / float(textureSize(surface_map, 0).x);
+	vec3 map = textureLod(surface_map, uv, max(log2(footprint_m / texel_m), 0.0)).rgb;
 	vec3 srgb = pow(map, vec3(1.0 / 2.2));
-	float water = smoothstep(0.06, 0.14, srgb.b - srgb.r) * step(srgb.g, srgb.b + 0.02);
+	float water = smoothstep(0.06, 0.14, srgb.b - srgb.r) * step(srgb.g, srgb.b + 0.02) * has_air;
 	// Fine detail below the map's ~20 km texels (modulates brightness only).
 	float detail = fbm(e * (planet_radius / 40000.0), 5, 40000.0, footprint_m);
 	vec3 albedo = map * mix(0.8 + 0.4 * detail, 1.0, water);
 	// Clouds: Earth-fixed noise that slowly drifts.
 	vec3 cp = e * vec3(4.0, 4.0, 7.0) + vec3(37.0 + cloud_time * 2.0e-5, 11.0, cloud_time * 1.0e-5);
-	float cloud = smoothstep(0.47, 0.62, fbm(cp, 9, planet_radius / 5.0, footprint_m));  // ≈30 % cover
+	float cloud = has_air > 0.5 ? smoothstep(0.47, 0.62, fbm(cp, 9, planet_radius / 5.0, footprint_m)) : 0.0;  // ≈30 % cover
 	albedo = mix(albedo, cloud_color, cloud * 0.9);
 
 	float ndl = dot(n, sun);
@@ -104,7 +107,7 @@ vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m) {
 	col += vec3(1.0, 0.92, 0.8) * pow(max(dot(n, h), 0.0), 220.0) * water * (1.0 - cloud) * day * 1.5;
 	// Looking obliquely through more air: haze towards the limb.
 	float grazing = pow(1.0 - clamp(dot(n, view), 0.0, 1.0), 3.0);
-	col = mix(col, air_color * 0.9 * day, grazing * 0.5);
+	col = mix(col, air_color * 0.9 * day, grazing * 0.5 * has_air);
 	return col + albedo * 0.006;  // faint night side
 }
 
@@ -126,7 +129,7 @@ void sky() {
 		} else {
 			vec3 col = vec3(0.0);
 			// Limb glow: brightness from the ray's closest approach altitude.
-			if (b < 0.0) {
+			if (b < 0.0 && has_air > 0.5) {
 				float r_min = sqrt(max(dot(oc, oc) - b * b, 0.0));
 				float h = r_min - planet_radius;
 				float top = entry_radius - planet_radius;
