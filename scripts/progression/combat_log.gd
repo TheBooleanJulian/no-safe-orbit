@@ -37,6 +37,9 @@ var loot: PackedStringArray = PackedStringArray()
 ## Mission goals met or failed this sortie ("✔ …", "✕ …", "▲ … not met yet").
 var objectives: PackedStringArray = PackedStringArray()
 var missiles_launched: int = 0
+## Our missiles that struck (their hits are not gun hits: accuracy is
+## rounds only).
+var missile_hits: int = 0
 var missiles_inbound: int = 0
 
 
@@ -64,10 +67,13 @@ func note_hit(ev: HitEvent, player_id: StringName, t: float, world: WorldSimulat
 		return
 	var r := ev.report
 	if ev.shooter_id == player_id or String(ev.shooter_id).begins_with(String(player_id) + "_"):
-		hits_scored += 1
+		if ev.missile:
+			missile_hits += 1
+		else:
+			hits_scored += 1
 		systems_destroyed += r.destroyed_ids.size()
 		var target := world.get_ship(ev.target_id)
-		record(t, "hit", "Hit %s: %s" % [target.display_name if target != null else String(ev.target_id), r.headline()])
+		record(t, "hit", "%s %s: %s" % ["Missile hit" if ev.missile else "Hit", target.display_name if target != null else String(ev.target_id), r.headline()])
 	elif ev.target_id == player_id:
 		hits_taken += 1
 		var side := side_of(r)
@@ -116,6 +122,7 @@ func to_dict() -> Dictionary:
 		"systems_lost": systems_lost.duplicate(true), "crew_lost": crew_lost, "crew_wounded": crew_wounded,
 		"explosions": explosions, "dv_spent": dv_spent, "has_workshop": has_workshop, "events": events.duplicate(true),
 		"objectives": Array(objectives), "missiles_launched": missiles_launched, "missiles_inbound": missiles_inbound,
+		"missile_hits": missile_hits,
 	}
 
 
@@ -181,7 +188,8 @@ static func summary(d: Dictionary) -> PackedStringArray:
 		" (%.0f %%)" % (100.0 * hits / shots) if shots > 0 else "", int(d.get("systems_destroyed", 0)),
 		"" if int(d.get("systems_destroyed", 0)) == 1 else "s"]
 	if int(d.get("missiles_launched", 0)) > 0:
-		dealt += " · %d missile%s launched" % [int(d.missiles_launched), "" if int(d.missiles_launched) == 1 else "s"]
+		dealt += " · %d missile%s launched, %d struck" % [int(d.missiles_launched), "" if int(d.missiles_launched) == 1 else "s",
+			int(d.get("missile_hits", 0))]
 	out.append(dealt)
 	var taken := int(d.get("hits_taken", 0))
 	var lost: Array = d.get("systems_lost", [])

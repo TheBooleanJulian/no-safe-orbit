@@ -31,6 +31,11 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   old large sections from blocks, but a section of odd length (the old
   3-long engine section) doesn't tile and stays as it was.
 
+## Fixed (2026-10-20, README screenshots)
+
+- **Debrief accuracy over 100 %:** missile strikes were counted as gun hits.
+  They are counted separately now; accuracy is rounds only.
+
 ## Fixed (2026-10-20, play-test bugs)
 
 - **Tab drawer lost the mouse cursor:** a click beside the open drawer (or
