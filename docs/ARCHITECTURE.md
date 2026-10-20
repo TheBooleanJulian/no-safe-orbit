@@ -190,6 +190,30 @@ and the location's central body:
   air on/off, surface map), stars' occlusion, eclipse, station names (HUD
   `station_name`). `EnemyFactory.encounter_size(chosen)` clamps the pick.
 
+## Alerts and audio (Pass A, 2026-10-20)
+
+- `Hud._alerts` reports every condition each frame as an `AlertQueue.Alert`:
+  key, class (threat, damage, systems, nav, info), level (advisory,
+  caution, danger), a noun, one value, a bearing, a key chip, the
+  system or room it is about, and a body-frame direction for threats.
+- `AlertQueue` (pure logic, tested) deduplicates by key and keeps an alert
+  up for 0.8 s after its condition clears. It raises a level at once and
+  lowers it after 1 s, and shows at most three, sorted by level, class and
+  age. Non-danger alerts can be acknowledged. `raised` lists new or
+  escalated alerts so Main can sound them (`ShipAudio.alarm`).
+- What the HUD does with them: the banner shows the visible alerts as
+  chips, and the attention line repeats a danger. The overlay draws
+  threat chevrons (`HudOverlay.threats`), and the damage map flashes the
+  top alert's subject (`ShipSchematic.alert_id`). The own-ship card's
+  STATUS line is computed directly (reactor, breaches, fires, vented
+  rooms).
+- `ShipAudio` takes samples from `data/audio` (CC0, in `SAMPLES` / `ALARMS`)
+  with synthesis as the per-slot fallback. It has three buses: Effects,
+  Alarms and Ambience. An alarm plays 1–3 blips by level and ducks Effects
+  and Ambience by 9 dB until 0.8 s after its last blip. Headless runs don't
+  play anything (the dummy driver never retires playbacks); every stream
+  is stopped and released on exit.
+
 ## Frame-time performance (2026-10-20)
 
 Measured with `tools/profile_frames.gd` (opens a window; per-section times

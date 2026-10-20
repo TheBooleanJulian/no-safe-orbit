@@ -22,10 +22,11 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **Locations are new** (2026-10-20): the Lunar Shipyard has the same
   crew, quartermaster and upgrades as Earth's (per-station stock is
   Milestone 13); moving between stations is free.
-- **With the Tab drawer open the alert banner overlaps the top of the
-  moved target card** (layout; Pass A redesigns the alerts).
-- **Two looping audio streams are reported as leaked at exit** in headless
-  runs (the engine and RCS loops still playing when the test quits). Harmless.
+- **With the Tab drawer open the alert banner can overlap the top of the
+  moved target card** (layout).
+- **Audio is silent in headless runs** (tests and checks): the dummy
+  driver never retires a playback, so ShipAudio skips playing there
+  (`ShipAudio.silent`); the alert and ducking logic still runs and is tested.
 - **A capital-sized hull hitches on spawn**: `ShipSystems.create` takes
   ~90 ms for a 300-module hull, almost all of it `CrewRoster.default_for`
   (it scans every room for every berth). Must be fixed before capital
@@ -124,7 +125,8 @@ rare part · Earth texture 5400 × 2700.
   visually (shrinks and sheds plating), but its cells still count in the
   damage model.
 - **Sound is your own ship heard through the hull** (there is none in
-  vacuum); an enemy's reactor going up is faint. Synthesised, no audio files.
+  vacuum); an enemy's reactor going up is faint. Recorded CC0 samples,
+  synthesis for any slot without one.
 - **On a gamepad the guns aim at the screen centre**; the aim cursor follows
   the mouse.
 - **Fonts:** Space Grotesk and JetBrains Mono are used when installed;

@@ -45,6 +45,9 @@ var gun_reticles: Array[Dictionary] = []
 var orbit_path := PackedVector3Array()
 ## Labelled points on the path: [{pos: Vector3, text: String, color: Color}].
 var orbit_markers: Array[Dictionary] = []
+## Incoming threats (Pass A): {dir (world, unit, from the ship), label,
+## danger} — a chevron where it is, or at the screen edge towards it.
+var threats: Array[Dictionary] = []
 ## Added to every orbit_path point and marker: the path is computed a few
 ## times a second, relative to where the render origin was then.
 var orbit_offset := Vector3.ZERO
@@ -117,6 +120,7 @@ func _draw() -> void:
 			_draw_edge_arrow(center, font)
 
 	_draw_craft_markers(font)
+	_draw_threats(font, center)
 
 	# Lead pip: where to point the nose so rounds meet the target.
 	if has_lead:
@@ -139,6 +143,37 @@ func _draw() -> void:
 			# Below-left, clear of the target bracket and its range label.
 			var text_w := font.get_string_size(lead_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 			draw_string(font, lp + Vector2(-text_w - 12, 24), lead_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COLOR_LEAD)
+
+
+## Threat chevrons: on the threat if it is in view (a ring of four ticks),
+## else at the screen edge pointing at it, with its alert line.
+func _draw_threats(font: Font, center: Vector2) -> void:
+	for t in threats:
+		var col := CyberTheme.RED if t.danger else CyberTheme.AMBER
+		var world_pt := ship_render_pos + (t.dir as Vector3) * MARKER_DISTANCE_M * 4.0
+		var label: String = t.label
+		if not camera.is_position_behind(world_pt):
+			var p := camera.unproject_position(world_pt)
+			if _inner_rect().has_point(p):
+				for k in 4:
+					var a := TAU * k / 4.0 + PI * 0.25
+					var d := Vector2(cos(a), sin(a))
+					draw_line(p + d * 12.0, p + d * 22.0, col, 2.5)
+				draw_string(font, p + Vector2(24, -10), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
+				continue
+		var local := camera.global_transform.affine_inverse() * world_pt
+		var dir := Vector2(local.x, -local.y)
+		dir = dir.normalized() if dir.length() > 1e-3 else Vector2.DOWN
+		var half := _inner_rect().size * 0.5 - Vector2(24, 24)
+		var reach := minf(half.x / maxf(absf(dir.x), 1e-6), half.y / maxf(absf(dir.y), 1e-6))
+		var tip := center + dir * reach
+		var side := Vector2(-dir.y, dir.x)
+		for k in 2:
+			var back := tip - dir * (10.0 + 9.0 * k)
+			draw_polyline(PackedVector2Array([back + side * 11.0 - dir * 8.0, back, back - side * 11.0 - dir * 8.0]), col, 3.0)
+		var size_t := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+		var lc := tip - dir * (40.0 + size_t.x * 0.5 * absf(dir.x) + size_t.y * 0.5 * absf(dir.y))
+		draw_string(font, lc + Vector2(-size_t.x * 0.5, size_t.y * 0.3), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
 
 
 ## Craft: a small diamond (magenta hostile, cyan ours) and its range; the

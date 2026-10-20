@@ -172,7 +172,7 @@ func _run() -> void:
 	while player.hits_taken == 0 and main.world.sim_time - t0 < 40.0:
 		await process_frame
 	await process_frame
-	_check(player.hits_taken > 0 and main.hud.flight_label.text.contains("HIT TAKEN"),
+	_check(player.hits_taken > 0 and main.hud.alert_queue.has(&"hit"),
 		"hostile target hits the player and the HUD reports it (after %.1f s)" % (main.world.sim_time - t0))
 
 	# Panels and the damage-control drawer, through the real actions.
@@ -184,7 +184,7 @@ func _run() -> void:
 	player.systems.damage_equipment(player.systems.equipment_by_id("e28"), 50.0)
 	await process_frame
 	await process_frame
-	_check(main.hud.alert_subject == "e28" or main.hud.warning_label.text.contains("e28") or main.hud.flight_label.text.contains("e28"),
+	_check(main.hud.alert_subject == "e28" or main.hud.alert_queue.all_active().any(func(a: AlertQueue.Alert) -> bool: return a.subject == "e28"),
 		"a critical reactor raises an alert naming it")
 	_press_action("tactical_overview")
 	await process_frame

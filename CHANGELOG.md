@@ -4,6 +4,48 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Pass A — alerts and audio (2026-10-20)
+
+#### Added
+- `AlertQueue`: every HUD alert in a fixed grammar (a shape, a short noun,
+  one value, the bearing for threats, the key that acts on it; ≤ 26
+  characters), at most three shown, deduplicated, priority by level then
+  class, held 0.8 s after their condition clears, raised at once and
+  lowered after a steady second, non-danger ones acknowledgeable with
+  **.** (new action `ack_alert`; `countermeasures` on Space is reserved
+  for Milestone 11).
+- Non-text cues: an alarm per alert class (threat, damage, systems,
+  navigation, information; 1–3 blips by level), threat chevrons on the
+  incoming missile or round or at the screen edge towards it, the damage
+  map flashing the system the top alert is about, and a persistent STATUS
+  line (reactor, breaches, fires, vented rooms).
+- Recorded CC0 sound (Kenney's Sci-Fi, Impact and Interface packs; 21
+  files, 641 kB, `data/ATTRIBUTION.md`): guns, hits, ricochets, missile
+  launches, warheads, reactor blasts, docking, the engine and RCS loops,
+  the machinery hum and the alarms; synthesis stays as each slot's
+  fallback. Effects, Alarms and Ambience buses; an alarm ducks the others
+  by 9 dB.
+- Tests: `test_pass_a.gd` (6).
+
+#### Changed
+- The banner shows up to three alert chips instead of one sentence; the
+  attention line repeats a danger's short line; the own-ship card's alert
+  list became the STATUS line; a missile alert shows range until the
+  missile is closing in earnest, then time.
+
+#### Fixed
+- Audio streams leaked at exit in headless runs: nothing is played
+  headless, and every stream is stopped and released on exit.
+
+#### Tests changed (and why)
+- `test_sensors_and_hits`: the synthesised-sound test now builds
+  `ShipAudio` with `use_samples = false` (synthesis is the fallback).
+- `test_input_bindings`: `countermeasures` and `ack_alert` are keys only
+  (every pad button is taken), like missiles.
+- `smoke_main`: "HIT TAKEN" and the reactor id are read from the alert
+  queue (alerts are no longer sentences in the card).
+- `smoke_boarding`: the boarders alert reads `BOARD …`.
+
 ### Play-test batch 4 — fixes (2026-10-20)
 
 #### Fixed

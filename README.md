@@ -299,10 +299,18 @@ top. It imparts no momentum.
 From mission 4 enemies carry a missile rack and fire when they hold a lock
 inside 12 km, every ~25 s; from mission 6 some carry an EMP launcher too.
 
-**Sound:** what you hear is your own ship through the hull — guns, the
-engines' rumble (every main engine, reverse and side ones too, deeper and
-louder as the throttle opens), the RCS jets' hiss, hits taken, alarms, the
-jump drive spooling; an enemy's reactor going up is a faint thud.
+**Sound:** what you hear is your own ship through the hull, because there
+is no sound in vacuum:
+- guns, missiles leaving the tubes, the clang of hits and ricochets;
+- the engines' rumble (every main engine, reverse and side ones too,
+  louder and a touch higher as the throttle opens) and the RCS jets' hiss;
+- the machinery's hum and the jump drive spooling;
+- warheads and reactors going up (an enemy's is a faint thud);
+- an alarm for each alert class.
+
+These are recorded CC0 samples (Kenney's Sci-Fi, Impact and Interface packs;
+see `data/ATTRIBUTION.md`); any slot without one is synthesised. Alarms play
+on their own bus and duck everything else, so they are always heard.
 
 **Scans:** hold a lock (inside 10 km) with a working sensor mast for 4 s to
 read a contact's cargo — spare parts and crates aboard — its scrap value and
@@ -473,8 +481,8 @@ Kept compact so the fight stays in view:
 
 - **Own ship** (top left): assist mode, inertial (orbital) velocity, where
   the nose points relative to the velocity vector, turn rates, propellant,
-  hull, power / heat, power pips and the urgent **alerts** — each with the
-  key that acts on it.
+  hull, power / heat, power pips, and a **STATUS** line that never moves:
+  `RCT ■  BRCH ■  FIRE ■  VENT ■` (reactor, breaches, fires, vented rooms).
 - **Target** (top right): identity and the **sensor track** — `MEAS`
   (measured now), `EST` (dead-reckoned) or `STALE` (old), its confidence and
   whether you have a **lock** (needed for the ◇ lead marker; inside 10 km).
@@ -484,14 +492,32 @@ Kept compact so the fight stays in view:
 - **Weapon strip** (bottom): gun and ammunition, point defence (none
   fitted yet), the air wing. Above it, a ticker of recent events.
 - **Attention line** (centre of the screen): the worst danger in big
-  pulsing red — incoming rounds, enemy boarders, emergency jump, fire —
-  or, with none, an amber prompt when the crew can patch damage with C.
+  pulsing red (the same short line as its alert), or, with none, an amber
+  `PATCH … [C]` when the crew can patch damage.
 - **Craft markers**: small diamonds (magenta theirs, cyan ours) with range;
   U puts the lead marker on a hostile craft.
 - **On demand:** O orbit details, P details & combat log (local velocity
   axes, Δv spent, rounds up, last hit reports), H the full controls card.
-- The **alert banner** shows the most urgent condition and what to do;
-  Tab opens damage control on the system it is about.
+- **Alerts** (the banner, top centre): at most three, most urgent first.
+  Each is a few words, e.g. `◆ MSL 2.4km 002`, `◆ RND 0.4s 330 [R]`,
+  `▲ FIRE r12 [Tab]` or `▲ SCRAM 1450K [Tab]`:
+  - a shape (◆ danger, ▲ caution, ● advisory) and a short noun;
+  - one value;
+  - for threats, the bearing from the nose (clockwise, ↑/↓ when steeply
+    above or below);
+  - the key that acts on it. For a round, that's the strafe key that
+    crosses its path fastest.
+
+  How the queue behaves:
+  - They don't flicker: an alert stays up 0.8 s after its condition
+    clears. It escalates at once and only steps down after a steady second.
+  - Each class has its own alarm: threat, damage, systems, navigation,
+    information.
+  - Incoming missiles and rounds get a red chevron on the threat, or at the
+    screen edge pointing to it.
+  - The damage map flashes the system the top alert is about.
+  - **.** acknowledges the top non-critical alert; it stays hidden until it
+    clears or escalates. Tab opens damage control on the system it is about.
 - In **match-velocity** mode the prograde/retrograde markers turn yellow and
   show motion relative to the target (green = orbital).
 - States are shapes as well as colours: ■ functional · ▲ degraded ·
