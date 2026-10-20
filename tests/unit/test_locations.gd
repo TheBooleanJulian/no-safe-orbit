@@ -119,7 +119,8 @@ func test_schema_7_location_and_encounter_size() -> void:
 	q.encounter_size = 3
 	q.save(TEST_PROFILE)
 	var r := PlayerProfile.load_file(TEST_PROFILE, PackedStringArray())
-	assert_true(r.loaded_schema == 7 and r.location == "moon" and r.encounter_size == 3, "saved and loaded at schema 7")
+	assert_true(r.loaded_schema == PlayerProfile.SCHEMA_VERSION and r.location == "moon" and r.encounter_size == 3,
+		"saved and loaded at the current schema (%d)" % r.loaded_schema)
 	# Bad values are clamped / fall back.
 	var bad := PlayerProfile.from_dict({"schema_version": 7, "location": "atlantis", "encounter_size": 9, "known_locations": ["atlantis"]}, PackedStringArray())
 	assert_true(bad.location == "earth" and bad.encounter_size == 3 and bad.known_locations == ["earth", "moon"],

@@ -190,6 +190,29 @@ and the location's central body:
   air on/off, surface map), stars' occlusion, eclipse, station names (HUD
   `station_name`). `EnemyFactory.encounter_size(chosen)` clamps the pick.
 
+## The station (Milestone 12, 2026-10-20)
+
+- `ShipyardSections` turns the shipyard into a station: a rail of sections
+  over full-width pages. The builder's body is the REFIT page, and the
+  builder's top-bar controls and keys work only there. The old right-hand
+  tabs' pages were moved into their sections (SERVICE → REPAIRS, CARGO &
+  HISTORY → HANGAR, QUARTERMASTER → ARMOURY, …). New pages: STATION (3D
+  preview and status cards), MISSIONS, DEALER (a 3D preview per template)
+  and the fleet cards in HANGAR.
+- Economy (`ServiceYard`): `parts_value` (a whole ship's parts) feeds
+  `dealer_price`: (parts × 2.5 cr + hull fee) × 1.25, plus crew × hiring
+  fee. `scrap_value` is (parts − repairs) × 0.5 in spare parts.
+  `PlayerProfile.buy_ship` / `scrap_vessel` use them.
+- Contracts (`ContractBoard`): seeded offers (profile `board_seed`, sorties
+  flown) from five givers. `accept` sets `active_contract`, the location
+  and the encounter size. Main runs it through `MissionChain.contract`
+  (goal, brief, reward); `complete` pays and clears it without advancing
+  the chain. The contract's `threat` replaces the mission number for enemy
+  designs. Profile schema 8.
+- Capital templates are generated (`tools/make_capital_templates.gd`) and
+  written only when the validator finds nothing. `CrewRoster` indexes
+  rooms by role once per roster, making a 300-module hull's crew linear.
+
 ## Countermeasures and EW (Milestone 11, 2026-10-20)
 
 - **Flares:** `WorldSimulation.decoys` holds flares as plain records (id,
