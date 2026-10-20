@@ -164,7 +164,7 @@ func _ready() -> void:
 	hud.celestial = celestial
 	hud.overview.command.connect(_on_overview_command)
 	hud.station_name = location.station_name
-	sky.configure(location.body)
+	sky.configure(location.body, location.sky_body)
 	_start_scenario()
 
 
@@ -1641,7 +1641,8 @@ func _process(delta: float) -> void:
 	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin)).to_vector3()
 	_update_sun(player)
 	sky.update_view(planet_center, camera, celestial, world.sim_time)
-	stars.update_view(camera, planet_center, world.body)
+	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
+		location.sky_body.radius_m if location.sky_body != null else 0.0)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)

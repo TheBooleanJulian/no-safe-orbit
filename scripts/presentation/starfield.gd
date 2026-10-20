@@ -43,13 +43,16 @@ func build(frame: CelestialFrame) -> void:
 
 
 ## Keep the sphere of stars centred on the camera; pass planet geometry.
-func update_view(camera: Camera3D, planet_center: Vector3, body: OrbitalBody) -> void:
+## `far_center` / `far_radius`: the far body in the sky (radius 0 = none).
+func update_view(camera: Camera3D, planet_center: Vector3, body: OrbitalBody, far_center := Vector3.ZERO, far_radius := 0.0) -> void:
 	global_position = camera.global_position
 	var height := maxf(camera.get_viewport().get_visible_rect().size.y, 1.0)
 	_material.set_shader_parameter("pixel_angle", deg_to_rad(camera.fov) / height)
 	_material.set_shader_parameter("planet_center", planet_center)
 	_material.set_shader_parameter("planet_radius", body.radius_m)
 	_material.set_shader_parameter("entry_radius", body.entry_radius_m())
+	_material.set_shader_parameter("far_center", far_center)
+	_material.set_shader_parameter("far_radius", far_radius)
 
 
 ## Rows of Vector4(ra_deg, dec_deg, vmag, b_minus_v).

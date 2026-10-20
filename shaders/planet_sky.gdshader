@@ -1,5 +1,7 @@
-// The central body (Earth, the Moon…), its atmosphere's limb and the Sun,
-// ray-traced per pixel.
+// The central body (Earth, the Moon…), its atmosphere's limb, one other
+// body far off in the sky (the Moon from Earth orbit, Earth from lunar
+// orbit; lit by the Sun, so it shows its phase) and the Sun, ray-traced per
+// pixel.
 // A real-scale planet cannot be a mesh (the limb would need thousands of
 // segments and the sphere sits far beyond any depth range). Drawn as the sky
 // it is always behind ships, which is correct: nothing in play is ever below
@@ -21,6 +23,13 @@ uniform float pixel_angle = 0.0013;
 uniform mat3 pci_to_body = mat3(1.0);
 // Real geography: equirectangular, left edge 180° W, top edge 90° N.
 uniform sampler2D surface_map : source_color, filter_linear_mipmap, repeat_enable;
+// The far body: centre relative to the render origin (m), radius, map,
+// rotation (PCI → its fixed axes), air; far_radius 0 = none.
+uniform vec3 far_center = vec3(0.0, 0.0, -384400000.0);
+uniform float far_radius = 0.0;
+uniform sampler2D far_map : source_color, filter_linear_mipmap, repeat_enable;
+uniform mat3 far_to_body = mat3(1.0);
+uniform float far_has_air = 0.0;
 // Simulation time (s), drifts the clouds.
 uniform float cloud_time = 0.0;
 
@@ -84,20 +93,35 @@ float fbm(vec3 p, int octaves, float wavelength_m, float footprint_m) {
 	return 0.5 + 0.5 * sum / norm;
 }
 
-vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m) {
-	vec3 e = pci_to_body * n;  // body-fixed: z = north pole, x = prime meridian
+// A body's lit surface at unit normal `n` (PCI), seen along `view`:
+// `map` sampled through `to_body` (PCI → body-fixed), `radius` (m), `air`
+// 1 for clouds, sea glint and haze. Shared by the central and far body.
+vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m, sampler2D map_tex, mat3 to_body, float radius, float air) {
+	vec3 e = to_body * n;  // body-fixed: z = north pole, x = prime meridian
 	vec2 uv = vec2(atan(e.y, e.x) / TAU + 0.5, 0.5 - asin(clamp(e.z, -1.0, 1.0)) / PI);
 	// Explicit LOD from the pixel footprint: no mip seam at the date line.
-	float texel_m = TAU * planet_radius / float(textureSize(surface_map, 0).x);
-	vec3 map = textureLod(surface_map, uv, max(log2(footprint_m / texel_m), 0.0)).rgb;
+	float texel_m = TAU * radius / float(textureSize(map_tex, 0).x);
+	vec3 map = textureLod(map_tex, uv, max(log2(footprint_m / texel_m), 0.0)).rgb;
 	vec3 srgb = pow(map, vec3(1.0 / 2.2));
-	float water = smoothstep(0.06, 0.14, srgb.b - srgb.r) * step(srgb.g, srgb.b + 0.02) * has_air;
+	float water = smoothstep(0.06, 0.14, srgb.b - srgb.r) * step(srgb.g, srgb.b + 0.02) * air;
 	// Fine detail below the map's ~20 km texels (modulates brightness only).
-	float detail = fbm(e * (planet_radius / 40000.0), 5, 40000.0, footprint_m);
+	float detail = fbm(e * (radius / 40000.0), 5, 40000.0, footprint_m);
 	vec3 albedo = map * mix(0.8 + 0.4 * detail, 1.0, water);
-	// Clouds: Earth-fixed noise that slowly drifts.
+	// Clouds: body-fixed noise that slowly drifts.
 	vec3 cp = e * vec3(4.0, 4.0, 7.0) + vec3(37.0 + cloud_time * 2.0e-5, 11.0, cloud_time * 1.0e-5);
-	float cloud = has_air > 0.5 ? smoothstep(0.47, 0.62, fbm(cp, 9, planet_radius / 5.0, footprint_m)) : 0.0;  // ≈30 % cover
+	float cloud = 0.0;
+	if (air > 0.5) {
+		// From far off (a whole planet in a few hundred pixels) only the
+		// coarse octaves remain: warp them into swirls, band them by latitude
+		// (cloudier ITCZ and 50–60° storm belts, clear ~25° subtropics) and
+		// soften and raise the edge so the cover stays near 30 %. Up close
+		// (far = 0) the clouds are unchanged.
+		float far = clamp((footprint_m - 5000.0) / 20000.0, 0.0, 1.0);
+		cp += far * 0.55 * vec3(gnoise(cp * 0.8), gnoise(cp * 0.8 + vec3(5.2, 1.3, 7.7)), gnoise(cp * 0.8 + vec3(9.1, 3.4, 2.6)));
+		float band = far * (0.04 * cos(6.0 * asin(clamp(e.z, -1.0, 1.0))) - 0.025);
+		float f = fbm(cp, 9, radius / 5.0, footprint_m) + band;
+		cloud = smoothstep(0.47 + 0.04 * far, 0.62 + 0.06 * far, f);  // ≈30 % cover
+	}
 	albedo = mix(albedo, cloud_color, cloud * 0.9);
 
 	float ndl = dot(n, sun);
@@ -107,7 +131,7 @@ vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m) {
 	col += vec3(1.0, 0.92, 0.8) * pow(max(dot(n, h), 0.0), 220.0) * water * (1.0 - cloud) * day * 1.5;
 	// Looking obliquely through more air: haze towards the limb.
 	float grazing = pow(1.0 - clamp(dot(n, view), 0.0, 1.0), 3.0);
-	col = mix(col, air_color * 0.9 * day, grazing * 0.5 * has_air);
+	col = mix(col, air_color * 0.9 * day, grazing * 0.5 * air);
 	return col + albedo * 0.006;  // faint night side
 }
 
@@ -125,7 +149,7 @@ void sky() {
 			float t = -b - sqrt(disc);
 			vec3 n = normalize(oc + dir * t);
 			float footprint = t * pixel_angle / max(dot(n, -dir), 0.05);
-			COLOR = surface(n, -dir, sun, footprint);
+			COLOR = surface(n, -dir, sun, footprint, surface_map, pci_to_body, planet_radius, has_air);
 		} else {
 			vec3 col = vec3(0.0);
 			// Limb glow: brightness from the ray's closest approach altitude.
@@ -140,8 +164,25 @@ void sky() {
 					col += air_color * glow * 1.4 + vec3(0.9, 0.95, 1.0) * glow * glow * 0.5;
 				}
 			}
+			// The far body, in units of its radius (metres would lose the
+			// disc to float precision at 384,000 km).
+			bool far_hit = false;
+			if (far_radius > 0.0) {
+				vec3 fo = (POSITION - far_center) / far_radius;
+				float fb = dot(fo, dir);
+				float fd = fb * fb - (dot(fo, fo) - 1.0);
+				if (fd > 0.0 && -fb - sqrt(fd) > 0.0) {
+					float ft = -fb - sqrt(fd);
+					vec3 fn = normalize(fo + dir * ft);
+					float ffoot = ft * far_radius * pixel_angle / max(dot(fn, -dir), 0.05);
+					col += surface(fn, -dir, sun, ffoot, far_map, far_to_body, far_radius, far_has_air);
+					far_hit = true;
+				}
+			}
 			float d = dot(dir, sun);
-			col += vec3(1.0, 0.97, 0.9) * (smoothstep(0.999984, 0.999990, d) * 30.0 + pow(max(d, 0.0), 900.0) * 0.8);
+			if (!far_hit) {
+				col += vec3(1.0, 0.97, 0.9) * (smoothstep(0.999984, 0.999990, d) * 30.0 + pow(max(d, 0.0), 900.0) * 0.8);
+			}
 			COLOR = col;
 		}
 	}

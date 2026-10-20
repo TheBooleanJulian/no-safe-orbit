@@ -201,6 +201,9 @@ func _run() -> void:
 		var speed := main.world.pci_velocity(player.velocity).length()
 		_check(main.world.body.display_name == "Moon" and absf(alt - 100_000.0) < 500.0 and absf(speed - 1633.0) < 5.0,
 			"launched into lunar orbit: %s, %.1f km, %.0f m/s" % [main.world.body.display_name, alt / 1000.0, speed])
+		var earth_km: float = main.sky.sky_body_center.length() / 1000.0 if main.sky.sky_body != null else 0.0
+		_check(main.sky.sky_body != null and main.sky.sky_body.display_name == "Earth" and earth_km > 356_000.0 and earth_km < 407_000.0,
+			"Earth hangs in the lunar sky (%.0f km)" % earth_km)
 		_check(main.encounter.contacts.size() == 2 and main.hud.station_name == "Lunar Shipyard",
 			"two ships to meet; the jump drive goes to the Lunar Shipyard (%d, %s)" % [main.encounter.contacts.size(), main.hud.station_name])
 		# B returns to the shipyard with the same design.

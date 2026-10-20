@@ -8,6 +8,10 @@ extends WorldEnvironment
 const SKY_SHADER: Shader = preload("res://shaders/planet_sky.gdshader")
 
 var _material: ShaderMaterial
+## The other body in the sky (Location.sky_body), or null.
+var sky_body: OrbitalBody
+## Its centre relative to the render origin (m), from the last update_view.
+var sky_body_center := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -24,7 +28,13 @@ func _ready() -> void:
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
 
 
-func configure(body: OrbitalBody) -> void:
+## `other`: the far body drawn in the sky (null for none).
+func configure(body: OrbitalBody, other: OrbitalBody = null) -> void:
+	sky_body = other
+	_material.set_shader_parameter("far_radius", other.radius_m if other != null else 0.0)
+	if other != null:
+		_material.set_shader_parameter("far_map", other.surface_map)
+		_material.set_shader_parameter("far_has_air", 1.0 if other.has_atmosphere else 0.0)
 	_material.set_shader_parameter("planet_radius", body.radius_m)
 	_material.set_shader_parameter("entry_radius", body.entry_radius_m())
 	_material.set_shader_parameter("has_air", 1.0 if body.has_atmosphere else 0.0)
@@ -38,3 +48,7 @@ func update_view(planet_center_render: Vector3, camera: Camera3D, frame: Celesti
 	_material.set_shader_parameter("pixel_angle", deg_to_rad(camera.fov) / height)
 	_material.set_shader_parameter("pci_to_body", frame.pci_to_body_fixed(sim_time))
 	_material.set_shader_parameter("cloud_time", sim_time)
+	if sky_body != null:
+		sky_body_center = planet_center_render + frame.position_of(sky_body, sim_time)
+		_material.set_shader_parameter("far_center", sky_body_center)
+		_material.set_shader_parameter("far_to_body", frame.body_fixed_of(sky_body, sim_time))
