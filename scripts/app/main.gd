@@ -244,6 +244,7 @@ func _start_scenario() -> void:
 		hud.debrief.visible = false
 
 	mission = MissionChain.from_dict(p.campaign)
+	mission.contract = p.active_contract.duplicate()
 	tutorial = Tutorial.from_dict(p.tutorial)
 	_salvaged = false
 	if mission.goal() == MissionChain.Goal.ESCORT:
@@ -265,6 +266,9 @@ func _start_scenario() -> void:
 ## ARRIVAL_DISTANCE_M out and closes; it must be detected before it engages.
 func _spawn_encounter(arriving: bool = false) -> void:
 	var mission_no := get_profile().missions_completed + 1
+	# A contract sets how dangerous the ships are (its threat level).
+	if not get_profile().active_contract.is_empty():
+		mission_no = maxi(int(get_profile().active_contract.get("threat", mission_no)), 1)
 	for i in EnemyFactory.encounter_size(get_profile().encounter_size):
 		_spawn_contact(i, mission_no, arriving)
 	encounter.ensure_selection(world)
