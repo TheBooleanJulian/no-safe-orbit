@@ -29,6 +29,8 @@ const SUN_ENERGY := 1.4
 ## Moonlight (earthlight at the Moon) on ships: from the other body in the
 ## sky, by its phase (PlanetSky.sky_body_light); not drawn in the sky.
 var sky_light: DirectionalLight3D
+## Flares in flight (Milestone 11).
+var decoy_view: DecoyView
 @onready var stars: Starfield = $Starfield
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
@@ -168,6 +170,9 @@ func _ready() -> void:
 	hud.celestial = celestial
 	hud.overview.command.connect(_on_overview_command)
 	hud.station_name = location.station_name
+	decoy_view = DecoyView.new()
+	decoy_view.name = "DecoyView"
+	add_child(decoy_view)
 	sky_light = DirectionalLight3D.new()
 	sky_light.name = "SkyBodyLight"
 	sky_light.light_color = PlanetSky.NIGHT_LIGHT_COLOR
@@ -407,6 +412,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	elif event.is_action_pressed("missile_mode"):
 		cycle_missile_mode()
+	elif event.is_action_pressed("countermeasures"):
+		fire_countermeasures()
 	elif event.is_action_pressed("ack_alert"):
 		if hud.alert_queue.acknowledge():
 			audio.play("ack")
@@ -550,6 +557,32 @@ func _apply_automation(input: ShipControlInput, player: ShipState, target: ShipS
 				salvo = s
 				hud.notice("AUTO-SALVO — %s ×%s at %s" % [MissileSalvo.mode_text(policy.salvo_mode, get_profile().missile_order),
 					str(policy.salvo_count) if policy.salvo_count > 0 else "all", target.display_name], world.sim_time)
+
+
+## Space: fire flares from every ready launcher (manual always works).
+func fire_countermeasures() -> String:
+	var why := world.launch_decoys(PLAYER_ID)
+	if why == "":
+		audio.play("launch", -8.0)
+	else:
+		hud.notice("FLARES: " + why, world.sim_time)
+	return why
+
+
+## Automatic flares by policy, for the player and every live contact: when
+## a missile is within the policy's lead time.
+func _auto_countermeasures(player: ShipState) -> void:
+	var ships: Array[ShipState] = [player]
+	for c in encounter.live(world):
+		ships.append(world.get_ship(c.id))
+	for s in ships:
+		if s == null or not s.is_active() or s.derelict or s.policy == null or s.systems == null:
+			continue
+		var t := Hud.missile_inbound_time(world, s)
+		if s.policy.cm_due(t) and not s.systems.ready_decoy_launchers().is_empty():
+			world.launch_decoys(s.id)
+			if s == player:
+				audio.play("launch", -8.0)
 
 
 ## Shooter ids on the player's side: the player and its craft (their rounds
@@ -1093,7 +1126,7 @@ func _update_tracks(player: ShipState, delta: float) -> void:
 		var target := world.get_ship(c.id)
 		if target == null:
 			continue
-		if c.track.update(player, target, world.sim_time, dt):
+		if c.track.update(player, target, world.sim_time, dt, world.jamming_of(target)):
 			var line := "CONTACT — %s detected at %.1f km" % [target.display_name, player.position.distance_to(target.position) / 1000.0]
 			hud.notice(line, world.sim_time)
 			combat_log.record(world.sim_time, "sensors", line)
@@ -1103,7 +1136,7 @@ func _update_tracks(player: ShipState, delta: float) -> void:
 				roundi(est.parts * c.track.scan_error), roundi(est.crates * c.track.scan_error), roundi(est.bounty * c.track.scan_error)]
 			hud.notice(line, world.sim_time)
 			combat_log.record(world.sim_time, "sensors", line)
-		c.their_track.update(target, player, world.sim_time, dt)
+		c.their_track.update(target, player, world.sim_time, dt, world.jamming_of(player))
 
 
 ## Each side's craft hunt the other side's craft in flight.
@@ -1563,6 +1596,8 @@ func _process(delta: float) -> void:
 	_update_goals(player)
 	_step_salvo()
 	_step_contact_salvos()
+	_auto_countermeasures(player)
+	hud.missile_chip = "[SPC]" if player.systems != null and player.systems.decoys_aboard() > 0 else ""
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
 	if (not player.is_active() or player_captured()) and not _sortie_closed:
@@ -1675,6 +1710,7 @@ func _process(delta: float) -> void:
 	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
 		location.sky_body.radius_m if location.sky_body != null else 0.0)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera.global_position, _own_shooters())
+	decoy_view.sync(world.decoys, render_origin, camera.global_position, world.sim_time)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track

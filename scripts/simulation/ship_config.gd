@@ -76,6 +76,9 @@ extends Resource
 ## the ship AI laying the guns without a bridge crew.
 @export var cannon_extra_dispersion_rad: float = 0.0
 
+## A craft's jammer (an EW drone): ships of its side within
+## WorldSimulation.EW_ESCORT_M share its noise (0 = none).
+@export var jam_strength: float = 0.0
 @export_group("Damage")
 ## Craft without a systems model: hit points of the whole hull (mm of
 ## penetration absorbed); 0 = never destroyed (fixed test configs).

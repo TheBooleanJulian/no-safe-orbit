@@ -838,7 +838,8 @@ static func category_of(kind: String, def: Resource) -> String:
 			return "Propulsion"
 		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION:
 			return "Power & thermal"
-		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE, EquipmentDefinition.Kind.MISSILE_LAUNCHER:
+		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE, EquipmentDefinition.Kind.MISSILE_LAUNCHER, \
+				EquipmentDefinition.Kind.DECOY_LAUNCHER, EquipmentDefinition.Kind.JAMMER:
 			return "Weapons"
 		EquipmentDefinition.Kind.SENSOR, EquipmentDefinition.Kind.GRAPPLE:
 			return "Sensors"
@@ -1615,6 +1616,15 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 				ShipSystems.LAUNCHER_CYCLE_S, m.unit_credits])
 			lines.append("MISSILE %.0f m/s² · Δv %.1f km/s · turns %.0f°/s · %s · point defence can shoot it down" % [
 				m.accel_mps2, m.delta_v_mps / 1000.0, m.turn_rate_deg_s, effect])
+		EquipmentDefinition.Kind.DECOY_LAUNCHER:
+			lines.append("FLARES %d · %d a launch [SPC] (or auto by policy) · burn %.0f s, signature %.1f (a frigate ≈ 1) · restocked for %d cr each" % [
+				e.decoy_capacity, e.decoy_salvo, e.decoy_life_s, e.decoy_signature, ServiceYard.FLARE_CREDITS])
+			lines.append("A missile that sees a flare near its target may chase it: fire as it closes (3–5 s out), not early — a flare that burns out lets it find you again")
+		EquipmentDefinition.Kind.JAMMER:
+			lines.append("JAMMING %.1f · enemy tracks of you lose confidence and their locks fail; missiles may lose lock — beyond %.0f km (burn-through), full beyond %.0f km; hardened masts filter it" % [
+				e.jam_strength, WorldSimulation.BURN_THROUGH_M / 1000.0, WorldSimulation.JAM_FULL_M / 1000.0])
+	if e.kind == EquipmentDefinition.Kind.SENSOR and e.emp_hardening > 0.0:
+		lines.append("EW FILTER %d %%: a hardened mast also shrugs off that much jamming" % roundi(e.emp_hardening * 100.0))
 	if e.emp_hardening > 0.0:
 		lines.append("EMP HARDENED %d %%: resets that much shorter" % roundi(e.emp_hardening * 100.0))
 	if e.rarity != Rarity.Tier.COMMON:

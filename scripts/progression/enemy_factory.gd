@@ -19,6 +19,10 @@ extends RefCounted
 
 const MISSILE_RACK_FROM_MISSION := 4
 const EMP_LAUNCHER_FROM_MISSION := 6
+## Countermeasures (Milestone 11): flares from mission 3, a jammer on some
+## ships from mission 6.
+const FLARES_FROM_MISSION := 3
+const JAMMER_FROM_MISSION := 6
 
 const CLASS_NAMES := ["Kestrel", "Harrier", "Shrike", "Goshawk", "Peregrine", "Merlin", "Hobby", "Saker"]
 
@@ -45,6 +49,8 @@ static func policy(mission: int, index: int) -> ShipPolicy:
 	p.salvo_min_range_m = 1500.0
 	p.salvo_max_range_m = 15000.0 if p.role == ShipPolicy.Role.STANDOFF else 12000.0
 	p.salvo_interval_s = 25.0
+	p.cm_auto = true
+	p.cm_lead_s = 3.5
 	return p
 
 
@@ -74,6 +80,10 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 		_fit_launcher(bp, catalog, &"missile_rack", rng)
 	if mission >= EMP_LAUNCHER_FROM_MISSION and rng.randf() < 0.5:
 		_fit_launcher(bp, catalog, &"emp_launcher", rng)
+	if mission >= FLARES_FROM_MISSION:
+		_fit_launcher(bp, catalog, &"flare_launcher", rng)
+	if mission >= JAMMER_FROM_MISSION and rng.randf() < 0.4:
+		_fit_launcher(bp, catalog, &"jammer", rng)
 	if mission >= 2:
 		var grid := ShipGrid.build(bp, catalog)
 		var cells: Array = grid.module_at.keys()

@@ -31,12 +31,18 @@ enum Kind {
 	GRAPPLE,
 	## Missile launcher: `missile_capacity` of its `missile` (M fires).
 	MISSILE_LAUNCHER,
+	## Decoy (flare) launcher: `decoy_capacity` flares, `decoy_salvo` a
+	## launch (Space); missile seekers may chase them instead (Milestone 11).
+	DECOY_LAUNCHER,
+	## Jammer: `jam_strength` of electronic noise — enemy sensor tracks lose
+	## confidence and missiles may lose lock, outside burn-through range.
+	JAMMER,
 }
 
 ## Kinds with control electronics an EMP can reset (engines, tanks and
 ## radiators are mechanical).
 const ELECTRONIC := [Kind.REACTOR, Kind.CANNON, Kind.DOCKING_COLLAR, Kind.CRAFT_MOUNT, Kind.SENSOR,
-	Kind.POWER_DISTRIBUTION, Kind.POINT_DEFENCE, Kind.GRAPPLE, Kind.MISSILE_LAUNCHER]
+	Kind.POWER_DISTRIBUTION, Kind.POINT_DEFENCE, Kind.GRAPPLE, Kind.MISSILE_LAUNCHER, Kind.DECOY_LAUNCHER, Kind.JAMMER]
 
 enum Mount { INTERNAL, EXTERNAL }
 
@@ -95,6 +101,8 @@ const DAMAGE_DEFAULTS := {
 	Kind.POWER_DISTRIBUTION: [15.0, 6.0],
 	Kind.POINT_DEFENCE: [12.0, 5.0],
 	Kind.MISSILE_LAUNCHER: [18.0, 8.0],
+	Kind.DECOY_LAUNCHER: [12.0, 6.0],
+	Kind.JAMMER: [14.0, 4.0],
 }
 
 
@@ -104,6 +112,15 @@ func max_hit_points() -> float:
 
 func shielding_mm() -> float:
 	return shield_mm if shield_mm > 0.0 else DAMAGE_DEFAULTS.get(kind, [20.0, 10.0])[1]
+## DECOY_LAUNCHER only: flares carried and fired a launch, each flare's
+## starting signature (a ship is ~1; WorldSimulation.signature_of) and how
+## long it burns (s).
+@export var decoy_capacity: int = 0
+@export var decoy_salvo: int = 3
+@export var decoy_signature: float = 2.5
+@export var decoy_life_s: float = 6.0
+## JAMMER only: noise strength (1 = a standard jammer).
+@export var jam_strength: float = 0.0
 ## CANNON only.
 @export var cannon: KineticCannonConfig
 ## CRAFT_MOUNT only: the craft it carries (its mass is part of mass_kg).
@@ -140,6 +157,10 @@ func validate() -> PackedStringArray:
 		problems.append("%s: gun equipment needs a KineticCannonConfig" % id)
 	if kind == Kind.MISSILE_LAUNCHER and (missile == null or missile_capacity <= 0):
 		problems.append("%s: launchers need a MissileConfig and a capacity" % id)
+	if kind == Kind.DECOY_LAUNCHER and (decoy_capacity <= 0 or decoy_salvo <= 0 or decoy_signature <= 0.0 or decoy_life_s <= 0.0):
+		problems.append("%s: decoy launchers need a capacity, a salvo, a signature and a burn time" % id)
+	if kind == Kind.JAMMER and jam_strength <= 0.0:
+		problems.append("%s: jammers need a positive jam_strength" % id)
 	if (kind == Kind.MAIN_ENGINE or kind == Kind.RCS) and isp_s <= 0.0:
 		problems.append("%s: thrusters need a positive isp_s" % id)
 	if kind == Kind.PROPELLANT_TANK and propellant_capacity_kg <= 0.0:

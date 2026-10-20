@@ -1200,6 +1200,9 @@ func _update_weapon_strip(player: ShipState) -> void:
 		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config, player), "▮".repeat(bars) + "▯".repeat(10 - bars),
 			player.cannon_rounds, cannon.magazine_rounds, "  EMPTY" if player.cannon_rounds == 0 else ""])
 	parts.append(pd_text(player))
+	var cm := countermeasure_text(player.systems)
+	if cm != "":
+		parts.append(cm)
 	var msl := missile_text(player.systems, MissileSalvo.mode_text(profile.missile_mode, profile.missile_order) if profile != null else "")
 	if msl != "":
 		parts.append(msl)
@@ -1209,6 +1212,25 @@ func _update_weapon_strip(player: ShipState) -> void:
 	if player_wing != null and not player_wing.crafts.is_empty():
 		lines.append("WING  %s   [[] launch []] recall" % wing_text(player_wing))
 	weapon_label.text = "\n".join(lines)
+
+
+## Countermeasures on the weapon strip: "CM 27 [SPC] · EW ■" ("" if none).
+static func countermeasure_text(sys: ShipSystems) -> String:
+	if sys == null:
+		return ""
+	var bits := PackedStringArray()
+	var has_launcher := false
+	for e in sys.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER:
+			has_launcher = true
+	if has_launcher:
+		bits.append("CM %d [SPC]" % sys.decoys_aboard())
+	var jam := sys.jamming_strength()
+	for e in sys.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.JAMMER:
+			bits.append("EW %s" % (CyberTheme.GLYPH_OK if jam > 0.0 else CyberTheme.GLYPH_OFFLINE))
+			break
+	return " · ".join(bits)
 
 
 ## Missiles aboard on the weapon strip: "MSL anti-ship 4 · EMP 2 [M]" ("" if

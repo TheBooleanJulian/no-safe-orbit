@@ -93,9 +93,9 @@ func _run() -> void:
 	var weapons := PackedStringArray()
 	for i in yard.palette_list.item_count:
 		weapons.append(yard.palette_list.get_item_text(i))
-	_check(weapons.size() == 8 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Point-defence")
-		and " ".join(weapons).contains("Missile rack"),
-		"the Weapons category lists the guns, point defence and launchers: %s" % ", ".join(weapons))
+	_check(weapons.size() == 10 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Point-defence")
+		and " ".join(weapons).contains("Missile rack") and " ".join(weapons).contains("Flare launcher") and " ".join(weapons).contains("EW jammer"),
+		"the Weapons category lists the guns, point defence, launchers and countermeasures: %s" % ", ".join(weapons))
 	yard.palette_list.select(0)
 	yard.palette_list.item_selected.emit(0)
 	_check(yard.tool == Shipyard.Tool.PLACE and yard.place_kind == "equipment", "picking from the list arms the place tool")
