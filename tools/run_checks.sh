@@ -37,6 +37,7 @@ run_step shipyard  "$GODOT" --headless --path . -s res://tests/smoke/smoke_shipy
 run_step campaign  "$GODOT" --headless --path . -s res://tests/smoke/smoke_campaign.gd
 run_step boarding  "$GODOT" --headless --path . -s res://tests/smoke/smoke_boarding.gd
 run_step wing      "$GODOT" --headless --path . -s res://tests/smoke/smoke_wing.gd
+run_step encounter "$GODOT" --headless --path . -s res://tests/smoke/smoke_encounter.gd
 run_step boot_main "$GODOT" --headless --path . --quit-after 600 -- --profile=user://check_boot_profile.json
 # Exported data: pack the project with the export preset (no templates
 # needed) and boot from the pack, so missing include filters fail here.
@@ -48,5 +49,5 @@ if ! grep -q "Orbital sandbox ready" "$LOG_DIR/pck_boot.log"; then
 	status=1
 fi
 
-grep -hE "tests, |smoke: |smoke_shipyard: |smoke_campaign: |smoke_boarding: |smoke_wing: " "$LOG_DIR/unit.log" "$LOG_DIR/smoke.log" "$LOG_DIR/shipyard.log" "$LOG_DIR/campaign.log" "$LOG_DIR/boarding.log" "$LOG_DIR/wing.log" 2>/dev/null
+grep -hE "tests, |smoke: |smoke_shipyard: |smoke_campaign: |smoke_boarding: |smoke_wing: |smoke_encounter: " "$LOG_DIR/unit.log" "$LOG_DIR/smoke.log" "$LOG_DIR/shipyard.log" "$LOG_DIR/campaign.log" "$LOG_DIR/boarding.log" "$LOG_DIR/wing.log" "$LOG_DIR/encounter.log" 2>/dev/null
 exit $status

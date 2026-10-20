@@ -17,6 +17,9 @@ var target_id: StringName
 ## Warheads still to fire, in order (-1 = any kind).
 var groups: Array[int] = []
 var launched: int = 0
+## At most this many missiles (0 = every one the mode allows); a swarm
+## launch may overshoot by the rest of its swarm.
+var limit: int = 0
 
 
 ## The warhead groups a mode fires, in order.
@@ -59,11 +62,12 @@ static func mode_text(mode: int, order: Array) -> String:
 	return "sequence %s" % order_text(order) if mode == Mode.SEQUENCE else MODE_NAMES[clampi(mode, 0, MODE_NAMES.size() - 1)]
 
 
-static func start(p_shooter: StringName, p_target: StringName, mode: int, order: Array) -> MissileSalvo:
+static func start(p_shooter: StringName, p_target: StringName, mode: int, order: Array, p_limit: int = 0) -> MissileSalvo:
 	var s := MissileSalvo.new()
 	s.shooter_id = p_shooter
 	s.target_id = p_target
 	s.groups = groups_for(mode, order)
+	s.limit = maxi(p_limit, 0)
 	return s
 
 
@@ -85,13 +89,20 @@ func step(world: WorldSimulation) -> int:
 		return 0
 	var n := 0
 	while not groups.is_empty():
+		if limit > 0 and launched + n >= limit:
+			groups.clear()
+			break
 		if shooter.systems.missiles_of(groups[0]) == 0:
 			groups.pop_front()
 			continue
-		while world.launch_missile(shooter_id, target_id, groups[0]) == "":
-			n += 1
+		var before := world.missiles.size()
+		while (limit == 0 or launched + n < limit) and world.launch_missile(shooter_id, target_id, groups[0]) == "":
+			n += world.missiles.size() - before
+			before = world.missiles.size()
 		break
 	launched += n
+	if limit > 0 and launched >= limit:
+		groups.clear()
 	return n
 
 

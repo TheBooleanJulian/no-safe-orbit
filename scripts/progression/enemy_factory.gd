@@ -23,11 +23,38 @@ const EMP_LAUNCHER_FROM_MISSION := 6
 const CLASS_NAMES := ["Kestrel", "Harrier", "Shrike", "Goshawk", "Peregrine", "Merlin", "Hobby", "Saker"]
 
 
-static func design(mission: int, template: ShipBlueprint, catalog: ConstructionCatalog) -> ShipBlueprint:
+## Ships per encounter: what the player picked on the shipyard map
+## (PlayerProfile.encounter_size), within 1–PlayerProfile.MAX_ENCOUNTER.
+static func encounter_size(chosen: int) -> int:
+	return clampi(chosen, 1, PlayerProfile.MAX_ENCOUNTER)
+
+
+## An enemy ship's policy (ShipPolicy): the Standard preset with a role by
+## its place in the encounter (closer, standoff, flanker, …), focus fire,
+## and missile salvos of a few missiles inside its role's reach.
+static func policy(mission: int, index: int) -> ShipPolicy:
+	var p := ShipPolicy.preset("Standard")
+	p.preset_name = "Enemy"
+	p.role = (index % ShipPolicy.Role.size()) as ShipPolicy.Role
+	p.focus_fire = true
+	p.autofire_tolerance_deg = GunneryAI.FIRE_CONE_DEG
+	p.salvo_enabled = true
+	p.salvo_mode = MissileSalvo.Mode.ALL
+	p.salvo_count = 4 if p.role == ShipPolicy.Role.STANDOFF else (3 if mission >= 6 else 2)
+	p.salvo_min_confidence = 0.5
+	p.salvo_min_range_m = 1500.0
+	p.salvo_max_range_m = 15000.0 if p.role == ShipPolicy.Role.STANDOFF else 12000.0
+	p.salvo_interval_s = 25.0
+	return p
+
+
+## `variant` > 0: another ship of the same mission's encounter (its own
+## rolls); variant 0 is the mission's lead ship as before.
+static func design(mission: int, template: ShipBlueprint, catalog: ConstructionCatalog, variant: int = 0) -> ShipBlueprint:
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 7919 * mission + 17
+	rng.seed = 7919 * mission + 17 + 104_729 * variant
 	var bp := template.duplicate_blueprint()
-	bp.name = "%s-class frigate" % CLASS_NAMES[(mission - 1) % CLASS_NAMES.size()]
+	bp.name = "%s-class frigate" % CLASS_NAMES[(mission - 1 + variant) % CLASS_NAMES.size()]
 	var m := float(mission)
 	for e in bp.equipment:
 		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)

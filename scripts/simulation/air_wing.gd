@@ -143,6 +143,7 @@ func launch(world: WorldSimulation, c: Craft) -> String:
 	ship.propellant_kg = c.config.propellant_capacity_kg * c.propellant_fraction
 	ship.set_rounds(c.ammo)
 	ship.hull_damage = (1.0 - c.hull_fraction) * c.config.hull_hp
+	ship.side = carrier.side
 	world.add_ship(ship)
 	c.status = Status.FLYING
 	c.comms_lost_s = 0.0

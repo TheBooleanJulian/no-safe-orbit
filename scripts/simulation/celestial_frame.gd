@@ -1,16 +1,21 @@
 class_name CelestialFrame
 extends RefCounted
 ## Ties the simulation's planet-centred inertial (PCI) axes to the real sky
-## for a scenario epoch, so the stars, the Sun and Earth's surface are
-## mutually consistent (stars and Sun as seen from the Solar System).
+## for a scenario epoch, so the stars, the Sun and the central body's
+## surface are mutually consistent (stars and Sun as seen from the Solar
+## System).
 ##
-## Axes: ICRS/J2000 equatorial (x → vernal equinox, z → celestial north)
-## maps to PCI with celestial north along PCI −X, then a twist about that
-## pole chosen so the Sun sits where the scenario wants it relative to the
-## start point (PCI +Y, moving −Z). That start orbit is therefore a prograde
-## equatorial orbit, like a real LEO station's.
+## Axes: the body's equatorial frame (its north pole, and the ascending node
+## of its equator on the ICRS equator) maps to PCI with the body's north
+## along PCI −X, then a twist about that pole chosen so the Sun sits where
+## the scenario wants it relative to the start point (PCI +Y, moving −Z).
+## The start orbit is therefore a prograde equatorial orbit, like a real LEO
+## station's. For Earth the pole is ICRS +Z and the node the ICRS +Y axis.
 ## Low-precision formulas (Astronomical Almanac): Sun ~0.01°, GMST ~0.1 s.
 ## Precession, nutation and aberration are ignored (< 0.4° since J2000).
+## The Moon: the IAU pole and rotation with only their largest periodic
+## term (E1; the rest add up to ~0.3°), and the Sun's direction is Earth's
+## (≤ 0.15° off at the Moon's distance).
 
 const EARTH_ROTATION_RAD_S := 7.2921159e-5  # sidereal
 const J2000_JD := 2451545.0
@@ -19,14 +24,30 @@ const UNIX_EPOCH_JD := 2440587.5
 var epoch_jd: float
 ## Rotation about PCI +X applied after the fixed axis mapping (rad).
 var twist: float = 0.0
+## The body's north pole and its equator's ascending node on the ICRS
+## equator (ICRS unit vectors), and its prime meridian (OrbitalBody).
+var pole_icrs := Vector3(0, 0, 1)
+var node_icrs := Vector3(0, 1, 0)
+var prime_meridian_deg := 190.46061837
+var rotation_deg_per_day := 360.98564736629
 
 
 ## `sun_angle_from_up_deg`: where the Sun's projection on the orbit plane
 ## should sit, measured from the start point's zenith (+Y) towards +Z
 ## (i.e. behind a ship flying prograde).
-static func for_scenario(p_epoch_jd: float, sun_angle_from_up_deg: float) -> CelestialFrame:
+## `body`: the central body whose pole and rotation to use (Earth if null).
+static func for_scenario(p_epoch_jd: float, sun_angle_from_up_deg: float, body: OrbitalBody = null) -> CelestialFrame:
 	var frame := CelestialFrame.new()
 	frame.epoch_jd = p_epoch_jd
+	if body != null:
+		var e := deg_to_rad(body.term_e0_deg + body.term_deg_per_day * (p_epoch_jd - J2000_JD))
+		var amp := body.term_amplitudes_deg
+		var ra := body.pole_ra_deg + amp.x * sin(e)
+		frame.pole_icrs = radec_to_icrs(ra, body.pole_dec_deg + amp.y * cos(e))
+		var node_ra := deg_to_rad(ra + 90.0)
+		frame.node_icrs = Vector3(cos(node_ra), sin(node_ra), 0.0)
+		frame.prime_meridian_deg = body.prime_meridian_deg + amp.z * sin(e)
+		frame.rotation_deg_per_day = body.rotation_deg_per_day
 	var s := frame.icrs_to_pci(sun_direction_icrs(p_epoch_jd))
 	frame.twist = deg_to_rad(sun_angle_from_up_deg) - atan2(s.z, s.y)
 	return frame
@@ -67,7 +88,8 @@ static func gmst_rad(jd: float) -> float:
 
 ## ICRS direction → PCI direction.
 func icrs_to_pci(v: Vector3) -> Vector3:
-	var m := Vector3(-v.z, v.x, -v.y)  # north → −X, equinox → +Y
+	# Body equatorial components (node, pole × node, pole), then north → −X.
+	var m := -Vector3(v.dot(pole_icrs), v.dot(pole_icrs.cross(node_icrs)), v.dot(node_icrs))
 	var c := cos(twist)
 	var s := sin(twist)
 	return Vector3(m.x, m.y * c - m.z * s, m.y * s + m.z * c)
@@ -77,7 +99,7 @@ func pci_to_icrs(v: Vector3) -> Vector3:
 	var c := cos(twist)
 	var s := sin(twist)
 	var m := Vector3(v.x, v.y * c + v.z * s, -v.y * s + v.z * c)
-	return Vector3(m.y, -m.z, -m.x)
+	return node_icrs * -m.z + pole_icrs.cross(node_icrs) * -m.y + pole_icrs * -m.x
 
 
 func julian_date(sim_time: float) -> float:
@@ -123,18 +145,21 @@ static func next_light_change(orbit: OrbitElements, sun_dir: Vector3, radius: fl
 	return {}
 
 
-## Earth's north pole in PCI.
+## The central body's north pole in PCI.
 func north_pole_pci() -> Vector3:
-	return icrs_to_pci(Vector3(0, 0, 1))
+	return icrs_to_pci(pole_icrs)
 
 
-## Basis taking PCI vectors to Earth-fixed (ECEF: x → Greenwich meridian on
-## the equator, z → north pole), for drawing real geography.
-func pci_to_ecef(sim_time: float) -> Basis:
-	var g := gmst_rad(julian_date(sim_time))
+## Basis taking PCI vectors to body-fixed axes (x → prime meridian on the
+## equator, z → north pole; for Earth, ECEF), for drawing real geography.
+## For Earth W = GMST − 90° (the IAU angle counts from the node at RA 90°).
+func pci_to_body_fixed(sim_time: float) -> Basis:
+	var w := deg_to_rad(fposmod(prime_meridian_deg + rotation_deg_per_day * (julian_date(sim_time) - J2000_JD), 360.0))
+	var east := pole_icrs.cross(node_icrs)
 	var cols: Array[Vector3] = []
 	for axis in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
 		var i := pci_to_icrs(axis)
-		# ECEF = Rz(−GMST) · ICRS
-		cols.append(Vector3(i.x * cos(g) + i.y * sin(g), -i.x * sin(g) + i.y * cos(g), i.z))
+		var e := Vector3(i.dot(node_icrs), i.dot(east), i.dot(pole_icrs))
+		# Body-fixed = Rz(−W) · body equatorial
+		cols.append(Vector3(e.x * cos(w) + e.y * sin(w), -e.x * sin(w) + e.y * cos(w), e.z))
 	return Basis(cols[0], cols[1], cols[2])

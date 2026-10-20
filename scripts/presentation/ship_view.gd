@@ -57,6 +57,7 @@ func _ready() -> void:
 	_docked_craft = model.docked_craft
 	_build_plumes(model.engine_nozzles, model.engine_normals)
 	_plates = model.plates
+	_bake_hull(model)
 	_spinners = model.spinners
 	_windows = model.windows
 	_nav_lights = model.nav_lights
@@ -257,6 +258,7 @@ func _show_plate_wear(systems: ShipSystems) -> void:
 		if int(_plate_level.get(key, 0)) == level:
 			continue
 		_plate_level[key] = level
+		_hull_dirty = true
 		var node := _plates[key] as MeshInstance3D
 		node.material_override = _char_material(level, node.material_override)
 		if dead:
@@ -265,6 +267,7 @@ func _show_plate_wear(systems: ShipSystems) -> void:
 			rng.seed = hash(key)
 			node.basis = node.basis * Basis.from_euler(Vector3(rng.randf_range(-0.2, 0.2), rng.randf_range(-0.25, 0.25), rng.randf_range(-0.2, 0.2))) \
 				* Basis.from_scale(Vector3(rng.randf_range(0.7, 0.9), rng.randf_range(0.5, 0.8), rng.randf_range(0.7, 0.9)))
+			_hull_flats[node] = ShipModelBuilder.flat_arrays(node, _model_root)
 
 
 func _char_material(level: int, current: Material) -> Material:
@@ -295,6 +298,11 @@ func _show_damage(systems: ShipSystems) -> void:
 			_break_off(mi)
 			mi.material_override = _wreck_material
 			mi.scale = Vector3.ONE * 0.72
+			_hull_flats[mi] = ShipModelBuilder.flat_arrays(mi, _model_root)
+			_hull_dirty = true
+	if _hull_dirty:
+		_hull_dirty = false
+		_hull_batch.mesh = ShipModelBuilder.mesh_from_flats(_hull_pieces, _hull_flats)
 
 
 func _break_off(mi: MeshInstance3D) -> void:
@@ -346,6 +354,31 @@ var _nav_lights: Array[Node3D] = []
 var _lights_check := 0.0
 const RADAR_RPM := 12.0
 var _plates: Dictionary = {}
+## Hull modules and armour plates, drawn merged as _hull_batch (a ship is a
+## hundred-odd of them, each a draw call otherwise). The pieces stay, hidden,
+## as what wear and wrecks edit; the batch is rebuilt after they change.
+var _hull_pieces: Array = []
+var _hull_flats: Dictionary = {}  # piece -> ShipModelBuilder.flat_arrays()
+var _hull_batch: MeshInstance3D
+var _hull_dirty := false
+var _model_root: Node3D
+
+
+func _bake_hull(model: ShipModelBuilder.Model) -> void:
+	_model_root = model.root
+	for m in blueprint.modules:
+		var mi := model.parts.get(m.id) as MeshInstance3D
+		if mi != null:
+			_hull_pieces.append(mi)
+	_hull_pieces.append_array(model.plates.values())
+	_hull_batch = MeshInstance3D.new()
+	_hull_batch.name = "Hull"
+	for piece: MeshInstance3D in _hull_pieces:
+		_hull_flats[piece] = ShipModelBuilder.flat_arrays(piece, _model_root)
+	_hull_batch.mesh = ShipModelBuilder.mesh_from_flats(_hull_pieces, _hull_flats)
+	_model_root.add_child(_hull_batch)
+	for piece: MeshInstance3D in _hull_pieces:
+		piece.visible = false
 var _plate_level: Dictionary = {}
 var _char_mats: Dictionary = {}
 var _wear_check := 0.0

@@ -92,11 +92,11 @@ func test_frame_round_trips() -> void:
 	var v := Vector3(0.3, -0.5, 0.81).normalized()
 	assert_vec_near(f.pci_to_icrs(f.icrs_to_pci(v)), v, 1e-6, "ICRS → PCI → ICRS")
 	# Earth-fixed basis: the pole maps to ECEF +Z; the basis is a rotation.
-	var b := f.pci_to_ecef(1234.0)
+	var b := f.pci_to_body_fixed(1234.0)
 	assert_vec_near(b * f.north_pole_pci(), Vector3(0, 0, 1), 1e-5, "pole → ECEF +Z")
 	assert_near(b.determinant(), 1.0, 1e-5, "ECEF basis is a proper rotation")
 	# One sidereal day later Earth has turned once.
 	var day := TAU / CelestialFrame.EARTH_ROTATION_RAD_S
-	assert_vec_near(f.pci_to_ecef(1234.0 + day) * Vector3.UP, b * Vector3.UP, 1e-4, "Earth-fixed frame repeats after a sidereal day")
-	var quarter := f.pci_to_ecef(1234.0 + day * 0.25) * Vector3.UP
+	assert_vec_near(f.pci_to_body_fixed(1234.0 + day) * Vector3.UP, b * Vector3.UP, 1e-4, "Earth-fixed frame repeats after a sidereal day")
+	var quarter := f.pci_to_body_fixed(1234.0 + day * 0.25) * Vector3.UP
 	assert_near(rad_to_deg(quarter.angle_to(b * Vector3.UP)), 90.0, 0.1, "Earth turns 90° in a quarter sidereal day (°)")

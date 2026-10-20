@@ -6,8 +6,10 @@ A hard-sci-fi spacecraft engineering and combat simulator, built in Godot 4.
 Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
-**Status:** Milestones 0–9 complete — design a ship in the shipyard, then fly
-and fight it in a real-scale 400 km Earth orbit under the real sky. Rounds
+**Status:** Milestones 0–10 complete — design a ship in the shipyard, then fly
+and fight it in a real-scale 400 km Earth orbit or 100 km lunar orbit (pick
+the station and the encounter's size, 1–3 ships, on the shipyard map) under
+the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
 own orbits afterwards; power, heat, pressure and propellant are simulated.
 Guided missiles (anti-ship, saturation swarms, EMP, nuclear) fly salvos that
@@ -64,7 +66,7 @@ godot --path .
 | Velocity hold: orbit → match target → target markers | X | X |
 | Fire (each gun fires once it is on the aim) | Left mouse (once captured) or Enter | A |
 | Zoom for gunnery (toggle; centres on the aim, the mouse turns the view; wheel = magnification) | Shift | right stick click |
-| Next target for the lead marker (the ship, then each hostile craft) | U | — |
+| Next target: each ship of the encounter, then each hostile craft (lead marker only) | U | — |
 | Grappling arm: grab / release | Y | — |
 | Missile salvo at the U target (the ship needs a sensor lock); again: hold the rest | M | — |
 | Missile mode: all / conventional / EMP / nuclear / sequence | , | — |
@@ -79,7 +81,7 @@ godot --path .
 | Tactical overview (ship map, power, crew, damage control, air wing) | Tab | left stick click |
 | Launch craft / recall craft | [ / ] | paddle / Misc |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
-| Dimensional jump drive to Earth Shipyard (hold 5 s, not while under fire) | hold B | hold Start |
+| Dimensional jump drive to the location's station (hold 5 s, not while under fire) | hold B | hold Start |
 | Controls panel (rebinding) | F1 | Guide |
 | Guided first sortie: start / skip | F2 | — |
 
@@ -120,8 +122,38 @@ fire, the aim below its face, offline, or locked). Put the cursor on the gold
 the rate of fire and with extra spread. With a gangway attached, both
 ships' primary weapons are locked; craft still fight.
 
-**Point defence:** PD turrets engage hostile craft and missiles within 2 km
-on their own (their own rounds, gangway or not) and never your own.
+**Point defence:** PD turrets engage hostile missiles, craft and big slow
+rounds on their own (their own rounds, gangway or not), never your side's.
+Your **ship policy** (Tab › POLICY) sets the order (default missiles ›
+craft › rounds), the engagement range (2 km) and an ammunition reserve
+(below 15 % of its magazine a mount keeps the rest for its first priority).
+Flak can only track heavy slugs (≥ 2 kg, closing under 1.5 km/s — the heavy
+cannon's rounds); autocannon rounds are too small and railgun slugs too fast.
+
+**Encounters:** from mission 4 two ships come at once, from mission 7
+three, each with its own role — a *closer* works in to gun range, a
+*standoff* ship holds 5–9 km off and fires missile salvos, a *flanker*
+works round to your stern — and they focus fire (an escorted courier first)
+and never waste fire on a wreck. The target card shows the selected
+contact in full and lists the others compactly (**U** selects the next);
+the radar, the world markers and Tab › TARGET show them all. Fire on one
+and the whole encounter turns hostile. Salvage, the gangway, boarding and
+missiles work on the selected contact; the next encounter arrives once the
+last ship is beaten.
+
+**Ship policy** (Tab › POLICY, saved with the vessel): automation layered
+on your controls — **manual input always wins**: your trigger and M fire
+whatever the policy says; automation only adds. Presets **Hold**,
+**Defensive** (the default: point defence only), **Standard** (auto-fire
+and auto-salvo, fire tight) and **Aggressive** (fire free, salvo everything
+from 1 km), every value editable:
+
+| Setting | What it does |
+|---|---|
+| Fire discipline | *hold*: automation never fires · *tight*: only at hostile contacts · *free*: at anything it has a solution on |
+| Auto point defence | on/off, priority order, engagement range, ammunition reserve |
+| Auto-salvo | at the selected contact when the lock quality, the range band and the interval allow: warhead mode and missiles per salvo |
+| Auto-fire | pulls the trigger while your aim is within the tolerance of the lead and you hold a lock |
 
 **Missiles (M):** launchers (Weapons palette; external, any face but aft)
 fire guided missiles at the target picked with U — the enemy ship needs a
@@ -190,8 +222,9 @@ spins the ship it strikes. A round that punches through keeps going, slower.
 the round's path through the hull and every module it damaged or destroyed,
 in order (the most severe recent hit wins the window).
 
-**Sky:** stars, Sun and Earth's rotation are real for 2026-10-19 12:00 UTC
-(Yale Bright Star Catalogue, NASA Blue Marble; see `data/ATTRIBUTION.md`).
+**Sky:** stars, Sun and the central body's rotation are real for 2026-10-19
+12:00 UTC (Yale Bright Star Catalogue, NASA Blue Marble, NASA CGI Moon Kit;
+see `data/ATTRIBUTION.md`).
 
 **Flight assist ON** (default) damps rotation to the requested turn rate. X
 cycles three modes:
@@ -214,6 +247,10 @@ courses: how near and in how long (and COLLISION COURSE inside 50 m).
 orbit, retrograde to lower it. The **entry interface is 100 km** (the Kármán
 line). If your periapsis drops below it, the HUD warns you and counts down.
 Crossing it ends the flight; Backspace restarts.
+
+**Lunar orbit** (Lunar Shipyard): 100 km circular at 1.63 km/s (period
+≈118 min). The Moon has no air: the floor is the highest terrain, 11 km up
+(TERRAIN on the orbit panel); dipping below it is a crash.
 
 HUD markers: white reticle = where the nose points; green ring = orbital
 prograde (where you're actually going), green ⊗ = retrograde; thin green line =
@@ -501,8 +538,14 @@ no usable backup. Loading an older save version first keeps a copy
 
 ## Shipyard
 
-**Earth Shipyard** opens after a jump (hold B in flight). You start from the
-ship you were flying (the Frigate Mk I template by default).
+**Earth Shipyard** (or the **Lunar Shipyard**) opens after a jump (hold B in
+flight). You start from the ship you were flying (the Frigate Mk I template
+by default).
+
+**Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click Earth or
+the Moon to move the vessel to that station; the next launch starts in its
+orbit. Pick the encounter: **1, 2 or 3 ships**. Moving is free for now
+(jump fuel comes with Milestone 13).
 
 **Hull** is built from four blocks: a 2×2×1 **pressurised block** (rooms go
 inside), 1×2×1 and 1×1×1 **sloped wedges** and a 1×2×1 **truss**. Wedges
@@ -587,16 +630,21 @@ actions: tutorial, missile salvo, crew and weapons tabs), the shipyard
 (`smoke_shipyard.gd`, including a real mouse click), the campaign loop
 (`smoke_campaign.gd`: fight → salvage → wreck stays → dock damaged →
 repair and refit → relaunch), boarding (`smoke_boarding.gd`) and the air
-wing (`smoke_wing.gd`), a 600-frame boot of the main scene, a `.pck`
+wing (`smoke_wing.gd`), a three-ship encounter (`smoke_encounter.gd`:
+selection, roles, salvos, salvaging a non-lead contact, policy, manual
+override), a 600-frame boot of the main scene, a `.pck`
 export and a boot from it. Smoke tests use a throwaway profile, never your
 save. The script fails on any test failure **and** on any Godot `ERROR:` /
 `SCRIPT ERROR` in the logs. Logs: `build/check-logs/`.
 
 Simulation frame-time profile under load (two frigates, every gun, a
-missile salvo):
+missile salvo; then a three-hostile encounter with wings and salvos), and
+a capital-hull spike (~300 modules: validation, compile, hit tests):
 
 ```bash
-godot --headless --path . -s res://tools/bench_sim.gd   # ms per tick by rounds in flight
+godot --headless --path . -s res://tools/bench_sim.gd    # ms per tick, mean and worst
+godot --headless --path . -s res://tools/bench_hull.gd   # large-hull timings
+godot --headless --path . -s res://tests/run_tests.gd -- --only=test_m10   # one test file
 ```
 
 Visual capture (needs a display; on a desktop it briefly opens a window).
@@ -615,11 +663,12 @@ xvfb-run -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compati
 
 ```text
 data/                  data, not code: catalog/ (parts), blueprints/ (templates),
-                       weapons/, bodies/ (Earth), ships/ (test fixture)
+                       weapons/, bodies/ (Earth, Moon), locations/ (map),
+                       earth/ and moon/ (surface maps), ships/ (test fixture)
 docs/                  GAME_DESIGN (source-of-truth spec), ARCHITECTURE, ROADMAP,
                        screenshots/ (README images)
 scenes/                main (flight), shipyard, ships, ui
-shaders/               planet_sky (Earth, 100 km limb, sun, stars)
+shaders/               planet_sky (central body, atmosphere limb, sun), stars
 scripts/simulation/    authoritative flight sim — no rendering, no Input singleton
 scripts/construction/  blueprint model, validation, derived stats, JSON I/O
 scripts/shipyard/      ship editor logic and shipyard UI
@@ -628,7 +677,7 @@ scripts/presentation/  views of sim state (ships, camera, dust, planet sky, trac
 scripts/ui/            HUD
 scripts/app/           wiring: main loop, player input, logging
 tests/                 unit tests, smoke test, runner
-tools/                 run_checks.sh, bench_sim.gd, capture_screens.gd, capture_readme.gd
+tools/                 run_checks.sh, bench_sim.gd, bench_hull.gd, capture_screens.gd, capture_readme.gd
 ```
 
 Also: [`CHANGELOG.md`](CHANGELOG.md), [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).

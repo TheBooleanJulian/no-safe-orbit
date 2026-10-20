@@ -172,7 +172,96 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				craft.transform = Transform3D(_basis_y_along(normal), mount + normal * 0.9)
 				CraftView.build_model(craft, def.craft, def.craft.cannon != null, false)
 				model.docked_craft[bp.equipment[i].id] = craft
+		_merge_static(part)
 	return model
+
+
+## Fold a part's fixed pieces (its direct mesh children with nothing hung on
+## them; pivots, turntables and beacons stay separate) into one mesh: a
+## radiator alone is a dozen panels, each a draw call.
+static func _merge_static(part: Node3D) -> void:
+	var pieces: Array = []
+	for child in part.get_children():
+		if child is MeshInstance3D and child.get_child_count() == 0:
+			pieces.append(child)
+	if pieces.size() < 2:
+		return
+	var merged := MeshInstance3D.new()
+	merged.name = "Static"
+	merged.mesh = merge_meshes(pieces, part)
+	for piece: MeshInstance3D in pieces:
+		part.remove_child(piece)
+		piece.free()
+	part.add_child(merged)
+
+
+## One mesh of `nodes` as they stand (transform relative to `ref`, an
+## ancestor of each, and material_override), a surface per material.
+static func merge_meshes(nodes: Array, ref: Node3D) -> ArrayMesh:
+	var flats := {}
+	for node: MeshInstance3D in nodes:
+		flats[node] = flat_arrays(node, ref)
+	return mesh_from_flats(nodes, flats)
+
+
+## A mesh node's triangles in `ref` space, unindexed: [vertices, normals].
+## Merged meshes keep only these (the hull materials map triplanar, so need
+## no UVs), so every piece shares one vertex format.
+static func flat_arrays(node: MeshInstance3D, ref: Node3D) -> Array:
+	var arrays := node.mesh.surface_get_arrays(0)
+	var t := _relative_transform(node, ref)
+	var nb := t.basis.inverse().transposed()
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var n: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var order := PackedInt32Array()
+	if arrays[Mesh.ARRAY_INDEX] is PackedInt32Array:
+		order = arrays[Mesh.ARRAY_INDEX]
+	if order.is_empty():
+		order.resize(v.size())
+		for i in v.size():
+			order[i] = i
+	var out_v := PackedVector3Array()
+	var out_n := PackedVector3Array()
+	out_v.resize(order.size())
+	out_n.resize(order.size())
+	for k in order.size():
+		out_v[k] = t * v[order[k]]
+		out_n[k] = (nb * n[order[k]]).normalized()
+	return [out_v, out_n]
+
+
+## Build a mesh from `nodes` using their cached flat_arrays (`flats`, by
+## node): concatenation only, so rebuilding after one piece changes is cheap.
+static func mesh_from_flats(nodes: Array, flats: Dictionary) -> ArrayMesh:
+	var verts := {}  # material -> PackedVector3Array
+	var norms := {}
+	for node: MeshInstance3D in nodes:
+		var mat := node.material_override
+		var f: Array = flats[node]
+		var v: PackedVector3Array = verts.get(mat, PackedVector3Array())
+		var n: PackedVector3Array = norms.get(mat, PackedVector3Array())
+		v.append_array(f[0])
+		n.append_array(f[1])
+		verts[mat] = v
+		norms[mat] = n
+	var mesh := ArrayMesh.new()
+	for mat: Material in verts:
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = verts[mat]
+		arrays[Mesh.ARRAY_NORMAL] = norms[mat]
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		mesh.surface_set_material(mesh.get_surface_count() - 1, mat)
+	return mesh
+
+
+static func _relative_transform(node: Node3D, ref: Node3D) -> Transform3D:
+	var t := node.transform
+	var n := node.get_parent() as Node3D
+	while n != null and n != ref:
+		t = n.transform * t
+		n = n.get_parent() as Node3D
+	return t
 
 
 ## Grappling arm: a shoulder, two boom segments folded back along the hull

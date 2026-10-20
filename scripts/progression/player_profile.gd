@@ -18,9 +18,18 @@ extends RefCounted
 
 ## v3: a hangar of vessels (one active) instead of a single vessel.
 ## v4: parts that stopped being common are granted to the saves using them.
+## v6: each vessel's automation policy (ShipInstance.policy); older vessels
+##     get the Defensive preset, which is what they already did.
 ## v5: the tutorial's and the mission chain's progress (an existing player
 ##     is not offered the tutorial again; [F2] still starts it).
-const SCHEMA_VERSION := 5
+## v7: where the ship is docked (location), the locations on the map
+##     (known_locations: Earth and the Moon to start) and the encounter size
+##     picked for the next sortie; older saves are at Earth, size 1.
+const SCHEMA_VERSION := 7
+## Ships per encounter the map offers (EnemyFactory spawns them).
+const MAX_ENCOUNTER := 3
+## Locations every player knows from the start (brokers sell more, M13).
+const STARTING_LOCATIONS := ["earth", "moon"]
 ## The last good save, kept beside the profile (rolling, one deep).
 const BACKUP_SUFFIX := ".bak"
 ## Equipment that was common before v4: owners get as many units as their
@@ -66,6 +75,11 @@ var active_vessel: int = 0
 var tutorial: Dictionary = {"state": "offer", "step": 0}
 var campaign: Dictionary = {"step": 0}
 ## What M fires (MissileSalvo.Mode) and the sequence mode's warhead order.
+## The station the vessel is docked at and launches from (Location id).
+var location: String = Location.DEFAULT_ID
+var known_locations: Array = STARTING_LOCATIONS.duplicate()
+## Ships in the next encounter, 1–MAX_ENCOUNTER (picked on the map).
+var encounter_size: int = 1
 var missile_mode: int = MissileSalvo.Mode.ALL
 var missile_order: Array = MissileSalvo.DEFAULT_ORDER.duplicate()
 ## The schema the profile was read from (SCHEMA_VERSION for a new one).
@@ -495,6 +509,9 @@ func to_dict() -> Dictionary:
 		"campaign": campaign.duplicate(),
 		"missile_mode": missile_mode,
 		"missile_order": missile_order.duplicate(),
+		"location": location,
+		"known_locations": known_locations.duplicate(),
+		"encounter_size": encounter_size,
 	}
 
 
@@ -559,6 +576,7 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 	p.missile_mode = clampi(int(d.get("missile_mode", MissileSalvo.Mode.ALL)), 0, MissileSalvo.Mode.size() - 1)
 	var order: Variant = d.get("missile_order", [])
 	p.missile_order = MissileSalvo.sanitize_order(order if order is Array else [])
+	_read_v7_map(p, d)
 	if int(version) < 4:
 		var designs: Array[ShipBlueprint] = []
 		for v in p.vessels:
@@ -569,6 +587,28 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 				designs.append(bp)
 		p.grant_used(NO_LONGER_COMMON_V4, designs)
 	return p
+
+
+## v7: location, known locations and encounter size (defaults for older
+## saves: docked at Earth, Earth and the Moon known, one ship).
+static func _read_v7_map(p: PlayerProfile, d: Dictionary) -> void:
+	var known: Variant = d.get("known_locations", [])
+	if known is Array:
+		for id in known:
+			if str(id) not in p.known_locations and Location.by_id(str(id)).id == str(id):
+				p.known_locations.append(str(id))
+	var here := str(d.get("location", Location.DEFAULT_ID))
+	p.location = here if here in p.known_locations else Location.DEFAULT_ID
+	p.encounter_size = clampi(int(d.get("encounter_size", 1)), 1, MAX_ENCOUNTER)
+
+
+## Move the docked vessel to the station at a known location (free until
+## jump costs arrive, M13). Returns "" or why not.
+func relocate(location_id: String) -> String:
+	if location_id not in known_locations:
+		return "That location is not on your map"
+	location = Location.by_id(location_id).id
+	return ""
 
 
 ## Migration aid: own at least as many of each of `ids` as any one of

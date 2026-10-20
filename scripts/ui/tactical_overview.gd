@@ -19,7 +19,7 @@ extends PanelContainer
 signal command(name: StringName, arg: Variant)
 
 const COVERABLE := [CrewRoster.Role.COMMAND, CrewRoster.Role.WEAPONS, CrewRoster.Role.ENGINEERING, CrewRoster.Role.DAMAGE_CONTROL]
-const TAB_NAMES := ["DAMAGE", "CREW", "POWER", "WING", "TARGET", "CARGO", "WEAPONS"]
+const TAB_NAMES := ["DAMAGE", "CREW", "POWER", "WING", "TARGET", "CARGO", "WEAPONS", "POLICY"]
 const CHANNEL_FOR_KIND := {
 	EquipmentDefinition.Kind.MAIN_ENGINE: ShipSystems.Channel.ENG,
 	EquipmentDefinition.Kind.CANNON: ShipSystems.Channel.WEP,
@@ -51,6 +51,14 @@ var _missile_label: RichTextLabel
 var _mode_buttons: Array[Button] = []
 var _order_box: VBoxContainer
 var _order_key := ""
+## The encounter's ships (Hud.contact_rows) and the player's policy (set by the HUD).
+var contacts: Array[Dictionary] = []
+var policy: ShipPolicy
+var _contacts_box: HFlowContainer
+var _contacts_key := ""
+var _policy_label: RichTextLabel
+var _policy_box: VBoxContainer
+var _policy_key := ""
 var _power_label: RichTextLabel
 var _loads_box: VBoxContainer
 var _loads_key := ""
@@ -96,6 +104,7 @@ func _ready() -> void:
 	_build_target_tab()
 	_build_cargo_tab()
 	_build_weapons_tab()
+	_build_policy_tab()
 	for i in TAB_NAMES.size():
 		_tabs.set_tab_title(i, TAB_NAMES[i])
 
@@ -250,6 +259,8 @@ func _build_wing_tab() -> void:
 
 func _build_target_tab() -> void:
 	var box := _tab_box()
+	_contacts_box = HFlowContainer.new()
+	box.add_child(_contacts_box)
 	_target_map = ShipSchematic.new()
 	_target_map.accent = CyberTheme.MAGENTA
 	_target_map.custom_minimum_size = Vector2(0, 220)
@@ -262,7 +273,7 @@ func _build_cargo_tab() -> void:
 	var box := _tab_box()
 	_cargo_label = _rich(box, 60)
 	box.add_child(_button("Vent excess (cheapest first)", func() -> void: command.emit(&"vent_excess", null), CyberTheme.AMBER))
-	box.add_child(_heading("HOLD — at risk until banked at Earth Shipyard", CyberTheme.CYAN))
+	box.add_child(_heading("HOLD — at risk until banked at the station", CyberTheme.CYAN))
 	_cargo_box = VBoxContainer.new()
 	box.add_child(_cargo_box)
 
@@ -329,6 +340,8 @@ func update_view(player: ShipState, target: ShipState, boarding: BoardingAction,
 			_refresh_cargo(sys)
 		6:
 			_refresh_weapons(sys)
+		7:
+			_refresh_policy()
 
 
 static func power_summary(sys: ShipSystems) -> String:
@@ -491,6 +504,7 @@ func _refresh_power(sys: ShipSystems) -> void:
 
 
 func _refresh_target(target: ShipState, boarding: BoardingAction, sim_time: float, close_look: bool) -> void:
+	_refresh_contact_buttons()
 	_target_map.systems = target.systems if target != null and close_look else null
 	if target == null:
 		_target_map.title = "NO CONTACT"
@@ -519,6 +533,106 @@ func _refresh_target(target: ShipState, boarding: BoardingAction, sim_time: floa
 		for l in boarding.log.slice(maxi(boarding.log.size() - 5, 0)):
 			lines.append(l)
 	_target_label.text = "\n".join(lines)
+
+
+## One button per ship of the encounter (the selected one marked ▸).
+func _refresh_contact_buttons() -> void:
+	var key := ",".join(contacts.map(func(c: Dictionary) -> String: return "%s%s%s" % [c.id, c.selected, c.state]))
+	if key == _contacts_key:
+		return
+	_contacts_key = key
+	for b in _contacts_box.get_children():
+		b.queue_free()
+	for c in contacts:
+		var id: String = c.id
+		var b := _button("%s%s · %s · %s" % ["▸ " if c.selected else "", c.name, c.state, c.role],
+			func() -> void: command.emit(&"select_contact", id), CyberTheme.MAGENTA)
+		_contacts_box.add_child(b)
+
+
+# --- Policy ------------------------------------------------------------------------------
+
+## Tab › POLICY: the ship's automation (ShipPolicy), on top of manual control
+## — manual input always wins. Saved with the vessel.
+func _build_policy_tab() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_tabs.add_child(scroll)
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	scroll.add_child(box)
+	box.add_child(_heading("SHIP POLICY — automation on top of your controls", CyberTheme.CYAN))
+	box.add_child(_caption_label("Manual input always wins: your trigger and M fire whatever the policy says; automation only adds."))
+	_policy_label = _rich(box, 36)
+	_policy_box = VBoxContainer.new()
+	box.add_child(_policy_box)
+
+
+func _refresh_policy() -> void:
+	if policy == null:
+		_policy_label.text = "No policy."
+		return
+	_policy_label.text = policy.summary()
+	var key := JSON.stringify(policy.to_dict())
+	if key == _policy_key:
+		return
+	_policy_key = key
+	for c in _policy_box.get_children():
+		c.queue_free()
+	var row := func(label: String) -> HBoxContainer:
+		var r := HBoxContainer.new()
+		var l := Label.new()
+		l.text = label
+		l.custom_minimum_size = Vector2(150, 0)
+		r.add_child(l)
+		_policy_box.add_child(r)
+		return r
+	var set_value := func(field: String, value: Variant) -> void: command.emit(&"policy_set", [field, value])
+	var stepper := func(r: HBoxContainer, field: String, value: float, step: float, text: String) -> void:
+		r.add_child(_button("−", func() -> void: set_value.call(field, value - step)))
+		var v := Label.new()
+		v.text = "  %s  " % text
+		r.add_child(v)
+		r.add_child(_button("+", func() -> void: set_value.call(field, value + step)))
+	var presets: HBoxContainer = row.call("Preset")
+	for name in ShipPolicy.PRESETS:
+		presets.add_child(_button(("▸ " if policy.preset_name == name else "") + name, func() -> void: command.emit(&"policy_preset", name)))
+	var disc: HBoxContainer = row.call("Fire discipline")
+	for d in ShipPolicy.Discipline.size():
+		disc.add_child(_button(("▸ " if policy.discipline == d else "") + ShipPolicy.DISCIPLINE_NAMES[d], func() -> void: set_value.call("discipline", d),
+			CyberTheme.AMBER))
+	_policy_box.add_child(_heading("POINT DEFENCE", CyberTheme.CYAN))
+	var pd: HBoxContainer = row.call("Auto point defence")
+	pd.add_child(_button("ON" if policy.pd_enabled else "OFF", func() -> void: set_value.call("pd_enabled", not policy.pd_enabled)))
+	var order := policy.pd_order()
+	for i in order.size():
+		var r: HBoxContainer = row.call("  %d. %s" % [i + 1, ShipPolicy.PD_KIND_NAMES[order[i]]])
+		var kind := order[i]
+		var up := _button("↑ earlier", func() -> void: command.emit(&"pd_order_up", String(kind)))
+		up.disabled = i == 0
+		r.add_child(up)
+	stepper.call(row.call("Engagement range"), "pd_range_m", policy.pd_range_m, 250.0, HudFormat.distance(policy.pd_range_m))
+	stepper.call(row.call("Ammo reserve"), "pd_reserve_fraction", policy.pd_reserve_fraction, 0.05,
+		"%d %% (first priority only)" % roundi(policy.pd_reserve_fraction * 100.0))
+	_policy_box.add_child(_heading("AUTO-SALVO (selected contact)", CyberTheme.AMBER))
+	var sv: HBoxContainer = row.call("Auto-salvo")
+	sv.add_child(_button("ON" if policy.salvo_enabled else "OFF", func() -> void: set_value.call("salvo_enabled", not policy.salvo_enabled)))
+	stepper.call(row.call("Lock quality ≥"), "salvo_min_confidence", policy.salvo_min_confidence, 0.1,
+		"%d %%" % roundi(policy.salvo_min_confidence * 100.0))
+	stepper.call(row.call("Range from"), "salvo_min_range_m", policy.salvo_min_range_m, 1000.0, HudFormat.distance(policy.salvo_min_range_m))
+	stepper.call(row.call("Range to"), "salvo_max_range_m", policy.salvo_max_range_m, 1000.0, HudFormat.distance(policy.salvo_max_range_m))
+	var mode: HBoxContainer = row.call("Warheads")
+	mode.add_child(_button(MissileSalvo.MODE_NAMES[clampi(policy.salvo_mode, 0, MissileSalvo.MODE_NAMES.size() - 1)],
+		func() -> void: set_value.call("salvo_mode", (policy.salvo_mode + 1) % MissileSalvo.Mode.size()), CyberTheme.AMBER))
+	stepper.call(row.call("Missiles a salvo"), "salvo_count", float(policy.salvo_count), 1.0,
+		str(policy.salvo_count) if policy.salvo_count > 0 else "all")
+	stepper.call(row.call("Interval"), "salvo_interval_s", policy.salvo_interval_s, 5.0, "%.0f s" % policy.salvo_interval_s)
+	_policy_box.add_child(_heading("AUTO-FIRE (guns)", CyberTheme.AMBER))
+	var af: HBoxContainer = row.call("Auto-fire")
+	af.add_child(_button("ON" if policy.autofire_enabled else "OFF", func() -> void: set_value.call("autofire_enabled", not policy.autofire_enabled)))
+	stepper.call(row.call("Tolerance"), "autofire_tolerance_deg", policy.autofire_tolerance_deg, 0.1, "%.1f°" % policy.autofire_tolerance_deg)
+	_policy_box.add_child(_caption_label("Auto-fire pulls the trigger while your aim is on the lead within the tolerance and you hold a lock; discipline TIGHT fires only at hostile contacts, HOLD never."))
 
 
 func _refresh_crew(sys: ShipSystems) -> void:

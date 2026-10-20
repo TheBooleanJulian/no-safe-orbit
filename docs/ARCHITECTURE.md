@@ -150,17 +150,70 @@ speed, apsides and prograde use the full PCI state.
 ## Real sky (CelestialFrame)
 
 `CelestialFrame` ties the simulation's planet-centred inertial (PCI) axes to the
-real sky for a scenario date (`Main.SCENARIO_EPOCH_UTC`, 2026-10-19 12:00 UTC):
+real sky for a scenario date (`Main.SCENARIO_EPOCH_UTC`, 2026-10-19 12:00 UTC)
+and the location's central body:
 
-- ICRS/J2000 → PCI: celestial north → PCI −X, vernal equinox → PCI +Y, then a
-  twist about the pole that puts the Sun where the scenario wants it relative to
-  the start point (15° behind zenith → ~24 min to sunset). The start orbit
-  (PCI +Y, moving −Z) is therefore a **prograde equatorial** orbit.
+- ICRS/J2000 → PCI: the body's equatorial frame (its north pole, and its
+  equator's ascending node on the ICRS equator, from the `OrbitalBody`'s IAU
+  pole) maps with the body's north → PCI −X, then a twist about the pole that
+  puts the Sun where the scenario wants it relative to the start point (15°
+  behind zenith → ~24 min to sunset). The start orbit (PCI +Y, moving −Z) is
+  therefore a **prograde equatorial** orbit about any body. For Earth (pole
+  ICRS +Z) this is the original mapping, tested against its old numbers.
+- The Moon's pole and prime meridian (Archinal et al. 2018) include only the
+  largest periodic term (E1, the node's 18.6-year cycle), evaluated at the
+  epoch: the pole lands 1.51° from the ecliptic pole (Cassini state ~1.54°).
 - Sun direction and Greenwich sidereal time use the Astronomical Almanac
   low-precision formulas (Sun ~0.01°), tested against Meeus's worked examples.
   Precession, nutation and aberration are ignored (< 0.4° since J2000).
-- The Earth-fixed frame (`pci_to_ecef`) turns at the sidereal rate; the sky
-  shader samples the Blue Marble map with it.
+- The body-fixed frame (`pci_to_body_fixed`, W = W0 + rate · days) turns at the
+  body's sidereal rate (for Earth W = GMST − 90°); the sky shader samples the
+  body's `surface_map` with it.
+
+## Locations and the map (2026-10-20)
+
+- `Location` (`data/locations/*.tres`, listed in `Location.FILES` so exports
+  find them): station name, `OrbitalBody`, circular start altitude, map
+  position and colour. Earth orbit (400 km, Earth Shipyard) and lunar orbit
+  (100 km, Lunar Shipyard).
+- `OrbitalBody` carries gravity (μ, radius), the entry interface (an
+  atmosphere's top, or the terrain floor for an airless body:
+  `has_atmosphere`, `entry_word()`), IAU rotation and the surface map.
+- `PlayerProfile` (schema 7) keeps `location` (where the vessel is docked),
+  `known_locations` (Earth and the Moon from the start; brokers sell more in
+  Milestone 13) and `encounter_size` (1–3). `relocate()` refuses unknown ids.
+- Shipyard HANGAR › MAP (`SystemMap`): click a body → `relocate`, save; three
+  toggle buttons set the encounter size. The route button beside LAUNCH
+  shows both and opens the tab.
+- `Main` reads the location in `_ready`: central body and start orbit,
+  celestial frame, sky (`PlanetSky.configure(body)`: radius, entry radius,
+  air on/off, surface map), stars' occlusion, eclipse, station names (HUD
+  `station_name`). `EnemyFactory.encounter_size(chosen)` clamps the pick.
+
+## Frame-time performance (2026-10-20)
+
+Measured with `tools/profile_frames.gd` (opens a window; per-section times
+from `Main.frame_ms`, per-phase tick times from `WorldSimulation.take_phase_ms`,
+renderer CPU/GPU time, spike frames, a mesh census):
+
+- **Rounds broadphase:** a uniform grid (256 m cells) of ships, rebuilt each
+  tick with each ship's swept box padded by the fastest round's step; a
+  round tests only the ships in its cell.
+- **Caches with explicit invalidation:** `ShipSystems.disabled_reason()`
+  (every state-changing entry point calls `_state_changed()`), docking hull
+  ports per ship (blueprint-only). `Docking.best()` ranks pairs on range and
+  alignment and assesses only the winner.
+- **HUD:** the orbit path (~260 Kepler solves) and the orbit panel refresh
+  every 200 ms; between refreshes the path is shifted by the render
+  origin's movement (`HudOverlay.orbit_offset`).
+- **Merged meshes:** `ShipView` hides each module and plate node and draws
+  them as one `ArrayMesh` (a surface per material) built from cached
+  ship-space triangle lists (`ShipModelBuilder.flat_arrays`); wear and
+  wrecks edit the hidden nodes, recompute only those pieces' triangles and
+  concatenate. External systems' fixed pieces are merged at build time
+  (`_merge_static`); pivots, turntables and beacons stay separate.
+  `MissileView` shares one body mesh per side.
+- **Logging:** `GameLog.hold(true)` during flight; Main flushes once a frame.
 
 ## Rendering at planetary scale
 
@@ -398,6 +451,46 @@ bounding-box hit test.
   happened to the HUD and the shipyard. Schema 5 adds `tutorial` and
   `campaign` (a pilot with history is not offered the tutorial).
 
+## Encounters, policies and point defence (Milestone 10)
+
+- **`Encounter`** (`scripts/simulation/encounter.gd`) is the contact
+  registry: `Contact`s by stable id (slots `target_01…`; the lead keeps
+  `Main.TARGET_ID`, a slot is reused once its ship is retired) and the
+  selected one (`cycle`, `select`, `ensure_selection`, `live`). A
+  **`Contact`** holds what the fight keeps per enemy ship: our track of it
+  and its of us, hostility, air wing, `ShipPolicy`, salvo in flight,
+  arriving / beaten / prize state, re-board timer.
+- **`Main`** drives every live contact each frame (`_drive_contact`):
+  captured → hold, break free from our gangway, board a beaten player (one
+  contact at a time), arrive to its role's standoff, else fight its role.
+  Selection-based actions (salvage, gangway, grapple, boarding, missiles,
+  lead) use `encounter.selected`; the single-target names the HUD and tests
+  use (`target_hostile`, `track`, `_target_arriving`, `target_wing`) are
+  properties of the selected contact. The next encounter
+  (`EnemyFactory.encounter_size`) arrives when no contact is left alive.
+- **`ShipPolicy`** (Resource, `data/policies/*.tres`): discipline, PD (order,
+  range, reserve), auto-salvo, auto-fire, role and focus fire. The player's
+  is `ShipInstance.policy` (schema 6); `trigger(manual, …)` = manual OR
+  auto-fire, so automation never blocks the player. `_apply_automation`
+  feeds the aim error against the lead (`aim_error_deg`) and starts
+  auto-salvos. Enemies: `EnemyFactory.policy(mission, index)` — the
+  Standard preset with a role by place; `GunneryAI.combat(…, policy)` uses
+  its keep range, flank bias and discipline; `GunneryAI.choose_prey` skips
+  derelicts and focuses fire.
+- **Point defence** (`WorldSimulation.pd_candidates`, `_update_point_defence`):
+  hostile missiles, craft and threatening rounds sorted by the policy's
+  rank then distance; each mount takes the first allowed (range, reserve)
+  in its arc. Flak (`ProjectileState.pd_target_round`) kills the round it
+  was fired at when it passes within 1.5 m during a tick
+  (`_intercept_rounds`). `ShipState.side` keeps PD off its own side.
+- **Numbers** (`tools/bench_sim.gd`, `tools/bench_hull.gd`): a 3-hostile
+  encounter with wings and salvos runs 3.7 ms mean per tick, 17.6 ms worst
+  (1 tick in 3,600 over 8 ms — a warhead strike: penetration walk, blast and
+  a flight-config recompute). A 300-module hull: grid 3 ms, stats 6 ms,
+  validation 8 ms, systems 91 ms (crew roster 115 ms of O(berths × rooms)),
+  recompute 0.2 ms, power 1 ms, hit test 0.16 ms per round, full-length
+  penetration 7 ms.
+
 ## Salvos, wrecks and crew views (Milestone 9)
 
 - **`MissileSalvo`**: one press of M = warhead groups (`groups_for(mode,
@@ -553,7 +646,11 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 
 | Simplification | Consequence | Revisit |
 |---|---|---|
-| Spherical Earth for gravity; no J2, no third bodies | Orbits never precess | If missions need ground tracks or long-duration accuracy |
+| Spherical central body for gravity; no J2, no third bodies (no Earth pull in lunar orbit) | Orbits never precess | If missions need ground tracks or long-duration accuracy |
+| Airless bodies: the floor is a sphere at the highest terrain (11 km on the Moon), no terrain model | Flying low over a lunar plain is as fatal as hitting a summit | If low passes or landings are wanted |
+| Moving between stations is free and instant (shipyard map) | Location is a free choice | Milestone 13 (jump fuel, brokers) |
+| Only the central body is drawn in the sky (no Earth from lunar orbit); the Sun's direction is Earth's (≤ 0.15° off at the Moon) | The lunar sky lacks Earth | Later (sky bodies) |
+| Lunar rotation uses the IAU pole and W with only the largest periodic term (others ~0.3°) | Lunar geography is ~0.3° off | Not needed |
 | No atmosphere/drag: crossing 100 km = entry, vessel removed (design decision) | Skimming 100–120 km has no cost; dipping to 99 km is fatal | If aerobraking or reentry gameplay is wanted |
 | Rounds inherit the ship's CoM velocity; muzzle velocity from rotation (ω × r) ignored | Firing while turning hard is slightly more accurate than reality | When weapon mounts gain turrets |
 | Fire control assumes straight-line relative motion, no target acceleration | A manoeuvring target defeats the lead | Missiles / AI (M6–M7) |
@@ -579,7 +676,11 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | No decoys, chaff or electronic warfare against missiles | Point defence, guns and range are the only counterplay | EW pass |
 | Nuclear effects simplified: one dose number, armour as a divisor, ship-wide heat, no blast wave, no fallout or lasting radiation | A burst is a sharp, explainable event | If a strategic weapon needs more depth |
 | EMP exposure falls with the square of the distance; no line-of-sight shielding by other ships | A ship cannot hide behind another | Later |
-| Missions are a fixed chain of four goals, then patrols; one contact at a time | Little variety after the chain | Campaign content |
+| Missions are a fixed chain of four goals, then patrols | Little variety after the chain | Campaign content (M13) |
+| An encounter turns hostile together, and a contact engages only after the player has detected it | Ships can't be picked off one by one while the rest stay passive | If stealth or diplomacy arrive |
+| Enemy roles are fixed by place in the encounter (closer, standoff, flanker); no coordinated manoeuvres | Encounters feel the same shape each time | Later AI work |
+| Point-defence flak: a round within 1.5 m of a heavy slug (≥ 2 kg, < 1.5 km/s closing) destroys it; small and fast rounds can't be tracked | Heavy-cannon fire can be thinned by PD; autocannon and railgun fire can't | If PD lasers or interceptors arrive |
+| Auto-fire judges the aim against the primary gun's lead only | Mixed batteries auto-fire on the primary gun's solution | Per-mount fire control |
 | The escort's courier is a craft-like hull (hull points, no systems) on a fixed drift | It can't evade or be repaired | If escorts become a mainstay |
 
 ## Testing
@@ -590,8 +691,9 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 - `tests/smoke/smoke_main.gd` — boots the real main scene and drives it via
   InputMap actions, including the hostile target hitting the player.
 - `tests/smoke/smoke_shipyard.gd` — shipyard end to end: real mouse click on
-  the deck editor, undo/redo by key, validation, save/reload, launch into
-  flight, B back.
+  the deck editor, undo/redo by key, validation, save/reload, the map (click
+  the Moon, pick two ships), launch into lunar orbit, B back to the Lunar
+  Shipyard.
 - `tests/smoke/smoke_campaign.gd` — the Milestone 4 exit test: fight, salvage
   with G, dock damaged with B, repair and refit in the shipyard, relaunch;
   then checks the profile on disk.

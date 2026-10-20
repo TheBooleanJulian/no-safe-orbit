@@ -219,6 +219,7 @@ func launch_missile(shooter_id: StringName, target_id: StringName, warhead: int 
 		m.missile = cfg
 		m.missile_owner = shooter_id
 		m.missile_target = target_id
+		m.side = s.side
 		add_ship(m)
 		missiles.append(m)
 	s.systems.missiles_used[e.id] = int(s.systems.missiles_used.get(e.id, 0)) + n
@@ -497,14 +498,35 @@ func take_hit_events() -> Array[HitEvent]:
 	return events
 
 
+## Time spent per phase of step() (ms, summed since the last
+## take_phase_ms()), for the profiling tools.
+var _phase_ms := {}
+var _phase_t0 := 0
+
+
+func _phase(name: String) -> void:
+	var now := Time.get_ticks_usec()
+	_phase_ms[name] = float(_phase_ms.get(name, 0.0)) + (now - _phase_t0) / 1000.0
+	_phase_t0 = now
+
+
+func take_phase_ms() -> Dictionary:
+	var out := _phase_ms
+	_phase_ms = {}
+	return out
+
+
 ## Run exactly one fixed tick.
 func step() -> void:
+	_phase_t0 = Time.get_ticks_usec()
 	if frame != null:
 		frame.step(fixed_dt)
 	var spawned: Array[ProjectileState] = []
 	for wing in wings:
 		wing.update(self, fixed_dt)
+	_phase("wings")
 	_guide_missiles()
+	_phase("guidance")
 	for id in _ship_order:
 		var ship: ShipState = _ships[id]
 		ship.snapshot_previous()
@@ -518,20 +540,27 @@ func step() -> void:
 		_resolve_hold(input)
 		ShipDynamics.step(ship, input, fixed_dt, frame)
 		_update_cannon(ship, input, spawned)
+		_phase("ships")
 		_update_point_defence(ship, spawned)
+		_phase("point_defence")
 		if ship.systems != null and ship.systems.tick(ship, fixed_dt):
 			ship.config = ship.systems.effective_config()
+		_phase("systems")
 	_step_missiles()
+	_phase("missiles")
 	_step_collisions()
+	_phase("collisions")
 	_step_links()
 	tick += 1
 	sim_time = tick * fixed_dt
 	_step_rounds()
+	_phase("rounds")
 	if frame != null:
 		_step_far_rounds()
 	_rounds.append_array(spawned)  # fired at end of tick; first move next tick
 	_check_entry_interface()
 	_rebase_if_needed()
+	_phase("other")
 
 
 ## Feed real elapsed time; runs whole fixed steps and returns the
@@ -641,19 +670,98 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 
 
 ## Point-defence range (m) and how close to the lead a barrel must be (deg).
+## The engagement range when a ship has no policy (m), and how close a
+## mount must be on its lead to fire (°).
 const PD_RANGE_M := 2000.0
 const PD_READY_DEG := 1.5
+## A flak round bursting this close to the round it was fired at destroys
+## it (m). Point defence can only track big, slow slugs — at least
+## PD_ROUND_MIN_KG and closing slower than PD_ROUND_MAX_CLOSING_MPS (the
+## heavy cannon's 4 kg rounds): autocannon rounds are too small to track,
+## railgun slugs too fast.
+const PD_FLAK_RADIUS_M := 1.5
+const PD_ROUND_MIN_KG := 2.0
+const PD_ROUND_MAX_CLOSING_MPS := 1500.0
+## A hostile round is a threat if it will pass within the ship's hit box
+## reach plus this margin (m) inside this horizon (s).
+const PD_THREAT_MARGIN_M := 10.0
+const PD_THREAT_HORIZON_S := 6.0
+## Rounds destroyed by point-defence flak (all ships), for tests and stats.
+var rounds_intercepted: int = 0
+static var _default_policy: ShipPolicy
 
 
-## Point defence: each working PD turret picks the nearest hostile craft in
-## range (any craft that isn't this ship's own), trains on its lead and fires
-## on its own — gangway or not (automatic defences).
+func _policy_of(ship: ShipState) -> ShipPolicy:
+	if ship.policy != null:
+		return ship.policy
+	if _default_policy == null:
+		_default_policy = ShipPolicy.preset("Defensive")
+	return _default_policy
+
+
+## Is `other` (a craft or missile) fair game for `ship`'s point defence?
+## Never its own craft or missiles, nor its own side's, nor a derelict.
+func _hostile_to(ship: ShipState, other: ShipState) -> bool:
+	if other.derelict or _is_craft_of(other.id, ship.id) or other.missile_owner == ship.id or _is_craft_of(other.missile_owner, ship.id):
+		return false
+	return ship.side == &"" or other.side == &"" or ship.side != other.side
+
+
+## Is a round a threat `ship`'s point defence can engage: a big, slow slug,
+## not its own side's, not flak, on a course to pass within its hit box
+## reach soon?
+func _round_threatens(ship: ShipState, shot: ProjectileState) -> bool:
+	# Cheapest checks first: most rounds are too small (autocannon, flak).
+	if shot.mass_kg() < PD_ROUND_MIN_KG or shot.pd_target_round >= 0:
+		return false
+	if (shot.velocity - ship.velocity).length_squared() > PD_ROUND_MAX_CLOSING_MPS * PD_ROUND_MAX_CLOSING_MPS \
+			or shot.shooter_id == ship.id or _is_craft_of(shot.shooter_id, ship.id):
+		return false
+	var shooter := get_ship(shot.shooter_id)
+	if shooter != null and ship.side != &"" and shooter.side == ship.side:
+		return false
+	var ca := RelativeMotion.closest_approach(ship.position, ship.velocity, shot.position, shot.velocity)
+	return ca.time > 0.0 and ca.time < PD_THREAT_HORIZON_S \
+		and ca.miss < ship.config.hit_box_half_extents.length() + PD_THREAT_MARGIN_M
+
+
+## What `ship`'s point defence could engage now — hostile missiles, craft
+## and rounds on a collision course — as {kind, rank, pos, vel, id, round,
+## d}, in the policy's order, nearest first within a kind.
+func pd_candidates(ship: ShipState) -> Array[Dictionary]:
+	var policy := _policy_of(ship)
+	var out: Array[Dictionary] = []
+	for id in _ship_order:
+		var other: ShipState = _ships[id]
+		if other == ship or not other.is_active() or other.systems != null or other.config.hull_hp <= 0.0 or not _hostile_to(ship, other):
+			continue
+		var kind := &"missile" if other.missile != null else &"craft"
+		out.append({"kind": kind, "rank": policy.pd_rank(kind), "pos": other.position, "vel": other.velocity,
+			"id": String(other.id), "round": -1, "d": other.position.distance_to(ship.position)})
+	if policy.pd_rank(&"round") >= 0:
+		for shot in _rounds:
+			if _round_threatens(ship, shot):
+				out.append({"kind": &"round", "rank": policy.pd_rank(&"round"), "pos": shot.position, "vel": shot.velocity,
+					"id": "round:%d" % shot.id, "round": shot.id, "d": shot.position.distance_to(ship.position)})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.rank) < int(b.rank) or (int(a.rank) == int(b.rank) and float(a.d) < float(b.d)))
+	return out
+
+
+## Point defence: each working PD turret takes the first candidate its
+## policy allows (order, range, ammunition reserve) that is in its arc,
+## trains on its lead and fires on its own — gangway or not (automatic
+## defences). Flak fired at a round remembers it (`pd_target_round`).
 func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> void:
 	var cfg := ship.config
 	if cfg.pd_gun == null or ship.systems == null or ship.derelict:
 		return
+	var policy := _policy_of(ship)
 	var gun := cfg.pd_gun
 	var inv := ship.orientation.inverse()
+	var candidates: Array[Dictionary] = []
+	if policy.pd_enabled:
+		candidates = pd_candidates(ship)
 	for k in cfg.pd_mounts_body.size():
 		ship.pd_cooldowns[k] = maxf(ship.pd_cooldowns[k] - fixed_dt, 0.0)
 		ship.pd_targets[k] = ""
@@ -663,26 +771,26 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		var n := cfg.pd_normals_body[k]
 		var muzzle := cfg.pd_mounts_body[k] + n * 0.6
 		var muzzle_world := ship.position + ship.orientation * muzzle
-		var best: ShipState
-		for id in _ship_order:
-			var other: ShipState = _ships[id]
-			if other == ship or not other.is_active() or other.systems != null or other.config.hull_hp <= 0.0 or _is_craft_of(id, ship.id) \
-					or other.missile_owner == ship.id or _is_craft_of(other.missile_owner, ship.id):
+		var chosen := {}
+		var want := Vector3.ZERO
+		for c in candidates:
+			if not policy.pd_allows(c.kind, ship.pd_rounds[k], gun.magazine_rounds) \
+					or (c.pos as Vector3).distance_to(muzzle_world) > policy.pd_range_m:
 				continue
-			if other.position.distance_to(muzzle_world) < PD_RANGE_M and (best == null or other.position.distance_squared_to(muzzle_world) < best.position.distance_squared_to(muzzle_world)):
-				best = other
-		if best == null:
+			var rel: Vector3 = c.pos - muzzle_world
+			var rel_v: Vector3 = c.vel - ship.velocity
+			var t := FireControl.intercept_time(rel, rel_v, gun.muzzle_velocity_mps)
+			if t < 0.0:
+				continue
+			want = (inv * FireControl.lead_point(rel, rel_v, t)).normalized()
+			if want.dot(n) < TURRET_ARC_MIN_DOT:
+				continue  # under its face: another mount's job
+			chosen = c
+			break
+		if chosen.is_empty():
 			ship.pd_dirs[k] = _rotate_toward(ship.pd_dirs[k], n, deg_to_rad(gun.traverse_deg_s) * fixed_dt)
 			continue
-		var rel := best.position - muzzle_world
-		var rel_v := best.velocity - ship.velocity
-		var t := FireControl.intercept_time(rel, rel_v, gun.muzzle_velocity_mps)
-		if t < 0.0:
-			continue
-		var want := (inv * FireControl.lead_point(rel, rel_v, t)).normalized()
-		if want.dot(n) < TURRET_ARC_MIN_DOT:
-			continue  # under its face: another mount's job
-		ship.pd_targets[k] = String(best.id)
+		ship.pd_targets[k] = str(chosen.id)
 		var dir := _rotate_toward(ship.pd_dirs[k], want, deg_to_rad(gun.traverse_deg_s) * fixed_dt)
 		ship.pd_dirs[k] = dir
 		if ship.pd_cooldowns[k] > 1e-9 or rad_to_deg(dir.angle_to(want)) > PD_READY_DEG or _hull_in_the_way(ship, muzzle, dir):
@@ -695,6 +803,7 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		shot.position = muzzle_world
 		shot.prev_position = shot.position
 		shot.velocity = ship.velocity + ship.orientation * _scatter(dir, deg_to_rad(gun.dispersion_deg)) * gun.muzzle_velocity_mps
+		shot.pd_target_round = int(chosen.round)
 		spawned.append(shot)
 		ship.pd_rounds[k] -= 1
 		ship.pd_cooldowns[k] += gun.fire_interval_s()
@@ -973,8 +1082,46 @@ func _collision_damage(ship: ShipState, point: Vector3, energy_j: float) -> Pack
 
 ## Rounds never expire. Near the engagement they are integrated like ships;
 ## far away they coast analytically (see _step_far_rounds).
+## Rounds broadphase: every active ship in each grid cell its reach
+## overlaps — hit box, plus how far it and the fastest round move in a tick —
+## rebuilt once per tick; a round tests only the ships in its segment's
+## midpoint cell instead of every ship (rounds × ships was the tick's cost).
+const BROAD_CELL_M := 256.0
+var _broad: Dictionary = {}  # Vector3i -> Array[ShipState]
+const _NO_SHIPS: Array[ShipState] = []
+
+
+func _broad_cell(p: Vector3) -> Vector3i:
+	return Vector3i(floori(p.x / BROAD_CELL_M), floori(p.y / BROAD_CELL_M), floori(p.z / BROAD_CELL_M))
+
+
+func _build_broadphase(round_step_m: float) -> void:
+	_broad.clear()
+	for id in _ship_order:
+		var ship: ShipState = _ships[id]
+		if not ship.is_active():
+			continue
+		var center := (ship.position + ship.prev_position) * 0.5
+		var r := ship.config.hit_box_center.length() + ship.config.hit_box_half_extents.length() \
+			+ ship.position.distance_to(ship.prev_position) + round_step_m + 1.0
+		var lo := _broad_cell(center - Vector3.ONE * r)
+		var hi := _broad_cell(center + Vector3.ONE * r)
+		for x in range(lo.x, hi.x + 1):
+			for y in range(lo.y, hi.y + 1):
+				for z in range(lo.z, hi.z + 1):
+					var key := Vector3i(x, y, z)
+					if not _broad.has(key):
+						var list: Array[ShipState] = []
+						_broad[key] = list
+					(_broad[key] as Array[ShipState]).append(ship)
+
+
 func _step_rounds() -> void:
 	var half_dt := fixed_dt * 0.5
+	var fastest := 0.0
+	for shot in _rounds:
+		fastest = maxf(fastest, shot.velocity.length_squared())
+	_build_broadphase(sqrt(fastest) * fixed_dt * 1.05)
 	var entry_r2 := 0.0
 	if frame != null:
 		entry_r2 = body.entry_radius_m() * body.entry_radius_m()
@@ -1004,8 +1151,38 @@ func _step_rounds() -> void:
 			continue  # no orbit to come back on: gone for good
 		survivors.append(shot)
 	_rounds = survivors
+	_intercept_rounds()
 	_rounds.append_array(_continuing)
 	_continuing.clear()
+
+
+## Flak: a point-defence round that came within PD_FLAK_RADIUS_M of the
+## round it was fired at during this tick (straight-line relative motion
+## over the tick) destroys it, and is spent.
+func _intercept_rounds() -> void:
+	var by_id := {}
+	var flak: Array[ProjectileState] = []
+	for s in _rounds:
+		if s.pd_target_round >= 0:
+			flak.append(s)
+	if flak.is_empty():
+		return
+	for s in _rounds:
+		by_id[s.id] = s
+	var dead := {}
+	for f in flak:
+		var t: ProjectileState = by_id.get(f.pd_target_round)
+		if t == null or dead.has(t.id) or dead.has(f.id):
+			continue
+		var d0 := f.prev_position - t.prev_position
+		var dd := (f.position - t.position) - d0
+		var u := clampf(-d0.dot(dd) / maxf(dd.length_squared(), 1e-9), 0.0, 1.0)
+		if (d0 + dd * u).length() <= PD_FLAK_RADIUS_M:
+			dead[t.id] = true
+			dead[f.id] = true
+			rounds_intercepted += 1
+	if not dead.is_empty():
+		_rounds = _rounds.filter(func(s: ProjectileState) -> bool: return not dead.has(s.id))
 
 
 ## Far rounds: each is re-checked once per simulated second (spread over the
@@ -1057,10 +1234,10 @@ func _to_far(shot: ProjectileState) -> void:
 func _resolve_round_hits(shot: ProjectileState) -> bool:
 	var best_t := INF
 	var best_ship: ShipState = null
-	for id in _ship_order:
-		if id == shot.shooter_id and shot.age_s < ARM_TIME_S:
+	var nearby: Array[ShipState] = _broad.get(_broad_cell((shot.prev_position + shot.position) * 0.5), _NO_SHIPS)
+	for ship in nearby:
+		if ship.id == shot.shooter_id and shot.age_s < ARM_TIME_S:
 			continue  # leaving its own muzzle
-		var ship: ShipState = _ships[id]
 		if ship.missile_owner == shot.shooter_id:
 			continue  # its own side's missile
 		if not ship.is_active():

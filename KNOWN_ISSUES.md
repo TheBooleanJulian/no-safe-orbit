@@ -14,17 +14,36 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **EW jamming exists only as a hook** for craft communications; there are
   no decoys or electronic warfare against missiles yet — the counterplay is
   point defence, guns and range.
+- **Encounters of two and three ships are hard** (Milestone 10): focus fire
+  and salvos from three ships wrecked the player's frigate within ~30 s of
+  game time in a test render at mission 7. Since 2026-10-20 the player picks
+  1, 2 or 3 ships on the shipyard map; enemy loadouts still grow with the
+  mission number. Salvo counts and intervals are first guesses.
+- **Locations are new** (2026-10-20): the Lunar Shipyard has the same
+  crew, quartermaster and upgrades as Earth's (per-station stock is
+  Milestone 13); moving between stations is free; the lunar sky shows no
+  Earth (only the central body is drawn).
+- **With the Tab drawer open the alert banner overlaps the top of the
+  moved target card** (layout; Pass A redesigns the alerts).
+- **Two looping audio streams are reported as leaked at exit** in headless
+  runs (the engine and RCS loops still playing when the test quits). Harmless.
+- **A capital-sized hull hitches on spawn**: `ShipSystems.create` takes
+  ~90 ms for a 300-module hull, almost all of it `CrewRoster.default_for`
+  (it scans every room for every berth). Must be fixed before capital
+  ships (Milestone 15); everything else scales (see ROADMAP M10).
 - **Missions and the tutorial are new** (Milestone 8): rewards and the
   courier's toughness are first guesses; the tutorial is verified by tests
   and the smoke run, not yet by a new player.
-- **Only the simulation is profiled** (`tools/bench_sim.gd`, ~1 ms a tick
-  with 200+ rounds; rare 10–15 ms ticks when many hits land at once).
-  Rendering cost depends on the GPU and isn't measured by the checks.
+- **Frame time is profiled by hand, not by the checks**:
+  `tools/profile_frames.gd` needs a window and a GPU (75 fps mean, 95th
+  percentile 20 ms on an RTX 3060 Ti against three ships, 50 missiles and
+  ~380 rounds); `tools/bench_sim.gd` (in the unit tests) covers the
+  simulation alone. A frame where many hits land at once can still take
+  ~50 ms (catch-up ticks).
 - **Missiles are new** (Milestones 7 and 9): ranges, prices, warhead
   strengths, the saturation swarm and the enemy's firing interval are first
   guesses, covered by tests, not yet by play. **M** and **,** have no
-  gamepad default (every pad button is taken). Enemies still fire single
-  missiles, not salvos.
+  gamepad default (every pad button is taken).
 - **Wrecks** drift away at 4 m/s and only the four most recent are kept;
   they can still be shot but not salvaged again.
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the
