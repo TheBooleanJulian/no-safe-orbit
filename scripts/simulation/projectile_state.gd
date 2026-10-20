@@ -19,6 +19,8 @@ var prev_position: Vector3 = Vector3.ZERO
 var age_s: float = 0.0
 ## Deflected off armour (drawn as a spark, not a tracer).
 var ricochet: bool = false
+## A point-defence flak round aimed at round `pd_target_round` (-1 = none).
+var pd_target_round: int = -1
 
 ## Far-mode state: PCI position/velocity at sim time `far_epoch`.
 var far: bool = false

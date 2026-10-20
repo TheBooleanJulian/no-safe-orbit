@@ -62,6 +62,9 @@ var _jump_flash: ColorRect
 ## under the alert banner; and the escort's courier, marked like a craft.
 var guide_lines := PackedStringArray()
 var escort_id: StringName = &""
+## The encounter (set by Main): the target card lists the other contacts
+## compactly; the radar and the markers show them all.
+var encounter: Encounter
 ## Beaten contacts left drifting, marked grey (set by Main).
 var wreck_ids: Array[StringName] = []
 var guide_label: RichTextLabel
@@ -441,6 +444,12 @@ func ticker_text() -> String:
 	return ticker_label.text
 
 
+## A new target was selected: its card starts clean.
+func reset_target() -> void:
+	_outgoing = null
+	_last_hit_time = -INF
+
+
 func reset() -> void:
 	_last_hit_time = -INF
 	_hits_scored = 0
@@ -539,6 +548,7 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	overlay.queue_redraw()
 
 	_update_radar(world, player, target if contact else null)
+	_update_contact_markers(world, player, alpha, render_origin)
 	damage_map.systems = player.systems
 	# The docking camera takes the damage map's corner while it is up.
 	damage_map.visible = not overview.visible and not docking_cam.visible
@@ -551,6 +561,8 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	if overview.visible:
 		overview.vessel = profile.vessel if profile != null else null
 		overview.profile = profile
+		overview.contacts = contact_rows(world, player)
+		overview.policy = player.policy
 		var link := world.link_for(player.id)
 		overview.update_view(player, target, world.boarding_for(link) if link != null else null, boarding_party_size, t,
 			player_wing, contact and (player_wing == null or player_wing.has_close_look(world, target)))
@@ -928,7 +940,60 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 	var hit_age := t - _last_hit_time
 	if hit_age < 3.0 and _outgoing != null:
 		lines.append("HIT     %s  (+%.1f s)  [P] log" % [_outgoing.headline(), hit_age])
+	lines.append_array(contact_lines(world, player))
 	target_label.text = "\n".join(lines)
+
+
+## The encounter's other ships, one compact line each (U selects the next):
+## "OTHERS  ◆ TGT-07B SHRIKE 4.2 km hostile standoff".
+func contact_lines(world: WorldSimulation, player: ShipState) -> PackedStringArray:
+	var out := PackedStringArray()
+	if encounter == null:
+		return out
+	var others := encounter.live(world).filter(func(c: Contact) -> bool: return c.id != encounter.selected)
+	for i in others.size():
+		var c: Contact = others[i]
+		var s := world.get_ship(c.id)
+		var where := "—"
+		if c.track.detected:
+			var pos := s.position if c.track.in_contact else c.track.estimated_position(player, world.sim_time)
+			where = ("" if c.track.in_contact else "~") + HudFormat.distance(player.position.distance_to(pos))
+		var state := "disabled" if s.systems != null and s.systems.is_disabled() else ("hostile" if c.hostile else "passive")
+		out.append("%s %s %s %s %s %s" % ["OTHERS " if i == 0 else "       ",
+			CyberTheme.GLYPH_CRITICAL if c.hostile else CyberTheme.GLYPH_OFFLINE, s.display_name, where, state,
+			ShipPolicy.ROLE_NAMES[c.policy.role] if c.policy != null else ""])
+	if not out.is_empty():
+		out.append("        [U] next target")
+	return out
+
+
+## The encounter for the drawer: [{id, name, range, state, role, selected}].
+func contact_rows(world: WorldSimulation, player: ShipState) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if encounter == null:
+		return out
+	for c in encounter.live(world):
+		var s := world.get_ship(c.id)
+		out.append({"id": String(c.id), "name": s.display_name,
+			"range": HudFormat.distance(player.position.distance_to(s.position)) if c.track.detected else "not detected",
+			"state": "disabled" if s.systems != null and s.systems.is_disabled() else ("hostile" if c.hostile else "passive"),
+			"role": ShipPolicy.ROLE_NAMES[c.policy.role] if c.policy != null else "", "selected": c.id == encounter.selected})
+	return out
+
+
+## World markers for the encounter's other ships (the selected one has the
+## target bracket).
+func _update_contact_markers(world: WorldSimulation, player: ShipState, alpha: float, render_origin: Vector3) -> void:
+	if encounter == null:
+		return
+	for c in encounter.live(world):
+		if c.id == encounter.selected or not c.track.detected:
+			continue
+		var s := world.get_ship(c.id)
+		var pos := s.interpolated_position(alpha) if c.track.in_contact else c.track.estimated_position(player, world.sim_time)
+		overlay.craft_markers.append({"pos": pos - render_origin,
+			"label": "%s %s" % [s.display_name.get_slice(" ", 0), HudFormat.distance(player.position.distance_to(pos))],
+			"hostile": c.hostile, "selected": false})
 
 
 ## Grappling arm: holding (and what it has siphoned), ready, or how far.
@@ -1316,19 +1381,32 @@ func _add_marker(orbit: OrbitElements, origin_pci: Vec3d, angle: float, text: St
 
 ## Radar contact at the measured position, or the dead-reckoned estimate
 ## (dimmed) when the track is not fresh.
+## Every detected contact on the radar; the selected one bright, the others
+## dimmer; the scale fits the selected one.
 func _update_radar(world: WorldSimulation, player: ShipState, target: ShipState) -> void:
 	radar.contacts = []
-	if target != null:
-		var inv := player.orientation.inverse()
-		var measured := track == null or track.in_contact
-		var pos := target.position if measured else track.estimated_position(player, world.sim_time)
-		var vel := target.velocity if measured else track.last_velocity
+	var inv := player.orientation.inverse()
+	var entries: Array = []
+	if encounter != null:
+		for c in encounter.live(world):
+			if c.track.detected:
+				entries.append([world.get_ship(c.id), c.track, c.id == encounter.selected])
+	elif target != null:
+		entries.append([target, track, true])
+	for e in entries:
+		var ship: ShipState = e[0]
+		var tr: SensorTrack = e[1]
+		var measured := tr == null or tr.in_contact
+		var pos := ship.position if measured else tr.estimated_position(player, world.sim_time)
+		var vel := ship.velocity if measured else tr.last_velocity
 		var rel := inv * (pos - player.position)
+		var col := COLOR_TARGET if e[2] else COLOR_TARGET * Color(1, 1, 1, 0.6)
 		radar.contacts.append({
 			"rel_body": rel,
 			"rel_vel_body": inv * (vel - player.velocity),
 			"range_rate": RelativeMotion.range_rate(player.position, player.velocity, pos, vel),
-			"color": COLOR_TARGET if measured else COLOR_TARGET * Color(1, 1, 1, 0.45),
+			"color": col if measured else col * Color(1, 1, 1, 0.45),
 		})
-		radar.scale_m = RadarMath.nice_scale(rel.length())
+		if e[2]:
+			radar.scale_m = RadarMath.nice_scale(rel.length())
 	radar.queue_redraw()

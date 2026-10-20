@@ -2,6 +2,8 @@ extends SceneTree
 ## Headless unit-test runner.
 ##   godot --headless --path . -s res://tests/run_tests.gd
 ## Exit code 0 = all passed, 1 = at least one failure or load error.
+##   … -s res://tests/run_tests.gd -- --only=test_m10   runs the files whose
+## name contains "test_m10" (for quick reruns and mutation checks).
 
 const TEST_DIRS: Array[String] = ["res://tests/unit"]
 
@@ -10,8 +12,14 @@ func _initialize() -> void:
 	var total := 0
 	var failed := 0
 	var load_errors := 0
+	var only := ""
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--only="):
+			only = arg.trim_prefix("--only=")
 	for dir_path in TEST_DIRS:
 		for file_name in _test_files(dir_path):
+			if only != "" and not file_name.contains(only):
+				continue
 			var path := dir_path.path_join(file_name)
 			var script := load(path) as GDScript
 			if script == null or not script.can_instantiate():

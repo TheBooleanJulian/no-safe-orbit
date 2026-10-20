@@ -14,6 +14,18 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **EW jamming exists only as a hook** for craft communications; there are
   no decoys or electronic warfare against missiles yet — the counterplay is
   point defence, guns and range.
+- **Encounters of two and three ships are hard** (Milestone 10): focus fire
+  and salvos from three ships wrecked the player's frigate within ~30 s of
+  game time in a test render at mission 7. Encounter sizes, salvo counts and
+  intervals are first guesses; expect tuning.
+- **With the Tab drawer open the alert banner overlaps the top of the
+  moved target card** (layout; Pass A redesigns the alerts).
+- **Two looping audio streams are reported as leaked at exit** in headless
+  runs (the engine and RCS loops still playing when the test quits). Harmless.
+- **A capital-sized hull hitches on spawn**: `ShipSystems.create` takes
+  ~90 ms for a 300-module hull, almost all of it `CrewRoster.default_for`
+  (it scans every room for every berth). Must be fixed before capital
+  ships (Milestone 15); everything else scales (see ROADMAP M10).
 - **Missions and the tutorial are new** (Milestone 8): rewards and the
   courier's toughness are first guesses; the tutorial is verified by tests
   and the smoke run, not yet by a new player.
@@ -23,8 +35,7 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **Missiles are new** (Milestones 7 and 9): ranges, prices, warhead
   strengths, the saturation swarm and the enemy's firing interval are first
   guesses, covered by tests, not yet by play. **M** and **,** have no
-  gamepad default (every pad button is taken). Enemies still fire single
-  missiles, not salvos.
+  gamepad default (every pad button is taken).
 - **Wrecks** drift away at 4 m/s and only the four most recent are kept;
   they can still be shot but not salvaged again.
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the

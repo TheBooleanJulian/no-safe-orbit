@@ -4,6 +4,45 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 10 — multi-contact encounters, ship policies, smarter AI (2026-10-20)
+
+#### Added
+- Contact registry (`Encounter`, `Contact`): up to three hostile ships plus
+  their craft per encounter (two from mission 4, three from 7), each with
+  its own sensor track (ours of it and its of us), hostility, air wing,
+  policy, salvo and wreck state. U cycles the ships, then hostile craft;
+  the target card shows the selected contact and lists the others; radar,
+  world markers and Tab › TARGET show all.
+- `ShipPolicy` resource and presets (`data/policies/`: Hold, Defensive,
+  Standard, Aggressive): fire discipline, auto point defence (order, range,
+  ammunition reserve), auto-salvo (lock quality, range band, warheads,
+  count, interval), auto-fire (lock + aim within tolerance). Tab › POLICY;
+  saved per vessel. Manual input always overrides.
+- Enemy AI is a policy: roles (closer, standoff, flanker) with their own
+  fighting ranges and flank bias, focus fire (an escorted courier first),
+  never a derelict, missile salvos of 2–4 by policy.
+- Point defence engages in policy order and can flak big, slow slugs.
+  Ships have a side: point defence never engages its own side.
+- `tools/bench_sim.gd` three-hostile encounter; `tools/bench_hull.gd`
+  capital-hull spike; `tests/run_tests.gd -- --only=<name>`.
+- Tests: `test_m10_contacts.gd` (15), `smoke_encounter.gd` (16 checks, in
+  `run_checks.sh`).
+
+#### Changed
+- Profile schema 6: each vessel's policy; older vessels get Defensive
+  (what they already did), the v5 file is kept as `.v5`.
+- `MissileSalvo` takes a count limit and counts missiles (a swarm launch
+  counts 8), not launches.
+- Simulation tick budget in `bench_sim.gd`: 8 ms (was 16).
+
+#### Tests changed (and why)
+- `smoke_main`: T is pressed only if the target isn't hostile yet — our hit
+  turns it hostile ("fired upon") and T then toggled it back to passive;
+  the old check passed only because the enemy had already hit us. Before T
+  the target's gun and conduit are restored: our hits can knock out its
+  only gun or cut its power (frame timing decides where they land), and a
+  gunless target can't shoot back.
+
 ### README screenshots (2026-10-20)
 
 #### Added

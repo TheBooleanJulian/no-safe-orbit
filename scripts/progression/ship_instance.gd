@@ -27,6 +27,8 @@ var history: PackedStringArray = PackedStringArray()
 ## Hired crew, one per berth: [{name, role (CrewRoster.Role), skill}].
 ## Empty = the standard (unnamed) complement — older saves until named.
 var crew: Array = []
+## The vessel's automation (ShipPolicy.to_dict()); set in Tab › POLICY.
+var policy: Dictionary = ShipPolicy.preset("Defensive").to_dict()
 
 
 ## Name the standard complement once (older saves, new vessels): the same
@@ -221,6 +223,7 @@ func to_dict() -> Dictionary:
 		"salvaged": salvaged,
 		"history": Array(history),
 		"crew": crew.duplicate(true),
+		"policy": policy.duplicate(true),
 	}
 
 
@@ -254,4 +257,8 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipInstance:
 			v.crew.append({"name": str(entry.get("name", "")), "role": int(entry.get("role", 6)), "skill": int(entry.get("skill", 0))})
 	for line in d.get("history", []):
 		v.history.append(str(line))
+	# Before schema 6 there was none: the Defensive preset (point defence on,
+	# no automatic fire) — what those ships already did.
+	var pol: Variant = d.get("policy", {})
+	v.policy = ShipPolicy.from_dict(pol if pol is Dictionary else {}).to_dict()
 	return v

@@ -70,6 +70,13 @@ var missile_age: float = 0.0
 ## A beaten ship (or its craft) left drifting: it gets no commands, fires
 ## nothing and its point defence is silent; it can still be hit.
 var derelict: bool = false
+## Which side it fights for (&"player", &"hostile"; "" = unaligned). Point
+## defence never engages its own side; craft and missiles take their
+## carrier's side.
+var side: StringName = &""
+## Its automation (point defence, salvos, fire discipline); null = the
+## Defensive preset.
+var policy: ShipPolicy
 
 ## Cannon state (unused when config.cannon is null). Rounds are shared by
 ## every mount; each mount has its own cooldown.

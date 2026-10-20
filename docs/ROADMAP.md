@@ -334,12 +334,147 @@ play-test list. Verified in `tests/unit/test_m9_weapons_crew.gd` unless noted.
 | Crew management UI; crew dots | `test_the_crew_roster_helpers`, `smoke_main` (CREW tab roster), renders | map dots by post, roster tree, send-to |
 | Boarders before N; party beyond 8 | `test_boarding_parties_can_be_bigger_and_we_see_who_would_go` | limit 24; target card / CREW tab show who would go |
 
-## Next (proposed, not started)
+## Next — agreed roadmap (2026-10-20)
 
-GAME_DESIGN.md §17 has no milestones after 8. Candidates, to be chosen:
+GAME_DESIGN.md §17 ends at Milestone 8; the user set the roadmap below. One
+milestone per session, in this order: **M10 → Pass A → M11 → M12 → M13 → M14
+→ M15** (Pass A may run before M10 on request; it is independent).
 
-- Smarter enemies: salvos, point-defence priorities, more than one ship per
-  encounter.
-- Countermeasures: decoys and electronic warfare against missiles.
-- Campaign variety beyond the fixed four-goal chain.
-- Wrecks that can be salvaged again or break up over time.
+Decisions already made:
+
+1. **Audio:** bundle CC0 samples, each verified individually and recorded in
+   `data/ATTRIBUTION.md` (source URL, author, licence, date). Diegetic rule
+   kept (your own ship through the hull; no sound in vacuum). Synthesis stays
+   as the fallback for any missing slot. Small budget: OGG for loops and long
+   sounds, WAV for short hits; report the total size.
+2. **Jump drive costs propellant**: main tank first, then a jump-only
+   reserve (thrusters and RCS can't use it). Cost scales with distance and
+   ship mass (data-driven formula). Unaffordable jumps are refused with a
+   reason; a stranded fallback (e.g. a paid rescue tow) prevents a
+   soft-lock; the emergency jump keeps working.
+3. **Jumps go to mapped, known locations**, unlocked by paid information
+   brokers and stored in the profile. Earth and the Moon start known.
+4. **Real solar-system bodies** at real scale and real orbital data, incl.
+   real artifacts (M14). One central body per location; no n-body gravity.
+5. **Ship policies:** player-customisable automation for the player's ship
+   on top of manual gunnery (manual input always wins, never blocked); the
+   same policy engine drives the enemy AI (enemies are policies built by
+   the enemy factory).
+6. **Alerts** are redesigned in Pass A.
+
+### Milestone 10 — multi-contact encounters, ship policies, smarter AI ✅ (2026-10-20)
+
+Verified in `tests/unit/test_m10_contacts.gd` and `smoke_encounter.gd`
+unless noted; all existing smoke suites pass (changes to `smoke_main`
+justified in the changelog).
+
+| # | Acceptance criterion | Verified by | Result |
+|---|---|---|---|
+| 1 | Contact registry; ≥ 3 hostiles + craft, each with its own track, hostility, AI, wing, wreck state; key to cycle; full card + compact list; radar and overview show all | `test_the_encounter_registry_selects_cycles_and_reselects`, `test_each_contact_keeps_its_own_track_and_policy`, `smoke_encounter`, renders | 3 contacts at mission 7; U cycles 02 → 03 → 01; card lists the other two; radar 3; Tab › TARGET 3 buttons |
+| 2 | Missions, capture/boarding, salvage, waves, escort, tutorial against the selected contact; existing smoke suites pass | `smoke_main`, `smoke_campaign`, `smoke_boarding`, `smoke_wing`, `smoke_shipyard`, `smoke_encounter` (salvages the selected, non-lead contact; the lead untouched) | all pass |
+| 3 | Roles, focus fire, salvos by policy, player over a derelict | `test_roles_fight_at_their_own_ranges`, `test_focus_fire_and_never_a_derelict`, `test_enemy_salvos_launch_the_policy_count`, `smoke_encounter` | standoff backs off at 3 km and closes at 12 km; focus on the player over a nearer fighter; salvos of 2–4; 4 missiles inbound; standoff 4.2 km vs closer 2.4 km |
+| 4 | PD priorities, range, reserve; missile + craft + round at once | `test_point_defence_engages_in_policy_order`, `test_point_defence_respects_range_and_ammo_reserve`, `test_flak_destroys_a_heavy_slug_but_not_small_or_fast_rounds`, `test_point_defence_never_engages_its_own_side` | missile, then craft, then round; reversed order → round first; nothing beyond 600 m; below reserve only missiles |
+| 5 | Policy engine: presets, editable, saved per vessel (schema 6, migration, backup), manual override | `test_policy_presets_and_discipline`, `test_auto_fire_and_manual_override`, `test_auto_salvo_conditions`, `test_policy_round_trips_and_is_clamped`, `test_schema_6_gives_old_vessels_the_defensive_policy`, `smoke_encounter` | Tab › POLICY switches presets; manual fire under HOLD fires; v5 → v6 with `.v5` kept |
+| 6 | Bench: 3 hostiles with wings and salvos inside 8 ms; ~300-module hull spike | `test_a_three_ship_encounter_stays_inside_the_tick_budget`, `tools/bench_sim.gd`, `tools/bench_hull.gd` | 3.7 ms mean, 17.6 ms worst (1 of 3,600 ticks over 8 ms: a warhead strike); hull: validation 8 ms, compile 10 ms, systems 91 ms (crew roster — must change before capital ships), hit test 0.16 ms/round |
+| 7 | Mutation checks | see below | each fails exactly its test |
+
+Mutation-checked (`--only=test_m10`, 15 tests): sorting point-defence
+candidates by distance only fails `test_point_defence_engages_in_policy_order`;
+ignoring the salvo count fails `test_enemy_salvos_launch_the_policy_count`;
+dropping the manual trigger from `ShipPolicy.trigger` fails
+`test_auto_fire_and_manual_override`; a `cycle` that doesn't advance fails
+`test_the_encounter_registry_selects_cycles_and_reselects`. Restored: 15/15.
+
+Brief vs repo: the brief assumed point defence could already engage
+rounds — it couldn't (craft and missiles only); flak against heavy slugs was
+added, limited to what PD can plausibly track.
+
+1. A contact registry (stable ids) replaces the single hard-wired enemy. An
+   encounter supports ≥ 3 hostile ships plus their craft; each contact has
+   its own sensor track, hostility, gunnery AI, wing and wreck state. A key
+   cycles / selects the target; the HUD shows a full card for the selected
+   contact and a compact list for the others; radar and the tactical
+   overview show all.
+2. Missions, capture/boarding, salvage, waves, escort and the tutorial work
+   against the selected contact; the existing smoke tests (campaign,
+   boarding, wing, main, shipyard) pass, any change justified in the
+   changelog.
+3. Enemies engage in roles (one closes, one stands off) and can focus fire;
+   they fire missile salvos (several per launch, by policy); they prefer the
+   player over a derelict.
+4. Point-defence priorities: policy-ordered (default missiles → craft →
+   rounds), engagement range, ammunition reserve. Tested with a missile, a
+   craft and a round incoming at once: PD engages in policy order.
+5. Policy engine: a typed, data-driven `Policy` resource with presets (Hold,
+   Defensive, Standard, Aggressive) and editable parameters. Player
+   controls: auto point-defence (priorities, ranges, ammo reserve),
+   auto-salvo (lock quality, range band, warhead mode, count), auto-fire
+   (solution within tolerance and a lock held) and fire discipline (hold /
+   tight / free). Editable in the Tab drawer or shipyard, saved per vessel
+   (schema bump, migration, backup, tests). Manual input always overrides.
+6. Performance: bench a 3-hostile encounter with wings and salvos inside the
+   8 ms tick budget (report mean and worst). Spike a ~300-module hull:
+   validation, compile and hit-test times; say whether anything must change
+   before capital ships (don't build them yet).
+7. Mutation checks: policy ordering, salvo count, manual override, contact
+   selection.
+
+### Pass A — alerts and audio (refined at the start of its session)
+
+- Audit every HUD alert string; a fixed grammar replaces sentences: shape or
+  icon, short noun, one value, direction where relevant, a key chip (e.g.
+  `MSL 2.1s 040 up [S]`); at most ~four words plus a number.
+- Priority queue: ≤ 3 visible, deduplicated, hysteresis (no flicker),
+  escalation (caution → danger), auto-clear when resolved, acknowledge/mute
+  for non-critical ones.
+- Non-text cues: a sound per alert class, a screen-edge direction indicator
+  for incoming threats, the affected system flashing on the damage map;
+  persistent compact status for reactor, breach, fire, vent.
+- CC0 samples (guns, impacts, missile launch/detonation through the hull,
+  alarms, UI, hull and machinery ambience) on audio buses with ducking so
+  critical alarms stay audible.
+- Tests: length limit, priority order, dedupe, hysteresis, every alert has
+  a sound and a clear condition.
+
+### Milestone 11 — countermeasures and electronic warfare
+
+Decoy launcher; missile seekers choose by signature and lose lock under
+jamming; jamming degrades sensor-track confidence; hardened masts and
+burn-through at close range as counterplay; an EW drone. Deterministic,
+seeded tests for decoys and jamming.
+
+### Milestone 12 — shipyard overhaul, ship dealer, economy
+
+Shipyard submenus (Dealer, Hangar, Crew, Armoury for rearm and refuel,
+Repairs, Tech, Loot tables). Every template, incl. Cutter, Corvette and
+Frigate Mk I, purchasable for credits: price from parts plus hull with a
+markup; no buy-then-scrap arbitrage (tested). Crew bought with credits.
+
+### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts
+
+`Location` resource (body, start orbit, shipyard stock and prices,
+encounter table, broker). Per-body config (μ, radius, entry interface:
+atmosphere top / surface plus margin / a defined gas-giant level). Earth,
+Moon, Mars first. Public-domain NASA textures (licences recorded, sizes
+controlled). Map screen, jump costs (decision 2), broker unlocks, a
+contract board (bounty, escort, delivery, defend, retrieve); the four-goal
+chain becomes the tutorial thread. Sun-centred locations need `Vec3d`
+precision, proven by a test.
+
+### Milestone 14 — orbital artifacts and derelicts
+
+`Artifact` resource (location, trajectory data, kind, interaction,
+reward); interaction reuses rendezvous, docking tolerances, the grapple and
+scans. Real objects with orbital data from NASA/JPL Horizons at a fixed,
+documented epoch (sources in `data/ATTRIBUTION.md`, uncertainty flagged):
+the 2018 Tesla Roadster, Voyager 1 and 2, Pioneer 10 and 11, New Horizons,
+the ISS, Hubble and similar. Lore-first rewards. Lagrange-point objects
+(JWST) need a rotating frame we don't have: left out, and said so. Wrecks
+become re-salvageable and break up over time.
+
+### Milestone 15 — fleet depth
+
+More craft as data (interceptor, bomber, repair and salvage drones, EW
+drone); capital templates (destroyer, cruiser, carrier) in the dealer, only
+once the M10 hull spike shows it is safe; hangar capacity, crew complement
+and PD coverage scale; templates validate clean with standard parts only.

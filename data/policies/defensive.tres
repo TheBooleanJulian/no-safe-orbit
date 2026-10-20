@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ShipPolicy" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/ship_policy.gd" id="1_p"]
+
+[resource]
+script = ExtResource("1_p")
+preset_name = "Defensive"
+discipline = 1
+pd_enabled = true
+pd_priorities = Array[StringName]([&"missile", &"craft", &"round"])
+pd_range_m = 2000.0
+pd_reserve_fraction = 0.15
+salvo_enabled = false
+salvo_min_confidence = 0.8
+salvo_min_range_m = 2000.0
+salvo_max_range_m = 12000.0
+salvo_mode = 1
+salvo_count = 3
+salvo_interval_s = 20.0
+autofire_enabled = false
+autofire_tolerance_deg = 0.5

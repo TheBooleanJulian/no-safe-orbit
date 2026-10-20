@@ -18,9 +18,11 @@ extends RefCounted
 
 ## v3: a hangar of vessels (one active) instead of a single vessel.
 ## v4: parts that stopped being common are granted to the saves using them.
+## v6: each vessel's automation policy (ShipInstance.policy); older vessels
+##     get the Defensive preset, which is what they already did.
 ## v5: the tutorial's and the mission chain's progress (an existing player
 ##     is not offered the tutorial again; [F2] still starts it).
-const SCHEMA_VERSION := 5
+const SCHEMA_VERSION := 6
 ## The last good save, kept beside the profile (rolling, one deep).
 const BACKUP_SUFFIX := ".bak"
 ## Equipment that was common before v4: owners get as many units as their
