@@ -7,7 +7,7 @@ Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
 **Status:** Milestones 0–10 complete — design a ship in the shipyard, then fly
-and fight it in a real-scale 400 km Earth orbit or 100 km lunar orbit (pick
+and fight it in a real-scale 400 km Earth orbit, 100 km lunar orbit or 300 km Mars orbit (pick
 the station and the encounter's size, 1–3 ships, on the shipyard map) under
 the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
@@ -101,9 +101,18 @@ data, and the tests check it against known values.
   The light falls on Earth's night side (or the Moon's), on ships, and on the
   other body's dark side (earthshine). Ships only get it while the light
   source is above the horizon.
+- **Mars:** JPL's gravitational parameter, a 3,389.5 km mean radius, the
+  IAU pole and rotation (a 24 h 37 min sol) and the USGS/NASA Viking colour
+  mosaic. Its air is thin and dusty: a butterscotch limb, the entry
+  interface at 125 km, no clouds or seas.
+- **Where Mars and Earth are:** Sun-centred, from JPL's Keplerian elements
+  (Standish, valid 1800–2050), computed in double precision — a single
+  float can't place a ship 236 million km from the Sun to better than ~2 km.
+  At Mars the Sun is where Mars sees it. Jumps pay for the real distance on
+  the scenario date (Earth–Mars 229 million km).
 - **The frame:** simulation axes are tied to ICRS/J2000 through the central
   body's pole. The start orbit is therefore a real prograde equatorial
-  orbit about Earth or the Moon.
+  orbit about Earth, the Moon or Mars.
 
 ### Where it departs from reality (on purpose)
 
@@ -117,8 +126,10 @@ data, and the tests check it against known values.
   mapping is chosen.
 - **Simplifications** (each under 0.5°): precession, nutation, aberration and
   light time are ignored. The Moon's position is the low-precision series,
-  and only one far body is drawn per sky. Stars are at their J2000
-  positions, with no proper motion.
+  and only one far body is drawn per sky (none at Mars: Earth is a point of
+  light there, and Phobos and Deimos are not modelled). Stars are at their
+  J2000 positions, with no proper motion. Sunlight is as bright at Mars as
+  at Earth (really 43 %), the way an eye or a camera adapts.
 
 ### How it is checked (`tests/unit/test_celestial.gd`, `test_locations.gd`)
 
@@ -134,6 +145,9 @@ data, and the tests check it against known values.
 | Full-Moon light | ~0.3 lux against ~127,000 lux of sunlight | 0.31 lux |
 | Half Moon vs full | ~1/9 (opposition surge) | 0.091 |
 | Full Earth from the Moon vs full Moon from Earth | ~40–60 × | 49 × |
+| Earth–Mars closest approaches 2018-07-31, 2020-10-06, 2025-01-12 (`test_m13_mars`) | NASA: 57.59, 62.07, 96.08 million km | 57.58, 62.07, 96.09 |
+| Mars's distance from the Sun | perihelion 1.381 AU, aphelion 1.666 AU | 1.381–1.666 AU |
+| Low Mars orbit at 300 km | ~3.41 km/s, ~113 min | 3407 m/s, 113.4 min |
 
 *Sky screenshots: `godot --path . -s res://tools/capture_sky.gd` (a scratch
 profile, HUD hidden). Data sources and licences: `data/ATTRIBUTION.md`.*
@@ -760,20 +774,24 @@ them:
 In REFIT you start from the ship you were flying (the Frigate Mk I template
 by default).
 
-**Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click Earth or
-the Moon to jump the vessel to that station; the next launch starts in its
-orbit. Pick the encounter: **1, 2 or 3 ships**.
+**Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click a body to
+jump the vessel to its station; the next launch starts in its orbit. Pick
+the encounter: **1, 2 or 3 ships**. Earth and the Moon are charted from the
+start; an **information broker** on the same page sells the charts for Mars
+(1,500 cr).
 
 - **Jumps cost propellant**: ship mass × (8 kg/t + 18 kg/t for every
   tenfold of distance in 1,000 km). Frigate Mk I: 4.9 t home within a
-  location, 33.7 t Earth ↔ Moon. The map shows each jump's cost.
+  location, 33.9 t Earth ↔ Moon, 64.6 t Earth → Mars (the real distances
+  on the scenario date). The map shows each jump's cost.
 - **Jump reserve**: a quarter of your tankage that only the jump drive can
   burn, used after the main tank. The ARMOURY shows and refills it.
 - **Not enough?** The map refuses with what's missing and the refuel price;
   a contract elsewhere can't be accepted until you can make the jump.
 - **Each station is different**: the Lunar Shipyard stocks four parts up to
   rare at 1.2× prices (crew fees too), and its traffic mixes corvettes with
-  frigates and is one threat level tougher.
+  frigates and is one threat level tougher. The Martian Shipyard stocks five
+  up to epic at 1.5×; destroyers fly among its frigates, two levels tougher.
 
 **Hull** is built from four blocks: a 2×2×1 **pressurised block** (rooms go
 inside), 1×2×1 and 1×1×1 **sloped wedges** and a 1×2×1 **truss**. Wedges

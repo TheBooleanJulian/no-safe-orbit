@@ -195,6 +195,20 @@ and the location's central body:
   `ContractBoard.accept` refuses when it does. `Main.pay_jump_home` charges
   the B jump and an alive-ship restart, or tows (credits, floored at 0).
   `ServiceYard.resupply_needs` includes `reserve_kg`.
+- **Sun-centred positions (Milestone 13 part 2)**: `CelestialFrame.KEPLER_ELEMENTS`
+  (Standish, 1800–2050, J2000 ecliptic) → `heliocentric_icrs(ephemeris, jd)`
+  as `Vec3d` (Earth = barycentre − Moon / 82.3; Moon = Earth + the lunar
+  series; Mars from its elements); `separation_m` for jump distances
+  (`Location.distance_m`, at `Main.SCENARIO_EPOCH_UTC`); `sun_direction_from`
+  (the Almanac's Sun for Earth and the Moon, unchanged; the elements
+  otherwise), used by `for_scenario` and `sun_direction_pci`.
+  `geocentric_icrs` covers Mars for completeness.
+- **Brokers**: `Location.broker_price/name/pitch`;
+  `PlayerProfile.brokers()` and `buy_location()` add to `known_locations`
+  (already saved, so no schema change). Shipyard MAP lists them.
+- **Bodies**: `OrbitalBody.air_color` and `clouds_and_seas` drive the sky
+  shader's `air_color`, `has_clouds` and `far_has_clouds` (clouds and sea
+  glint off on Mars).
 - **Per station** (`Location`): `vendor_stock_size`, `vendor_max_rarity`,
   `price_factor` (quartermaster and hiring, applied in
   `PlayerProfile.refresh_station`), `enemy_templates` / `enemy_weights`
@@ -768,7 +782,9 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 |---|---|---|
 | Spherical central body for gravity; no J2, no third bodies (no Earth pull in lunar orbit) | Orbits never precess | If missions need ground tracks or long-duration accuracy |
 | Airless bodies: the floor is a sphere at the highest terrain (11 km on the Moon), no terrain model | Flying low over a lunar plain is as fatal as hitting a summit | If low passes or landings are wanted |
-| Jump distance is each location's distance from Earth on a line (Moon 384,400 km); travel is instant | The Earth–Moon jump always costs the same | Milestone 13 part 2 (Sun-centred positions for Mars) |
+| Jump distances are the real separations on the fixed scenario date; travel is instant | Each jump always costs the same | If the calendar advances between sorties |
+| Mars has no moons in its sky and no far body; sunlight is not dimmed with distance from the Sun (43 % at Mars) | Mars looks as bright as Earth; Phobos is never seen | If outer locations arrive |
+| Planet positions from Keplerian elements (arcminutes), precession ignored between the Almanac Sun (of date) and the J2000 stars and elements (0.37° by 2026) | Mars's Sun is placed to ~0.1°; Earth's Sun to ~0.4° against the stars | If an eclipse or occultation must be exact |
 | The jump reserve has no mass and no part of its own (a quarter of the tankage, beside it) | Bigger tanks mean a bigger reserve; the reserve never slows the ship | If tank design should trade reserve for range |
 | Reflected light is shown through a night-adaptation mapping (full Moon = 5 % of the Sun), not at its physical 2.4e-6; it isn't occluded by the near body's terrain or shadowed on hulls | Night is visible and readable | If an exposure/eye-adaptation model is wanted |
 | One far body per sky (the Moon from Earth, Earth from the Moon), placed by a low-precision lunar series (~0.3°); eclipses of the Sun by it are all-or-nothing; the Sun's direction is Earth's (≤ 0.15° off at the Moon) | Close enough to look right; no eclipse gameplay | If eclipses or more bodies matter |

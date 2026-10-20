@@ -16,12 +16,29 @@ extends RefCounted
 ## The Moon: the IAU pole and rotation with only their largest periodic
 ## term (E1; the rest add up to ~0.3°), and the Sun's direction is Earth's
 ## (≤ 0.15° off at the Moon's distance).
+## Sun-centred positions (Mars, and the distances jumps pay for): Standish's
+## Keplerian elements for 1800–2050 (JPL, "Approximate Positions of the
+## Planets", table 1), arcminute-level, solved in Vec3d doubles — at
+## 2e11 m from the Sun a float32 Vector3 is only good to ~16 km.
 
 const EARTH_ROTATION_RAD_S := 7.2921159e-5  # sidereal
 ## The Almanac's lunar parallax is against this radius.
 const EARTH_EQUATORIAL_RADIUS_M := 6_378_140.0
 const J2000_JD := 2451545.0
 const UNIX_EPOCH_JD := 2440587.5
+const AU_M := 1.495978707e11
+## J2000 obliquity of the ecliptic (deg), for the heliocentric elements.
+const OBLIQUITY_J2000_DEG := 23.43928
+## Earth / Moon mass ratio: Earth sits this much nearer the barycentre.
+const EARTH_MOON_MASS_RATIO := 81.30056
+## Standish (1800–2050), J2000 ecliptic and equinox: [a (AU), e, I, L, ϖ, Ω]
+## (deg) at J2000 and their rates per Julian century.
+const KEPLER_ELEMENTS := {
+	&"emb": [[1.00000261, 0.01671123, -0.00001531, 100.46457166, 102.93768193, 0.0],
+		[0.00000562, -0.00004392, -0.01294668, 35999.37244981, 0.32327364, 0.0]],
+	&"mars": [[1.52371034, 0.09339410, 1.84969142, -4.55343205, -23.94362959, 49.55953891],
+		[0.00001847, 0.00007882, -0.00813131, 19140.30268499, 0.44441088, -0.29257343]],
+}
 
 var epoch_jd: float
 ## Rotation about PCI +X applied after the fixed axis mapping (rad).
@@ -50,7 +67,7 @@ static func for_scenario(p_epoch_jd: float, sun_angle_from_up_deg: float, body: 
 		frame.prime_meridian_deg = o[2]
 		frame.rotation_deg_per_day = body.rotation_deg_per_day
 		frame.central_ephemeris = body.ephemeris
-	var s := frame.icrs_to_pci(sun_direction_icrs(p_epoch_jd))
+	var s := frame.icrs_to_pci(sun_direction_from(frame.central_ephemeris, p_epoch_jd))
 	frame.twist = deg_to_rad(sun_angle_from_up_deg) - atan2(s.z, s.y)
 	return frame
 
@@ -119,7 +136,70 @@ static func geocentric_icrs(ephemeris: StringName, jd: float) -> Vector3:
 	match ephemeris:
 		&"moon":
 			return moon_geocentric_icrs(jd)
-	return Vector3.ZERO  # Earth (and anything unknown) at the geocentre
+		&"earth":
+			return Vector3.ZERO
+	if KEPLER_ELEMENTS.has(ephemeris):
+		return heliocentric_icrs(ephemeris, jd).minus(heliocentric_icrs(&"earth", jd)).to_vector3()
+	return Vector3.ZERO  # anything unknown at the geocentre
+
+
+## Heliocentric position (ICRS axes, m, double precision) by ephemeris id:
+## Earth (from the Earth–Moon barycentre), the Moon, or a planet with
+## KEPLER_ELEMENTS.
+static func heliocentric_icrs(ephemeris: StringName, jd: float) -> Vec3d:
+	match ephemeris:
+		&"earth":
+			var moon := Vec3d.from_vector3(moon_geocentric_icrs(jd))
+			return _kepler_icrs(&"emb", jd).minus(moon.times(1.0 / (1.0 + EARTH_MOON_MASS_RATIO)))
+		&"moon":
+			return heliocentric_icrs(&"earth", jd).plus(Vec3d.from_vector3(moon_geocentric_icrs(jd)))
+	return _kepler_icrs(ephemeris, jd)
+
+
+## Distance (m) between two bodies by ephemeris id, in double precision.
+static func separation_m(a: StringName, b: StringName, jd: float) -> float:
+	if a == b:
+		return 0.0
+	return heliocentric_icrs(a, jd).minus(heliocentric_icrs(b, jd)).length()
+
+
+## Direction to the Sun (ICRS, unit) from a central body: the Almanac's
+## geocentric Sun for Earth and the Moon (as before), the elements for the
+## others.
+static func sun_direction_from(ephemeris: StringName, jd: float) -> Vector3:
+	if ephemeris == &"earth" or ephemeris == &"moon" or not KEPLER_ELEMENTS.has(ephemeris):
+		return sun_direction_icrs(jd)
+	return heliocentric_icrs(ephemeris, jd).times(-1.0).normalized().to_vector3()
+
+
+## A Keplerian orbit's position at `jd` (ICRS axes, m).
+static func _kepler_icrs(id: StringName, jd: float) -> Vec3d:
+	var el: Array = KEPLER_ELEMENTS[id]
+	var t := (jd - J2000_JD) / 36525.0
+	var v: Array = []
+	for i in 6:
+		v.append(float(el[0][i]) + float(el[1][i]) * t)
+	var a: float = v[0] * AU_M
+	var e: float = v[1]
+	var inc := deg_to_rad(v[2])
+	var node := deg_to_rad(v[5])
+	var peri := deg_to_rad(v[4]) - node  # argument of perihelion
+	var mean := deg_to_rad(fposmod(v[3] - v[4] + 180.0, 360.0) - 180.0)
+	var ecc := mean + e * sin(mean)
+	for i in 8:
+		ecc -= (ecc - e * sin(ecc) - mean) / (1.0 - e * cos(ecc))
+	var xp := a * (cos(ecc) - e)
+	var yp := a * sqrt(1.0 - e * e) * sin(ecc)
+	var cw := cos(peri)
+	var sw := sin(peri)
+	var co := cos(node)
+	var so := sin(node)
+	var ci := cos(inc)
+	var x := (cw * co - sw * so * ci) * xp + (-sw * co - cw * so * ci) * yp
+	var y := (cw * so + sw * co * ci) * xp + (-sw * so + cw * co * ci) * yp
+	var z := (sw * sin(inc)) * xp + (cw * sin(inc)) * yp
+	var eps := deg_to_rad(OBLIQUITY_J2000_DEG)
+	return Vec3d.new(x, cos(eps) * y - sin(eps) * z, sin(eps) * y + cos(eps) * z)
 
 
 static func _sin_deg(d: float) -> float:
@@ -184,7 +264,7 @@ func julian_date(sim_time: float) -> float:
 
 
 func sun_direction_pci(sim_time: float) -> Vector3:
-	return icrs_to_pci(sun_direction_icrs(julian_date(sim_time))).normalized()
+	return icrs_to_pci(sun_direction_from(central_ephemeris, julian_date(sim_time))).normalized()
 
 
 ## Fraction of the Sun visible from PCI position `r`: 1 in sunlight, 0 in the

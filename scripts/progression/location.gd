@@ -12,6 +12,7 @@ extends Resource
 const FILES := [
 	"res://data/locations/earth_orbit.tres",
 	"res://data/locations/moon_orbit.tres",
+	"res://data/locations/mars_orbit.tres",
 ]
 const DEFAULT_ID := "earth"
 
@@ -23,7 +24,8 @@ static var _all: Array[Location] = []
 ## The station's name, e.g. "Earth Shipyard".
 @export var station_name: String = ""
 @export var body: OrbitalBody
-## The other body drawn in this location's sky (Earth's Moon, the Moon's Earth).
+## The other body drawn in this location's sky (Earth's Moon, the Moon's
+## Earth; none at Mars, where Earth is a point of light).
 @export var sky_body: OrbitalBody
 ## Circular, prograde, equatorial start orbit (m above the mean radius).
 @export var start_altitude_m: float = 400_000.0
@@ -35,10 +37,12 @@ static var _all: Array[Location] = []
 ## One line for the map.
 @export_multiline var blurb: String = ""
 
-@export_group("Jumps")
-## Distance from Earth (m) the jump drive pays for; between two locations
-## the difference of theirs (see the simplifications in ARCHITECTURE).
-@export var jump_distance_m: float = 0.0
+@export_group("Broker")
+## What an information broker charges for the charts (credits); 0 for a
+## location known from the start (PlayerProfile.STARTING_LOCATIONS).
+@export var broker_price: int = 0
+@export var broker_name: String = ""
+@export_multiline var broker_pitch: String = ""
 
 @export_group("Station")
 ## The quartermaster: how many items, the rarest tier stocked, and a price
@@ -72,9 +76,11 @@ static func by_id(location_id: String) -> Location:
 	return all()[0]
 
 
-## Jump distance between two locations (m).
+## Jump distance between two locations (m): their bodies' real separation
+## at the scenario date (CelestialFrame, double precision).
 static func distance_m(a: Location, b: Location) -> float:
-	return absf(a.jump_distance_m - b.jump_distance_m)
+	return CelestialFrame.separation_m(a.body.ephemeris, b.body.ephemeris,
+		CelestialFrame.julian_date_from_iso(Main.SCENARIO_EPOCH_UTC))
 
 
 ## The template file for ship `index` of an encounter at `mission`

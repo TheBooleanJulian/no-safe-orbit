@@ -63,9 +63,12 @@ func configure(body: OrbitalBody, other: OrbitalBody = null) -> void:
 	if other != null:
 		_material.set_shader_parameter("far_map", other.surface_map)
 		_material.set_shader_parameter("far_has_air", 1.0 if other.has_atmosphere else 0.0)
+		_material.set_shader_parameter("far_has_clouds", 1.0 if other.clouds_and_seas else 0.0)
 	_material.set_shader_parameter("planet_radius", body.radius_m)
 	_material.set_shader_parameter("entry_radius", body.entry_radius_m())
 	_material.set_shader_parameter("has_air", 1.0 if body.has_atmosphere else 0.0)
+	_material.set_shader_parameter("has_clouds", 1.0 if body.clouds_and_seas else 0.0)
+	_material.set_shader_parameter("air_color", body.air_color)
 	_material.set_shader_parameter("surface_map", body.surface_map)
 
 

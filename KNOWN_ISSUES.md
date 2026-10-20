@@ -29,6 +29,9 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   game time in a test render at mission 7. Since 2026-10-20 the player picks
   1, 2 or 3 ships on the shipyard map; enemy loadouts still grow with the
   mission number. Salvo counts and intervals are first guesses.
+- **Surface maps are 4–5 km per texel** (Moon and Mars 4096 px, Earth
+  5400 px): from low orbit the ground looks soft, and crater rims blocky.
+  Bigger maps would cost ~180 MB of video memory each, uncompressed.
 - **Locations are new** (2026-10-20): jump costs, the reserve, the tow fee
   and the Lunar Shipyard's prices and traffic are first guesses. Upgrades
   are still the same at every station.

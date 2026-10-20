@@ -116,9 +116,9 @@ build are reviewed by Valve, a few working days each).
 **Short description** (≤ 300 characters):
 
 > A hard-sci-fi ship engineering and combat simulator. Design a warship
-> block by block, then fly and fight it in real-scale Earth and lunar
-> orbit — where armour, power, heat and crew decide how it fails, and
-> every round you miss keeps orbiting.
+> block by block, then fly and fight it in real-scale orbits of Earth, the
+> Moon and Mars — where armour, power, heat and crew decide how it fails,
+> and every round you miss keeps orbiting.
 
 **About this game:**
 
@@ -127,9 +127,9 @@ build are reviewed by Valve, a few working days each).
 >
 > Build in the shipyard from hull blocks and sloped wedges, paint on
 > armour, route power, place reactors, radiators, guns, missile pods,
-> hangars and crew quarters. Then take it into a 400 km Earth orbit or a
-> 100 km lunar orbit under the real sky — the stars, Sun, Moon and Earth
-> where they actually are.
+> hangars and crew quarters. Then take it into Earth, lunar or Mars orbit
+> under the real sky — the stars, Sun, Moon and planets where they actually
+> are. Jumping between them costs propellant; buy the charts first.
 >
 > - **Newtonian flight in real orbits.** Every ship, round and missile
 >   obeys orbital mechanics; a miss keeps flying and may come back round.
