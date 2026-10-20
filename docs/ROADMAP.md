@@ -573,8 +573,14 @@ Part 1 ✅ (2026-10-20) — real artifacts:
 | JWST left out, and said so | `test_m14_artifacts` | not in the list; ATTRIBUTION, README |
 | Save format | `test_m14_artifacts` (schema 10), `compat_check` | v9 → empty codex, `.v9` kept; COMPAT: OK |
 
-Part 2 (next): derelicts — wrecks that stay, are salvaged again and break
-up over time.
+Part 2 ✅ (2026-10-20) — derelicts:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Wrecks stay | `test_m14_derelicts` (field), `smoke_campaign` (mutation-checked) | the first sortie's wreck lies 5.7 km out on the relaunch |
+| Re-salvageable | `test_m14_derelicts` (yield), `smoke_campaign` | 1,000 → 500 → 250 cr scrap; +140 cr the second time; once per sortie |
+| Break up over time | `test_m14_derelicts` (decay) | −15 % a sortie; gone below 10 % or after 8 sorties |
+| Save format | `test_m14_derelicts` (schema 11), `compat_check` | v10 → empty fields, `.v10` kept; COMPAT: OK |
 
 `Artifact` resource (location, trajectory data, kind, interaction,
 reward); interaction reuses rendezvous, docking tolerances, the grapple and
