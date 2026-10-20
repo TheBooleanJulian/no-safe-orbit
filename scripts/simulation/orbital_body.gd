@@ -32,6 +32,8 @@ extends Resource
 @export var term_amplitudes_deg := Vector3.ZERO
 @export var term_e0_deg: float = 0.0
 @export var term_deg_per_day: float = 0.0
+## Where it is (CelestialFrame.geocentric_icrs): &"earth" or &"moon".
+@export var ephemeris: StringName = &"earth"
 ## Surface colour map: equirectangular, left edge 180° W, top edge 90° N.
 @export var surface_map: Texture2D
 

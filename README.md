@@ -224,7 +224,9 @@ in order (the most severe recent hit wins the window).
 
 **Sky:** stars, Sun and the central body's rotation are real for 2026-10-19
 12:00 UTC (Yale Bright Star Catalogue, NASA Blue Marble, NASA CGI Moon Kit;
-see `data/ATTRIBUTION.md`).
+see `data/ATTRIBUTION.md`). The Moon hangs in Earth's sky and Earth in the
+Moon's, where they really are that day, in phase — zoom (Shift, wheel) to
+see them.
 
 **Flight assist ON** (default) damps rotation to the requested turn rate. X
 cycles three modes:

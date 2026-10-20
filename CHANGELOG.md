@@ -4,6 +4,29 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### The Moon in Earth's sky, Earth in the Moon's (2026-10-20)
+
+#### Added
+- Each location draws the other body in its sky (`Location.sky_body`):
+  the Moon from Earth orbit (0.5° across), Earth from lunar orbit (1.8°),
+  at their real positions for the scenario date, lit by the Sun so they
+  show their phase, with their own surface maps and rotation; they pass
+  behind the near body, hide the stars behind them and block the Sun.
+- `CelestialFrame.moon_geocentric_icrs` (Astronomical Almanac
+  low-precision series), `position_of`, `body_fixed_of`;
+  `OrbitalBody.ephemeris`.
+- Earth seen from afar: clouds swirl (domain warp), follow latitude bands
+  (ITCZ, storm belts, clear subtropics) and keep ~30 % cover; from low
+  orbit they are unchanged.
+- Tests: `test_locations` +2 (the Moon against Meeus's example 47.a and the
+  2024-04-08 eclipse / 2024-04-23 full moon; Earth from the Moon opposite
+  the Moon from Earth; longitude mutation-checked); `smoke_shipyard` checks
+  Earth hangs in the lunar sky.
+
+#### Changed
+- `planet_sky.gdshader`: `surface()` takes the body (map, rotation, radius,
+  air) so the central and far body share it.
+
 ### Play-test batch 3 — map, lunar orbit, big-fight performance (2026-10-20)
 
 #### Added

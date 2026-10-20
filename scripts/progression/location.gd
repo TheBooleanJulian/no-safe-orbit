@@ -23,6 +23,8 @@ static var _all: Array[Location] = []
 ## The station's name, e.g. "Earth Shipyard".
 @export var station_name: String = ""
 @export var body: OrbitalBody
+## The other body drawn in this location's sky (Earth's Moon, the Moon's Earth).
+@export var sky_body: OrbitalBody
 ## Circular, prograde, equatorial start orbit (m above the mean radius).
 @export var start_altitude_m: float = 400_000.0
 ## Where it sits on the map (0–1 across, 0–1 down).
