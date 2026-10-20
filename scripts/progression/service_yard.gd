@@ -121,19 +121,23 @@ const PROPELLANT_CREDITS_PER_T := 1.0
 const ROUNDS_PER_CREDIT := 10
 
 
-## Propellant (kg) and rounds the vessel used last sortie, and what topping
-## them up costs: {propellant_kg, rounds, credits}.
+## Propellant (kg) and rounds the vessel used last sortie (and the jump
+## drive's reserve spent), and what topping them up costs:
+## {propellant_kg, reserve_kg, rounds, missiles, missile_credits, credits}.
 static func resupply_needs(vessel: ShipInstance, catalog: ConstructionCatalog) -> Dictionary:
 	var missiles := missile_needs(vessel, catalog)
 	var stores: Dictionary = vessel.condition.get("stores", {})
 	if stores.is_empty():
-		return {"propellant_kg": 0.0, "rounds": 0, "missiles": missiles.count, "missile_credits": missiles.credits,
-			"credits": missiles.credits}
+		return {"propellant_kg": 0.0, "reserve_kg": 0.0, "rounds": 0, "missiles": missiles.count,
+			"missile_credits": missiles.credits, "credits": missiles.credits}
 	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
 	var prop := maxf(stats.propellant_capacity_kg - float(stores.get("propellant_kg", stats.propellant_capacity_kg)), 0.0)
+	var reserve_cap := JumpDrive.standard().reserve_capacity_kg(stats.propellant_capacity_kg)
+	var reserve := maxf(reserve_cap - float(stores.get("jump_reserve_kg", reserve_cap)), 0.0)
 	var rounds := maxi(stats.rounds_capacity - int(stores.get("rounds", stats.rounds_capacity)), 0)
-	return {"propellant_kg": prop, "rounds": rounds, "missiles": missiles.count, "missile_credits": missiles.credits,
-		"credits": ceili(prop / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds) / ROUNDS_PER_CREDIT - 1e-9) + missiles.credits}
+	return {"propellant_kg": prop, "reserve_kg": reserve, "rounds": rounds, "missiles": missiles.count,
+		"missile_credits": missiles.credits,
+		"credits": ceili((prop + reserve) / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds) / ROUNDS_PER_CREDIT - 1e-9) + missiles.credits}
 
 
 ## Missiles fired since the last restock: {count, credits, by_launcher
@@ -165,15 +169,17 @@ static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: Cons
 		profile.credits -= int(need.credits)
 		vessel.condition.erase("stores")
 		vessel.condition.erase("missiles_used")
-		var line := "Resupplied %.1f t propellant and %d rounds%s for %d credits" % [need.propellant_kg / 1000.0, need.rounds,
+		var line := "Resupplied %.1f t propellant and %d rounds%s for %d credits" % [(need.propellant_kg + need.reserve_kg) / 1000.0, need.rounds,
 			" and %d missile%s" % [need.missiles, "" if need.missiles == 1 else "s"] if need.missiles > 0 else "", need.credits]
 		vessel.record(line)
 		return line
-	# Short of credits: as much propellant, then as many rounds, then as many
-	# missiles, as they buy.
+	# Short of credits: as much propellant (the main tank, then the jump
+	# reserve), then as many rounds, then as many missiles, as they buy.
 	var budget := float(profile.credits)
 	var kg := minf(float(need.propellant_kg), budget / PROPELLANT_CREDITS_PER_T * 1000.0)
 	budget -= ceilf(kg / 1000.0 * PROPELLANT_CREDITS_PER_T)
+	var reserve_kg := minf(float(need.reserve_kg), maxf(budget, 0.0) / PROPELLANT_CREDITS_PER_T * 1000.0)
+	budget -= ceilf(reserve_kg / 1000.0 * PROPELLANT_CREDITS_PER_T)
 	var rounds := mini(int(need.rounds), int(maxf(budget, 0.0)) * ROUNDS_PER_CREDIT)
 	budget -= ceilf(float(rounds) / ROUNDS_PER_CREDIT)
 	var stocked := 0
@@ -192,8 +198,10 @@ static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: Cons
 	if vessel.condition.has("stores"):
 		var stores: Dictionary = vessel.condition.stores
 		stores["propellant_kg"] = float(stores.get("propellant_kg", 0.0)) + kg
+		if stores.has("jump_reserve_kg"):
+			stores["jump_reserve_kg"] = float(stores.jump_reserve_kg) + reserve_kg
 		stores["rounds"] = int(stores.get("rounds", 0)) + rounds
-	var line := "Partly resupplied (credits short): %.1f t propellant, %d rounds, %d missiles" % [kg / 1000.0, rounds, stocked]
+	var line := "Partly resupplied (credits short): %.1f t propellant, %d rounds, %d missiles" % [(kg + reserve_kg) / 1000.0, rounds, stocked]
 	vessel.record(line)
 	return line
 

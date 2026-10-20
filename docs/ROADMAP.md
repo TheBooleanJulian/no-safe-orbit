@@ -522,8 +522,21 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 
 Done early (play-test batch 3): `Location` resource, Earth and Moon with
 per-body config and NASA textures, the shipyard map, known locations in the
-profile. Still to do: Mars, shipyard stock and prices and an encounter table
-per location, jump costs, brokers, contracts, sun-centred precision.
+profile. Done early (Milestone 12): the contract board.
+
+Part 1 ✅ (2026-10-20) — jump fuel, per-station shelves and traffic:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Jumps cost propellant by mass and distance (data-driven) | `test_m13_jumps` (cost) | Frigate 618 t: home 4.9 t, Earth→Moon 33.7 t |
+| Main tank first, then a jump-only reserve | `test_m13_jumps` (pay, relocation; mutation-checked) | 20 t + 20 t → 0 t + 9.5 t after the Moon jump |
+| Unaffordable jumps refused with a reason | `test_m13_jumps` (map, contract) | "burns 28.9 t; tanks 10.0 t, reserve 2.0 t — refuel (88 cr)" |
+| Stranded fallback; emergency jump still works | `smoke_campaign` (dry tanks) | rescue tow 412 cr; jump home burned 4.9 t as quoted |
+| Station stock, prices, encounter table | `test_m13_jumps` (shelves, traffic) | Moon: 4 items ≤ rare, ×1.2, crew fees 400 → 480 cr; corvettes and frigates, threat +1 |
+| Save format | `test_m13_jumps` (schema 9), `compat_check` | v8 → full reserve, `.v8` kept; COMPAT: OK |
+
+Still to do (part 2): Mars, brokers that sell locations, Sun-centred
+positions with `Vec3d` precision proven by a test.
 
 `Location` resource (body, start orbit, shipyard stock and prices,
 encounter table, broker). Per-body config (μ, radius, entry interface:

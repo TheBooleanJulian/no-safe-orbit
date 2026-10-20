@@ -4,6 +4,42 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 13, part 1 — jump fuel, per-station shelves and traffic (2026-10-20)
+
+#### Added
+- **Jumps burn propellant** (`JumpDrive`, `data/jump/jump_drive.tres`):
+  ship mass × (8 kg/t + 18 kg/t per decade of distance in 1,000 km). The
+  Frigate Mk I (618 t with full tanks) pays 4.9 t to jump home within a
+  location and 33.7 t from Earth to the Moon.
+- **A jump-only reserve**: the drive's own cell, a quarter of the tankage
+  (20 t on the Frigate); engines and RCS can't burn it. Jumps take the main
+  tank first, then the reserve; the yard refills both at launch or in the
+  ARMOURY, which now shows the reserve.
+- **Refused with the reason** when the propellant can't cover a jump (map
+  and contracts: "refuel in the ARMOURY (n cr)"; accepting a contract you
+  can't reach leaves the offer up). In flight a **rescue tow** brings the
+  ship home instead — 150 cr plus 0.5 cr per tonne, or all the credits
+  there are — so nobody is stranded. The jump alert shows the cost
+  (`JUMP 3.2s 4.9t`) or the tow (`TOW 3.2s 412cr` for a dry Frigate).
+- **Per-station shelves and traffic** (`Location`): the Lunar Shipyard
+  stocks four parts up to rare at ×1.2 prices (hiring ×1.2 too); its
+  traffic mixes corvettes and frigates one threat level higher. Earth is
+  unchanged. The map shows each jump's cost and the station's terms.
+- Tests: `test_m13_jumps.gd` (7, mutation-checked on the reserve and the
+  relocation charge); `smoke_campaign` checks the jump home burns the
+  quoted propellant and that dry tanks call the tow.
+
+#### Changed
+- **Backspace (restart) when your ship is still flying is a jump home**
+  and is paid like one (it was a free way back).
+- Enemy class names follow their hull ("Merlin-class corvette").
+- Profile schema 9: the vessel's stores carry `jump_reserve_kg`; v8 saves
+  start with a full reserve and keep `.v8`.
+- The shipyard map is taller, so labels and costs don't run into the text.
+
+#### Tests changed (and why)
+- `test_m12_shipyard` schema test: expects the current schema (9), not 8.
+
 ### Steam release preparation (2026-10-20)
 
 #### Added

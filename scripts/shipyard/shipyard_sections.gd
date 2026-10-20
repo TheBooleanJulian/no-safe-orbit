@@ -437,8 +437,11 @@ func _armoury_text() -> String:
 	var need := ServiceYard.resupply_needs(v, cat)
 	var lines := PackedStringArray(["[b]%s[/b]" % v.name])
 	lines.append("PROPELLANT  %s" % ("full" if float(need.propellant_kg) <= 0.0 else "%.1f t to fill" % (float(need.propellant_kg) / 1000.0)))
+	var tanks := yard.profile.vessel_tanks(cat)
+	lines.append("JUMP RESERVE  %s of %s%s — the jump drive's own; engines can't burn it" % [JumpDrive.tonnes(tanks.reserve_kg),
+		JumpDrive.tonnes(tanks.reserve_capacity_kg), "" if float(need.reserve_kg) <= 0.0 else " · %.1f t to fill" % (float(need.reserve_kg) / 1000.0)])
 	lines.append("ROUNDS      %s" % ("full" if int(need.rounds) <= 0 else "%d to fill" % need.rounds))
-	var msl := ServiceYard.missile_needs(v, cat)
+	var msl :=ServiceYard.missile_needs(v, cat)
 	lines.append("MISSILES & FLARES  %s" % ("full" if int(msl.count) == 0 else "%d to restock (%d cr)" % [msl.count, msl.credits]))
 	lines.append("TOTAL       %d credits (you have %d) — or left to the launch, which restocks what the credits allow" % [need.credits, yard.profile.credits])
 	return "\n".join(lines)

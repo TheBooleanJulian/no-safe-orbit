@@ -57,8 +57,9 @@ var radar_fits: bool = true
 var top_alert_level: String = ""
 ## Pass A alerts: ordered, steadied, trimmed (AlertQueue).
 var alert_queue := AlertQueue.new()
-## Jump drive while [B] is held (Main): {progress, left_s, waiting} or
-## {blocked}; {} when not charging.
+## Jump drive while [B] is held (Main): {progress, left_s, waiting, cost_kg,
+## tow (credits, when the propellant can't pay)} or {blocked}; {} when not
+## charging.
 var jump_state: Dictionary = {}
 var _jump_flash: ColorRect
 ## The current mission goal and the tutorial's prompt (set by Main), shown
@@ -761,8 +762,11 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		out.append(AlertQueue.make(&"jump", &"nav", CAUTION, "JUMP", "blocked", "", "[B]"))
 	elif jump_state.has("progress"):
 		var waiting: PackedStringArray = jump_state.waiting
-		if waiting.is_empty():
-			out.append(AlertQueue.make(&"jump", &"nav", ADVISORY, "JUMP", "%.1fs" % jump_state.left_s))
+		if jump_state.has("tow"):
+			out.append(AlertQueue.make(&"jump", &"nav", CAUTION, "TOW", "%.1fs %dcr" % [jump_state.left_s, int(jump_state.tow)], "", "[B]"))
+		elif waiting.is_empty():
+			out.append(AlertQueue.make(&"jump", &"nav", ADVISORY, "JUMP", "%.1fs %s" % [jump_state.left_s,
+				JumpDrive.tonnes(float(jump_state.get("cost_kg", 0.0))).replace(" ", "")]))
 		else:
 			out.append(AlertQueue.make(&"jump", &"nav", DANGER, "JUMP", "%.1fs −%d" % [jump_state.left_s, waiting.size()], "", "[B]"))
 	var link := world.link_for(player.id)

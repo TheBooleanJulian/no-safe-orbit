@@ -27,10 +27,12 @@ extends RefCounted
 ##     picked for the next sortie; older saves are at Earth, size 1.
 ## v8: the mission board (board, board_sortie, board_seed) and the
 ##     accepted contract (active_contract); older saves get a fresh board.
-const SCHEMA_VERSION := 8
+## v9: the jump drive's reserve in the vessel's stores
+##     (condition.stores.jump_reserve_kg); older vessels start it full.
+const SCHEMA_VERSION := 9
 ## Ships per encounter the map offers (EnemyFactory spawns them).
 const MAX_ENCOUNTER := 3
-## Locations every player knows from the start (brokers sell more, M13).
+## Locations every player knows from the start (brokers sell more).
 const STARTING_LOCATIONS := ["earth", "moon"]
 ## The last good save, kept beside the profile (rolling, one deep).
 const BACKUP_SUFFIX := ".bak"
@@ -315,15 +317,19 @@ func refresh_station(catalog: ConstructionCatalog) -> void:
 		var skill := 0 if _rng.randf() < 0.55 else (1 if _rng.randf() < 0.75 else 2)
 		hire_pool.append({"name": CrewNames.pick(_rng), "role": _rng.randi() % CrewRoster.Role.size(), "skill": skill,
 			"fee": HIRE_FEE + HIRE_FEE_PER_SKILL * skill})
+	# Each station's own shelves and prices (Location).
+	var here := Location.by_id(location)
+	for c in hire_pool:
+		c.fee = roundi(float(c.fee) * here.price_factor)
 	vendor_stock.clear()
 	var ids: Array = []
 	for id in ConstructionCatalog.sorted_ids(catalog.equipment):
 		var def: EquipmentDefinition = catalog.equipment[id]
-		if def.rarity != Rarity.Tier.COMMON and def.rarity <= Rarity.Tier.EPIC and not def.legacy:
+		if def.rarity != Rarity.Tier.COMMON and def.rarity <= mini(here.vendor_max_rarity, Rarity.Tier.EPIC) and not def.legacy:
 			ids.append(id)
-	for i in mini(VENDOR_STOCK_SIZE, ids.size()):
+	for i in mini(here.vendor_stock_size, ids.size()):
 		var id: StringName = ids.pop_at(_rng.randi() % ids.size())
-		vendor_stock.append({"id": String(id), "price": VENDOR_PRICES[catalog.equipment[id].rarity]})
+		vendor_stock.append({"id": String(id), "price": roundi(VENDOR_PRICES[catalog.equipment[id].rarity] * here.price_factor)})
 
 
 ## Berths on the active vessel's design.
@@ -666,12 +672,58 @@ static func _read_v8_board(p: PlayerProfile, d: Dictionary) -> void:
 		p.active_contract = (a as Dictionary).duplicate(true)
 
 
-## Move the docked vessel to the station at a known location (free until
-## jump costs arrive, M13). Returns "" or why not.
-func relocate(location_id: String) -> String:
+## The docked vessel's tanks: {mass_kg (with what is aboard), main_kg,
+## capacity_kg, reserve_kg, reserve_capacity_kg}. No stores = full.
+func vessel_tanks(catalog: ConstructionCatalog) -> Dictionary:
+	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
+	var stores: Dictionary = vessel.condition.get("stores", {})
+	var drive := JumpDrive.standard()
+	var reserve_cap := drive.reserve_capacity_kg(stats.propellant_capacity_kg)
+	var main := minf(float(stores.get("propellant_kg", stats.propellant_capacity_kg)), stats.propellant_capacity_kg)
+	var reserve := minf(float(stores.get("jump_reserve_kg", reserve_cap)), reserve_cap)
+	return {"mass_kg": stats.mass_kg + main + reserve, "main_kg": main, "capacity_kg": stats.propellant_capacity_kg,
+		"reserve_kg": reserve, "reserve_capacity_kg": reserve_cap}
+
+
+## Propellant (kg) the docked vessel's jump to `location_id` would burn.
+func jump_cost_kg(location_id: String, catalog: ConstructionCatalog) -> float:
+	var here := Location.by_id(location)
+	var there := Location.by_id(location_id)
+	if here.id == there.id:
+		return 0.0
+	return JumpDrive.standard().cost_kg(float(vessel_tanks(catalog).mass_kg), Location.distance_m(here, there))
+
+
+## Jump the docked vessel to the station at a known location, paying the
+## propellant from its main tank, then the drive's reserve (the yard refills
+## both, for credits, at the next launch or in the ARMOURY). Returns "" or
+## why not.
+func relocate(location_id: String, catalog: ConstructionCatalog = null) -> String:
 	if location_id not in known_locations:
 		return "That location is not on your map"
-	location = Location.by_id(location_id).id
+	var there := Location.by_id(location_id)
+	if there.id == location:
+		return ""
+	if catalog == null:
+		catalog = ConstructionCatalog.default_catalog()
+	var tanks := vessel_tanks(catalog)
+	var cost := jump_cost_kg(there.id, catalog)
+	var paid := JumpDrive.pay(float(tanks.main_kg), float(tanks.reserve_kg), cost)
+	if not paid.ok:
+		var short := ServiceYard.resupply_needs(vessel, catalog)
+		return "The jump to %s burns %s; the tanks hold %s and the reserve %s — refuel in the ARMOURY (%d cr)" % [
+			there.station_name, JumpDrive.tonnes(cost), JumpDrive.tonnes(tanks.main_kg), JumpDrive.tonnes(tanks.reserve_kg),
+			int(short.credits)]
+	var stores: Dictionary = vessel.condition.get("stores", {})
+	if stores.is_empty():
+		var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
+		stores = {"propellant_kg": stats.propellant_capacity_kg, "rounds": stats.rounds_capacity}
+	stores["propellant_kg"] = paid.main_kg
+	stores["jump_reserve_kg"] = paid.reserve_kg
+	vessel.condition["stores"] = stores
+	vessel.record("Jumped to %s: %s of propellant" % [there.station_name, JumpDrive.tonnes(cost)])
+	location = there.id
+	refresh_station(catalog)
 	return ""
 
 

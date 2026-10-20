@@ -185,6 +185,21 @@ and the location's central body:
 - Shipyard HANGAR › MAP (`SystemMap`): click a body → `relocate`, save; three
   toggle buttons set the encounter size. The route button beside LAUNCH
   shows both and opens the tab.
+- **Jumps (Milestone 13)**: `JumpDrive` (data `data/jump/jump_drive.tres`):
+  `cost_kg(mass, distance)` = t × (base + per-decade × log10(1 + d / 1000 km));
+  `pay(main, reserve, cost)` takes the main tank first; `tow_credits(mass)`.
+  The reserve is `reserve_fraction` of the tankage, kept in the vessel's
+  `condition.stores.jump_reserve_kg` (schema 9) and in `Main.jump_reserve_kg`
+  during a sortie. `PlayerProfile.relocate(id, catalog)` charges the docked
+  vessel (`vessel_tanks`) or refuses with the refuel price;
+  `ContractBoard.accept` refuses when it does. `Main.pay_jump_home` charges
+  the B jump and an alive-ship restart, or tows (credits, floored at 0).
+  `ServiceYard.resupply_needs` includes `reserve_kg`.
+- **Per station** (`Location`): `vendor_stock_size`, `vendor_max_rarity`,
+  `price_factor` (quartermaster and hiring, applied in
+  `PlayerProfile.refresh_station`), `enemy_templates` / `enemy_weights`
+  (seeded per mission and slot by `enemy_template`) and `threat_bonus`
+  (added to the mission number in `Main._spawn_encounter`).
 - `Main` reads the location in `_ready`: central body and start orbit,
   celestial frame, sky (`PlanetSky.configure(body)`: radius, entry radius,
   air on/off, surface map), stars' occlusion, eclipse, station names (HUD
@@ -753,7 +768,8 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 |---|---|---|
 | Spherical central body for gravity; no J2, no third bodies (no Earth pull in lunar orbit) | Orbits never precess | If missions need ground tracks or long-duration accuracy |
 | Airless bodies: the floor is a sphere at the highest terrain (11 km on the Moon), no terrain model | Flying low over a lunar plain is as fatal as hitting a summit | If low passes or landings are wanted |
-| Moving between stations is free and instant (shipyard map) | Location is a free choice | Milestone 13 (jump fuel, brokers) |
+| Jump distance is each location's distance from Earth on a line (Moon 384,400 km); travel is instant | The Earth–Moon jump always costs the same | Milestone 13 part 2 (Sun-centred positions for Mars) |
+| The jump reserve has no mass and no part of its own (a quarter of the tankage, beside it) | Bigger tanks mean a bigger reserve; the reserve never slows the ship | If tank design should trade reserve for range |
 | Reflected light is shown through a night-adaptation mapping (full Moon = 5 % of the Sun), not at its physical 2.4e-6; it isn't occluded by the near body's terrain or shadowed on hulls | Night is visible and readable | If an exposure/eye-adaptation model is wanted |
 | One far body per sky (the Moon from Earth, Earth from the Moon), placed by a low-precision lunar series (~0.3°); eclipses of the Sun by it are all-or-nothing; the Sun's direction is Earth's (≤ 0.15° off at the Moon) | Close enough to look right; no eclipse gameplay | If eclipses or more bodies matter |
 | Lunar rotation uses the IAU pole and W with only the largest periodic term (others ~0.3°) | Lunar geography is ~0.3° off | Not needed |

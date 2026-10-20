@@ -142,6 +142,9 @@ func _run() -> void:
 		flown_condition.crew.erase("wounded")
 		if flown_condition.crew.is_empty():
 			flown_condition.erase("crew")
+	# The jump home burns propellant (main tank first, then the reserve).
+	var aboard_kg := player.propellant_kg + main.jump_reserve_kg
+	var jump_cost := main.jump_home_cost_kg(player)
 	await _jump()
 	var yard := current_scene as Shipyard
 	_check(yard != null, "holding B jumps to Earth Shipyard")
@@ -150,6 +153,10 @@ func _run() -> void:
 	var vessel := yard.profile.vessel
 	var docked_condition := vessel.condition.duplicate(true)
 	_check(docked_condition.has("stores"), "the stores it came back with are recorded (%s)" % str(docked_condition.get("stores")))
+	var home: Dictionary = docked_condition.get("stores", {})
+	var burned := aboard_kg - float(home.get("propellant_kg", 0.0)) - float(home.get("jump_reserve_kg", 0.0))
+	_check(home.has("jump_reserve_kg") and absf(burned - jump_cost) < 1500.0,
+		"the jump burned %.1f t (%.1f t quoted)" % [burned / 1000.0, jump_cost / 1000.0])
 	docked_condition.erase("stores")
 	_check(vessel.sorties == 1 and vessel.is_damaged() and JSON.stringify(docked_condition) == JSON.stringify(flown_condition),
 		"the docked vessel keeps exactly the damage it flew back with (the wounded recover)")
@@ -213,6 +220,14 @@ func _run() -> void:
 	var reborn := main.world.get_ship(Main.PLAYER_ID)
 	_check(reborn.is_active() and reborn.systems.blueprint.equipment.size() == player.systems.blueprint.equipment.size() and not main.hud.debrief.visible,
 		"Backspace respawns the same design")
+	# Dry tanks: going home (Backspace docks first, a jump) calls the tow.
+	reborn.propellant_kg = 0.0
+	main.jump_reserve_kg = 0.0
+	profile.credits = 1000
+	var tow := JumpDrive.standard().tow_credits(reborn.mass_kg())
+	await _press("restart_scenario")
+	await _frames(3)
+	_check(profile.credits == 1000 - tow, "dry tanks: the rescue tow brings the ship home for %d credits (left %d)" % [tow, profile.credits])
 	_finish()
 
 

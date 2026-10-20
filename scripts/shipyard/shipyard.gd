@@ -1207,17 +1207,19 @@ func _build_map_tab(tabs: TabContainer) -> void:
 	_refresh_map()
 
 
-## Dock the vessel at a known location's station (the next launch starts in
-## its orbit). Free for now; jump costs come with Milestone 13.
+## Jump the vessel to a known location's station (the next launch starts in
+## its orbit), paying the propellant (PlayerProfile.relocate).
 func pick_location(location_id: String) -> bool:
-	var why := profile.relocate(location_id)
+	var cost := profile.jump_cost_kg(location_id, editor.catalog)
+	var why := profile.relocate(location_id, editor.catalog)
 	if why != "":
 		_set_status(why, true)
 		return false
 	_save_profile()
 	_refresh_map()
-	_set_status("Docked at %s — the next launch starts in %s" % [Location.by_id(location_id).station_name,
-		Location.by_id(location_id).display_name.to_lower()])
+	_refresh_station_tabs()
+	_set_status("Docked at %s — the jump burned %s; the next launch starts in %s" % [Location.by_id(location_id).station_name,
+		JumpDrive.tonnes(cost), Location.by_id(location_id).display_name.to_lower()])
 	return true
 
 
@@ -1231,7 +1233,11 @@ func _refresh_map() -> void:
 	if system_map == null:
 		return
 	var here := Location.by_id(profile.location)
-	system_map.set_state(profile.known_locations, here.id)
+	var costs := {}
+	for id: String in profile.known_locations:
+		if id != here.id:
+			costs[id] = "jump %s" % JumpDrive.tonnes(profile.jump_cost_kg(id, editor.catalog))
+	system_map.set_state(profile.known_locations, here.id, costs)
 	var title := get_node_or_null("Margin/VBox/TopBar/Title") as Label
 	if title != null:
 		title.text = here.station_name.to_upper()
@@ -1246,7 +1252,16 @@ func _refresh_map() -> void:
 %s" % [
 		here.station_name, here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
 		"entry interface" if b.has_atmosphere else "terrain floor", b.entry_interface_altitude_m / 1000.0,
-		CyberTheme.tint("Click a body to move to its station · free until jump fuel arrives", CyberTheme.TEXT_DIM)]
+		CyberTheme.tint(_jump_note(), CyberTheme.TEXT_DIM)]
+
+
+func _jump_note() -> String:
+	var t := profile.vessel_tanks(editor.catalog)
+	var here := Location.by_id(profile.location)
+	return "Click a body to jump to its station: propellant from the tanks (%s) first, then the jump reserve (%s)
+%s: shelves ×%.2f, %d items up to %s · local traffic %s" % [
+		JumpDrive.tonnes(t.main_kg), JumpDrive.tonnes(t.reserve_kg), here.station_name, here.price_factor, here.vendor_stock_size,
+		Rarity.NAMES[here.vendor_max_rarity].to_lower(), ", ".join(Array(here.enemy_templates).map(func(f: String) -> String: return f.get_basename().split("_")[0]))]
 
 
 ## The station's people and shelves: the vessel's crew (roles, dismiss),

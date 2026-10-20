@@ -12,6 +12,8 @@ signal picked(location_id: String)
 var known: Array = []
 ## The docked location's id.
 var docked: String = ""
+## Location id -> a short line under its name (the jump's cost).
+var notes: Dictionary = {}
 
 var _hover: String = ""
 
@@ -20,14 +22,15 @@ const EARTH_MOON_KM := 384_400
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(0, 150)
+	custom_minimum_size = Vector2(0, 320)  # discs plus three label lines
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	tooltip_text = "Click a location to move the vessel to its station"
 
 
-func set_state(known_ids: Array, docked_id: String) -> void:
+func set_state(known_ids: Array, docked_id: String, note_by_id: Dictionary = {}) -> void:
 	known = known_ids
 	docked = docked_id
+	notes = note_by_id
 	queue_redraw()
 
 
@@ -97,6 +100,9 @@ func _draw() -> void:
 		draw_string(font, c + Vector2(-r, r + 20.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, col)
 		draw_string(font, c + Vector2(-r, r + 34.0), "%s · %.0f km" % [loc.display_name, loc.start_altitude_m / 1000.0],
 			HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, CyberTheme.TEXT_DIM)
+		if notes.has(loc.id):
+			draw_string(font, c + Vector2(-r, r + 48.0), str(notes[loc.id]),
+				HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, CyberTheme.CYAN if loc.id == _hover else CyberTheme.TEXT_DIM)
 
 
 static func _thousands(n: int) -> String:

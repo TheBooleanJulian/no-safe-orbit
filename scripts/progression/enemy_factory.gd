@@ -60,7 +60,7 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7919 * mission + 17 + 104_729 * variant
 	var bp := template.duplicate_blueprint()
-	bp.name = "%s-class frigate" % CLASS_NAMES[(mission - 1 + variant) % CLASS_NAMES.size()]
+	bp.name = "%s-class %s" % [CLASS_NAMES[(mission - 1 + variant) % CLASS_NAMES.size()], template.name.split(" ")[0].to_lower()]
 	var m := float(mission)
 	for e in bp.equipment:
 		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)

@@ -68,17 +68,18 @@ static func giver(c: Dictionary) -> Dictionary:
 
 
 ## Accept offer `id` from the board: it becomes the active contract and sets
-## the next sortie's location and encounter size. "" or why not.
+## the next sortie's location (jumping there, paid in propellant) and
+## encounter size. "" or why not (an unaffordable jump leaves the offer up).
 static func accept(profile: PlayerProfile, id: String) -> String:
 	if not profile.active_contract.is_empty():
 		return "Finish or abandon %s first" % profile.active_contract.title
 	for c in profile.board:
 		if str(c.id) == id:
-			profile.active_contract = (c as Dictionary).duplicate()
-			profile.board.erase(c)
 			var why := profile.relocate(str(c.location))
 			if why != "":
-				profile.location = Location.DEFAULT_ID
+				return why
+			profile.active_contract = (c as Dictionary).duplicate()
+			profile.board.erase(c)
 			profile.encounter_size = int(c.ships)
 			return ""
 	return "That offer is gone"

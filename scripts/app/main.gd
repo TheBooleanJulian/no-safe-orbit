@@ -118,6 +118,8 @@ const ENEMY_REBOARD_DELAY_S := 20.0
 ## How our crew defends against boarders (chosen in Tab → CREW).
 var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
 var _jump_hold := 0.0
+## The jump drive's reserve (kg): only jumps burn it (JumpDrive).
+var jump_reserve_kg := 0.0
 ## SEQUENCE missile mode: which warhead the next press of M fires.
 var _sequence_index := 0
 var _craft_views: Dictionary = {}  # craft id -> CraftView
@@ -229,6 +231,10 @@ func _start_scenario() -> void:
 		player.propellant_kg = minf(float(stores.get("propellant_kg", player.propellant_kg)), player.propellant_kg)
 		player.propellant_kg = minf(player.propellant_kg, _intact_tank_capacity(systems))
 		player.set_rounds(mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds))
+	var reserve_cap := JumpDrive.standard().reserve_capacity_kg(player.config.propellant_capacity_kg)
+	jump_reserve_kg = reserve_cap
+	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
+		jump_reserve_kg = minf(float(vessel.condition.get("stores", {}).get("jump_reserve_kg", reserve_cap)), reserve_cap)
 	player.attach_systems(systems)
 	world.add_ship(player)
 	player_wing = AirWing.for_ship(player)
@@ -270,6 +276,8 @@ func _spawn_encounter(arriving: bool = false) -> void:
 	# A contract sets how dangerous the ships are (its threat level).
 	if not get_profile().active_contract.is_empty():
 		mission_no = maxi(int(get_profile().active_contract.get("threat", mission_no)), 1)
+	# Local traffic is tougher away from home (Location.threat_bonus).
+	mission_no += location.threat_bonus
 	for i in EnemyFactory.encounter_size(get_profile().encounter_size):
 		_spawn_contact(i, mission_no, arriving)
 	encounter.ensure_selection(world)
@@ -280,7 +288,12 @@ func _spawn_encounter(arriving: bool = false) -> void:
 func _spawn_contact(index: int, mission_no: int, arriving: bool) -> Contact:
 	var id := StringName("target_%02d" % (index + 1))
 	var player := world.get_ship(PLAYER_ID)
-	var template := _load_template()
+	# The location's encounter table picks the hull (Location.enemy_template).
+	var errors := PackedStringArray()
+	var template := BlueprintIO.load_file("res://data/blueprints/" + location.enemy_template(mission_no, index), errors)
+	if template == null:
+		GameLog.error("main", "Enemy template failed to load (%s); using the default" % ", ".join(errors))
+		template = _load_template()
 	_designs[id] = _compile(EnemyFactory.design(mission_no, template, ConstructionCatalog.default_catalog(), index), template)
 	var class_name_word: String = (_designs[id].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
 	var offset: Vector3 = CONTACT_OFFSETS[index % CONTACT_OFFSETS.size()] * (1.0 + float(index / CONTACT_OFFSETS.size()))
@@ -394,6 +407,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event.is_action_pressed("restart_scenario"):
 		GameLog.info("main", "Scenario restarted")
+		# Docking first is a jump home: it is paid for like one.
+		var me := world.get_ship(PLAYER_ID)
+		if me != null and me.is_active() and not player_captured() and not _sortie_closed:
+			pay_jump_home(me)
 		close_sortie()
 		_start_scenario()
 		return
@@ -733,7 +750,7 @@ func close_sortie() -> void:
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
 		var after := player.systems.condition()
 		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds,
-			"missiles": player.systems.missile_count()}
+			"missiles": player.systems.missile_count(), "jump_reserve_kg": jump_reserve_kg}
 		lines.append_array(p.dock(after, catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	for line in lines:
@@ -995,6 +1012,37 @@ func jump_waiting() -> PackedStringArray:
 	return out
 
 
+## Propellant (kg) the jump home to the location's station costs now (the
+## base cost: no distance within a location).
+func jump_home_cost_kg(player: ShipState) -> float:
+	return JumpDrive.standard().cost_kg(player.mass_kg() + jump_reserve_kg, 0.0)
+
+
+## Pay for the jump home: the main tank, then the reserve; if they can't
+## cover it, a rescue tow brings the ship in for credits (all there are, if
+## fewer) — the ship is never stranded. Returns the log line.
+func pay_jump_home(player: ShipState) -> String:
+	var drive := JumpDrive.standard()
+	var cost := jump_home_cost_kg(player)
+	var paid := JumpDrive.pay(player.propellant_kg, jump_reserve_kg, cost)
+	var line := ""
+	if paid.ok:
+		player.propellant_kg = paid.main_kg
+		jump_reserve_kg = paid.reserve_kg
+		line = "Jump drive burned %s of propellant" % JumpDrive.tonnes(cost)
+	else:
+		var p := get_profile()
+		var fee := drive.tow_credits(player.mass_kg() + jump_reserve_kg)
+		var charged := mini(fee, p.credits)
+		p.credits -= charged
+		line = "Not enough propellant to jump (%s needed) — a rescue tow brought the ship in for %d credits%s" % [
+			JumpDrive.tonnes(cost), charged, " (all you had)" if charged < fee else ""]
+	if combat_log != null:
+		combat_log.record(world.sim_time, "jump", line)
+	GameLog.info("main", line)
+	return line
+
+
 ## Hold [B]: the dimensional jump drive charges for JUMP_HOLD_S and takes the
 ## ship home to Earth Shipyard. Not while a hostile is firing on us. Craft
 ## and boarders still out are left behind (an emergency jump — the countdown
@@ -1009,9 +1057,14 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 		else:
 			_jump_hold = minf(_jump_hold + delta, JUMP_HOLD_S)
 			var waiting := jump_waiting()
-			state = {"progress": _jump_hold / JUMP_HOLD_S, "left_s": JUMP_HOLD_S - _jump_hold, "waiting": waiting}
+			var cost := jump_home_cost_kg(player)
+			state = {"progress": _jump_hold / JUMP_HOLD_S, "left_s": JUMP_HOLD_S - _jump_hold, "waiting": waiting,
+				"cost_kg": cost}
+			if not JumpDrive.pay(player.propellant_kg, jump_reserve_kg, cost).ok:
+				state["tow"] = JumpDrive.standard().tow_credits(player.mass_kg() + jump_reserve_kg)
 			if _jump_hold >= JUMP_HOLD_S:
 				hud.jump_state = {}
+				pay_jump_home(player)
 				var vented := get_profile().vessel.vent_excess(player.systems.stats.cargo_m3, ConstructionCatalog.default_catalog()) \
 					if player.systems != null else PackedStringArray()
 				if not vented.is_empty():
