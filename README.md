@@ -6,17 +6,35 @@ A hard-sci-fi spacecraft engineering and combat simulator, built in Godot 4.
 Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
-**Status:** Milestones 0–6 complete — design a ship in the shipyard, then fly
+**Status:** Milestones 0–9 complete — design a ship in the shipyard, then fly
 and fight it in a real-scale 400 km Earth orbit under the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
 own orbits afterwards; power, heat, pressure and propellant are simulated.
-Disable an enemy, salvage it for spare parts and loot crates, dock, repair,
-refit and fly again — your vessel keeps its damage between sorties. A crew
-works the ship; dock a gangway and board the enemy room by room; launch a
-fighter and a recon drone and give them orders. Ships are built from blocks
-and sloped wedges, armoured with plates you paint on, powered through a bus
-you route; turrets train on your mouse aim. Next: Milestone 7 (EMP and
-advanced weapons). See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Guided missiles (anti-ship, saturation swarms, EMP, nuclear) fly salvos that
+point defence can shoot down. Disable an enemy, salvage it for spare parts and
+loot crates, dock, repair, refit and fly again — your vessel keeps its damage
+between sorties, and a short mission chain (with an opt-in guided first
+sortie) gives each fight a goal. A crew works the ship; dock a gangway and
+board the enemy room by room; launch a fighter and a recon drone and give
+them orders. Ships are built from blocks and sloped wedges, armoured with
+plates you paint on, powered through a bus you route; turrets train on your
+mouse aim. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Flight HUD in a 400 km orbit, a contact 2.5 km out](docs/screenshots/flight.jpg) | ![Gunnery: the hit cam replays a round through the enemy hull](docs/screenshots/gunnery.jpg) |
+| **Flight** — own-ship and target cards, the mission goal and tutorial offer, lead marker, radar and damage map. | **Gunnery** — fire on the ◇ lead; the hit cam replays where the round went and what it broke. |
+| ![A missile salvo climbing away from the frigate](docs/screenshots/missile_salvo.jpg) | ![Tab drawer: deck-by-deck damage control map](docs/screenshots/damage_control.jpg) |
+| **Missile salvo** — M fires every missile the mode allows; a saturation pod launches eight at a time. | **Damage control** (Tab) — every system and room by deck, with crew dots; click one for its actions. |
+| ![Tab drawer: crew map and roster by post](docs/screenshots/crew.jpg) | ![Debrief with the sortie summary](docs/screenshots/debrief.jpg) |
+| **Crew** (Tab › CREW) — a dot per person in their post's colour, the roster by post, orders and the boarding party. | **Debrief** — the mission result, what you dealt and took, and lessons for the shipyard. |
+| ![The shipyard: deck editor, palette, stats and hangar](docs/screenshots/shipyard.jpg) | |
+| **Shipyard** — build from blocks and wedges, route power, paint armour; stats, repairs and the next mission alongside. | |
+
+*Rendered with `godot --path . -s res://tools/capture_readme.gd` (a scratch
+profile, never your save).*
 
 ## Requirements
 
@@ -598,7 +616,8 @@ xvfb-run -s "-screen 0 1600x900x24" godot --path . --rendering-method gl_compati
 ```text
 data/                  data, not code: catalog/ (parts), blueprints/ (templates),
                        weapons/, bodies/ (Earth), ships/ (test fixture)
-docs/                  GAME_DESIGN (source-of-truth spec), ARCHITECTURE, ROADMAP
+docs/                  GAME_DESIGN (source-of-truth spec), ARCHITECTURE, ROADMAP,
+                       screenshots/ (README images)
 scenes/                main (flight), shipyard, ships, ui
 shaders/               planet_sky (Earth, 100 km limb, sun, stars)
 scripts/simulation/    authoritative flight sim — no rendering, no Input singleton
@@ -609,7 +628,7 @@ scripts/presentation/  views of sim state (ships, camera, dust, planet sky, trac
 scripts/ui/            HUD
 scripts/app/           wiring: main loop, player input, logging
 tests/                 unit tests, smoke test, runner
-tools/                 run_checks.sh, bench_sim.gd, capture_screens.gd
+tools/                 run_checks.sh, bench_sim.gd, capture_screens.gd, capture_readme.gd
 ```
 
 Also: [`CHANGELOG.md`](CHANGELOG.md), [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).

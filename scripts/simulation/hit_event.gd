@@ -15,3 +15,5 @@ var relative_speed: float
 var energy_j: float
 ## What the round did inside the ship (null for ships without systems).
 var report: DamageReport
+## A missile's warhead, not a gun round (counted apart from gun accuracy).
+var missile: bool = false

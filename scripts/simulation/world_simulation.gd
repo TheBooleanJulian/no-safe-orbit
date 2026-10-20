@@ -357,6 +357,7 @@ func _detonate(m: ShipState, target: ShipState) -> void:
 			ev.point_body = point_body
 			ev.relative_speed = rel_v.length()
 			ev.energy_j = 0.5 * m.mass_kg() * rel_v.length_squared()
+			ev.missile = true
 			ev.report = Penetration.apply(target.systems, point_body, inv * dir, cfg.penetration_mm)
 			_apply_damage(target, ev.report)
 			target.systems.blast_at(point_body, cfg.blast_radius_m, cfg.blast_structure_fraction, cfg.blast_hp, "%s hit — warhead detonated" % cfg.display_name)
