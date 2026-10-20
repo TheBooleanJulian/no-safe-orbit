@@ -694,6 +694,30 @@ func jump_cost_kg(location_id: String, catalog: ConstructionCatalog) -> float:
 	return JumpDrive.standard().cost_kg(float(vessel_tanks(catalog).mass_kg), Location.distance_m(here, there))
 
 
+## Locations an information broker sells (not on the map yet), in map order.
+func brokers() -> Array[Location]:
+	var out: Array[Location] = []
+	for loc in Location.all():
+		if loc.id not in known_locations and loc.broker_price > 0:
+			out.append(loc)
+	return out
+
+
+## Buy a broker's charts: the location goes on the map. "" or why not.
+func buy_location(location_id: String) -> String:
+	var loc := Location.by_id(location_id)
+	if loc.id != location_id or loc.broker_price <= 0:
+		return "No broker sells charts for that"
+	if location_id in known_locations:
+		return "%s is already on your map" % loc.display_name
+	if credits < loc.broker_price:
+		return "%s wants %d credits for the charts; you have %d" % [loc.broker_name, loc.broker_price, credits]
+	credits -= loc.broker_price
+	known_locations.append(loc.id)
+	loot_log.append("Charts bought: %s (%s)" % [loc.display_name, loc.station_name])
+	return ""
+
+
 ## Jump the docked vessel to the station at a known location, paying the
 ## propellant from its main tank, then the drive's reserve (the yard refills
 ## both, for credits, at the next launch or in the ARMOURY). Returns "" or

@@ -535,8 +535,20 @@ Part 1 ✅ (2026-10-20) — jump fuel, per-station shelves and traffic:
 | Station stock, prices, encounter table | `test_m13_jumps` (shelves, traffic) | Moon: 4 items ≤ rare, ×1.2, crew fees 400 → 480 cr; corvettes and frigates, threat +1 |
 | Save format | `test_m13_jumps` (schema 9), `compat_check` | v8 → full reserve, `.v8` kept; COMPAT: OK |
 
-Still to do (part 2): Mars, brokers that sell locations, Sun-centred
-positions with `Vec3d` precision proven by a test.
+Part 2 ✅ (2026-10-20) — Mars, brokers, Sun-centred positions:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Mars: per-body config, public-domain texture with its licence recorded, size controlled | `test_m13_mars` (place), render review, `data/ATTRIBUTION.md` | 3407 m/s, 113.4 min at 300 km; entry 125 km; USGS/NASA mosaic 4096 × 2048, 2.2 MB |
+| Sun-centred positions, real orbital data | `test_m13_mars` (published approaches, perihelion/aphelion, Sun vs Almanac) | 57.58 / 62.07 / 96.09 Mkm (NASA 57.59 / 62.07 / 96.08); 1.381–1.666 AU; Sun differs by precession only |
+| `Vec3d` precision proven | `test_m13_mars` (doubles) | ship at Mars: 0 m with doubles, 1,868 m with Vector3 |
+| Mars has its own Sun | `test_m13_mars` (mutation-checked) | 68.3° from Earth's on the scenario date |
+| Brokers sell locations (decision 3) | `test_m13_mars` (brokers, mutation-checked), render review | Mars 1,500 cr; contracts follow; saved |
+| Jumps pay the real distance | `test_m13_mars`, `test_m13_jumps` | Earth→Mars 229 Mkm: 64.6 t; Earth→Moon 400,985 km: 33.9 t |
+| Local traffic and shelves | `test_m13_mars` | destroyers among frigates, threat +2; 5 items ≤ epic ×1.5 |
+
+Not done: delivery and retrieve contracts (the board has bounty, capture,
+escort, defend and salvage).
 
 `Location` resource (body, start orbit, shipyard stock and prices,
 encounter table, broker). Per-body config (μ, radius, entry interface:

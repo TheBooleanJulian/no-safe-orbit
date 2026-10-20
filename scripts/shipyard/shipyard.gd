@@ -104,6 +104,7 @@ var map_tab: VBoxContainer
 var route_button: Button
 var size_buttons: Array[Button] = []
 var _map_info: RichTextLabel
+var _broker_box: VBoxContainer
 var _hangar_tabs: TabContainer
 ## The station's sections (Milestone 12): the builder is REFIT, one of them.
 var sections: ShipyardSections
@@ -1180,6 +1181,9 @@ func _build_map_tab(tabs: TabContainer) -> void:
 	map_tab.add_child(system_map)
 	_map_info = _rich_label()
 	map_tab.add_child(_map_info)
+	_broker_box = VBoxContainer.new()
+	_broker_box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	map_tab.add_child(_broker_box)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
 	var heading := Label.new()
@@ -1223,6 +1227,19 @@ func pick_location(location_id: String) -> bool:
 	return true
 
 
+## Buy a broker's charts (PlayerProfile.buy_location); the map grows.
+func buy_charts(location_id: String) -> bool:
+	var why := profile.buy_location(location_id)
+	if why != "":
+		_set_status(why, true)
+		return false
+	_save_profile()
+	_refresh_map()
+	_set_status("%s is on your map — jump there from it (%s of propellant)" % [Location.by_id(location_id).display_name,
+		JumpDrive.tonnes(profile.jump_cost_kg(location_id, editor.catalog))])
+	return true
+
+
 func set_encounter_size(n: int) -> void:
 	profile.encounter_size = clampi(n, 1, PlayerProfile.MAX_ENCOUNTER)
 	_save_profile()
@@ -1245,6 +1262,7 @@ func _refresh_map() -> void:
 		size_buttons[i].set_pressed_no_signal(i + 1 == profile.encounter_size)
 	var n := profile.encounter_size
 	route_button.text = "◎ %s · %d SHIP%s" % [here.display_name.to_upper(), n, "" if n == 1 else "S"]
+	_refresh_brokers()
 	var b := here.body
 	_map_info.text = "[b]%s[/b] · docked
 %s
@@ -1253,6 +1271,32 @@ func _refresh_map() -> void:
 		here.station_name, here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
 		"entry interface" if b.has_atmosphere else "terrain floor", b.entry_interface_altitude_m / 1000.0,
 		CyberTheme.tint(_jump_note(), CyberTheme.TEXT_DIM)]
+
+
+## Information brokers: charts for the places not on the map yet.
+func _refresh_brokers() -> void:
+	if _broker_box == null:
+		return
+	for c in _broker_box.get_children():
+		c.queue_free()
+	for loc in profile.brokers():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+		var text := _rich_label()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		text.text = "[b]BROKER[/b] %s — %s\n%s" % [loc.broker_name, loc.display_name.to_upper(),
+			CyberTheme.tint(loc.broker_pitch, CyberTheme.TEXT_DIM)]
+		row.add_child(text)
+		var buy := Button.new()
+		buy.text = "Buy charts (%d cr)" % loc.broker_price
+		buy.custom_minimum_size = Vector2(200, 34)
+		buy.disabled = profile.credits < loc.broker_price
+		buy.tooltip_text = "Puts %s on your map; jumping there still costs propellant" % loc.station_name
+		CyberTheme.style_button(buy, CyberTheme.AMBER)
+		buy.pressed.connect(buy_charts.bind(loc.id))
+		row.add_child(buy)
+		_broker_box.add_child(row)
 
 
 func _jump_note() -> String:

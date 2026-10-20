@@ -30,6 +30,9 @@ uniform float far_radius = 0.0;
 uniform sampler2D far_map : source_color, filter_linear_mipmap, repeat_enable;
 uniform mat3 far_to_body = mat3(1.0);
 uniform float far_has_air = 0.0;
+// 1 where the air carries Earth-like clouds and the map has seas (glint).
+uniform float has_clouds = 1.0;
+uniform float far_has_clouds = 1.0;
 // Light reflected between the two bodies (PlanetSky): the far body lighting
 // the central body's night side (near_fill: moonlight on Earth, earthlight
 // on the Moon) and the central body lighting the far body's (far_fill:
@@ -107,21 +110,21 @@ float fbm(vec3 p, int octaves, float wavelength_m, float footprint_m) {
 // `map` sampled through `to_body` (PCI → body-fixed), `radius` (m), `air`
 // 1 for clouds, sea glint and haze. Shared by the central and far body.
 vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m, sampler2D map_tex, mat3 to_body, float radius, float air,
-		vec3 fill_dir, float fill) {
+		float clouds_on, vec3 fill_dir, float fill) {
 	vec3 e = to_body * n;  // body-fixed: z = north pole, x = prime meridian
 	vec2 uv = vec2(atan(e.y, e.x) / TAU + 0.5, 0.5 - asin(clamp(e.z, -1.0, 1.0)) / PI);
 	// Explicit LOD from the pixel footprint: no mip seam at the date line.
 	float texel_m = TAU * radius / float(textureSize(map_tex, 0).x);
 	vec3 map = textureLod(map_tex, uv, max(log2(footprint_m / texel_m), 0.0)).rgb;
 	vec3 srgb = pow(map, vec3(1.0 / 2.2));
-	float water = smoothstep(0.06, 0.14, srgb.b - srgb.r) * step(srgb.g, srgb.b + 0.02) * air;
+	float water = smoothstep(0.06, 0.14, srgb.b - srgb.r) * step(srgb.g, srgb.b + 0.02) * air * clouds_on;
 	// Fine detail below the map's ~20 km texels (modulates brightness only).
 	float detail = fbm(e * (radius / 40000.0), 5, 40000.0, footprint_m);
 	vec3 albedo = map * mix(0.8 + 0.4 * detail, 1.0, water);
 	// Clouds: body-fixed noise that slowly drifts.
 	vec3 cp = e * vec3(4.0, 4.0, 7.0) + vec3(37.0 + cloud_time * 2.0e-5, 11.0, cloud_time * 1.0e-5);
 	float cloud = 0.0;
-	if (air > 0.5) {
+	if (air * clouds_on > 0.5) {
 		// From far off (a whole planet in a few hundred pixels) only the
 		// coarse octaves remain: warp them into swirls, band them by latitude
 		// (cloudier ITCZ and 50–60° storm belts, clear ~25° subtropics) and
@@ -162,7 +165,7 @@ void sky() {
 			float t = -b - sqrt(disc);
 			vec3 n = normalize(oc + dir * t);
 			float footprint = t * pixel_angle / max(dot(n, -dir), 0.05);
-			COLOR = surface(n, -dir, sun, footprint, surface_map, pci_to_body, planet_radius, has_air, near_fill_dir, near_fill);
+			COLOR = surface(n, -dir, sun, footprint, surface_map, pci_to_body, planet_radius, has_air, has_clouds, near_fill_dir, near_fill);
 		} else {
 			vec3 col = vec3(0.0);
 			// Limb glow: brightness from the ray's closest approach altitude.
@@ -188,7 +191,7 @@ void sky() {
 					float ft = -fb - sqrt(fd);
 					vec3 fn = normalize(fo + dir * ft);
 					float ffoot = ft * far_radius * pixel_angle / max(dot(fn, -dir), 0.05);
-					col += surface(fn, -dir, sun, ffoot, far_map, far_to_body, far_radius, far_has_air, far_fill_dir, far_fill);
+					col += surface(fn, -dir, sun, ffoot, far_map, far_to_body, far_radius, far_has_air, far_has_clouds, far_fill_dir, far_fill);
 					far_hit = true;
 				}
 			}

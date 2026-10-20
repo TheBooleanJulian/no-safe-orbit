@@ -4,6 +4,45 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 13, part 2 — Mars, brokers, Sun-centred positions (2026-10-20)
+
+#### Added
+- **Mars**: a third location — the Martian Shipyard in a 300 km orbit
+  (3.41 km/s, 113.4 min) about Mars with its real gravity (μ 42,828 km³/s²),
+  radius, IAU pole and 24 h 37 min sol, thin dusty air (entry interface
+  125 km, a butterscotch limb, no clouds or sea glint) and the USGS/NASA
+  Viking colour mosaic (public domain). Deeper shelves (five parts up to
+  epic, ×1.5) and heavier traffic (destroyers among the frigates,
+  threat +2).
+- **Information brokers** (decision 3): places not on your map are sold as
+  charts on HANGAR › MAP — Mars for 1,500 cr. Earth and the Moon stay known
+  from the start; contracts follow you to newly charted places.
+- **Sun-centred positions**: Standish's Keplerian elements (JPL, 1800–2050)
+  for the Earth–Moon barycentre and Mars, solved in double precision
+  (`Vec3d`). They give Mars its own Sun (68° from Earth's on the scenario
+  date) and the real distance every jump pays for. Earth–Mars at the
+  scenario date: 229 million km, 64.6 t of propellant for the Frigate —
+  one full tank.
+- The map draws a line from Earth to each charted body, labelled with the
+  real distance.
+- Tests: `test_m13_mars.gd` (6): published Earth–Mars closest approaches
+  (2018, 2020, 2025: within 0.02 %), Mars's perihelion and aphelion, the
+  Sun agreeing with the Almanac up to precession, doubles vs single
+  precision (0 m vs 1.9 km for a ship at Mars), Mars's orbit, air and Sun,
+  brokers, traffic and shelves; mutation-checked on Mars's Sun and the
+  broker's charge.
+
+#### Changed
+- Jump distances are the bodies' real separation at the scenario date
+  (Earth–Moon 400,985 km: 33.9 t, was 33.7 t on a fixed 384,400 km).
+- `OrbitalBody` gains `air_color` and `clouds_and_seas` (Earth's defaults
+  unchanged). The data pack grows from 16.9 to 25.1 MB with the Mars map.
+
+#### Tests changed (and why)
+- `test_locations`: three locations in map order; the unknown-id fallback
+  uses "jupiter", since "mars" is now real.
+- `test_release`: the Mars map's attribution row joins the credited sources.
+
 ### Milestone 13, part 1 — jump fuel, per-station shelves and traffic (2026-10-20)
 
 #### Added

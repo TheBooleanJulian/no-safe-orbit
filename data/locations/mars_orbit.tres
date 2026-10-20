@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
+[ext_resource type="Resource" path="res://data/bodies/mars.tres" id="2_body"]
+
+[resource]
+script = ExtResource("1_loc")
+id = "mars"
+display_name = "Mars orbit"
+station_name = "Martian Shipyard"
+body = ExtResource("2_body")
+start_altitude_m = 300000.0
+map_position = Vector2(0.88, 0.7)
+map_radius_px = 20.0
+map_color = Color(0.74, 0.4, 0.24, 1)
+blurb = "Low Mars orbit, 300 km · 3.41 km/s · 113 min period. Thin, dusty air: the entry interface is 125 km. A frontier yard with deep shelves and heavy traffic."
+vendor_stock_size = 5
+vendor_max_rarity = 3
+price_factor = 1.5
+enemy_templates = PackedStringArray("frigate_mk1.json", "destroyer_mk1.json")
+enemy_weights = PackedFloat32Array(2, 1)
+threat_bonus = 2
+broker_price = 1500
+broker_name = "Cartographer Iyer"
+broker_pitch = "Approach charts for Mars and the Martian Shipyard's docking codes. The jump is long; fill your tanks."

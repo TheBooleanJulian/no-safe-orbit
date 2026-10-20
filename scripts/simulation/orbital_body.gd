@@ -38,8 +38,13 @@ extends Resource
 ## measured curve, with its opposition surge).
 @export var geometric_albedo: float = 0.3
 @export var phase_law: StringName = &"lambert"
-## Where it is (CelestialFrame.geocentric_icrs): &"earth" or &"moon".
+## Where it is (CelestialFrame.heliocentric_icrs): &"earth", &"moon" or a
+## planet with Keplerian elements (&"mars").
 @export var ephemeris: StringName = &"earth"
+## The air's colour (limb glow and haze) and whether it carries Earth-like
+## clouds over seas (sea glint); Mars has thin, dusty air and neither.
+@export var air_color := Color(0.32, 0.56, 1.0)
+@export var clouds_and_seas: bool = true
 ## Surface colour map: equirectangular, left edge 180° W, top edge 90° N.
 @export var surface_map: Texture2D
 
