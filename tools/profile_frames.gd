@@ -7,6 +7,9 @@ extends SceneTree
 ##   godot --path . -s res://tools/profile_frames.gd
 ## Prints frame time (mean, 95th percentile, worst) and where it went
 ## (Main.frame_ms sections), with what was in flight.
+##   -- --carriers : the player's Carrier (four hangars) against three enemy
+##                   carriers: the many-fighters fight (play-test batch 6).
+##   -- --carrier  : the player's Carrier against the usual three frigates.
 
 const SECONDS := 40.0
 const SALVO_EVERY_S := 8.0
@@ -26,7 +29,13 @@ func _run() -> void:
 	var p := Main.get_profile()
 	p.missions_completed = 6
 	p.encounter_size = 3
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var carriers := OS.get_cmdline_user_args().has("--carriers")
+	var own_carrier := carriers or OS.get_cmdline_user_args().has("--carrier")
+	var bp := BlueprintIO.load_file("res://data/blueprints/carrier_mk1.json" if own_carrier else BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	if carriers:
+		# In memory only: Earth's traffic becomes carriers for this run.
+		Location.by_id("earth").enemy_templates = PackedStringArray(["carrier_mk1.json"])
+		Location.by_id("earth").enemy_weights = PackedFloat32Array([1.0])
 	var rng := RandomNumberGenerator.new()
 	EnemyFactory._fit_launcher(bp, ConstructionCatalog.default_catalog(), &"missile_rack", rng)
 	EnemyFactory._fit_launcher(bp, ConstructionCatalog.default_catalog(), &"saturation_pod", rng)
@@ -77,6 +86,8 @@ func _run() -> void:
 		peak.missiles = maxi(peak.missiles, main.world.missiles.size())
 		peak.craft = maxi(peak.craft, craft)
 		peak.rounds = maxi(peak.rounds, main.world.projectiles().size())
+		peak["asleep"] = int(peak.get("asleep", 0)) + main.world.rounds_asleep
+		peak["awake"] = int(peak.get("awake", 0)) + main.world.rounds_awake
 		draw_calls += Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
 		render.cpu += RenderingServer.viewport_get_measured_render_time_cpu(vp) + RenderingServer.get_frame_setup_time_cpu()
 		render.gpu += RenderingServer.viewport_get_measured_render_time_gpu(vp)
@@ -91,7 +102,8 @@ func _run() -> void:
 	mean /= maxf(n, 1)
 	print("profile_frames: %d frames in %.0f s · mean %.1f ms (%.0f fps) · p95 %.1f ms · worst %.1f ms" % [
 		n, SECONDS, mean, 1000.0 / maxf(mean, 0.001), frames[int(n * 0.95)], frames[n - 1]])
-	print("  peak in flight: %d missiles · %d craft · %d rounds near" % [peak.missiles, peak.craft, peak.rounds])
+	print("  peak in flight: %d missiles · %d craft · %d rounds near · rounds asleep %d %% of round-ticks" % [peak.missiles, peak.craft, peak.rounds,
+		roundi(100.0 * int(peak.get("asleep", 0)) / maxf(int(peak.get("asleep", 0)) + int(peak.get("awake", 0)), 1))])
 	for k in sections:
 		print("  %-6s %6.2f ms mean · %6.1f ms worst" % [k, float(sections.get(k, 0.0)) / maxf(n, 1), float(worst_sections.get(k, 0.0))])
 	var phases: Dictionary = main.world.take_phase_ms()
@@ -104,6 +116,11 @@ func _run() -> void:
 	print("  spikes over %.0f ms: %d" % [SPIKE_MS, spikes.size()])
 	for line in spikes.slice(0, 12):
 		print("    " + line)
+	var by_gun := {}
+	for shot in main.world.projectiles():
+		var k := shot.weapon.display_name if shot.weapon != null else "?"
+		by_gun[k] = int(by_gun.get(k, 0)) + 1
+	print("  rounds by gun at the end: %s" % by_gun)
 	var census := {}
 	_census(main, census)
 	print("  scene: %s" % census)

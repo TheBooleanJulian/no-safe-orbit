@@ -51,10 +51,18 @@ class Craft:
 	var comms_lost_s: float = 0.0
 	## Why it is flying something other than its directive ("" = following it).
 	var override_reason: String = ""
+	## Its last controls (held between thoughts) and which tick of
+	## THINK_EVERY it thinks on.
+	var held_input: ShipControlInput
+	var think_offset: int = 0
 
 	func is_drone() -> bool:
 		return config.cannon == null
 
+
+## Craft think every THINK_EVERY ticks (30 Hz), staggered; on their way
+## home, every tick.
+const THINK_EVERY := 2
 
 var carrier_id: StringName
 var crafts: Array[Craft] = []
@@ -88,6 +96,7 @@ static func for_ship(carrier: ShipState) -> AirWing:
 		c.label = "%s %s%d" % [e.def.craft.display_name.split(" ")[0], kind.left(1).to_upper(), n[kind]]
 		c.directive = CraftAI.Directive.RECON if kind == "drone" else CraftAI.Directive.STRIKE
 		c.ammo = c.config.cannon.magazine_rounds if c.config.cannon != null else 0
+		c.think_offset = wing.crafts.size() % THINK_EVERY
 		wing.crafts.append(c)
 	return wing
 
@@ -241,8 +250,14 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 	if carrier != null and carrier.is_active():
 		var frame := rack_frame(world, c)
 		rack_point = frame[0] + frame[1] * (RECOVER_RADIUS_M * 0.5)
-	world.set_input(c.id, CraftAI.command(s, directive, carrier, rack_point, target, hostiles, c.priority, _slot_of(c, directive),
-		_friends, _enemy_missiles, dt))
+	# A craft thinks every THINK_EVERY ticks (staggered) and holds its controls
+	# in between — every tick on its way home, where landing needs precise
+	# braking (play-test batch 6: many fighters).
+	var landing := directive == CraftAI.Directive.RETURN
+	if landing or c.held_input == null or (world.tick + c.think_offset) % THINK_EVERY == 0:
+		c.held_input = CraftAI.command(s, directive, carrier, rack_point, target, hostiles, c.priority, _slot_of(c, directive),
+			_friends, _enemy_missiles, dt * (1.0 if landing else float(THINK_EVERY)))
+	world.set_input(c.id, c.held_input)
 	if directive == CraftAI.Directive.RETURN and carrier != null and carrier.is_active() \
 			and s.position.distance_to(rack_point) < RECOVER_RADIUS_M \
 			and (s.velocity - carrier.velocity).length() < RECOVER_SPEED_MPS:

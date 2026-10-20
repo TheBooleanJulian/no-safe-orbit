@@ -6,9 +6,9 @@
 script = ExtResource("1_gun")
 display_name = "Point-defence gun"
 muzzle_velocity_mps = 1100.0
-rate_of_fire_rpm = 900.0
-magazine_rounds = 600
-round_mass_kg = 0.1
-penetration_mm = 6.0
+rate_of_fire_rpm = 300.0
+magazine_rounds = 200
+round_mass_kg = 0.3
+penetration_mm = 18.0
 traverse_deg_s = 120.0
 dispersion_deg = 0.25

@@ -81,9 +81,14 @@ func interpolated_origin(alpha: float) -> Vec3d:
 	return prev_origin_position.plus(origin_position.minus(prev_origin_position).times(a))
 
 
+## Rebases so far (a pull worked out before one is stale).
+var rebase_count := 0
+
+
 ## Moves the origin by `shift` (local coordinates); callers subtract `shift`
 ## from every local position so PCI positions are unchanged.
 func rebase(shift: Vector3) -> void:
+	rebase_count += 1
 	origin_position = origin_position.plus_v3(shift)
 	prev_origin_position = prev_origin_position.plus_v3(shift)
 	rebase_offset = rebase_offset.plus_v3(shift)

@@ -4,6 +4,37 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 6, part 1 — big-fight performance (2026-10-21)
+
+#### Fixed
+- **Lag with many fighters and thousands of rounds.** Measured with
+  `tools/profile_frames.gd` (new modes `--carrier`, `--carriers`):
+  the usual three-ship fight 77 → 139 fps; your Carrier against three
+  frigates (15 craft, ~1,750 rounds) ~34 → 50 fps; four carriers (46 craft,
+  ~2,100 rounds) 7 → 20 fps.
+  - Rounds that can't reach a ship sleep (no hit test, no tidal term) and
+    settle the tidal pull on waking; awake rounds reuse last tick's pull and
+    test a bounding sphere before the hit box.
+  - Point defence fires a third as many, three times heavier rounds (300 rpm,
+    0.3 kg, 18 mm penetration, 2.6 m flak radius): the same damage rate, and
+    PD rounds had been 69 % of everything in flight. Its magazine holds 200
+    rounds (the same 40 s of fire). It gathers its targets once per tick.
+  - Craft think at 30 Hz, avoidance at 15 Hz; collisions skip pairs that
+    can't collide; tracers are built on the GPU; the HUD ship schematic
+    redraws at 10 Hz.
+  - At most 3 simulation ticks per frame (was 8; still 8 when
+    fast-forwarding): an overloaded fight runs a little slower than real
+    time instead of stuttering.
+  - Craft on final approach (within 150 m of their rack) stop keeping apart
+    from other craft: two landing at neighbouring racks could hold each
+    other off for ever.
+
+#### Tests changed (and why)
+- `test_m8_polish` (60 Hz budget): the duel's load is now > 40 rounds in
+  flight, not > 100 — point defence fires a third as many.
+- `test_combat_ai` (flares once armed): the defending ship's point defence
+  is off; the heavier PD rounds now kill the missile before flares are due.
+
 ### Milestone 14, part 2 — derelicts that stay, are salvaged again and break up (2026-10-20)
 
 #### Added

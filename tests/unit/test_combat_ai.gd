@@ -184,6 +184,10 @@ func test_ramming_is_harder_and_worse_for_the_lighter_ship() -> void:
 func test_flares_fire_once_a_missile_is_armed() -> void:
 	var world := WorldSimulation.new(DT)
 	var me := _ship(&"me", Vector3.ZERO, &"player")
+	# Its point defence off, so the missile lives long enough to be flared.
+	var no_pd := ShipPolicy.preset("Hold")
+	no_pd.pd_enabled = false
+	me.policy = no_pd
 	world.add_ship(me)
 	var foe := _ship(&"foe", Vector3(0, 0, -700), &"hostile")
 	world.add_ship(foe)

@@ -10,7 +10,12 @@ extends RefCounted
 
 const DEFAULT_FIXED_DT := 1.0 / 60.0
 ## Cap on catch-up steps per frame, so a long stall cannot snowball.
-const MAX_STEPS_PER_ADVANCE := 8
+## At most this many ticks per frame: under a heavy load the fight runs a
+## little slower than real time instead of the frame rate collapsing while
+## the simulation chases its own tail (play-test batch 6). 3 keeps real time
+## down to 20 fps.
+const MAX_STEPS_PER_ADVANCE := 3
+const FAST_FORWARD_STEPS := 8
 const _ACCUMULATOR_EPSILON := 1e-9
 ## Re-centre the local frame on the anchor ship beyond this offset. Keeps
 ## 32-bit local positions at sub-millimetre resolution.
@@ -727,6 +732,7 @@ func step() -> void:
 	_update_seekers()
 	_guide_missiles()
 	_phase("guidance")
+	_collect_pd_rounds()
 	for id in _ship_order:
 		var ship: ShipState = _ships[id]
 		ship.snapshot_previous()
@@ -769,7 +775,11 @@ func step() -> void:
 func advance(frame_delta: float) -> float:
 	_accumulator += maxf(frame_delta, 0.0)
 	var steps := 0
-	while _accumulator + _ACCUMULATOR_EPSILON >= fixed_dt and steps < MAX_STEPS_PER_ADVANCE:
+	# A deliberate fast-forward (Engine.time_scale > 1, the smoke tests) keeps
+	# the old cap: more ticks a frame and Main's per-frame logic (docking,
+	# boarding) would steer too coarsely.
+	var cap := MAX_STEPS_PER_ADVANCE if Engine.time_scale <= 1.0 else FAST_FORWARD_STEPS
+	while _accumulator + _ACCUMULATOR_EPSILON >= fixed_dt and steps < cap:
 		step()
 		_accumulator -= fixed_dt
 		steps += 1
@@ -882,7 +892,7 @@ const PD_READY_DEG := 1.5
 ## PD_ROUND_MIN_KG and closing slower than PD_ROUND_MAX_CLOSING_MPS (the
 ## heavy cannon's 4 kg rounds): autocannon rounds are too small to track,
 ## railgun slugs too fast.
-const PD_FLAK_RADIUS_M := 1.5
+const PD_FLAK_RADIUS_M := 2.6  # √3 × the old 1.5 m: a third as many flak rounds, three times the mass (batch 6)
 const PD_ROUND_MIN_KG := 2.0
 const PD_ROUND_MAX_CLOSING_MPS := 1500.0
 ## A hostile round is a threat if it will pass within the ship's hit box
@@ -928,21 +938,50 @@ func _round_threatens(ship: ShipState, shot: ProjectileState) -> bool:
 		and ca.miss < ship.config.hit_box_half_extents.length() + PD_THREAT_MARGIN_M
 
 
+## Rounds point defence could track at all (heavy enough, not flak),
+## gathered once per tick: with thousands of light rounds about, scanning
+## them all for every PD ship was most of the tick (play-test batch 6).
+var _pd_rounds: Array[ProjectileState] = []
+## Missiles and craft (what PD shoots besides rounds), gathered once per tick.
+var _pd_air: Array[ShipState] = []
+## Candidates just beyond PD range are kept (they close within the tick).
+const PD_CANDIDATE_SLACK_M := 300.0
+
+
+var _pd_collected_tick := -1
+
+
+func _collect_pd_rounds() -> void:
+	_pd_collected_tick = tick
+	_pd_air.clear()
+	for id in _ship_order:
+		var s: ShipState = _ships[id]
+		if s.is_active() and s.systems == null and s.config.hull_hp > 0.0:
+			_pd_air.append(s)
+	_pd_rounds.clear()
+	for shot in _rounds:
+		if shot.pd_target_round < 0 and shot.weapon != null and shot.weapon.round_mass_kg >= PD_ROUND_MIN_KG:
+			_pd_rounds.append(shot)
+
+
 ## What `ship`'s point defence could engage now — hostile missiles, craft
 ## and rounds on a collision course — as {kind, rank, pos, vel, id, round,
 ## d}, in the policy's order, nearest first within a kind.
 func pd_candidates(ship: ShipState) -> Array[Dictionary]:
 	var policy := _policy_of(ship)
 	var out: Array[Dictionary] = []
-	for id in _ship_order:
-		var other: ShipState = _ships[id]
-		if other == ship or not other.is_active() or other.systems != null or other.config.hull_hp <= 0.0 or not _hostile_to(ship, other):
+	if _pd_collected_tick != tick:
+		_collect_pd_rounds()  # called between ticks (HUD, tests)
+	var reach2 := (policy.pd_range_m + PD_CANDIDATE_SLACK_M) * (policy.pd_range_m + PD_CANDIDATE_SLACK_M)
+	for other in _pd_air:
+		# Cheapest first: most are out of reach (play-test batch 6).
+		if other == ship or other.position.distance_squared_to(ship.position) > reach2 or not _hostile_to(ship, other):
 			continue
 		var kind := &"missile" if other.missile != null else &"craft"
 		out.append({"kind": kind, "rank": policy.pd_rank(kind), "pos": other.position, "vel": other.velocity,
 			"id": String(other.id), "round": -1, "d": other.position.distance_to(ship.position)})
 	if policy.pd_rank(&"round") >= 0:
-		for shot in _rounds:
+		for shot in _pd_rounds:
 			if _round_threatens(ship, shot):
 				out.append({"kind": &"round", "rank": policy.pd_rank(&"round"), "pos": shot.position, "vel": shot.velocity,
 					"id": "round:%d" % shot.id, "round": shot.id, "d": shot.position.distance_to(ship.position)})
@@ -1103,21 +1142,25 @@ func _scatter(dir: Vector3, sigma: float) -> Vector3:
 ## by a gangway and craft near their own carrier don't collide.
 func _step_collisions() -> void:
 	var now := {}
+	# Only ships with hulls (systems) collide with anything: pair each with
+	# every later body and every earlier body without systems (each pair once).
 	for i in _ship_order.size():
 		var a: ShipState = _ships[_ship_order[i]]
-		if not a.is_active():
+		if not a.is_active() or a.systems == null or a.missile != null:
 			continue
-		for j in range(i + 1, _ship_order.size()):
-			var b: ShipState = _ships[_ship_order[j]]
-			if not b.is_active() or a.systems == null and b.systems == null or a.missile != null or b.missile != null:
+		for j in _ship_order.size():
+			if j == i:
 				continue
-			if _is_craft_of(a.id, b.id) or _is_craft_of(b.id, a.id) or _linked(a.id, b.id):
+			var b: ShipState = _ships[_ship_order[j]]
+			if not b.is_active() or b.missile != null or (b.systems != null and j < i):
 				continue
 			var ra := a.config.hit_box_half_extents.length()
 			var rb := b.config.hit_box_half_extents.length()
 			var ca := a.position + a.orientation * a.config.hit_box_center
 			var cb := b.position + b.orientation * b.config.hit_box_center
 			if ca.distance_squared_to(cb) > (ra + rb) * (ra + rb):
+				continue
+			if _is_craft_of(a.id, b.id) or _is_craft_of(b.id, a.id) or _linked(a.id, b.id):
 				continue
 			var contact := _contact_point(a, b)
 			if contact.is_empty():
@@ -1337,22 +1380,127 @@ func _build_broadphase(round_step_m: float) -> void:
 					(_broad[key] as Array[ShipState]).append(ship)
 
 
+## Sleeping rounds (play-test batch 6: thousands of fighter rounds): a round
+## that can't reach any ship for a while only coasts — no hit test, no tidal
+## term — for up to MAX_SLEEP_TICKS. How long: its distance to the nearest
+## ship's reach, less SLEEP_MARGIN_M (room for a ship or missile to speed
+## up), over its speed plus that ship's. On waking the tidal term over the
+## sleep is applied (trapezoid: exact for a linearly changing pull).
+const MAX_SLEEP_TICKS := 60
+const SLEEP_MARGIN_M := 150.0
+var _sleep_ships: Array = []  # [position, reach, speed] of each active ship
+var _sleep_center := Vector3.ZERO
+var _sleep_radius := 0.0
+var _sleep_speed := 0.0
+## Profiling: rounds asleep / awake in the last tick.
+var rounds_asleep := 0
+var rounds_awake := 0
+
+
+func _collect_sleep_ships() -> void:
+	_sleep_ships.clear()
+	var lo := Vector3.INF
+	var hi := -Vector3.INF
+	_sleep_speed = 0.0
+	for id in _ship_order:
+		var ship: ShipState = _ships[id]
+		if not ship.is_active():
+			continue
+		var reach := ship.config.hit_box_center.length() + ship.config.hit_box_half_extents.length()
+		var speed := ship.velocity.length()
+		_sleep_ships.append([ship.position, reach, speed])
+		lo = lo.min(ship.position - Vector3.ONE * reach)
+		hi = hi.max(ship.position + Vector3.ONE * reach)
+		_sleep_speed = maxf(_sleep_speed, speed)
+	_sleep_center = (lo + hi) * 0.5 if not _sleep_ships.is_empty() else Vector3.ZERO
+	_sleep_radius = (hi - lo).length() * 0.5 if not _sleep_ships.is_empty() else 0.0
+
+
+## Ticks `shot` can sleep (0 = it must be tested). A round in a broadphase
+## cell with ships in it is right by one: it stays awake, and isn't
+## re-measured for RECHECK_TICKS (measuring it against every ship each tick
+## was most of the rounds' cost).
+const RECHECK_TICKS := 4
+
+
+func _safe_ticks(shot: ProjectileState) -> int:
+	if _sleep_ships.is_empty():
+		return MAX_SLEEP_TICKS
+	if shot.recheck_in > 0:
+		shot.recheck_in -= 1
+		return 0
+	if _broad.has(_broad_cell(shot.position)):
+		shot.recheck_in = RECHECK_TICKS
+		return 0
+	var sp := shot.velocity.length()
+	# The whole fight at once first: most misses are well clear of it.
+	var gap := shot.position.distance_to(_sleep_center) - _sleep_radius - SLEEP_MARGIN_M
+	if gap / (sp + _sleep_speed + 1.0) >= MAX_SLEEP_TICKS * fixed_dt:
+		return MAX_SLEEP_TICKS
+	var best := INF
+	for s: Array in _sleep_ships:
+		var d := shot.position.distance_to(s[0]) - float(s[1]) - SLEEP_MARGIN_M
+		if d <= 0.0:
+			shot.recheck_in = RECHECK_TICKS
+			return 0
+		best = minf(best, d / (sp + float(s[2]) + 1.0))
+	return clampi(floori(best / fixed_dt), 0, MAX_SLEEP_TICKS)
+
+
+## The fastest round awake (or waking) last tick, and any fired since (m/s):
+## the broadphase's reach without a pass over every round.
+var _awake_speed := 0.0
+## Never assume less than the fastest gun's muzzle velocity (4 km/s) plus a
+## fast ship: rounds also arrive by firing, returning from far, and tests.
+const ROUND_SPEED_FLOOR_MPS := 4500.0
+
+
 func _step_rounds() -> void:
 	var half_dt := fixed_dt * 0.5
-	var fastest := 0.0
-	for shot in _rounds:
-		fastest = maxf(fastest, shot.velocity.length_squared())
-	_build_broadphase(sqrt(fastest) * fixed_dt * 1.05)
+	if _rounds.is_empty():
+		_broad.clear()
+		_awake_speed = 0.0
+		return  # nothing to move or test (and no broadphase to build)
+	var fastest := maxf(_awake_speed, ROUND_SPEED_FLOOR_MPS)
+	_awake_speed = 0.0
+	_build_broadphase(fastest * fixed_dt * 1.05 + 1.0)
+	_collect_sleep_ships()
 	var entry_r2 := 0.0
 	if frame != null:
 		entry_r2 = body.entry_radius_m() * body.entry_radius_m()
 	var survivors: Array[ProjectileState] = []
+	rounds_asleep = 0
+	rounds_awake = 0
 	for shot in _rounds:
 		shot.prev_position = shot.position
-		if frame != null:
-			shot.velocity += frame.tidal_acceleration(shot.position, true) * half_dt
+		if shot.sleep_ticks > 0:
+			rounds_asleep += 1
+			# Asleep: coast in a straight line; settle the pull on waking.
 			shot.position += shot.velocity * fixed_dt
-			shot.velocity += frame.tidal_acceleration(shot.position, false) * half_dt
+			shot.sleep_t += fixed_dt
+			shot.age_s += fixed_dt
+			shot.sleep_ticks -= 1
+			if shot.sleep_ticks == 0:
+				_awake_speed = maxf(_awake_speed, shot.velocity.length())
+			if shot.sleep_ticks == 0 and frame != null:
+				var t := shot.sleep_t
+				var a1 := frame.tidal_acceleration(shot.position, false)
+				shot.position += (shot.sleep_a0 / 3.0 + a1 / 6.0) * t * t
+				shot.velocity += (shot.sleep_a0 + a1) * 0.5 * t
+				shot.tidal_rebase = -1  # moved since a1: work it out afresh
+			survivors.append(shot)
+			continue
+		rounds_awake += 1
+		if frame != null:
+			# The pull at this tick's start is last tick's end (same origin,
+			# same place) unless the frame was rebased since.
+			var a_start := shot.tidal_end if shot.tidal_rebase == frame.rebase_count \
+				else frame.tidal_acceleration(shot.position, true)
+			shot.velocity += a_start * half_dt
+			shot.position += shot.velocity * fixed_dt
+			shot.tidal_end = frame.tidal_acceleration(shot.position, false)
+			shot.tidal_rebase = frame.rebase_count
+			shot.velocity += shot.tidal_end * half_dt
 		else:
 			shot.position += shot.velocity * fixed_dt
 		shot.age_s += fixed_dt
@@ -1370,9 +1518,17 @@ func _step_rounds() -> void:
 				continue
 		elif shot.position.length() > INERTIAL_MAX_RANGE_M:
 			continue  # no orbit to come back on: gone for good
+		shot.sleep_ticks = _safe_ticks(shot) if shot.pd_target_round < 0 else 0
+		if shot.sleep_ticks == 0:
+			_awake_speed = maxf(_awake_speed, shot.velocity.length())
+		if shot.sleep_ticks > 0:
+			shot.sleep_t = 0.0
+			shot.sleep_a0 = frame.tidal_acceleration(shot.position, false) if frame != null else Vector3.ZERO
 		survivors.append(shot)
 	_rounds = survivors
 	_intercept_rounds()
+	for s in _continuing:
+		_awake_speed = maxf(_awake_speed, s.velocity.length())
 	_rounds.append_array(_continuing)
 	_continuing.clear()
 
@@ -1465,6 +1621,14 @@ func _resolve_round_hits(shot: ProjectileState) -> bool:
 			continue
 		if shot.iff_side != &"" and ship.side == shot.iff_side and ship.missile == null:
 			continue  # a craft's round: its IFF interlock spares its own side
+		# Bounding sphere first (a few flops): most ships in the cell are
+		# nowhere near this round's path this tick.
+		var p0 := shot.prev_position - ship.prev_position
+		var seg := (shot.position - ship.position) - p0
+		var u := clampf(-p0.dot(seg) / maxf(seg.length_squared(), 1e-9), 0.0, 1.0)
+		var reach := ship.config.hit_box_center.length() + ship.config.hit_box_half_extents.length()
+		if (p0 + seg * u).length_squared() > reach * reach:
+			continue
 		var t := HitTest.round_vs_ship(shot.prev_position, shot.position, ship)
 		if t >= 0.0 and ship.systems != null:
 			# Narrow phase: the real hull cells, not just the bounding box.

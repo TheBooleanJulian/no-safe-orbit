@@ -352,6 +352,34 @@ renderer CPU/GPU time, spike frames, a mesh census):
   `MissileView` shares one body mesh per side.
 - **Logging:** `GameLog.hold(true)` during flight; Main flushes once a frame.
 
+Play-test batch 6 (2026-10-21), "lag when thousands of rounds are fired by
+many fighters" — `profile_frames.gd -- --carrier` (own Carrier against three
+frigates) and `-- --carriers` (four carriers, 46 craft):
+
+- **Sleeping rounds** (`WorldSimulation._safe_ticks`): a round that can't
+  reach any ship's hit sphere (less a 150 m margin) within up to 60 ticks
+  only coasts — no hit test, no tidal term — and settles the tidal pull on
+  waking (trapezoid over the sleep). A round in a broadphase cell with ships
+  stays awake without being measured for 4 ticks. 53–83 % of round-ticks
+  sleep. Awake rounds reuse the tidal pull from the end of their last tick
+  (invalidated by a frame rebase), and test each ship's bounding sphere
+  before its box.
+- **Point defence** gathers trackable rounds and air targets once per tick
+  and filters by distance before hostility. Its gun fires a third as many
+  rounds (300 rpm, 0.3 kg, 18 mm; flak radius 2.6 m): PD rounds had been
+  69 % of everything in flight.
+- **Craft** think every 2 ticks (staggered; every tick within 300 m of their
+  rack on the way home) and work out avoidance every 4.
+- **Collisions** pair only ships with hulls with everything else, distance
+  before the string checks.
+- **Tracers** are built on the GPU: each instance carries its position and
+  relative velocity; the vertex shader turns and sizes the streak.
+- **The HUD ship schematic** redraws at 10 Hz (a Carrier's was ~9 ms a frame).
+- **Catch-up** is capped at 3 ticks a frame (was 8; still 8 under a
+  deliberate fast-forward, `Engine.time_scale` > 1, as in the smoke tests):
+  overloaded, the fight runs slower than real time instead of the frame
+  rate collapsing.
+
 ## Rendering at planetary scale
 
 - **Floating origin:** every view is placed at `local_position − player_position`,
@@ -855,7 +883,10 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Missions are a fixed chain of four goals, then patrols | Little variety after the chain | Campaign content (M13) |
 | An encounter turns hostile together, and a contact engages only after the player has detected it | Ships can't be picked off one by one while the rest stay passive | If stealth or diplomacy arrive |
 | Enemy roles are fixed by place in the encounter (closer, standoff, flanker); no coordinated manoeuvres | Encounters feel the same shape each time | Later AI work |
-| Point-defence flak: a round within 1.5 m of a heavy slug (≥ 2 kg, < 1.5 km/s closing) destroys it; small and fast rounds can't be tracked | Heavy-cannon fire can be thinned by PD; autocannon and railgun fire can't | If PD lasers or interceptors arrive |
+| Point-defence flak: a round within 2.6 m of a heavy slug (≥ 2 kg, < 1.5 km/s closing) destroys it; small and fast rounds can't be tracked | Heavy-cannon fire can be thinned by PD; autocannon and railgun fire can't | If PD lasers or interceptors arrive |
+| A round far from every ship coasts in a straight line between checks (up to 1 s), its tidal pull applied on waking | Paths agree with step-by-step integration to well under a metre over a sleep | Not needed |
+| Craft controls are updated at 30 Hz (avoidance at 15 Hz), held in between | Craft react a tick later | If dogfights need finer control |
+| At most 3 ticks per frame | Below 20 fps the fight runs slower than real time | If a faster simulation arrives |
 | Auto-fire judges the aim against the primary gun's lead only | Mixed batteries auto-fire on the primary gun's solution | Per-mount fire control |
 | Craft IFF is perfect: a craft's round never hits a ship of its own side, hulls included (the clear-shot check still holds fire so rounds aren't wasted on friends) | Craft can't hurt you or each other | If IFF failure is wanted as a mechanic |
 | Craft avoidance is a local velocity nudge (no path planning around hulls) | Craft can get pinned against a large hull for a moment | If carriers get very large |

@@ -24,6 +24,9 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   first guesses; the models are simple shapes at the real size. Depending
   on where the Sun is at the start, you may first see an object's dark
   side (the ISS starts in Earth's shadow at the scenario time).
+- **Very large fights are still heavy**: four carriers with 46 craft out run
+  at ~20 fps (slightly slower than real time), down from 7; the simulation
+  is GDScript and each round, craft and missile costs microseconds.
 - **Craft roles are new** (play-test batch 5): the interceptor, bomber,
   gun runs and avoidance distances are first guesses covered by seeded
   tests, not yet by play. Avoidance is a local nudge, so a craft can be
