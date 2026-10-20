@@ -147,7 +147,7 @@ func test_schema_9_migration() -> void:
 	_set_tanks(q, 30_000.0, 4_000.0)
 	q.save(path)
 	var r := PlayerProfile.load_file(path, PackedStringArray())
-	assert_true(r.loaded_schema == PlayerProfile.SCHEMA_VERSION and PlayerProfile.SCHEMA_VERSION == 9, "saved at schema 9")
+	assert_true(r.loaded_schema == PlayerProfile.SCHEMA_VERSION and PlayerProfile.SCHEMA_VERSION >= 9, "saved at the current schema (9 or later)")
 	assert_near(float(r.vessel_tanks(_cat()).reserve_kg), 4_000.0, 1.0, "with the reserve (kg)")
 	for s in ["", ".bak", ".tmp", ".v8"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + s))

@@ -4,6 +4,50 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 14, part 1 — real artifacts to survey (2026-10-20)
+
+#### Added
+- **Eleven real objects** where NASA/JPL Horizons puts them on the
+  scenario date (state vectors at 2026-10-19 12:00 UT, sources and
+  uncertainty recorded per object and in `data/ATTRIBUTION.md`): the ISS
+  and Hubble about Earth, LRO about the Moon, MRO and 2001 Mars Odyssey
+  about Mars, and — about the Sun — the Tesla Roadster, New Horizons,
+  Voyager 1 and 2 and Pioneer 10 and 11. JWST is left out (it sits at the
+  Sun–Earth L2 point, which needs a rotating frame), and so is MAVEN (no
+  ephemeris after March 2026).
+- **Survey sorties** (HANGAR › MAP › ARTIFACTS, "Survey next sortie"): you
+  start 3 km behind the object in its real orbit, with no hostile traffic.
+  Close to within 500 m (or five times its size), match its speed within
+  2 m/s and hold for 20 s with a working sensor mast: the survey fee is
+  paid once and its record goes into the codex, shown on the MAP. The
+  target card becomes a survey card (range, relative speed, sensor,
+  progress, distance from the Sun) and the HUD marks the object.
+- **Deep space**: surveys of the Sun-centred objects fly with the Sun as
+  the central body (its real gravity; the Sun drawn at its true size, a
+  point from Voyager 1; nothing casts a shadow). The jump out and back is
+  paid at launch and must fit in the full tanks and the reserve, so these
+  need a ship built for range: the Roadster takes 20 % of a ship's mass in
+  propellant, Voyager 1 28 % (the Frigate Mk I carries 16 %).
+- Real objects are heritage: they can't be damaged, grappled or salvaged.
+- Tests: `test_m14_artifacts.gd` (6) — orbits against what is known (ISS
+  427 km, 51.8°; Hubble 28.3°; MRO and Odyssey near-polar; Roadster
+  0.986–1.664 AU; Voyager 1 172.1 AU, escaping), double precision, survey
+  rules, the codex, schema 10; `smoke_survey.gd` (14 checks: the ISS survey
+  end to end, Voyager 1 about the Sun, back to Earth), mutation-checked on
+  the survey range and on the Sun casting a shadow.
+
+#### Changed
+- Profile schema 10: `survey_target` and `codex`; v9 saves have surveyed
+  nothing and keep `.v9`.
+- `CelestialFrame`: the Sun as a central body (`set_star_sun`),
+  `icrs_to_pci_d` in double precision, the Sun's distance for its disc;
+  `OrbitalBody.is_star`, `shadow_radius_m`, `disc_radius_m`.
+- `tools/run_checks.sh` runs `smoke_survey` (12 stages).
+
+#### Tests changed (and why)
+- `test_m13_jumps` schema test: the current schema (now 10), not exactly 9.
+- `test_release`: the Horizons row joins the credited sources.
+
 ### Milestone 13, part 2 — Mars, brokers, Sun-centred positions (2026-10-20)
 
 #### Added

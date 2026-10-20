@@ -118,6 +118,17 @@ const ENEMY_REBOARD_DELAY_S := 20.0
 ## How our crew defends against boarders (chosen in Tab → CREW).
 var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
 var _jump_hold := 0.0
+## Milestone 14: the artifact this sortie surveys (null for an ordinary
+## sortie), how long the survey has held (sim s), whether it is done, and
+## whether a deep-space round trip was paid at launch.
+const ARTIFACT_ID := &"artifact"
+var artifact: Artifact
+var survey_progress := 0.0
+var survey_done := false
+var _survey_clock := 0.0
+var _jump_prepaid := false
+var _prepaid_line := ""
+var _artifact_view: ArtifactView
 ## The jump drive's reserve (kg): only jumps burn it (JumpDrive).
 var jump_reserve_kg := 0.0
 ## SEQUENCE missile mode: which warhead the next press of M fires.
@@ -168,6 +179,13 @@ func _ready() -> void:
 	audio.name = "Audio"
 	add_child(audio)
 	location = Location.by_id(get_profile().location)
+	# A survey sortie (Milestone 14): deep space centres on the Sun; one in a
+	# location's orbit flies from that location as usual.
+	artifact = Artifact.by_id(get_profile().survey_target)
+	if artifact != null and artifact.is_deep_space():
+		location = Location.deep_space(location)
+	elif artifact != null and (artifact.location() == null or artifact.location().id != location.id):
+		artifact = null
 	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG, location.body)
 	stars.build(celestial)
 	hud.celestial = celestial
@@ -214,7 +232,22 @@ func _start_scenario() -> void:
 	world = WorldSimulation.new()
 	var body := location.body
 	var r0 := location.start_radius_m()
-	world.set_central_body(body, Vec3d.new(0, r0, 0), Vec3d.new(0, 0, -body.circular_speed(r0)))
+	var anchor_r := Vec3d.new(0, r0, 0)
+	var anchor_v := Vec3d.new(0, 0, -body.circular_speed(r0))
+	var artifact_offset := Vector3.ZERO
+	if artifact != null:
+		# Its real state (Horizons, at the scenario epoch) in this frame; we
+		# start START_BEHIND_M back along its track at its speed.
+		var st := artifact.state_icrs()
+		var r := celestial.icrs_to_pci_d(st[0])
+		var v := celestial.icrs_to_pci_d(st[1])
+		var back := v.normalized().times(-Artifact.START_BEHIND_M)
+		anchor_r = r.plus(back)
+		anchor_v = v
+		artifact_offset = back.times(-1.0).to_vector3()
+		if body.is_star:
+			celestial.set_star_sun(anchor_r)
+	world.set_central_body(body, anchor_r, anchor_v)
 	world.anchor_id = PLAYER_ID
 	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
 	player.side = &"player"
@@ -244,9 +277,18 @@ func _start_scenario() -> void:
 	hud.player_wing = player_wing
 	hud.encounter = encounter
 	_spawn_view(PLAYER_ID, Color.WHITE)
-	_spawn_encounter()
+	survey_progress = 0.0
+	survey_done = false
+	_survey_clock = 0.0
+	_jump_prepaid = false
+	if artifact != null:
+		_spawn_artifact(player, artifact_offset)
+	else:
+		_spawn_encounter()
 	_sortie_closed = false
 	combat_log = CombatLog.begin(player, world.sim_time)
+	if _jump_prepaid:
+		combat_log.record(world.sim_time, "jump", _prepaid_line)
 	if hud.debrief != null:
 		hud.debrief.visible = false
 
@@ -254,9 +296,14 @@ func _start_scenario() -> void:
 	mission.contract = p.active_contract.duplicate()
 	tutorial = Tutorial.from_dict(p.tutorial)
 	_salvaged = false
-	if mission.goal() == MissionChain.Goal.ESCORT:
+	if mission.goal() == MissionChain.Goal.ESCORT and artifact == null:
 		_spawn_courier(player)
-	hud.notice("%s — %s" % [mission.number_text(), mission.current().brief], world.sim_time)
+	if artifact != null:
+		hud.notice("SURVEY — %s, %s ahead: close to %s, match its speed within %.0f m/s, hold %.0f s" % [
+			artifact.display_name, HudFormat.distance(Artifact.START_BEHIND_M), HudFormat.distance(artifact.survey_range_m()),
+			Artifact.SURVEY_SPEED_MPS, Artifact.SURVEY_S], world.sim_time)
+	else:
+		hud.notice("%s — %s" % [mission.number_text(), mission.current().brief], world.sim_time)
 	if PlayerProfile.load_notice != "":
 		hud.notice(PlayerProfile.load_notice, world.sim_time)
 		combat_log.record(world.sim_time, "profile", PlayerProfile.load_notice)
@@ -264,6 +311,66 @@ func _start_scenario() -> void:
 	GameLog.info("main", "Orbital sandbox ready: player flies '%s' (%.0f t), %s orbit at %.0f km, fixed dt %.4f s" % [
 		_designs[PLAYER_ID].config.display_name, _designs[PLAYER_ID].config.mass_kg / 1000.0,
 		location.body.display_name, location.start_altitude_m / 1000.0, world.fixed_dt])
+
+
+## A survey's object: craft-like, no hull points (it can't be harmed),
+## neutral, drifting with us `offset` ahead; a deep-space survey pays its
+## round trip from the tanks now (checked at launch).
+func _spawn_artifact(player: ShipState, offset: Vector3) -> void:
+	var a := ShipState.create(ARTIFACT_ID, artifact.display_name, artifact.ship_config(), player.position + offset)
+	a.velocity = player.velocity
+	a.side = &"neutral"
+	a.derelict = true
+	world.add_ship(a)
+	hud.artifact_id = ARTIFACT_ID
+	if _artifact_view != null:
+		_artifact_view.queue_free()
+	_artifact_view = ArtifactView.new()
+	_artifact_view.artifact = artifact
+	add_child(_artifact_view)
+	if artifact.is_deep_space():
+		var home := Location.by_id(get_profile().location)
+		var need := 2.0 * JumpDrive.standard().cost_kg(player.mass_kg() + jump_reserve_kg, artifact.distance_from(home))
+		var paid := JumpDrive.pay(player.propellant_kg, jump_reserve_kg, need)
+		player.propellant_kg = paid.main_kg if paid.ok else 0.0
+		jump_reserve_kg = paid.reserve_kg if paid.ok else 0.0
+		_jump_prepaid = true
+		var line := "Jumped %s to %s; the round trip burned %s (the jump home is paid)" % [
+			SystemMap.distance_text(artifact.distance_from(home)), artifact.display_name, JumpDrive.tonnes(need)]
+		_prepaid_line = line
+		GameLog.info("main", line)
+
+
+## The survey, each frame: within range, slow relative to it and with a
+## working sensor mast, the clock runs (it keeps what it has when you drift
+## off); at Artifact.SURVEY_S the record and the fee are ours.
+func _update_survey(player: ShipState) -> void:
+	if artifact == null or not world.has_ship(ARTIFACT_ID):
+		hud.survey = {}
+		return
+	var a := world.get_ship(ARTIFACT_ID)
+	var d := a.position.distance_to(player.position)
+	var rel := (a.velocity - player.velocity).length()
+	var sensor := player.systems == null or player.systems.sensor_range_m() > ShipSystems.VISUAL_RANGE_M + 1.0
+	var close := d <= artifact.survey_range_m()
+	var slow := rel <= Artifact.SURVEY_SPEED_MPS
+	var dt := world.sim_time - _survey_clock
+	_survey_clock = world.sim_time
+	if not survey_done and close and slow and sensor and player.is_active():
+		survey_progress = minf(survey_progress + dt, Artifact.SURVEY_S)
+		if survey_progress >= Artifact.SURVEY_S:
+			survey_done = true
+			var paid := get_profile().complete_survey(artifact.id)
+			var line := "Survey of %s complete — %s" % [artifact.display_name,
+				"+%d credits, its record is in the codex (shipyard › MAP)" % paid if paid > 0 else "surveyed before: no fee this time"]
+			hud.notice(line, world.sim_time)
+			if combat_log != null:
+				combat_log.record(world.sim_time, "survey", line)
+			_save_profile()
+	hud.survey = {"name": artifact.display_name, "range_m": d, "rel_mps": rel, "need_m": artifact.survey_range_m(),
+		"need_mps": Artifact.SURVEY_SPEED_MPS, "progress": survey_progress / Artifact.SURVEY_S, "done": survey_done,
+		"close": close, "slow": slow, "sensor": sensor, "launched": artifact.launched,
+		"sun_au": world.pci_position(player.position).length() / CelestialFrame.AU_M if location.body.is_star else -1.0}
 
 
 ## The next encounter: the size picked on the shipyard map, in slots
@@ -412,6 +519,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if me != null and me.is_active() and not player_captured() and not _sortie_closed:
 			pay_jump_home(me)
 		close_sortie()
+		if artifact != null:
+			# A survey is one sortie: start over from the station's own orbit.
+			get_tree().reload_current_scene()
+			return
 		_start_scenario()
 		return
 	elif event.is_action_pressed("open_shipyard"):
@@ -729,6 +840,9 @@ func close_sortie() -> void:
 		return
 	_sortie_closed = true
 	var p := get_profile()
+	# A survey is one sortie; the next is an ordinary one unless picked again.
+	if artifact != null:
+		p.survey_target = ""
 	var player := world.get_ship(PLAYER_ID)
 	var catalog := ConstructionCatalog.default_catalog()
 	var lines := PackedStringArray()
@@ -759,7 +873,10 @@ func close_sortie() -> void:
 	p.tutorial = tutorial.to_dict()
 	p.campaign = mission.to_dict()
 	if combat_log != null:
-		if mission.failed != "":
+		if artifact != null:
+			combat_log.objectives.append("%s SURVEY %s — %s" % ["✔" if survey_done else "▲", artifact.display_name,
+				"complete" if survey_done else "not finished (%d%%)" % roundi(100.0 * survey_progress / Artifact.SURVEY_S)])
+		elif mission.failed != "":
 			combat_log.objectives.append("✕ %s %s — failed: %s" % [mission.number_text(), mission.current().title, mission.failed])
 		elif combat_log.objectives.is_empty():
 			combat_log.objectives.append("▲ %s %s — not met yet: %s" % [mission.number_text(), mission.current().title, mission.current().brief])
@@ -1022,6 +1139,11 @@ func jump_home_cost_kg(player: ShipState) -> float:
 ## cover it, a rescue tow brings the ship in for credits (all there are, if
 ## fewer) — the ship is never stranded. Returns the log line.
 func pay_jump_home(player: ShipState) -> String:
+	if _jump_prepaid:
+		var prepaid := "Jump home to %s (paid with the survey's round trip)" % location.station_name
+		if combat_log != null:
+			combat_log.record(world.sim_time, "jump", prepaid)
+		return prepaid
 	var drive := JumpDrive.standard()
 	var cost := jump_home_cost_kg(player)
 	var paid := JumpDrive.pay(player.propellant_kg, jump_reserve_kg, cost)
@@ -1494,6 +1616,10 @@ func _update_goals(player: ShipState) -> void:
 		get_profile().tutorial = tutorial.to_dict()
 		audio.play("tick")
 	var guide := PackedStringArray([mission.hud_line()])
+	if artifact != null:
+		guide = PackedStringArray(["SURVEY ▸ %s — close in, match its speed and hold %.0f s · fee %s · B jumps home" % [
+			artifact.display_name.to_upper(), Artifact.SURVEY_S,
+			"%d cr" % artifact.survey_credits if not get_profile().codex.has(artifact.id) or survey_done else "none (surveyed before)"]])
 	if tutorial.prompt() != "":
 		guide.append(tutorial.prompt())
 	hud.guide_lines = guide
@@ -1601,6 +1727,7 @@ func _process(delta: float) -> void:
 	_note_enemy_fire()
 	if _update_jump(player, delta):
 		return
+	_update_survey(player)
 	_update_tracks(player, delta)
 	for c in encounter.live(world):
 		var s := world.get_ship(c.id)
@@ -1740,6 +1867,8 @@ func _process(delta: float) -> void:
 	_sync_craft_views(alpha, render_origin)
 	_sync_missile_views(alpha, render_origin)
 	_sync_courier_view(alpha, render_origin)
+	if _artifact_view != null and world.has_ship(ARTIFACT_ID):
+		_artifact_view.sync_from(world.get_ship(ARTIFACT_ID), alpha, render_origin)
 	for id: StringName in _views:
 		var ship := world.get_ship(id)
 		var view: ShipView = _views[id]
@@ -1862,4 +1991,4 @@ func _update_sky_light() -> void:
 func _update_sun(player: ShipState) -> void:
 	var dir := celestial.sun_direction_pci(world.sim_time)
 	sun.look_at(-dir, Vector3.RIGHT if absf(dir.y) > 0.99 else Vector3.UP)
-	sun.light_energy = SUN_ENERGY * CelestialFrame.sunlight_fraction(world.pci_position(player.position), dir, world.body.radius_m)
+	sun.light_energy = SUN_ENERGY * CelestialFrame.sunlight_fraction(world.pci_position(player.position), dir, world.body.shadow_radius_m())

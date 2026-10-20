@@ -17,6 +17,10 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   `docs/STEAM.md` §3.
 - **No application icon yet** (the Godot default is used); see
   `docs/STEAM.md` §6.
+- **Artifacts are new** (Milestone 14): survey fees, range and time are
+  first guesses; the models are simple shapes at the real size. Depending
+  on where the Sun is at the start, you may first see an object's dark
+  side (the ISS starts in Earth's shadow at the scenario time).
 - **Craft roles are new** (play-test batch 5): the interceptor, bomber,
   gun runs and avoidance distances are first guesses covered by seeded
   tests, not yet by play. Avoidance is a local nudge, so a craft can be

@@ -33,7 +33,7 @@ func test_credits_and_licences() -> void:
 		assert_true(text.contains(needle), "credits mention %s" % needle)
 	# Every data source in data/ATTRIBUTION.md has a credit line.
 	var rows := 0
-	var keys := {"stars/": "Yale Bright Star", "earth/": "Blue Marble", "moon/": "Moon Kit", "mars/": "Viking Colorized", "audio/": "Kenney"}
+	var keys := {"stars/": "Yale Bright Star", "earth/": "Blue Marble", "moon/": "Moon Kit", "mars/": "Viking Colorized", "artifacts/": "Horizons", "audio/": "Kenney"}
 	for line in FileAccess.get_file_as_string("res://data/ATTRIBUTION.md").split("\n"):
 		if not line.begins_with("| `"):
 			continue

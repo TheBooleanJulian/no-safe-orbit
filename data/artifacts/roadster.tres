@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "roadster"
+display_name = "Tesla Roadster (Starman)"
+kind = &"car"
+center = &"sun"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(222054552.336931, 12205358.45215982, 8613966.469879596)
+v_km_s = PackedFloat64Array(-6.635219083778072, 19.99793952905523, 8.904090074137326)
+horizons_id = "-143205"
+horizons_source = "tesla_s11"
+uncertainty = "Horizons tesla_s11 solution, from tracking in 2018 and extrapolated since: thousands of kilometres."
+size_m = 3.9
+mass_kg = 1300.0
+survey_credits = 800
+launched = "2018-02-06 (the first Falcon Heavy)"
+lore = "A 2008 Tesla Roadster sent up as the dummy payload of the first Falcon Heavy, with a mannequin called Starman in a spacesuit at the wheel and \"DON'T PANIC!\" on the dashboard screen. Its orbit around the Sun runs from just inside Earth's out to about Mars's distance. Nobody has seen it since its first days out."

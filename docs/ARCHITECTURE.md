@@ -203,6 +203,26 @@ and the location's central body:
   (the Almanac's Sun for Earth and the Moon, unchanged; the elements
   otherwise), used by `for_scenario` and `sun_direction_pci`.
   `geocentric_icrs` covers Mars for completeness.
+- **Artifacts (Milestone 14)**: `Artifact` (`data/artifacts/*.tres`,
+  listed in `Artifact.FILES`): Horizons state (km, km/s, ICRF) about
+  `center` at `epoch_utc` (the scenario epoch), source, uncertainty, size,
+  mass, fee, record. `PlayerProfile.survey_target` / `codex` (schema 10),
+  `choose_survey` (location rule; deep-space round trip ≤ full tanks +
+  reserve, `survey_cost_kg` = 2 × `JumpDrive.cost_kg`), `complete_survey`.
+  `Main` reads the target in `_ready`: a deep-space one swaps the location
+  for `Location.deep_space(home)` (the Sun, `is_star`; station name from
+  home). `_start_scenario` spawns the anchor `START_BEHIND_M` back along
+  the object's velocity (`icrs_to_pci_d`, doubles), sets the star frame's
+  Sun from that point (`set_star_sun`), spawns the object (`ARTIFACT_ID`,
+  `ship_config()`: hull_hp 0 → undamageable, neutral, derelict) instead of
+  the encounter, and pays the deep-space round trip (`_jump_prepaid`, so
+  `pay_jump_home` is free). `_update_survey` accumulates sim time while in
+  range, slow and with a mast; HUD `survey` / `artifact_id` drive the
+  survey card, marker and SURVEY alert. Restart after a survey reloads the
+  scene (back to the home location). `ArtifactView` draws a procedural
+  model by kind. Star centre: `OrbitalBody.shadow_radius_m()` /
+  `disc_radius_m()` are 0 (no shadow, no planet disc); the sky's Sun disc
+  scales with `CelestialFrame.sun_distance_m`, never below a pixel.
 - **Brokers**: `Location.broker_price/name/pitch`;
   `PlayerProfile.brokers()` and `buy_location()` add to `known_locations`
   (already saved, so no schema change). Shipyard MAP lists them.
@@ -783,6 +803,10 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Spherical central body for gravity; no J2, no third bodies (no Earth pull in lunar orbit) | Orbits never precess | If missions need ground tracks or long-duration accuracy |
 | Airless bodies: the floor is a sphere at the highest terrain (11 km on the Moon), no terrain model | Flying low over a lunar plain is as fatal as hitting a summit | If low passes or landings are wanted |
 | Jump distances are the real separations on the fixed scenario date; travel is instant | Each jump always costs the same | If the calendar advances between sorties |
+| Artifacts sit at their real state at the fixed scenario epoch; an artifact never manoeuvres or reboosts; JWST and other Lagrange-point objects are left out (no rotating frame) | Each object is always found in the same place | If the calendar advances |
+| About the Sun, the Sun's direction is fixed for the sortie (from the start point) and nothing near is drawn (the planets are points of light) | Off by 2e-6 rad an hour at Voyager 1, 0.02° at the Roadster | Not needed |
+| A deep-space survey pays its round trip at launch, from the home location's body | No stranding far out; the trip home is free once paid | If deep-space stations arrive |
+| Real objects take no damage and can't be grappled (heritage) | Surveys are about flying, not salvage | Not planned |
 | Mars has no moons in its sky and no far body; sunlight is not dimmed with distance from the Sun (43 % at Mars) | Mars looks as bright as Earth; Phobos is never seen | If outer locations arrive |
 | Planet positions from Keplerian elements (arcminutes), precession ignored between the Almanac Sun (of date) and the J2000 stars and elements (0.37° by 2026) | Mars's Sun is placed to ~0.1°; Earth's Sun to ~0.4° against the stars | If an eclipse or occultation must be exact |
 | The jump reserve has no mass and no part of its own (a quarter of the tankage, beside it) | Bigger tanks mean a bigger reserve; the reserve never slows the ship | If tank design should trade reserve for range |

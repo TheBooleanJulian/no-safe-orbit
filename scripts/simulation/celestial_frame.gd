@@ -51,6 +51,11 @@ var prime_meridian_deg := 190.46061837
 var rotation_deg_per_day := 360.98564736629
 ## Where the central body is (OrbitalBody.ephemeris), for placing others.
 var central_ephemeris: StringName = &"earth"
+## Distance from the Sun (m), for the size of its disc in the sky.
+var sun_distance_m: float = AU_M
+## With the Sun as the central body (a deep-space survey) the Sun's
+## direction is set from where the ship starts (PCI, unit); zero otherwise.
+var sun_override_pci := Vector3.ZERO
 
 
 ## `sun_angle_from_up_deg`: where the Sun's projection on the orbit plane
@@ -67,6 +72,9 @@ static func for_scenario(p_epoch_jd: float, sun_angle_from_up_deg: float, body: 
 		frame.prime_meridian_deg = o[2]
 		frame.rotation_deg_per_day = body.rotation_deg_per_day
 		frame.central_ephemeris = body.ephemeris
+		if body.is_star:
+			return frame  # no twist: the Sun is set from the start point (set_star_sun)
+	frame.sun_distance_m = heliocentric_icrs(frame.central_ephemeris, p_epoch_jd).length()
 	var s := frame.icrs_to_pci(sun_direction_from(frame.central_ephemeris, p_epoch_jd))
 	frame.twist = deg_to_rad(sun_angle_from_up_deg) - atan2(s.z, s.y)
 	return frame
@@ -138,9 +146,17 @@ static func geocentric_icrs(ephemeris: StringName, jd: float) -> Vector3:
 			return moon_geocentric_icrs(jd)
 		&"earth":
 			return Vector3.ZERO
-	if KEPLER_ELEMENTS.has(ephemeris):
+	if KEPLER_ELEMENTS.has(ephemeris) or ephemeris == &"sun":
 		return heliocentric_icrs(ephemeris, jd).minus(heliocentric_icrs(&"earth", jd)).to_vector3()
 	return Vector3.ZERO  # anything unknown at the geocentre
+
+
+## Sun-centred frame: the Sun lies towards the centre from `start_pci` (the
+## ship's start), constant over a sortie (it turns by 2e-6 rad an hour at
+## Voyager 1, 0.02° at the Roadster).
+func set_star_sun(start_pci: Vec3d) -> void:
+	sun_distance_m = start_pci.length()
+	sun_override_pci = start_pci.times(-1.0).normalized().to_vector3()
 
 
 ## Heliocentric position (ICRS axes, m, double precision) by ephemeris id:
@@ -153,6 +169,8 @@ static func heliocentric_icrs(ephemeris: StringName, jd: float) -> Vec3d:
 			return _kepler_icrs(&"emb", jd).minus(moon.times(1.0 / (1.0 + EARTH_MOON_MASS_RATIO)))
 		&"moon":
 			return heliocentric_icrs(&"earth", jd).plus(Vec3d.from_vector3(moon_geocentric_icrs(jd)))
+		&"sun":
+			return Vec3d.new()
 	return _kepler_icrs(ephemeris, jd)
 
 
@@ -252,6 +270,17 @@ func icrs_to_pci(v: Vector3) -> Vector3:
 	return Vector3(m.x, m.y * c - m.z * s, m.y * s + m.z * c)
 
 
+## icrs_to_pci in double precision (a heliocentric state at 172 AU needs it).
+func icrs_to_pci_d(v: Vec3d) -> Vec3d:
+	var e := pole_icrs.cross(node_icrs)
+	var mx := -(v.x * pole_icrs.x + v.y * pole_icrs.y + v.z * pole_icrs.z)
+	var my := -(v.x * e.x + v.y * e.y + v.z * e.z)
+	var mz := -(v.x * node_icrs.x + v.y * node_icrs.y + v.z * node_icrs.z)
+	var c := cos(twist)
+	var s := sin(twist)
+	return Vec3d.new(mx, my * c - mz * s, my * s + mz * c)
+
+
 func pci_to_icrs(v: Vector3) -> Vector3:
 	var c := cos(twist)
 	var s := sin(twist)
@@ -264,12 +293,16 @@ func julian_date(sim_time: float) -> float:
 
 
 func sun_direction_pci(sim_time: float) -> Vector3:
+	if sun_override_pci != Vector3.ZERO:
+		return sun_override_pci
 	return icrs_to_pci(sun_direction_from(central_ephemeris, julian_date(sim_time))).normalized()
 
 
 ## Fraction of the Sun visible from PCI position `r`: 1 in sunlight, 0 in the
 ## planet's shadow (cylindrical shadow, softened over ±10 km at the edge).
 static func sunlight_fraction(r: Vec3d, sun_dir: Vector3, radius: float) -> float:
+	if radius <= 0.0:
+		return 1.0  # nothing to cast a shadow (the Sun at the centre)
 	var s := Vec3d.from_vector3(sun_dir.normalized())
 	var along := r.dot(s)
 	if along >= 0.0:

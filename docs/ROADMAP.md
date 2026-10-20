@@ -561,6 +561,21 @@ precision, proven by a test.
 
 ### Milestone 14 — orbital artifacts and derelicts
 
+Part 1 ✅ (2026-10-20) — real artifacts:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| `Artifact` resource (location, trajectory, kind, interaction, reward) | `test_m14_artifacts` (recorded) | 11 objects, each validated, source in ATTRIBUTION |
+| Real orbital data from Horizons at a fixed, documented epoch; uncertainty flagged | `test_m14_artifacts` (orbits) | ISS 427 km, 51.8° (real 51.6°; precession ignored); Hubble 28.3°; MRO/Odyssey 92°; Roadster 0.986–1.664 AU; Voyager 1 172.1 AU, escaping |
+| Interaction reuses rendezvous, docking tolerances and scans | `smoke_survey` (mutation-checked on range) | within 500 m, ≤ 2 m/s, 20 s with a mast; no start from 3 km |
+| Lore-first rewards | `test_m14_artifacts` (once-only fee, codex), MAP render | fee once; record on the MAP |
+| Deep space: the Roadster, Voyagers, Pioneers, New Horizons | `smoke_survey` (mutation-checked on the shadow), `test_m14_artifacts` (doubles) | Sun-centred; 3 km kept to 1 mm at 172 AU; 20 s flown, finite |
+| JWST left out, and said so | `test_m14_artifacts` | not in the list; ATTRIBUTION, README |
+| Save format | `test_m14_artifacts` (schema 10), `compat_check` | v9 → empty codex, `.v9` kept; COMPAT: OK |
+
+Part 2 (next): derelicts — wrecks that stay, are salvaged again and break
+up over time.
+
 `Artifact` resource (location, trajectory data, kind, interaction,
 reward); interaction reuses rendezvous, docking tolerances, the grapple and
 scans. Real objects with orbital data from NASA/JPL Horizons at a fixed,
