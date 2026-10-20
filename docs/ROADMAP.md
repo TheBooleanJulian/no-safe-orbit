@@ -438,7 +438,19 @@ brokers, contracts, Mars and per-station stock stay in Milestone 13.
 | Earth unchanged by the generalised frame | `test_locations` (old reference values), `test_celestial` | identical to 1e-6 |
 | Save format: schema 7, migration, backup | `test_locations`, `build/compat_check.gd` | v6 → Earth, 1 ship, `.v6` kept; COMPAT: OK |
 
-### Pass A — alerts and audio (refined at the start of its session)
+### Pass A — alerts and audio ✅ (2026-10-20)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Fixed grammar: noun, one value, direction, key chip; length limit | `test_pass_a` (grammar; every HUD alert) | ≤ 26 characters, e.g. `MSL 2.4km 002`, `RND 0.4s 330 [R]` |
+| ≤ 3 visible, deduplicated, priority | `test_pass_a` (priority, dedupe) | danger › caution › advisory, then threat › damage › systems › nav › info |
+| Hysteresis, escalation, auto-clear, acknowledge | `test_pass_a` (hysteresis, acknowledge) | clears 0.8 s after its condition; up at once, down after 1 s; [.] hides a non-danger until it clears or escalates |
+| Every alert has a clear condition | `test_pass_a` (prop, round, scram, fire, jump appear and clear) | all appear and clear |
+| A sound per class; samples on buses with ducking | `test_pass_a` (sounds) | 5 alarm classes; 17 slots from samples; alarms duck effects and ambience by 9 dB |
+| Screen-edge threat indicator; damage-map flash; persistent status | render review (`build/screens/alerts_*.png`), smoke_main | chevrons on/at the edge, `STATUS RCT ■ BRCH ■ FIRE ■ VENT ■` |
+| CC0 audio, verified, budget | `data/ATTRIBUTION.md`, `test_pass_a` | Kenney CC0 packs (licence file in each), 21 files, 641 kB |
+
+Original brief:
 
 - Audit every HUD alert string; a fixed grammar replaces sentences: shape or
   icon, short noun, one value, direction where relevant, a key chip (e.g.

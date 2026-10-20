@@ -140,7 +140,9 @@ func test_a_reactor_explosion_plays_out_and_its_debris_flies_free() -> void:
 
 
 func test_shipboard_sounds_are_synthesised() -> void:
+	# The fallback when a slot has no recorded sample (Pass A uses samples).
 	var audio := ShipAudio.new()
+	audio.use_samples = false
 	audio._ready()
 	for sound in ["gun", "hit", "ricochet", "explosion", "alert", "dock"]:
 		assert_true(audio.has_sound(sound), "%s is made" % sound)

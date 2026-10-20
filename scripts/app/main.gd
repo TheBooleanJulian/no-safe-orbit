@@ -35,7 +35,6 @@ var sky_light: DirectionalLight3D
 var gangways := GangwayView.new()
 var audio := ShipAudio.new()
 var _rounds_heard := 0
-var _alert_heard := ""
 
 ## Design the player flies; set by the shipyard before it switches to this
 ## scene. Null = the default template. Only used to commission the first
@@ -408,6 +407,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	elif event.is_action_pressed("missile_mode"):
 		cycle_missile_mode()
+	elif event.is_action_pressed("ack_alert"):
+		if hud.alert_queue.acknowledge():
+			audio.play("ack")
 		return
 	elif event.is_action_pressed("tutorial"):
 		toggle_tutorial()
@@ -1742,10 +1744,12 @@ func _update_audio(player: ShipState) -> void:
 	audio.set_engine(burn.x)
 	audio.set_rcs(burn.y)
 	audio.set_jump(float(hud.jump_state.progress) if hud.jump_state.has("progress") else -1.0)
-	var danger := hud.warning_label.text if hud.warning_label.visible and hud.top_alert_level == "danger" else ""
-	if danger != "" and danger.get_slice(" ", 1) != _alert_heard.get_slice(" ", 1):
-		audio.play("alert")
-	_alert_heard = danger
+	# A sound per alert class as alerts appear or escalate (caution and up;
+	# an advisory has its own sound already — the clang of a hit, the spool).
+	for a in hud.alert_queue.raised:
+		if a.level >= AlertQueue.Level.CAUTION and not a.acked:
+			audio.alarm(a.cls, a.level)
+			break
 
 
 ## Light from the other body in the sky onto ships: along its direction,

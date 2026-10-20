@@ -139,7 +139,7 @@ func _run() -> void:
 	var theirs := main.enemy_boarding()
 	_check(theirs != null and theirs.link.attacker_id == Main.TARGET_ID, "a beaten player is boarded: the enemy docks and sends a party")
 	_check(theirs != null and theirs.defence == BoardingAction.Defence.COUNTERATTACK, "our chosen defence applies to their boarding")
-	_check(main.hud.warning_label.text.contains("ENEMY BOARDING"), "the HUD warns of enemy boarders")
+	_check(main.hud.warning_label.text.contains("BOARD") and main.hud.alert_queue.has(&"boarders"), "the HUD warns of enemy boarders (%s)" % main.hud.warning_label.text)
 	await _press("dock")
 	_check(main.world.link_for(Main.PLAYER_ID) == null, "V cuts their gangway loose")
 	_finish()
