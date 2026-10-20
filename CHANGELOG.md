@@ -4,6 +4,41 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 4 — fixes (2026-10-20)
+
+#### Fixed
+- **M emptied every magazine:** each press now fires a volley, one launch
+  from each pod the missile mode allows (a saturation pod's launch is its
+  swarm of eight); sequence mode walks the warhead order press by press.
+  `MissileSalvo.volley`; counted salvos (AI, auto-salvo) are unchanged.
+- **Invisible enemy rounds:** tracers were capped at 512 in array order, so
+  with a dozen point-defence mounts our own rounds filled the cap and an
+  enemy railgun round could hit undrawn. Now up to 4,096, incoming rounds
+  first (`ProjectileView.draw_order`).
+- **Auto-fire and auto-salvo fired at wrecks:** automation now needs a
+  fighting target (not a derelict, not disabled: `Main.is_fightable`); the
+  player's own trigger still always fires.
+- **Slope armour:** a 1×2 wedge's plates sat at each cell's centre, a
+  quarter cell above or below the slope (gaps, floating, looking short);
+  they now lie on the slope over their own cell and butt with a slim seam.
+  Thick plates on 1×1 wedges crossed the plate on the face behind them at
+  the ridge; slope plates are trimmed by depth · tan(θ/2) where they meet a
+  flat face.
+
+#### Changed
+- Missile restock about a quarter of the price: anti-ship 2 cr, EMP 5,
+  nuclear 30, saturation 1 (refills 24 / 30 / 90 / 48 cr).
+- The nuclear burst: a 160 m white flash and a light reaching 4 km, a
+  14-lobe fireball swelling over 3.2 s, three shockwave rings and a shock
+  shell out to ~1.6 km, a violet ionisation afterglow; 8 s in all (was the
+  reactor explosion at 60 m, 4.5 s); a harder camera shake to 8 km.
+- Tests: `test_playtest4.gd` (7).
+
+#### Tests changed (and why)
+- `smoke_main`: M fires one missile from the rack, a second press the next
+  (was: the salvo empties the rack); "M starts a salvo" accepts a volley
+  already finished in the same frame.
+
 ### Moonlight, earthlight and earthshine (2026-10-20)
 
 #### Added

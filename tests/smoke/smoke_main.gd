@@ -235,7 +235,8 @@ func _run() -> void:
 		await process_frame
 	_check(main.get_profile().missile_mode == MissileSalvo.Mode.ALL, "[,] cycles the missile modes round to 'all'")
 
-	# M: a salvo — the whole rack — at the locked target.
+	# M: a volley — one missile from each pod (here the one rack) — at the
+	# locked target; a second press fires the next.
 	_press_action("tactical_overview")
 	main.hud.selected_id = &""
 	var t_lock := main.world.sim_time
@@ -244,11 +245,14 @@ func _run() -> void:
 	_press_action("fire_missile")
 	await process_frame
 	await process_frame
-	_check(main.track.locked and main.salvo != null and main.hud.weapon_label.text.contains("MSL"),
-		"M starts a salvo at the locked target (strip: %s)" % main.hud.weapon_label.text.get_slice("\n", 0))
-	await _run_until_sim_time(main, 12 * ShipSystems.LAUNCHER_CYCLE_S + 1.0)
-	_check(main.salvo == null and player.systems.missiles_of() == 0 and main.combat_log.missiles_launched == 12,
-		"the salvo empties the rack (%d launched)" % main.combat_log.missiles_launched)
+	_check(main.track.locked and (main.salvo != null or main.combat_log.missiles_launched > 0) and main.hud.weapon_label.text.contains("MSL"),
+		"M fires a volley at the locked target (strip: %s)" % main.hud.weapon_label.text.get_slice("\n", 0))
+	await _run_until_sim_time(main, 1.0)
+	_check(main.salvo == null and player.systems.missiles_of() == 11 and main.combat_log.missiles_launched == 1,
+		"one press, one missile from the rack (%d launched, %d left)" % [main.combat_log.missiles_launched, player.systems.missiles_of()])
+	_press_action("fire_missile")
+	await _run_until_sim_time(main, 1.0)
+	_check(main.combat_log.missiles_launched == 2 and player.systems.missiles_of() == 10, "a second press fires the next")
 	Main.launch_blueprint = null
 
 	print("smoke: %d failure(s)" % _failures.size())

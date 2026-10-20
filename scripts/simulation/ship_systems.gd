@@ -1027,6 +1027,27 @@ func ready_launcher(warhead: int = -1) -> EquipmentState:
 	return null
 
 
+## The launcher `id` if it can fire now, else null.
+func launcher_if_ready(id: String) -> EquipmentState:
+	for e in equipment:
+		if e.id == id:
+			if e.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER and e.working() and missiles_left(e) > 0 \
+					and float(launcher_cooldown.get(e.id, 0.0)) <= 0.0:
+				return e
+			return null
+	return null
+
+
+## Working, loaded launchers of `warhead` (-1 any): the pods a volley fires.
+func loaded_launchers(warhead: int = -1) -> Array[EquipmentState]:
+	var out: Array[EquipmentState] = []
+	for e in equipment:
+		if e.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER and e.def.missile != null and e.working() \
+				and missiles_left(e) > 0 and (warhead < 0 or e.def.missile.warhead == warhead):
+			out.append(e)
+	return out
+
+
 ## Missiles in launchers that can fire them (working: powered, not reset by
 ## an EMP, not destroyed); `warhead` -1 = every kind.
 func missiles_of(warhead: int = -1) -> int:

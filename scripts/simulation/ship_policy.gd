@@ -131,20 +131,23 @@ func pd_allows(kind: StringName, rounds_left: int, magazine: int) -> bool:
 
 
 ## Auto-fire: pull the trigger? Needs a lock, a hostile-enough contact for
-## the discipline, and the guns' aim within tolerance of the solution.
-func autofire(locked: bool, hostile: bool, aim_error_deg: float) -> bool:
-	return autofire_enabled and locked and allows_fire(hostile) and aim_error_deg <= autofire_tolerance_deg
+## the discipline, a target still fighting (`fightable`: not a derelict, not
+## disabled; automation never wastes rounds on a wreck), and the guns' aim
+## within tolerance of the solution.
+func autofire(locked: bool, hostile: bool, aim_error_deg: float, fightable: bool = true) -> bool:
+	return autofire_enabled and locked and fightable and allows_fire(hostile) and aim_error_deg <= autofire_tolerance_deg
 
 
 ## The trigger with automation layered on manual control: the player's
 ## trigger always fires (whatever the discipline); auto-fire only adds.
-func trigger(manual: bool, locked: bool, hostile: bool, aim_error_deg: float) -> bool:
-	return manual or autofire(locked, hostile, aim_error_deg)
+func trigger(manual: bool, locked: bool, hostile: bool, aim_error_deg: float, fightable: bool = true) -> bool:
+	return manual or autofire(locked, hostile, aim_error_deg, fightable)
 
 
 ## Auto-salvo: start one now?
-func salvo_due(locked: bool, confidence: float, range_m: float, hostile: bool, now: float, next_at: float) -> bool:
-	return salvo_enabled and locked and confidence >= salvo_min_confidence and allows_fire(hostile) \
+func salvo_due(locked: bool, confidence: float, range_m: float, hostile: bool, now: float, next_at: float,
+		fightable: bool = true) -> bool:
+	return salvo_enabled and locked and fightable and confidence >= salvo_min_confidence and allows_fire(hostile) \
 		and range_m >= salvo_min_range_m and range_m <= salvo_max_range_m and now >= next_at
 
 

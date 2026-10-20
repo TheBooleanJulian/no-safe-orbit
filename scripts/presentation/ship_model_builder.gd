@@ -516,11 +516,29 @@ static func _add_plates(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_
 		var mat := thick if mm >= ShipBlueprint.PLATE_THICK_MM else thin
 		var cell_center := ShipGrid.cell_center_m(cell) - origin_m
 		if grid.is_wedge_cell(cell) and grid.slope_faces(cell).has(face):
-			var n := grid.wedge_normal(grid.module_at[cell])
+			var mi: int = grid.module_at[cell]
+			var n := grid.wedge_normal(mi)
 			var basis := _basis_y_along(n)
-			var plate := _box(holder, Vector3(c * 0.96, depth, c * 0.96 * grid.plate_area_factor(cell, face)), cell_center + n * depth * 0.5, mat)
+			# The slope passes through the wedge's centre, not through each
+			# cell's (a 1×2 wedge's slope is a quarter cell above one cell's
+			# centre and below the other's): lift or lower the plate straight
+			# up or down onto the slope, so it stays over its own cell.
+			var module_center := (Vector3(bp.modules[mi].position) + Vector3(grid.module_size(mi)) * 0.5) * c - origin_m
+			var on_slope := cell_center + Vector3.UP * (-(cell_center - module_center).dot(n) / n.y)
+			# Where the slope meets a flat face (the ridge, the toe) square-cut
+			# plates would cross the neighbouring plate by depth · tan(θ/2):
+			# trim that off the toe and ridge ends (not where two cells of one
+			# long wedge meet on the same plane).
+			var sz := Vector3(grid.module_def(mi).size_cells)
+			var miter := depth * tan(atan2(sz.y, sz.z) * 0.5)
+			var fore: Vector3i = ShipGrid.FACE_NORMALS[grid.slope_faces(cell)[0]]
+			var trim_toe := 0.0 if int(grid.module_at.get(cell + fore, -1)) == mi else 1.0
+			var trim_ridge := 0.0 if int(grid.module_at.get(cell - fore, -1)) == mi else 1.0
+			var up_slope := (Vector3(fore) * -1.0).slide(n).normalized()
+			var along := maxf(c * 0.96 * grid.plate_area_factor(cell, face) - (trim_toe + trim_ridge) * miter, c * 0.5)
+			var plate := _box(holder, Vector3(c * 0.96, depth, along),
+				on_slope + n * depth * 0.5 + up_slope * (trim_toe - trim_ridge) * miter * 0.5, mat)
 			# Square the plate to the slope: its long side runs up the slope.
-			var up_slope := (Vector3(ShipGrid.FACE_NORMALS[grid.slope_faces(cell)[0]]) * -1.0).slide(n).normalized()
 			plate.transform.basis = Basis(up_slope.cross(n), n, up_slope).orthonormalized() if up_slope.length() > 0.1 else basis
 			model.plates[key] = plate
 			continue

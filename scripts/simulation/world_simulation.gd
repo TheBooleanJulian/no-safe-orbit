@@ -185,14 +185,15 @@ func link_for(id: StringName) -> DockingLink:
 ## Fire from `shooter_id`'s next ready launcher (of `warhead`, -1 any) at
 ## `target_id`: one missile, or a saturation pod's swarm. "" on success, or
 ## why not.
-func launch_missile(shooter_id: StringName, target_id: StringName, warhead: int = -1) -> String:
+## `launcher_id`: fire that launcher only ("" = the first ready of `warhead`).
+func launch_missile(shooter_id: StringName, target_id: StringName, warhead: int = -1, launcher_id: String = "") -> String:
 	var s := get_ship(shooter_id)
 	var target := get_ship(target_id)
 	if s == null or s.systems == null or not s.is_active():
 		return "no launcher"
 	if target == null or not target.is_active():
 		return "no target"
-	var e := s.systems.ready_launcher(warhead)
+	var e := s.systems.ready_launcher(warhead) if launcher_id == "" else s.systems.launcher_if_ready(launcher_id)
 	if e == null:
 		for x in s.systems.equipment:
 			if x.def.kind == EquipmentDefinition.Kind.MISSILE_LAUNCHER:
@@ -390,7 +391,7 @@ func _detonate(m: ShipState, target: ShipState) -> void:
 				if not lines.is_empty():
 					_link_events.append("%s: %s" % [s.display_name, "; ".join(lines)])
 			_bursts.append({"ship_id": target.id, "point_body": inv * (m.position - target.position),
-				"radius": cfg.effect_radius_m * (0.15 if cfg.warhead == MissileConfig.Warhead.NUCLEAR else 0.5), "kind": cfg.warhead})
+				"radius": cfg.effect_radius_m * (0.4 if cfg.warhead == MissileConfig.Warhead.NUCLEAR else 0.5), "kind": cfg.warhead})
 			_link_events.append("%s detonated %.0f m from %s" % [cfg.display_name, Grapple.gap_to(target, m.position), target.display_name])
 
 

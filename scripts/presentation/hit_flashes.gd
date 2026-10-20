@@ -16,10 +16,11 @@ func add(ev: HitEvent) -> void:
 
 
 ## Reactor containment failure: flash, fireball, shockwaves, debris, glow.
-func add_explosion(ship_id: StringName, point_body: Vector3, radius: float) -> ReactorExplosion:
+## `nuclear`: the warhead's profile (bigger, brighter, longer; ReactorExplosion).
+func add_explosion(ship_id: StringName, point_body: Vector3, radius: float, nuclear: bool = false) -> ReactorExplosion:
 	var boom := ReactorExplosion.new()
 	add_child(boom)
-	boom.setup(ship_id, point_body, radius, hash(String(ship_id)) + int(point_body.x * 31.0 + point_body.z * 17.0))
+	boom.setup(ship_id, point_body, radius, hash(String(ship_id)) + int(point_body.x * 31.0 + point_body.z * 17.0), nuclear)
 	_explosions.append(boom)
 	return boom
 
