@@ -71,6 +71,9 @@ var escort_id: StringName = &""
 ## need_m, need_mps, progress (0–1), done, close, slow, sensor, launched,
 ## sun_au (-1 unless about the Sun)}; {} on an ordinary sortie.
 var artifact_id: StringName = &""
+## The location's derelict field flying this sortie (Main): marked, with
+## how many times each was salvaged.
+var derelict_ids: Array[StringName] = []
 var survey: Dictionary = {}
 ## The encounter (set by Main): the target card lists the other contacts
 ## compactly; the radar and the markers show them all.
@@ -470,6 +473,7 @@ func reset_target() -> void:
 
 func reset() -> void:
 	artifact_id = &""
+	derelict_ids = []
 	survey = {}
 	_last_hit_time = -INF
 	_hits_scored = 0
@@ -1466,6 +1470,13 @@ func _update_craft_markers(world: WorldSimulation, player: ShipState, alpha: flo
 			continue
 		overlay.craft_markers.append({"pos": w.interpolated_position(alpha) - render_origin,
 			"label": "WRECK %s" % HudFormat.distance(w.position.distance_to(player.position)), "hostile": false, "selected": false, "wreck": true})
+	for id in derelict_ids:
+		var d := world.get_ship(id)
+		if d == null or not d.is_active() or d.position.distance_to(player.position) > reach:
+			continue
+		overlay.craft_markers.append({"pos": d.interpolated_position(alpha) - render_origin,
+			"label": "%s %s" % [d.display_name, HudFormat.distance(d.position.distance_to(player.position))],
+			"hostile": false, "selected": false, "wreck": true})
 	if artifact_id != &"" and world.has_ship(artifact_id):
 		var art := world.get_ship(artifact_id)
 		overlay.craft_markers.append({"pos": art.interpolated_position(alpha) - render_origin,

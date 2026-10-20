@@ -31,7 +31,9 @@ extends RefCounted
 ##     (condition.stores.jump_reserve_kg); older vessels start it full.
 ## v10: artifact surveys — the next sortie's survey target and the codex of
 ##     objects surveyed; older saves have surveyed nothing.
-const SCHEMA_VERSION := 10
+## v11: the derelict fields (derelicts, DerelictField); older saves start
+##     with none.
+const SCHEMA_VERSION := 11
 ## Ships per encounter the map offers (EnemyFactory spawns them).
 const MAX_ENCOUNTER := 3
 ## Locations every player knows from the start (brokers sell more).
@@ -96,6 +98,8 @@ var active_contract: Dictionary = {}
 ## sortie) and the codex: artifact id -> the sortie it was surveyed on.
 var survey_target: String = ""
 var codex: Dictionary = {}
+## Milestone 14 part 2: every location's derelict field (DerelictField records).
+var derelicts: Array = []
 var missile_mode: int = MissileSalvo.Mode.ALL
 var missile_order: Array = MissileSalvo.DEFAULT_ORDER.duplicate()
 ## The schema the profile was read from (SCHEMA_VERSION for a new one).
@@ -574,6 +578,7 @@ func to_dict() -> Dictionary:
 		"active_contract": active_contract.duplicate(true),
 		"survey_target": survey_target,
 		"codex": codex.duplicate(),
+		"derelicts": derelicts.duplicate(true),
 	}
 
 
@@ -681,6 +686,12 @@ static func _read_v8_board(p: PlayerProfile, d: Dictionary) -> void:
 	# v10: surveys (an unknown or missing artifact is dropped).
 	var target := str(d.get("survey_target", ""))
 	p.survey_target = target if Artifact.by_id(target) != null else ""
+	# v11: derelict fields (records for unknown places or hulls are dropped).
+	var field: Variant = d.get("derelicts", [])
+	if field is Array:
+		for r in field:
+			if r is Dictionary and (r as Dictionary).has_all(["id", "location", "template", "intact"]) 					and Location.by_id(str(r.location)).id == str(r.location) 					and FileAccess.file_exists("res://data/blueprints/" + str(r.template)):
+				p.derelicts.append((r as Dictionary).duplicate())
 	var c: Variant = d.get("codex", {})
 	if c is Dictionary:
 		for id in c:

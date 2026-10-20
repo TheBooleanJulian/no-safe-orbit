@@ -4,6 +4,32 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 14, part 2 — derelicts that stay, are salvaged again and break up (2026-10-20)
+
+#### Added
+- **Derelict fields** (`DerelictField`): every beaten ship left behind at
+  the end of a sortie stays at its location (six per place, newest kept).
+  The next sorties there find the newest two 4–7 km out, silent, unpowered
+  and marked on the HUD.
+- **Salvage again**: G within 2 km of a derelict (when there's nothing to
+  beacon in the fight) salvages it once per sortie — its scrap and crates
+  halve for each earlier salvage, no bounty — and strips half of what is
+  left. Measured: a wreck salvaged once paid 140 cr the second time.
+- **Break-up**: each sortie flown anywhere, a derelict loses 15 % of what is
+  left; below 10 % intact, or after 8 sorties, it breaks up and the debrief
+  says so.
+- Tests: `test_m14_derelicts.gd` (5); `smoke_campaign` finds the first
+  sortie's wreck on the relaunch and salvages it again (mutation-checked on
+  recording the field).
+
+#### Changed
+- Profile schema 11: `derelicts`; v10 saves start with empty fields and
+  keep `.v10`.
+- Contacts remember their hull template, mission and variant.
+
+#### Tests changed (and why)
+- `test_m14_artifacts` schema test: the current schema (now 11), not exactly 10.
+
 ### Milestone 14, part 1 — real artifacts to survey (2026-10-20)
 
 #### Added

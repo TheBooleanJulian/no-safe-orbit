@@ -223,6 +223,18 @@ and the location's central body:
   model by kind. Star centre: `OrbitalBody.shadow_radius_m()` /
   `disc_radius_m()` are 0 (no shadow, no planet disc); the sky's Sun disc
   scales with `CelestialFrame.sun_distance_m`, never below a pixel.
+- **Derelicts (Milestone 14 part 2)**: `DerelictField` records in
+  `PlayerProfile.derelicts` (schema 11): {id, location, name, template,
+  mission, variant, intact, salvaged, age}. `Main._update_derelict_field`
+  (from `close_sortie`, after docking or loss) updates the flying ones'
+  `intact`, ages everything (`age_all`: ×0.85, break-up < 0.1 or age 8),
+  then records this sortie's retired wrecks (`_wreck_meta`, salvaged 1) and
+  disabled contacts (salvaged 0). `_spawn_derelicts` rebuilds the newest
+  two with `EnemyFactory.design(mission, template, variant)` and
+  `wreck_to` (hit points set directly: no reactor blast; seeded), neutral
+  and derelict, at `spawn_offset`. G with nothing to beacon salvages the
+  nearest in reach (`salvage_derelict`: `resalvage_yield`, strip, once per
+  sortie). HUD `derelict_ids` marks them.
 - **Brokers**: `Location.broker_price/name/pitch`;
   `PlayerProfile.brokers()` and `buy_location()` add to `known_locations`
   (already saved, so no schema change). Shipyard MAP lists them.
@@ -807,6 +819,7 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | About the Sun, the Sun's direction is fixed for the sortie (from the start point) and nothing near is drawn (the planets are points of light) | Off by 2e-6 rad an hour at Voyager 1, 0.02° at the Roadster | Not needed |
 | A deep-space survey pays its round trip at launch, from the home location's body | No stranding far out; the trip home is free once paid | If deep-space stations arrive |
 | Real objects take no damage and can't be grappled (heritage) | Surveys are about flying, not salvage | Not planned |
+| A derelict is rebuilt from its design and worn to a single "intact" figure (not its exact damage); it decays per sortie, not with time | Wrecks look plausibly wrecked, not as they were left | If wrecks should keep their exact damage |
 | Mars has no moons in its sky and no far body; sunlight is not dimmed with distance from the Sun (43 % at Mars) | Mars looks as bright as Earth; Phobos is never seen | If outer locations arrive |
 | Planet positions from Keplerian elements (arcminutes), precession ignored between the Almanac Sun (of date) and the J2000 stars and elements (0.37° by 2026) | Mars's Sun is placed to ~0.1°; Earth's Sun to ~0.4° against the stars | If an eclipse or occultation must be exact |
 | The jump reserve has no mass and no part of its own (a quarter of the tankage, beside it) | Bigger tanks mean a bigger reserve; the reserve never slows the ship | If tank design should trade reserve for range |

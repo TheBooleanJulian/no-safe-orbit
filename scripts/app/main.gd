@@ -142,6 +142,12 @@ var salvo: MissileSalvo
 const MAX_WRECKS := 4
 const WRECK_DRIFT_MPS := 4.0
 var _wrecks: Array[StringName] = []
+## Milestone 14 part 2: how each wreck of this sortie was made (to leave it
+## in the derelict field), and the field's derelicts flying now (ship id ->
+## record id) with those already salvaged this sortie.
+var _wreck_meta: Dictionary = {}
+var _field: Dictionary = {}
+var _field_salvaged: Dictionary = {}
 var _derelict_wings: Array[AirWing] = []
 var _wreck_count := 0
 ## An enemy boarding party is at most this big (ours: BoardingAction.MAX_TEAM).
@@ -215,6 +221,9 @@ func _start_scenario() -> void:
 		(view as Node).queue_free()
 	_missile_views.clear()
 	_wrecks.clear()
+	_wreck_meta.clear()
+	_field.clear()
+	_field_salvaged.clear()
 	_derelict_wings.clear()
 	encounter = Encounter.new()
 	salvo = null
@@ -285,6 +294,7 @@ func _start_scenario() -> void:
 		_spawn_artifact(player, artifact_offset)
 	else:
 		_spawn_encounter()
+		_spawn_derelicts(player)
 	_sortie_closed = false
 	combat_log = CombatLog.begin(player, world.sim_time)
 	if _jump_prepaid:
@@ -311,6 +321,109 @@ func _start_scenario() -> void:
 	GameLog.info("main", "Orbital sandbox ready: player flies '%s' (%.0f t), %s orbit at %.0f km, fixed dt %.4f s" % [
 		_designs[PLAYER_ID].config.display_name, _designs[PLAYER_ID].config.mass_kg / 1000.0,
 		location.body.display_name, location.start_altitude_m / 1000.0, world.fixed_dt])
+
+
+## The location's derelict field (DerelictField): the newest wrecks left
+## here on earlier sorties, rebuilt and wrecked to what is left of them,
+## silent and drifting a few kilometres out.
+func _spawn_derelicts(player: ShipState) -> void:
+	var catalog := ConstructionCatalog.default_catalog()
+	for rec: Dictionary in DerelictField.at(get_profile().derelicts, location.id):
+		var errors := PackedStringArray()
+		var template := BlueprintIO.load_file("res://data/blueprints/" + str(rec.template), errors)
+		if template == null:
+			continue
+		var id := StringName("derelict_%s" % rec.id)
+		_designs[id] = _compile(EnemyFactory.design(int(rec.mission), template, catalog, int(rec.variant)), template)
+		var ship := ShipState.create(id, "DERELICT %s" % rec.name, _designs[id].config, player.position + DerelictField.spawn_offset(rec),
+			player.velocity + Vector3(0.6, -0.2, 0.4), Quaternion(Vector3(0.3, 1, 0.1).normalized(), float(hash(rec.id) % 628) / 100.0))
+		ship.angular_velocity = Vector3(0.004, 0.01, -0.006)
+		ship.side = &"neutral"
+		ship.derelict = true
+		ship.attach_systems(_new_systems(id))
+		DerelictField.wreck_to(ship.systems, float(rec.intact), hash(rec.id))
+		ship.config = ship.systems.effective_config()
+		world.add_ship(ship)
+		world.set_input(id, ShipControlInput.neutral())
+		_spawn_view(id, Color(0.62, 0.6, 0.58))
+		_field[id] = str(rec.id)
+	hud.derelict_ids.assign(_field.keys())
+
+
+## The nearest field derelict within beacon range not yet salvaged this
+## sortie (&"" if none).
+func derelict_in_reach(player: ShipState) -> StringName:
+	var best := &""
+	var best_d := Salvage.BEACON_RANGE_M
+	for id: StringName in _field:
+		if _field_salvaged.has(id) or not world.has_ship(id):
+			continue
+		var d := world.get_ship(id).position.distance_to(player.position)
+		if d <= best_d:
+			best_d = d
+			best = id
+	return best
+
+
+## G by a derelict: the tug takes what is left worth taking — the scrap
+## value and crates, halved for each earlier salvage, no bounty — and it is
+## stripped of half of what remains. Once per sortie each.
+func salvage_derelict(id: StringName) -> Array:
+	var p := get_profile()
+	var catalog := ConstructionCatalog.default_catalog()
+	var ship := world.get_ship(id)
+	var rec := DerelictField.by_id(p.derelicts, str(_field[id]))
+	var times := int(rec.get("salvaged", 0))
+	var y := DerelictField.resalvage_yield(Salvage.scrap_value(ship.systems), Salvage.pulls_for(ship.systems), times)
+	var scrap := roundi(float(y.scrap) * TechTree.factor("salvage", p.tech_level("salvage")))
+	var crates := p.open_crates(int(y.pulls), Salvage.BEACON_LOOT_CHANCE, catalog)
+	for d in crates:
+		if d != null:
+			p.stow(d)
+	p.credits += scrap
+	for e in ship.systems.equipment:
+		if not e.destroyed():
+			ship.systems.damage_equipment(e, e.hp * DerelictField.STRIP_FACTOR)
+	if not rec.is_empty():
+		rec.salvaged = times + 1
+		rec.intact = ship.systems.intact_fraction()
+	_field_salvaged[id] = true
+	var summary := "Salvage beacon on %s (salvaged %d× before): %d cr scrap, %d crate%s into the hold" % [
+		ship.display_name, times, scrap, crates.size(), "" if crates.size() == 1 else "s"]
+	p.vessel.record(summary)
+	if combat_log != null:
+		combat_log.record(world.sim_time, "salvage", summary)
+	hud.loot.show_rewards("SALVAGE — %s" % ship.display_name, PackedStringArray([
+		"An old wreck, salvaged %d× before: the tug takes what is left" % times,
+		"+%d cr scrap (%d%% of the first salvage's rate) · no bounty" % [scrap, roundi(100.0 * pow(DerelictField.RESALVAGE_FACTOR, times))],
+		"%d crate%s into the cargo hold" % [crates.size(), "" if crates.size() == 1 else "s"],
+	]), crates, p)
+	_save_profile()
+	return crates
+
+
+## Leave this sortie's wrecks in the field, and age it (DerelictField).
+func _update_derelict_field() -> PackedStringArray:
+	var p := get_profile()
+	for id: StringName in _field:
+		var rec := DerelictField.by_id(p.derelicts, str(_field[id]))
+		if not rec.is_empty() and world.has_ship(id) and world.get_ship(id).systems != null:
+			rec.intact = world.get_ship(id).systems.intact_fraction()
+	var lines := DerelictField.age_all(p.derelicts)
+	if artifact == null:
+		for id: StringName in _wrecks:
+			var meta: Dictionary = _wreck_meta.get(id, {})
+			var w := world.get_ship(id)
+			if meta.is_empty() or w == null or w.systems == null:
+				continue
+			DerelictField.record(p.derelicts, location.id, str(meta.name), str(meta.template), int(meta.mission), int(meta.variant),
+				w.systems.intact_fraction(), 1)
+		for c in encounter.contacts:
+			var s := world.get_ship(c.id)
+			if s != null and s.is_active() and s.systems != null and s.systems.is_disabled() and not s.systems.captured:
+				DerelictField.record(p.derelicts, location.id, s.display_name.trim_prefix("TGT-"), c.template_file, c.mission_no, c.variant,
+					s.systems.intact_fraction(), 0)
+	return lines
 
 
 ## A survey's object: craft-like, no hull points (it can't be harmed),
@@ -397,10 +510,12 @@ func _spawn_contact(index: int, mission_no: int, arriving: bool) -> Contact:
 	var player := world.get_ship(PLAYER_ID)
 	# The location's encounter table picks the hull (Location.enemy_template).
 	var errors := PackedStringArray()
-	var template := BlueprintIO.load_file("res://data/blueprints/" + location.enemy_template(mission_no, index), errors)
+	var template_file := location.enemy_template(mission_no, index)
+	var template := BlueprintIO.load_file("res://data/blueprints/" + template_file, errors)
 	if template == null:
 		GameLog.error("main", "Enemy template failed to load (%s); using the default" % ", ".join(errors))
 		template = _load_template()
+		template_file = BlueprintIO.DEFAULT_TEMPLATE.get_file()
 	_designs[id] = _compile(EnemyFactory.design(mission_no, template, ConstructionCatalog.default_catalog(), index), template)
 	var class_name_word: String = (_designs[id].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
 	var offset: Vector3 = CONTACT_OFFSETS[index % CONTACT_OFFSETS.size()] * (1.0 + float(index / CONTACT_OFFSETS.size()))
@@ -420,6 +535,9 @@ func _spawn_contact(index: int, mission_no: int, arriving: bool) -> Contact:
 	ship.policy = c.policy
 	c.arriving = arriving
 	c.salvo_at = world.sim_time + c.policy.salvo_interval_s * 0.5
+	c.template_file = template_file
+	c.mission_no = mission_no
+	c.variant = index
 	ship.attach_systems(_new_systems(id))
 	world.add_ship(ship)
 	world.set_input(id, ShipControlInput.neutral())
@@ -867,6 +985,7 @@ func close_sortie() -> void:
 			"missiles": player.systems.missile_count(), "jump_reserve_kg": jump_reserve_kg}
 		lines.append_array(p.dock(after, catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
+	lines.append_array(_update_derelict_field())
 	for line in lines:
 		GameLog.info("main", line)
 	tutorial.decline_offer()
@@ -902,6 +1021,11 @@ func _on_salvage_pressed() -> void:
 		return
 	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), target_ship())
 	if why != "":
+		# Nothing to beacon in the fight: an old derelict close by, then.
+		var old := derelict_in_reach(world.get_ship(PLAYER_ID))
+		if old != &"":
+			salvage_derelict(old)
+			return
 		hud.notice("SALVAGE BEACON: " + why, world.sim_time)
 		return
 	drop_beacon()
@@ -1062,6 +1186,8 @@ func _retire_contact(c: Contact) -> void:
 	_views[new_id] = view
 	if c.wing != null:
 		_derelict_wings.append(c.wing)
+	_wreck_meta[new_id] = {"name": wreck.display_name.trim_prefix("WRECK "), "template": c.template_file,
+		"mission": c.mission_no, "variant": c.variant}
 	_wrecks.append(new_id)
 	hud.wreck_ids = _wrecks
 	while _wrecks.size() > MAX_WRECKS:

@@ -467,6 +467,12 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
      value and double bounty; its stores (`10 + 50 × intact` spare parts) and
      crates (+2, **90 %** loot each) go into your **cargo hold**.
    Loot in the hold is at risk until you bank it, and limited by its size.
+3. **Come back for the wrecks.** Beaten ships stay where they were left
+   (six per location). Later sorties there find the newest two a few
+   kilometres out, marked DERELICT. **G** within 2 km salvages one again,
+   once per sortie: half the scrap and crates of the time before, no
+   bounty. Each sortie a derelict loses 15 % of what is left, and it breaks
+   up below 10 % or after 8 sorties.
    Either way the wreck's best intact rare part comes too, the crates open
    on a spinning carousel, and the next contact arrives — each one tougher
    (rarer guns, armour plates, RCS and reactors). The beaten ship doesn't

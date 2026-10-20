@@ -132,6 +132,6 @@ func test_schema_10_migration() -> void:
 	q.complete_survey("iss")
 	q.save(path)
 	var r := PlayerProfile.load_file(path, PackedStringArray())
-	assert_true(r.loaded_schema == PlayerProfile.SCHEMA_VERSION and PlayerProfile.SCHEMA_VERSION == 10 and r.codex.has("iss"), "saved at schema 10 with the codex")
+	assert_true(r.loaded_schema == PlayerProfile.SCHEMA_VERSION and PlayerProfile.SCHEMA_VERSION >= 10 and r.codex.has("iss"), "saved at the current schema (10 or later) with the codex")
 	for s in ["", ".bak", ".tmp", ".v9"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + s))

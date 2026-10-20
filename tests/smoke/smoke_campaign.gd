@@ -198,6 +198,31 @@ func _run() -> void:
 	_check(flown_radiators == radiators + 1, "relaunched ship carries the refit (%d radiators)" % flown_radiators)
 	_check(profile.spare_parts == parts_before_launch - 5, "the refit was paid for: 5 parts for the 2-cell radiator")
 
+	# 6b. The wreck left behind on the first sortie is still out there
+	# (Milestone 14 derelict field): salvage it again, for half.
+	var field_ids: Array = main.hud.derelict_ids
+	_check(field_ids.size() == 1 and profile.derelicts.size() == 1 and int(profile.derelicts[0].salvaged) == 1,
+		"the first sortie's wreck is in the derelict field (%d found)" % field_ids.size())
+	if field_ids.size() == 1:
+		var old := main.world.get_ship(field_ids[0])
+		var dist := old.position.distance_to(player.position)
+		_check(old.derelict and old.systems.disabled_reason() == "no power" and dist > 3500.0,
+			"%s lies %.1f km out, dead in space" % [old.display_name, dist / 1000.0])
+		player.position = old.position + Vector3(0, 0, 600)
+		player.velocity = old.velocity
+		var credits_before := profile.credits
+		main._on_salvage_pressed()
+		await _frames(2)
+		_check(profile.credits > credits_before and int(profile.derelicts[0].salvaged) == 2 and main.hud.loot.visible,
+			"G by it salvages it again: +%d cr, salvaged twice" % (profile.credits - credits_before))
+		main.hud.loot.close()
+		var again := profile.credits
+		main._on_salvage_pressed()
+		await _frames(2)
+		_check(profile.credits == again, "but only once per sortie")
+		if main.hud.loot.visible:
+			main.hud.loot.close()
+
 	# 7. What is on disk agrees.
 	var errors := PackedStringArray()
 	var saved := PlayerProfile.load_file(PlayerProfile.path, errors)
