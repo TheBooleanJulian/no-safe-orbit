@@ -734,6 +734,15 @@ bounding-box hit test.
   spawned 8 m off the rack at +3 m/s), recovery (< 10 m, < 2 m/s), 40 s
   servicing, comms (30 km; jammed → fallback RETURN after 10 s), loss, and
   persistence (`ShipInstance.wing`).
+- **Targets and rearming (play-test batch 6)**: `AirWing.strike_target`
+  is `target_id` while `combat_ready` (active, not a derelict, not
+  disabled), else the nearest combat-ready of `candidate_ids` (Main: the
+  encounter's contacts), else null (STRIKE then returns home).
+  `CraftAI.disengage_reason` adds "out of ammunition" at every risk. A craft
+  that returns on its own sets `came_back_itself`; docked, serviced and with
+  a strike target it relaunches (`auto_relaunch`, the WING tab's toggle);
+  `recall` / `recall_all` clear it. Overview commands `wing_launch`,
+  `wing_recall`, `wing_directive`, `wing_risk`, `wing_auto`.
 - **`CraftAI`**: directive → `ShipControlInput`. Position control: desired
   velocity = target velocity + 0.12 × error (≤ 80 m/s), reached in ~1.5 s
   with the per-axis thrust available; attitude by proportional rate

@@ -63,7 +63,9 @@ var _power_label: RichTextLabel
 var _loads_box: VBoxContainer
 var _loads_key := ""
 var _wing_box: VBoxContainer
-var _wing_rows: Dictionary = {}  # craft id -> Label
+var _wing_rows: Dictionary = {}  # craft id -> {state, hull, fuel, ammo, order, risk, act}
+var _wing_auto: CheckBox
+var _wing_summary: Label
 var _wing_ref: AirWing
 var _target_map: ShipSchematic
 var _target_label: RichTextLabel
@@ -252,8 +254,8 @@ func _build_power_tab() -> void:
 
 func _build_wing_tab() -> void:
 	var box := _tab_box()
-	box.add_child(_caption_label("[[] launch all  ·  []] recall all"))
 	_wing_box = VBoxContainer.new()
+	_wing_box.add_theme_constant_override("separation", CyberTheme.SPACE_S)
 	box.add_child(_wing_box)
 
 
@@ -797,64 +799,184 @@ func _refresh_weapons(sys: ShipSystems) -> void:
 		_order_box.add_child(row)
 
 
-## One row per craft: status line, then directive / risk / priority pickers
-## and launch / recall.
+## The wing as a table (play-test batch 6: "fighter management is messy"):
+## wing-wide orders on top, then a row per craft — callsign and role, state,
+## hull / fuel / ammunition, its order, risk and aim, and launch or recall.
+## The role's description is the row's tooltip; how they fly folds away.
+const WING_COLUMNS := ["CRAFT", "STATE", "HULL·FUEL·AMMO", "ORDER", "RISK", "AIM", ""]
+
+
 func _update_wing(wing: AirWing) -> void:
 	if wing == null:
 		return
 	if wing != _wing_ref:
 		_wing_ref = wing
-		for child in _wing_box.get_children():
-			child.queue_free()
-		_wing_rows.clear()
-		for c in wing.crafts:
-			var status := Label.new()
-			status.add_theme_font_size_override("font_size", CyberTheme.SIZE_BODY)
-			status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			_wing_box.add_child(status)
-			_wing_rows[c.id] = status
-			var role := Label.new()
-			role.text = "   " + str(CraftAI.ROLE_HELP.get(c.config.craft_role, ""))
-			role.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
-			role.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
-			role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			_wing_box.add_child(role)
-			var row := HFlowContainer.new()
-			var id := c.id
-			row.add_child(_picker(CraftAI.DIRECTIVE_NAMES, c.directive, func(i: int) -> void: command.emit(&"craft_directive", [id, i])))
-			row.add_child(_picker(CraftAI.RISK_NAMES, c.risk, func(i: int) -> void: command.emit(&"craft_risk", [id, i])))
-			if not c.is_drone():
-				row.add_child(_picker(CraftAI.PRIORITY_NAMES, c.priority, func(i: int) -> void: command.emit(&"craft_priority", [id, i])))
-			row.add_child(_button("Launch", func() -> void: command.emit(&"craft_launch", id)))
-			row.add_child(_button("Recall", func() -> void: command.emit(&"craft_recall", id)))
-			_wing_box.add_child(row)
-		# How they fly: every directive and the risk setting, in a line each.
-		var how := Label.new()
-		how.text = "HOW THEY FLY\n" + "\n".join(CraftAI.DIRECTIVE_HELP) + "\n" + CraftAI.RISK_HELP \
-			+ "\nEvery craft holds fire with a friend in the line of fire, keeps apart from other craft and clear of hulls; its rounds carry an IFF interlock and never hit your side."
-		how.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
-		how.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
-		how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_wing_box.add_child(how)
+		_build_wing_table(wing)
+	if _wing_auto != null:
+		_wing_auto.set_pressed_no_signal(wing.auto_relaunch)
+	var out := 0
 	for c in wing.crafts:
-		var label: Label = _wing_rows.get(c.id)
-		if label == null:
+		var row: Dictionary = _wing_rows.get(c.id, {})
+		if row.is_empty():
 			continue
-		var ammo := " · ammo %d" % c.ammo if c.config.cannon != null else ""
 		var state: String = AirWing.STATUS_NAMES[c.status].to_upper()
-		if c.status == AirWing.Status.DOCKED and c.service_left_s > 0.0:
-			state = "SERVICING %.0f s" % c.service_left_s
-		label.text = "%s — %s · hull %d%% · fuel %d%%%s%s" % [c.label, state, roundi(c.hull_fraction * 100.0),
-			roundi(c.propellant_fraction * 100.0), ammo, "  » " + c.override_reason if c.override_reason != "" else ""]
-		label.add_theme_color_override("font_color", CyberTheme.RED if c.status == AirWing.Status.LOST else CyberTheme.TEXT)
+		var color := CyberTheme.TEXT
+		match c.status:
+			AirWing.Status.FLYING:
+				out += 1
+				color = CyberTheme.CYAN
+				if c.override_reason != "":
+					state = c.override_reason.split(" — ")[0].to_upper()
+					color = CyberTheme.AMBER
+			AirWing.Status.DOCKED:
+				if c.service_left_s > 0.0:
+					state = "REARMING %.0f s" % c.service_left_s
+					color = CyberTheme.AMBER
+				else:
+					state = "READY"
+			AirWing.Status.LOST:
+				color = CyberTheme.RED
+		(row.state as Label).text = state
+		(row.state as Label).add_theme_color_override("font_color", color)
+		(row.gauges as Label).text = "%d%% · %d%% · %s" % [roundi(c.hull_fraction * 100.0), roundi(c.propellant_fraction * 100.0),
+			str(c.ammo) if c.config.cannon != null else "—"]
+		var flying := c.status == AirWing.Status.FLYING
+		(row.act as Button).text = "▼ In" if flying else "▲ Out"
+		(row.act as Button).tooltip_text = "Recall it (it stays home)" if flying else "Launch it"
+		(row.act as Button).disabled = c.status == AirWing.Status.LOST
+		(row.order as OptionButton).select(c.directive)
+		(row.risk as OptionButton).select(c.risk)
+	if _wing_summary != null:
+		_wing_summary.text = "%d of %d out · strikes move on to the next combat-ready enemy · empty guns or low fuel bring a craft home to rearm" % [
+			out, wing.crafts.size()]
+
+
+## The table's cells: small type, so a carrier's wing fits the drawer;
+## pickers `width` px wide, their text clipped (not sized to the longest
+## option).
+func _small(c: Control, width: float = 0.0) -> void:
+	c.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
+	if c is OptionButton:
+		(c as OptionButton).fit_to_longest_item = false
+		(c as OptionButton).clip_text = true
+	if width > 0.0:
+		c.custom_minimum_size.x = width
+
+
+func _build_wing_table(wing: AirWing) -> void:
+	for child in _wing_box.get_children():
+		child.queue_free()
+	_wing_rows.clear()
+	var bar := HFlowContainer.new()
+	bar.add_theme_constant_override("h_separation", CyberTheme.SPACE_S)
+	bar.add_child(_button("Launch all [[]", func() -> void: command.emit(&"wing_launch", null)))
+	bar.add_child(_button("Recall all []]", func() -> void: command.emit(&"wing_recall", null), CyberTheme.AMBER))
+	var all_order := _picker(["All: order…"] + Array(CraftAI.DIRECTIVE_NAMES), 0, func(i: int) -> void:
+		if i > 0:
+			command.emit(&"wing_directive", i - 1))
+	_small(all_order, 120)
+	bar.add_child(all_order)
+	var all_risk := _picker(["All: risk…"] + Array(CraftAI.RISK_NAMES), 0, func(i: int) -> void:
+		if i > 0:
+			command.emit(&"wing_risk", i - 1))
+	_small(all_risk, 120)
+	bar.add_child(all_risk)
+	_wing_auto = CheckBox.new()
+	_wing_auto.text = "Back out after rearming"
+	_wing_auto.tooltip_text = "Craft that came home on their own (empty guns, low fuel, hurt, nothing left to strike) relaunch once refuelled and rearmed, while there is a combat-ready enemy"
+	_wing_auto.toggled.connect(func(on: bool) -> void: command.emit(&"wing_auto", on))
+	bar.add_child(_wing_auto)
+	_wing_box.add_child(bar)
+	_wing_summary = Label.new()
+	_wing_summary.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
+	_wing_summary.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
+	_wing_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_wing_box.add_child(_wing_summary)
+	var grid := GridContainer.new()
+	grid.columns = WING_COLUMNS.size()
+	grid.add_theme_constant_override("h_separation", CyberTheme.SPACE_S)
+	grid.add_theme_constant_override("v_separation", CyberTheme.SPACE_XS)
+	grid.add_theme_constant_override("h_separation", CyberTheme.SPACE_XS)
+	for h in WING_COLUMNS:
+		var head := Label.new()
+		head.text = h
+		head.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
+		head.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
+		grid.add_child(head)
+	for c in wing.crafts:
+		var id := c.id
+		var help := str(CraftAI.ROLE_HELP.get(c.config.craft_role, ""))
+		var name := Label.new()
+		name.text = c.label
+		name.tooltip_text = "%s — %s" % [str(c.config.craft_role).to_upper(), help]
+		name.mouse_filter = Control.MOUSE_FILTER_PASS
+		_small(name)
+		grid.add_child(name)
+		var row := {}
+		for key in ["state", "gauges"]:
+			var l := Label.new()
+			l.custom_minimum_size = Vector2(84 if key == "state" else 112, 0)
+			l.clip_text = true
+			l.tooltip_text = name.tooltip_text
+			l.mouse_filter = Control.MOUSE_FILTER_PASS
+			_small(l)
+			grid.add_child(l)
+			row[key] = l
+		var order := _picker(CraftAI.DIRECTIVE_NAMES, c.directive, func(i: int) -> void: command.emit(&"craft_directive", [id, i]))
+		_small(order, 84)
+		grid.add_child(order)
+		row.order = order
+		var risk := _picker(CraftAI.RISK_NAMES, c.risk, func(i: int) -> void: command.emit(&"craft_risk", [id, i]))
+		_small(risk, 92)
+		grid.add_child(risk)
+		row.risk = risk
+		if c.is_drone():
+			var none := Label.new()
+			none.text = "—"
+			_small(none)
+			grid.add_child(none)
+		else:
+			var aim := _picker(CraftAI.PRIORITY_NAMES, c.priority, func(i: int) -> void: command.emit(&"craft_priority", [id, i]))
+			_small(aim, 76)
+			grid.add_child(aim)
+		var act := _button("▲ Out", func() -> void:
+			var craft := wing.by_id(id)
+			command.emit(&"craft_recall" if craft != null and craft.status == AirWing.Status.FLYING else &"craft_launch", id))
+		_small(act, 50)
+		grid.add_child(act)
+		row.act = act
+		_wing_rows[c.id] = row
+	_wing_box.add_child(grid)
+	# How they fly: folded away until asked for.
+	var how := Label.new()
+	how.text = "\n".join(CraftAI.DIRECTIVE_HELP) + "\n" + CraftAI.RISK_HELP \
+		+ "\nEvery craft holds fire with a friend in the line of fire, keeps apart from other craft and clear of hulls; its rounds carry an IFF interlock and never hit your side." \
+		+ "\nRoles (hover a craft for its own): " + " · ".join(CraftAI.ROLE_HELP.keys().map(func(k: StringName) -> String: return "%s — %s" % [str(k).to_upper(), CraftAI.ROLE_HELP[k]]))
+	how.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
+	how.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
+	how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	how.visible = false
+	var fold := _button("How they fly ▸", func() -> void: pass)
+	fold.pressed.connect(func() -> void:
+		how.visible = not how.visible
+		fold.text = "How they fly ▾" if how.visible else "How they fly ▸")
+	_wing_box.add_child(fold)
+	_wing_box.add_child(how)
 
 
 # --- Helpers -------------------------------------------------------------------------
 
+## A tab's content box, inside a scroll area so a long list (a carrier's
+## wing, many contacts) never runs off the screen.
 func _tab_box() -> VBoxContainer:
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL  # the damage map still fills the tab
 	box.add_theme_constant_override("separation", CyberTheme.SPACE_S)
-	_tabs.add_child(box)
+	scroll.add_child(box)
+	_tabs.add_child(scroll)
 	return box
 
 

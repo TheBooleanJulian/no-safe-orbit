@@ -107,6 +107,9 @@ static func disengage_reason(craft: ShipState, risk: Risk) -> String:
 	if craft.config.cannon != null and craft.config.cannon.magazine_rounds > 0 \
 			and float(craft.cannon_rounds) / craft.config.cannon.magazine_rounds < limits[2]:
 		return "ammunition low"
+	# Whatever the risk: an empty gun is no use out there.
+	if craft.config.cannon != null and craft.config.cannon.magazine_rounds > 0 and craft.cannon_rounds <= 0:
+		return "out of ammunition"
 	return ""
 
 
