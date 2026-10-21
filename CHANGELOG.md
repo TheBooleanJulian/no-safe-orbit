@@ -36,6 +36,11 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
   `smoke_campaign`). Banking spare parts makes the REPAIR button affordable,
   but it still has to be pressed.
 
+#### Docs
+- KNOWN_ISSUES: batch 11's first-guess numbers, the bank-cargo report (not
+  reproduced) and the dealer's timings; ROADMAP: candidates for what comes
+  next (not agreed).
+
 #### Tests changed (and why)
 - New `test_batch11_cargo` (4): the freight named; selling from the hold
   (480 cr for a rare part, the hold emptied, the bank untouched); DEV 100k;

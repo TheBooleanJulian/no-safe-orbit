@@ -67,4 +67,5 @@ Legend: ✅ done · 🔧 in progress · ⬜ to do
 
 ## Afterwards
 
-- ⬜ Continue with the milestones. The agreed roadmap ended at Milestone 15; the next one is to be decided.
+- ⬜ Continue with the milestones. The agreed roadmap ended at Milestone 15; the next one is to be decided (candidates in `docs/ROADMAP.md`, "Next — to be decided").
+- ✅ Promote dev to main after part 4.

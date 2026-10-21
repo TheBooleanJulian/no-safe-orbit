@@ -77,6 +77,19 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   gamepad default (every pad button is taken).
 - **Wrecks** drift away at 4 m/s and only the four most recent are kept;
   they can still be shot but not salvaged again.
+- **Play-test batch 11 is new** (2026-10-22), covered by tests and render
+  reviews, not yet by play:
+  - the laser tiers (fibre, Nd:YAG, free-electron), the craft's light-tier
+    weapons, their disengage thresholds and the propellant margin home are
+    first guesses;
+  - crew: 2 berths per crew-quarters cell, the cafeteria's +2 % per cell and
+    the armoury's bonus are first guesses; resting crew are unpaid;
+  - the quartermaster's buy-back (40 % of shelf, a common part as 100 cr);
+  - hangar doors open on one outside face; a bay with none is an error, so
+    some older custom designs may need a bay moved.
+- **"Banking cargo fully repairs the ship" was not reproduced** (play-test
+  batch 11): banking leaves the damage and the repair jobs as they were
+  (`smoke_campaign` checks it). Steps to reproduce are welcome.
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the
   old large sections from blocks, but a section of odd length (the old
   3-long engine section) doesn't tile and stays as it was.
@@ -152,10 +165,11 @@ rare part · Earth texture 5400 × 2700.
   2026-10-19). Crossing it removes the vessel or round (with a re-entry
   cutscene for the player since play-test batch 10); skimming above it costs
   nothing.
-- **The dealer's first opening in a session takes a few seconds**
-  (play-test batch 10): the cards come one a frame (4.2 s for all twelve in
-  a windowed review, frames of up to ~0.75 s while a super-heavy is loaded,
-  checked and priced); later openings reuse what was worked out.
+- **The dealer's cards come one a frame** (play-test batches 10 and 11):
+  each template is loaded, checked and priced once a session (frames of up
+  to ~0.75 s for a super-heavy; ~1.5 s for all twelve). The pictures are
+  drawn only the first time a template is seen and then kept in
+  `user://dealer_shots` (~7 s the very first time, while scrolling).
 - **The Moon's ground** (play-test batch 10): ships settle on their hit
   box's smallest half-extent whatever their attitude, and rest without
   sliding or tipping; the drawn ground reaches 115 km at most (the camera's
