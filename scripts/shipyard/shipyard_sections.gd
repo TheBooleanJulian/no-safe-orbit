@@ -414,7 +414,8 @@ func _offer_text(bp: ShipBlueprint) -> String:
 		CyberTheme.tint("CAPITAL SHIP · ", CyberTheme.AMBER) if _is_capital(bp) else "",
 		stats.mass_kg / 1000.0, stats.thrust_forward_n / maxf(stats.mass_kg, 1.0) / ShipDynamics.G0, stats.delta_v_m_s(),
 		int(price.crew_count), stats.cargo_m3, " · ".join(arms),
-		CyberTheme.tint("hull and parts %d cr · crew %d × %d cr" % [price.ship, price.crew_count, PlayerProfile.HIRE_FEE], CyberTheme.TEXT_DIM)]
+		CyberTheme.tint("hull and parts %d cr%s · crew %d × %d cr" % [price.ship,
+			" · rarer parts %d cr (yours with it)" % price.units if int(price.units) > 0 else "", price.crew_count, PlayerProfile.HIRE_FEE], CyberTheme.TEXT_DIM)]
 
 
 # --- ARMOURY ----------------------------------------------------------------------

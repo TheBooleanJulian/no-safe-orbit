@@ -286,6 +286,7 @@ func _start_scenario() -> void:
 	hud.player_wing = player_wing
 	hud.encounter = encounter
 	_spawn_view(PLAYER_ID, Color.WHITE)
+	camera.fit_to(_designs[PLAYER_ID].stats.hull_bounds_m)
 	survey_progress = 0.0
 	survey_done = false
 	_survey_clock = 0.0

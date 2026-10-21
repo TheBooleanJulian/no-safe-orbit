@@ -305,10 +305,15 @@ func test_templates_of_every_size_use_only_standard_parts() -> void:
 		var bp := BlueprintIO.load_file(path, PackedStringArray())
 		var r := ShipValidator.validate(bp, cat)
 		assert_true(not r.has_errors(), "%s is valid:\n%s" % [bp.name, r.summary()])
+		# Common parts only, apart from the rarer parts the dealer sells with
+		# a capital ship (play-test batch 6).
 		var fresh := PlayerProfile.new(1)
+		var units := ServiceYard.rare_units(bp, cat)
+		for id: StringName in units:
+			fresh.inventory[String(id)] = int(units[id])
 		var rep := ShipValidator.Report.new()
 		fresh.check_design(bp, cat, rep)
-		assert_true(not rep.has_errors(), "%s flies on a new profile (common parts only):\n%s" % [bp.name, rep.summary()])
+		assert_true(not rep.has_errors(), "%s flies on a new profile (common parts, plus the rarer parts sold with it):\n%s" % [bp.name, rep.summary()])
 		masses.append(ShipStats.compute(bp, ShipGrid.build(bp, cat)).wet_mass_kg())
 	masses.sort()
 	assert_true(masses.size() >= 3 and masses[-1] > masses[0] * 2.0, "light to heavy (%s t)" % [masses.map(func(m: float) -> int: return roundi(m / 1000.0))])

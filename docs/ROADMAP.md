@@ -628,6 +628,10 @@ friendly-fire safety (clear shot + IFF) and craft separation.
 | Ramming worse for the lighter ship | `test_combat_ai` | 8 m/s: Cutter −35.5 % (2 modules), Destroyer −0.9 % |
 | Auto flares only once armed | `test_combat_ai` (mutation-checked) | armed at 1.5 s; flares due at 4.0 s out |
 
+Done in play-test batch 6 (2026-10-21): the capital templates rebuilt as
+armoured battleships with a main battery (`test_m12_shipyard`), rarer parts
+sold with them, a camera that sits back for big hulls.
+
 Still to do: repair and salvage drones; hangar capacity, crew complement
 and PD coverage that scale with hull size.
 

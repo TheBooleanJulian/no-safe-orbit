@@ -813,7 +813,7 @@ them:
 |---|---|
 | **STATION** (opens here) | Your ship in 3D; cards for repairs, rearm, crew and the next sortie, each with a button to its section |
 | **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage. Accepting one sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
-| **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, plus the crew at the hiring fee |
+| **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the hold and the bank, the service record |
 | **REFIT** | The builder below |
 | **CREW** | The roster by post, who is for hire |
@@ -821,6 +821,7 @@ them:
 | **REPAIRS** | Damage and what fixing it costs |
 | **UPGRADES** | Station technology |
 | **MAP** | Where you launch from, how many you meet |
+| **Capital ships** | Built like battleships: a long armoured hull (80 mm down the flanks, 40 mm on top and the bow) that narrows to a stepped prow, a two-deck superstructure amidships with the bridge on top, a main battery on the centreline — heavy kinetic cannons ahead of the superstructure and superfiring on its roof (the Cruiser adds railguns) — autocannon secondaries down the flanks, point defence, missile racks. Destroyer 3,002 t (3 heavy guns), Cruiser 4,987 t (4 heavy guns, 2 railguns), Carrier 6,512 t (16 craft). The camera sits back further the bigger the ship |
 | **LOOT** | Every crate drop and its odds |
 
 In REFIT you start from the ship you were flying (the Frigate Mk I template

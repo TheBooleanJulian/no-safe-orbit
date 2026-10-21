@@ -47,6 +47,7 @@ var _bounds := AABB()
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP if interactive else Control.MOUSE_FILTER_IGNORE
+	clip_contents = true  # a capital ship's crew dots stay inside the panel
 
 
 ## Redraws at most this often (s): a capital ship has hundreds of modules,
