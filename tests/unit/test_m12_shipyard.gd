@@ -22,8 +22,14 @@ func test_every_template_is_for_sale() -> void:
 		var price := ServiceYard.dealer_price(bp, _catalog())
 		var parts := ServiceYard.parts_value(bp, _catalog())
 		var expect_ship := ceili((parts * ServiceYard.part_credits() + PlayerProfile.NEW_HULL_FEE) * ServiceYard.DEALER_MARKUP)
-		assert_true(int(price.ship) == expect_ship and int(price.crew) == int(price.crew_count) * PlayerProfile.HIRE_FEE
-			and int(price.total) == int(price.ship) + int(price.crew), "%s: parts + fee + margin, crew at the hiring fee (%s)" % [bp.name, price])
+		# Rarer parts come with the ship, at the quartermaster's prices plus the margin.
+		var units := 0
+		for id: StringName in ServiceYard.rare_units(bp, _catalog()):
+			units += int(ServiceYard.rare_units(bp, _catalog())[id]) * PlayerProfile.VENDOR_PRICES[(_catalog().equipment[id] as EquipmentDefinition).rarity]
+		assert_true(int(price.ship) == expect_ship and int(price.units) == ceili(units * ServiceYard.DEALER_MARKUP)
+			and int(price.crew) == int(price.crew_count) * PlayerProfile.HIRE_FEE
+			and int(price.total) == int(price.ship) + int(price.units) + int(price.crew),
+			"%s: parts + fee + margin, rarer parts at the quartermaster's price + margin, crew at the hiring fee (%s)" % [bp.name, price])
 		names.append("%s %d cr" % [bp.name, price.total])
 	print("    measured: dealer prices — %s" % ", ".join(names))
 	assert_true(names.size() >= 3, "Cutter, Corvette and Frigate Mk I are all offered (%d)" % names.size())
@@ -70,7 +76,7 @@ func test_scrapping() -> void:
 	assert_true(fresh == floori(ServiceYard.parts_value(v.blueprint, _catalog()) * ServiceYard.SCRAP_RETURN), "an intact ship: half its parts (%d)" % fresh)
 
 
-func test_capital_ships_are_standard_and_spawn_fast() -> void:
+func test_capital_ships_are_battleships_and_spawn_fast() -> void:
 	var cat := _catalog()
 	for id in ["destroyer_mk1", "cruiser_mk1", "carrier_mk1"]:
 		var bp := BlueprintIO.load_file("res://data/blueprints/%s.json" % id, PackedStringArray())
@@ -79,11 +85,29 @@ func test_capital_ships_are_standard_and_spawn_fast() -> void:
 			continue
 		var report := ShipValidator.validate(bp, cat)
 		assert_true(report.issues.is_empty(), "%s validates clean (%d issues)" % [id, report.issues.size()])
-		var rare := PackedStringArray()
+		# Play-test batch 6: better armed and armoured — a main battery of
+		# heavy guns, armour on the flanks, a superstructure above the hull.
+		var heavy := 0
 		for e in bp.equipment:
-			if (cat.equipment[e.def_id] as EquipmentDefinition).rarity != Rarity.Tier.COMMON:
-				rare.append(String(e.def_id))
-		assert_true(rare.is_empty(), "%s uses standard (common) parts only (%s)" % [id, rare])
+			if e.def_id in [&"kinetic_cannon", &"railgun"]:
+				heavy += 1
+		var top_tower := 0
+		for m in bp.modules:
+			top_tower = maxi(top_tower, m.position.y)
+		var flank_plates := 0
+		for key: String in bp.armor:
+			if key.ends_with("port") or key.ends_with("starboard"):
+				flank_plates += 1
+		assert_true(heavy >= 2 and flank_plates > 100, "%s: a main battery (%d heavy guns) and armoured flanks (%d plates)" % [id, heavy, flank_plates])
+		assert_true(top_tower >= 3, "%s: a superstructure rises above the hull (deck %d)" % [id, top_tower])
+		# Its rarer parts come with it.
+		var p := PlayerProfile.new(3)
+		p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+		p.credits = 10_000_000
+		var units := ServiceYard.rare_units(bp, cat)
+		assert_true(p.buy_ship(bp, cat) == "", "%s bought" % id)
+		for uid: StringName in units:
+			assert_true(p.owned(uid) == int(units[uid]), "%s comes with its %d × %s" % [id, units[uid], uid])
 		var t0 := Time.get_ticks_usec()
 		var grid := ShipGrid.build(bp, cat)
 		var stats := ShipStats.compute(bp, grid)

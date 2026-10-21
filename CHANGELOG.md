@@ -4,6 +4,39 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 6, part 5 — capital ships as battleships (2026-10-21)
+
+#### Changed
+- **Destroyer, Cruiser and Carrier rebuilt** (`tools/make_capital_templates.gd`)
+  from "a flat flimsy plank" into battleships: a taller hull (3–4 decks)
+  narrowing to a stepped, sloped prow; a two-deck superstructure amidships
+  (quarters, bridge on top, mast); 80 mm plates down the flanks and 40 mm on
+  top and the bow; a main battery on the centreline — heavy kinetic cannons
+  ahead of the superstructure and superfiring on its roof, the Cruiser
+  with two railguns — autocannon secondaries in the flanks and a ventral
+  pair, 10–16 point-defence mounts, missile racks.
+
+  | | was | now |
+  |---|---|---|
+  | Destroyer | 960 t, 8 autocannons, no armour | 3,002 t, 3 heavy guns + 8 autocannons, 536 plates, 0.27 g |
+  | Cruiser | 2,169 t, 14 autocannons | 4,987 t, 4 heavy guns + 2 railguns + 12 autocannons, 816 plates, 0.26 g |
+  | Carrier | 1,954 t, 6 autocannons, 4 hangars | 6,512 t, 2 heavy guns + 10 autocannons, 6 hangars (16 craft), 1,008 plates, 0.20 g |
+- **The dealer sells rarer parts with the ship**: a template's non-common
+  parts (heavy cannons, railguns, missile racks) are priced at the
+  quartermaster's rates plus the margin and banked when you buy it.
+  Destroyer 19,466 cr, Cruiser 37,237 cr, Carrier 34,084 cr (crew included).
+- **The chase camera sits back in proportion to the ship** (frigates and
+  smaller unchanged); the HUD schematic clips to its panel.
+
+#### Tests changed (and why)
+- `test_m12_shipyard`: the dealer's price includes the rarer parts; the
+  capital-ship test checks a main battery, armoured flanks, a superstructure
+  and that the rarer parts come with the ship (it used to require common
+  parts only). Compile times: 14.9 / 27.1 / 36.0 ms.
+- `test_feedback_pass` (templates fly on a new profile): the fresh profile
+  is given the rarer parts the dealer sells with the template before the
+  check; without them the capital ships now (deliberately) fail it.
+
 ### Play-test batch 6, part 4 — builder: parts list, radiators, armour, wrecks (2026-10-21)
 
 #### Changed

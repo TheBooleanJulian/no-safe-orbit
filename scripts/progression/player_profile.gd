@@ -454,6 +454,9 @@ func buy_ship(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
 	if int(price.total) > credits:
 		return "%s costs %d credits; you have %d" % [bp.name, price.total, credits]
 	credits -= int(price.total)
+	# Its rarer parts come with it, banked like any others.
+	for id: StringName in price.unit_ids:
+		inventory[String(id)] = owned(id) + int(price.unit_ids[id])
 	var v := ShipInstance.fresh(bp.duplicate_blueprint())
 	v.ensure_crew(catalog)
 	v.record("Bought from the dealer for %d credits (crew of %d included)" % [price.total, price.crew_count])

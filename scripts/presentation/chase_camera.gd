@@ -25,6 +25,22 @@ var zoomed: bool = false
 ## Orbit around the ship: x = yaw, y = pitch (radians), set by Main.
 var orbit: Vector2 = Vector2.ZERO
 
+## The offsets above for ships up to a frigate's size; fit_to scales them
+## up for bigger hulls (play-test batch 6: a capital ship filled the view).
+const BASE_OFFSET := Vector3(0, 16, 85)
+const BASE_OFFSET_ZOOMED := Vector3(0, 18, 40)
+## A hull's half-diagonal (m) the base offsets were set for.
+const BASE_RADIUS_M := 30.0
+
+
+## Sit back from a hull of `bounds` (ship metres): the base offsets for
+## anything up to a frigate, scaled with the hull's size above that.
+func fit_to(bounds: AABB) -> void:
+	var k := maxf(bounds.size.length() * 0.5 / BASE_RADIUS_M, 1.0)
+	offset_body = BASE_OFFSET * k
+	offset_zoomed = BASE_OFFSET_ZOOMED * k
+
+
 var _shake := 0.0
 var _shake_clock := 0.0
 var _smoothed: Quaternion = Quaternion.IDENTITY
