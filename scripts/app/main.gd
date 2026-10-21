@@ -36,6 +36,12 @@ var beam_view: BeamView
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 var gangways := GangwayView.new()
+## The ground close up (a body with an elevation map, below its terrain altitude).
+var terrain_view := TerrainView.new()
+## Earth re-entry (play-test batch 10): the cutscene's clock once the player
+## crosses an atmosphere's entry interface (-1 = not playing).
+const REENTRY_CUTSCENE_S := 7.0
+var _reentry_s := -1.0
 var audio := ShipAudio.new()
 var _rounds_heard := 0
 var _pulses_heard := 0
@@ -205,6 +211,7 @@ func _ready() -> void:
 	DisplaySettings.apply_saved()
 	gangways.name = "Gangways"
 	add_child(gangways)
+	add_child(terrain_view)
 	audio.name = "Audio"
 	add_child(audio)
 	location = Location.by_id(get_profile().location)
@@ -284,6 +291,9 @@ func _start_scenario() -> void:
 			celestial.set_star_sun(anchor_r)
 	world.set_central_body(body, anchor_r, anchor_v)
 	world.anchor_id = PLAYER_ID
+	# A real surface to land on (the Moon: NASA's LOLA heights).
+	world.terrain = body.terrain() if not body.is_star else null
+	_update_surface_frame()
 	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
 	player.side = &"player"
 	player.policy = ShipPolicy.from_dict(vessel.policy)
@@ -1267,6 +1277,38 @@ func in_combat() -> bool:
 	return false
 
 
+## The body's surface turns: its fixed axes and spin for the simulation.
+func _update_surface_frame() -> void:
+	if world == null or world.terrain == null:
+		return
+	world.pci_to_fixed = celestial.pci_to_body_fixed(world.sim_time)
+	var pole := world.pci_to_fixed.transposed() * Vector3(0, 0, 1)
+	world.surface_spin_pci = pole * deg_to_rad(world.body.rotation_deg_per_day) / 86400.0
+
+
+## Earth re-entry: crossing an atmosphere's entry interface plays the
+## cutscene — the plasma sheath builds and the hull comes apart — before the
+## debrief. True while it plays.
+func _play_reentry(player: ShipState, delta: float) -> bool:
+	if player.status != ShipState.Status.ENTERED_ATMOSPHERE or not world.body.has_atmosphere:
+		return false
+	if _reentry_s < 0.0:
+		_reentry_s = 0.0
+		hud.notice("RE-ENTRY — %s is breaking up" % get_profile().vessel.name, world.sim_time)
+		if combat_log != null:
+			combat_log.record(world.sim_time, "entry", "Re-entry: the hull broke up in the atmosphere")
+	_reentry_s += delta
+	var flow := (player.orientation.inverse() * -player.velocity).normalized() if player.velocity.length() > 1.0 else Vector3.BACK
+	(_views[PLAYER_ID] as ShipView).show_reentry(clampf(_reentry_s / REENTRY_CUTSCENE_S, 0.0, 1.0), flow)
+	camera.h_offset = randf_range(-0.3, 0.3) * minf(_reentry_s, 2.0)
+	camera.v_offset = randf_range(-0.3, 0.3) * minf(_reentry_s, 2.0)
+	if _reentry_s < REENTRY_CUTSCENE_S:
+		return true
+	camera.h_offset = 0.0
+	camera.v_offset = 0.0
+	return false
+
+
 ## Anything that could still hurt us: a hostile contact, a hostile's craft
 ## out, a missile on its way to us or ours, fire taken within UNDER_FIRE_S.
 func threat_present() -> bool:
@@ -2079,15 +2121,20 @@ func _process(delta: float) -> void:
 	hud.missile_chip = "[SPC]" if player.systems != null and player.systems.decoys_aboard() > 0 else ""
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
-	if (not player.is_active() or player_captured()) and not _sortie_closed:
+	if (not player.is_active() or player_captured()) and not _sortie_closed and not _play_reentry(player, delta):
 		close_sortie()
 		var p := get_profile()
 		hud.debrief.show_debrief(p.last_debrief, "[BACKSPACE] respawn the %s here  ·  [B] back to %s" % [p.vessel.name, location.station_name])
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var running := player.is_active() and not player_captured() and not hud.controls.visible
 	_lap("ai")
+	_update_surface_frame()
 	var alpha := world.advance(delta) if running else 1.0
 	_lap("sim")
+	for line in world.take_landing_events():
+		hud.notice(line.to_upper() if line.contains("PLAYER") else line, world.sim_time)
+		if combat_log != null:
+			combat_log.record(world.sim_time, "landing", line)
 	for line in world.take_link_events():
 		if line.contains("sealed") or line.contains("SEALED"):
 			audio.play("dock")
@@ -2172,7 +2219,7 @@ func _process(delta: float) -> void:
 	for id: StringName in _views:
 		var ship := world.get_ship(id)
 		var view: ShipView = _views[id]
-		view.visible = ship.is_active()
+		view.visible = ship.is_active() or (id == PLAYER_ID and _reentry_s >= 0.0)
 		view.grapple_holds = holds.get(id, {})
 		view.sync_from(ship, alpha, render_origin)
 
@@ -2197,6 +2244,7 @@ func _process(delta: float) -> void:
 	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin)).to_vector3()
 	_update_sun(player)
 	sky.update_view(planet_center, camera, celestial, world.sim_time)
+	terrain_view.update_view(world, player, planet_center, delta)
 	_update_sky_light()
 	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
 		location.sky_body.radius_m if location.sky_body != null else 0.0)

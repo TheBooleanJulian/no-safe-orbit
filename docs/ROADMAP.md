@@ -518,6 +518,15 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 10 — part 2: the Moon's ground, landing, Earth re-entry ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| NASA elevation map, accuracy against file size | `test_batch10_surface`, `tools/convert_lola.py` | 8 px/deg, 5.9 MB (16 px/deg 21.6 MB, 4 px/deg 1.6 MB); summit 10.4 km |
+| No instakill at the Moon's 11 km; land below a safe speed | `test_batch10_surface` | 1.2 km above the mean radius, still flying; landed at 3.3 m/s; crashed at 128 m/s |
+| Terrain to the horizon below 11 km, flat map beyond | `test_batch10_surface`, windowed render | 2,952-vertex mesh at 2 km, none at 20 km |
+| Earth re-entry cutscene, ship breaking up | `test_batch10_surface`, windowed render | 64 of 64 modules off over 7 s |
+
 ### Play-test batch 10 — part 1: crew under fire, boarding, models ✅ (2026-10-21)
 
 | Requirement | Test | Measured |

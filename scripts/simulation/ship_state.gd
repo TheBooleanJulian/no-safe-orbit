@@ -37,6 +37,10 @@ var velocity: Vector3 = Vector3.ZERO
 var orientation: Quaternion = Quaternion.IDENTITY
 ## Angular velocity in the BODY frame (rad/s about body X, Y, Z).
 var angular_velocity: Vector3 = Vector3.ZERO
+## Resting on the surface (play-test batch 10: WorldSimulation keeps it
+## there until it thrusts away), and how fast it last touched down (m/s).
+var landed: bool = false
+var touchdown_mps: float = 0.0
 
 ## State at the start of the most recent tick, for render interpolation.
 var prev_position: Vector3 = Vector3.ZERO
@@ -202,6 +206,13 @@ func delta_v_remaining() -> float:
 	if config.unlimited_propellant:
 		return INF
 	return config.main_isp_s * ShipDynamics.G0 * log(mass_kg() / config.mass_kg)
+
+
+## How far its centre sits off the ground when resting (its hit box's
+## smallest half-extent: it settles on its flattest side).
+func contact_radius_m() -> float:
+	var e := config.hit_box_half_extents
+	return maxf(minf(e.x, minf(e.y, e.z)), 0.5)
 
 
 func is_active() -> bool:

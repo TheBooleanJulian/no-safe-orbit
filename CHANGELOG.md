@@ -4,6 +4,39 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 10, part 2 — the Moon's ground, landing, Earth re-entry (2026-10-21)
+
+#### Added
+- **NASA's LOLA elevation map of the Moon** (`data/moon/lola_elevation.bin`,
+  5.9 MB: 8 pixels a degree, whole metres; `tools/convert_lola.py` from the
+  SVS 4720 CGI Moon Kit) plus seeded detail under 90 m finer than its
+  pixels.
+- **Lunar landing**: touch down slower than 4 m/s over the turning surface
+  and the ship rests there until it thrusts away; faster is a crash. The
+  own-ship card's GROUND line (height above ground, vertical speed, speed
+  over ground); a GROUND alert below 3 km coming down too fast; notices on
+  touchdown, lift-off and impact.
+- **The ground drawn below 11 km**: a mesh of the real heights out to the
+  horizon (115 km at most), the colour map on it, its heights growing in
+  over the first 2 km and fading into the flat map at its edge.
+- **Earth re-entry cutscene**: crossing 100 km, a plasma sheath builds and
+  the hull comes apart module by module over 7 s before the debrief.
+
+#### Changed
+- **No instant loss at the Moon's 11 km**: the ground is where the ground
+  is. The orbit panel's TERRAIN line is the band the summits reach into.
+
+#### Tests changed (and why)
+- New `test_batch10_surface` (5): the map (2880 × 1440; a 1° scan −7.8 …
+  10.0 km; 10.4 km near the Selenean summit), a landing from 3 m at 1 m/s
+  (landed at 3.3 m/s, 120 s without moving, the frame keeping up; off again
+  on the main engines), a crash from 5 km (128 m/s) with no loss at the old
+  11 km line, the ground mesh below 11 km (none at 20 km), re-entry
+  breaking up all 64 modules. Checked in a windowed render too.
+- `smoke_campaign`: losing the ship over Earth now waits for the 7 s
+  re-entry cutscene before the debrief (checked that it played).
+- `test_release`: the LOLA attribution row needs its credit line too.
+
 ### Play-test batch 10, part 1 — crew under fire, boarding, models (2026-10-21)
 
 #### Fixed

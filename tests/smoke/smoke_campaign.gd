@@ -239,8 +239,14 @@ func _run() -> void:
 	var credits_before_loss := profile.credits
 	var fee := profile.respawn_fee(ConstructionCatalog.default_catalog())
 	main.world.get_ship(Main.PLAYER_ID).status = ShipState.Status.ENTERED_ATMOSPHERE
-	for i in 3:
+	# Earth: the re-entry cutscene first (play-test batch 10), then the debrief.
+	Engine.time_scale = 8.0
+	var waited := 0
+	while not main.hud.debrief.visible and waited < 5000:
 		await process_frame
+		waited += 1
+	Engine.time_scale = 1.0
+	_check(main._reentry_s >= Main.REENTRY_CUTSCENE_S, "the re-entry cutscene played first (%.1f s)" % main._reentry_s)
 	_check(main.hud.debrief.visible and main.hud.debrief.text().contains("VESSEL LOST") and main.hud.debrief.text().contains("Respawn fee"),
 		"losing the ship shows the debrief with the fee")
 	_check(profile.credits == credits_before_loss - fee and profile.vessel.cargo_is_empty(), "fee %d credits paid; the hold's 25 parts lost" % fee)

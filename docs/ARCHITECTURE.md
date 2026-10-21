@@ -265,6 +265,22 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Surfaces (play-test batch 10, part 2)**: `TerrainMap` (data/moon's
+  LOLA heights from `tools/convert_lola.py`; rows decoded on first use;
+  `height_at(body-fixed dir)` = bilinear map + `FastNoiseLite` detail);
+  `OrbitalBody.elevation_map` / `safe_landing_mps` / `terrain()`.
+  `WorldSimulation.terrain`, `pci_to_fixed`, `surface_spin_pci` (Main's
+  `_update_surface_frame` from `CelestialFrame.pci_to_body_fixed`);
+  `_check_terrain` replaces `_check_entry_interface` for such a body:
+  contact by `ShipState.contact_radius_m`, `landed` / `touchdown_mps`, a
+  crash is `ENTERED_ATMOSPHERE`; landed ships are pinned with the surface
+  velocity; `_rebase_velocity` keeps a landed anchor's frame up with it;
+  `take_landing_events` for notices. `TerrainView` (a polar mesh under the
+  player, rebuilt every 0.4 s, heights morphed in and faded at the edge).
+  HUD `ground_text` and a GROUND alert. Earth: `Main._play_reentry` holds
+  `close_sortie` for `REENTRY_CUTSCENE_S` while `ShipView.show_reentry`
+  grows the plasma sheath and breaks modules off (`mesh_from_flats` skips
+  emptied materials).
 - **Crew and models (play-test batch 10, part 1)**: `Main.threat_present`
   (hostile contact, hostile craft flying, a non-player missile, fire within
   `UNDER_FIRE_S`) stamps `_threat_seen`; `systems.suited` holds until

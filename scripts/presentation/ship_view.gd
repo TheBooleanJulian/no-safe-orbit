@@ -199,6 +199,68 @@ func _rand_dir() -> Vector3:
 	return d.normalized() if d.length_squared() > 1e-4 else Vector3.UP
 
 
+## Earth re-entry (play-test batch 10): Main plays it when the ship crosses an
+## atmosphere's entry interface — a plasma sheath builds on the side facing
+## the flow, stretched back along it, and the hull comes apart a module at a
+## time (`f` 0 → 1 over the cutscene). `flow_body`: the air's direction past
+## the hull (body frame).
+const REENTRY_BREAK_FROM := 0.2
+var reentry_broken := 0
+var _plasma: MeshInstance3D
+var _plasma_mat: StandardMaterial3D
+var _break_order: Array = []
+
+
+func show_reentry(f: float, flow_body: Vector3) -> void:
+	var b := stats.hull_bounds_m
+	if _plasma == null:
+		_plasma_mat = StandardMaterial3D.new()
+		_plasma_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_plasma_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_plasma_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		_plasma_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		var shell := SphereMesh.new()
+		shell.radius = b.size.length() * 0.45
+		shell.height = shell.radius * 2.0
+		_plasma = MeshInstance3D.new()
+		_plasma.name = "Plasma"
+		_plasma.mesh = shell
+		_plasma.material_override = _plasma_mat
+		_plasma.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_plasma)
+		for m in blueprint.modules:
+			_break_order.append(m.id)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(ship_id)
+		for k in range(_break_order.size() - 1, 0, -1):
+			var j := rng.randi_range(0, k)
+			var tmp: Variant = _break_order[k]
+			_break_order[k] = _break_order[j]
+			_break_order[j] = tmp
+	var flow := flow_body.normalized() if flow_body.length_squared() > 1e-6 else Vector3.BACK
+	var side := Vector3.UP if absf(flow.y) < 0.9 else Vector3.RIGHT
+	var x := side.cross(flow).normalized()
+	# Stretched back along the flow, its leading edge just ahead of the hull.
+	var stretch := 1.0 + 1.5 * f
+	_plasma.transform = Transform3D(Basis(x, flow.cross(x), flow * stretch),
+		b.get_center() - stats.center_of_mass_m + flow * b.size.length() * 0.3 * (stretch - 1.0))
+	_plasma_mat.albedo_color = Color(1.0, lerpf(0.35, 0.85, f), lerpf(0.1, 0.6, f), 0.06 + 0.3 * f)
+	var want := int(clampf((f - REENTRY_BREAK_FROM) / (1.0 - REENTRY_BREAK_FROM), 0.0, 1.0) * _break_order.size())
+	while reentry_broken < want:
+		var id: String = _break_order[reentry_broken]
+		reentry_broken += 1
+		var mi := _parts.get(id) as MeshInstance3D
+		if mi == null or _broken.has(id):
+			continue
+		_broken[id] = true
+		_break_off(mi)
+		_hull_flats[mi] = [PackedVector3Array(), PackedVector3Array()]
+		_hull_dirty = true
+	if _hull_dirty:
+		_hull_dirty = false
+		_hull_batch.mesh = ShipModelBuilder.mesh_from_flats(_hull_pieces, _hull_flats)
+
+
 ## Hold [B] (play-test batch 9): Main sets how far the jump drive has charged
 ## (0–1). Rings of light gather along the hull and spin up, closing in on
 ## its middle, brightening until it jumps.
