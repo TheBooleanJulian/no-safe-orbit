@@ -518,6 +518,17 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 11 — part 2: the crew manifest ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Crew manifest; 2 crew a quarters cell, live with the refit | `test_batch11_crew`, `smoke_shipyard` | frigate 8 cells → 16 berths |
+| Ship-agnostic crew; resting crew below the hiring hall | `test_batch11_crew` | destroyer bought: 144 aboard (16 from the frigate); back: 16 aboard |
+| Occupations; more names, no duplicates | `test_batch11_crew` | 144 names, 144 different |
+| Hiring hall top right, never runs out | `test_batch11_crew`, render review | 5 hires, the hall still 4 |
+| Crew armoury, cafeteria; Medbay | `test_batch11_crew` | armoury ×1.50; cafeteria ×1.24 (12 cells) |
+| Save format | `test_batch11_crew` (v13 → v14), `compat_check` | 16 aboard, the rest ashore; `.v13` kept |
+
 ### Play-test batch 11 — part 1: combat rules, craft, lasers, flares, battle stations ✅ (2026-10-22)
 
 | Requirement | Test | Measured |

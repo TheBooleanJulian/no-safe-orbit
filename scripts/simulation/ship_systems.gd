@@ -85,6 +85,15 @@ const ROLE_STATIONS := {
 ## give this much more.
 const GUNNER_SKILL_STEP := 0.03
 const ENGINEER_SKILL_STEP := 0.02
+## Play-test batch 11 rooms. A working cafeteria makes the whole crew this
+## much better at everything skill touches (gunnery, the reactor, repairs,
+## medicine) per cell, up to CAFETERIA_MAX; a working crew armoury makes the
+## ship's boarders and defenders fight this much harder per cell, up to
+## ARMOURY_MAX (it is also where security stand their watch).
+const CAFETERIA_PER_CELL := 0.02
+const CAFETERIA_MAX := 0.5
+const ARMOURY_PER_CELL := 0.1
+const ARMOURY_MAX := 0.5
 ## Crew reach external systems on EVA from rooms this close (cells).
 const EVA_REACH_CELLS := 2
 ## A medic treats one wounded crew member in this long (s), with a working
@@ -775,7 +784,7 @@ func cut_bus(cell: Vector3i) -> bool:
 
 
 func reactor_output() -> float:
-	var crew_factor := 1.0 + ENGINEER_SKILL_STEP * _engineer_skill
+	var crew_factor := (1.0 + ENGINEER_SKILL_STEP * _engineer_skill) * crew_skill_factor()
 	match reactor_state:
 		Reactor.THROTTLED:
 			return THROTTLE_OUTPUT * tech_factor("reactor") * stats.reactor_room_factor * crew_factor
@@ -792,7 +801,7 @@ func tech_factor(id: String) -> float:
 ## The member on a field repair works faster with skill.
 func _repairer_skill(task: RepairTask) -> float:
 	var m: CrewRoster.Member = crew.by_id(task.member_id) if crew != null else null
-	return 1.0 + 0.2 * m.skill if m != null else 1.0
+	return (1.0 + 0.2 * m.skill if m != null else 1.0) * crew_skill_factor()
 
 
 ## Damage-control teams (Milestone 15): one per two fit damage-control crew,
@@ -1229,6 +1238,25 @@ func foam_left(room: int) -> int:
 ## What a role's rooms are worth: 0 with none working (powered and, unless
 ## the crew are suited, pressurised); 1 for one cell, ROOM_BONUS_PER_CELL more
 ## for each further cell, up to ROOM_BONUS_MAX.
+## Cells of working (powered, and pressurised or the crew suited) rooms of `role`.
+func working_cells(role: StringName) -> int:
+	var cells := 0
+	for i in blueprint.rooms.size():
+		if room_role(i) == role and rooms[i].powered and (suited or rooms[i].pressurized):
+			cells += blueprint.rooms[i].rect.size.x * blueprint.rooms[i].rect.size.y
+	return cells
+
+
+## The cafeteria's lift to everything the crew's skill touches (1 without one).
+func crew_skill_factor() -> float:
+	return 1.0 + minf(CAFETERIA_PER_CELL * working_cells(&"cafeteria"), CAFETERIA_MAX)
+
+
+## The crew armoury's lift to the ship's fighting crew in a boarding (1 without one).
+func armoury_factor() -> float:
+	return 1.0 + minf(ARMOURY_PER_CELL * working_cells(&"armoury"), ARMOURY_MAX)
+
+
 func room_bonus(role: StringName) -> float:
 	var cells := 0
 	for i in blueprint.rooms.size():
@@ -1344,7 +1372,7 @@ func effective_config() -> ShipConfig:
 	if cfg.pd_gun != null and tech_factor("pd_control") != 1.0:
 		cfg.pd_gun = cfg.pd_gun.duplicate()
 		cfg.pd_gun.rate_of_fire_rpm *= tech_factor("pd_control")
-	var gunnery := channel_factor(Channel.WEP) * tech_factor("gunnery") * (1.0 + GUNNER_SKILL_STEP * _gunner_skill)
+	var gunnery := channel_factor(Channel.WEP) * tech_factor("gunnery") * (1.0 + GUNNER_SKILL_STEP * _gunner_skill) * crew_skill_factor()
 	if cfg.cannon != null and gunnery != 1.0:
 		cfg.scale_rate_of_fire(gunnery)
 	if not has_command():
@@ -1466,7 +1494,7 @@ func _advance_medical(dt: float) -> bool:
 				continue
 			cur = {"patient": patient.id, "s": 0.0}
 			taken[patient.id] = medic.id
-		cur.s = float(cur.s) + dt * maxf(room_bonus(&"life_support"), 0.5) * tech_factor("medicine") * (1.0 + 0.2 * medic.skill)
+		cur.s = float(cur.s) + dt * maxf(room_bonus(&"life_support"), 0.5) * tech_factor("medicine") * (1.0 + 0.2 * medic.skill) * crew_skill_factor()
 		if float(cur.s) < MEDICAL_TREATMENT_S:
 			_treating[medic.id] = cur
 			continue
@@ -1868,7 +1896,7 @@ func _advance_in_place_repairs(dt: float) -> bool:
 	in_place_repairs.clear()
 	if crew == null or working_workshop() < 0:
 		return false
-	var rate := dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * maxf(room_bonus(&"workshop"), 1.0)
+	var rate := dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * maxf(room_bonus(&"workshop"), 1.0) * crew_skill_factor()
 	var changed := false
 	for m in crew.members:
 		if not m.available() or m.location < 0 or not (suited or rooms[m.location].pressurized):

@@ -14,7 +14,8 @@ extends RefCounted
 ## - Fighting: while both sides are in a room, each side loses KILL_RATE ×
 ##   the other side's strength in hit points per second (Lanchester's square
 ##   law). Strength = Σ CrewRoster.COMBAT_STRENGTH by role; defenders on
-##   their own ship × DEFENDER_BONUS. A person at 0 hit points is out:
+##   their own ship × DEFENDER_BONUS; each side × its ship's crew armoury
+##   (ShipSystems.armoury_factor). A person at 0 hit points is out:
 ##   alternately wounded and killed. Numbers, roles, where the defenders are
 ##   and how far the boarders must go decide it — no room kills outright.
 ## - Capture: boarders hold the bridge with no fit defender in it → the
@@ -280,8 +281,8 @@ func _fight(dt: float) -> bool:
 		return false
 	if action == &"move" or action == &"cut":
 		action = &""  # interrupted
-	var to_them := KILL_RATE * strength(ours) * dt
-	var to_us := KILL_RATE * strength(theirs) * DEFENDER_BONUS * dt
+	var to_them := KILL_RATE * strength(ours) * attacker.armoury_factor() * dt
+	var to_us := KILL_RATE * strength(theirs) * DEFENDER_BONUS * defender.armoury_factor() * dt
 	_hurt("d:", theirs, to_them)
 	_hurt("a:", ours, to_us)
 	if defenders_in(room).is_empty():

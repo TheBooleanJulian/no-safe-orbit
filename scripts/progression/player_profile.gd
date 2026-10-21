@@ -36,8 +36,12 @@ extends RefCounted
 ## v12 (play-test batch 9): pilots — a vessel's fighters each need one, so
 ## general crew are posted as pilots where a v11 vessel has none; crew keep
 ## the sorties they have served. v13: the bank — a deposit and loans
-## (none in older saves).
-const SCHEMA_VERSION := 13
+## (none in older saves). v14 (play-test batch 11): crew are yours, not a
+## ship's — they move with you to whichever vessel you fly; those without a
+## berth rest at the station, unpaid (`resting`); each has a previous
+## occupation. Older saves: other vessels' crews go to rest, the active
+## vessel keeps as many as its berths (now 2 a quarters cell) hold.
+const SCHEMA_VERSION := 14
 ## Ships per encounter the map offers (EnemyFactory spawns them).
 const MAX_ENCOUNTER := 3
 ## Locations every player knows from the start (brokers sell more).
@@ -127,6 +131,9 @@ var vessel: ShipInstance:
 ## Crew for hire at the station: [{name, role, skill, fee}], refreshed each
 ## sortie.
 var hire_pool: Array = []
+## Crew on unpaid break at the station (play-test batch 11): no berth on the
+## vessel you fly; post them back aboard when there is one.
+var resting: Array = []
 ## The quartermaster's stock: [{id (equipment), price}], refreshed each sortie.
 var vendor_stock: Array = []
 ## Earth Shipyard upgrades bought: TechTree id -> level.
@@ -341,13 +348,9 @@ func pity_countdown() -> Vector2i:
 func refresh_station(catalog: ConstructionCatalog) -> void:
 	hire_pool.clear()
 	for i in HIRE_POOL_SIZE:
-		var skill := 0 if _rng.randf() < 0.55 else (1 if _rng.randf() < 0.75 else 2)
-		hire_pool.append({"name": CrewNames.pick(_rng), "role": _rng.randi() % CrewRoster.Role.size(), "skill": skill,
-			"fee": HIRE_FEE + HIRE_FEE_PER_SKILL * skill})
+		hire_pool.append(_candidate())
 	# Each station's own shelves and prices (Location).
 	var here := Location.by_id(location)
-	for c in hire_pool:
-		c.fee = roundi(float(c.fee) * here.price_factor)
 	vendor_stock.clear()
 	var ids: Array = []
 	for id in ConstructionCatalog.sorted_ids(catalog.equipment):
@@ -357,6 +360,37 @@ func refresh_station(catalog: ConstructionCatalog) -> void:
 	for i in mini(here.vendor_stock_size, ids.size()):
 		var id: StringName = ids.pop_at(_rng.randi() % ids.size())
 		vendor_stock.append({"id": String(id), "price": roundi(VENDOR_PRICES[catalog.equipment[id].rarity] * here.price_factor)})
+
+
+## Someone at the hiring hall: a name nobody you employ has, a post, a
+## level, an occupation, and their fee at this station's prices.
+func _candidate() -> Dictionary:
+	var skill := 0 if _rng.randf() < 0.55 else (1 if _rng.randf() < 0.75 else 2)
+	return {"name": CrewNames.pick_unique(_rng, taken_names()), "role": _rng.randi() % CrewRoster.Role.size(), "skill": skill,
+		"sorties": 0, "occupation": CrewNames.occupation(_rng),
+		"fee": roundi(float(HIRE_FEE + HIRE_FEE_PER_SKILL * skill) * Location.by_id(location).price_factor)}
+
+
+## Every name in use: aboard any vessel, resting, at the hiring hall.
+func taken_names() -> Dictionary:
+	var out := {}
+	for v in vessels:
+		for c: Dictionary in v.crew:
+			out[str(c.name)] = true
+	for c: Dictionary in resting:
+		out[str(c.name)] = true
+	for c: Dictionary in hire_pool:
+		out[str(c.get("name", ""))] = true
+	return out
+
+
+## A crew entry from a save: name, role, level, sorties, occupation (one is
+## given to those saved before there were any).
+static func read_crew(entry: Dictionary) -> Dictionary:
+	var name := str(entry.get("name", ""))
+	return {"name": name, "role": clampi(int(entry.get("role", CrewRoster.Role.GENERAL)), 0, CrewRoster.Role.size() - 1),
+		"skill": clampi(int(entry.get("skill", 0)), 0, CrewRoster.MAX_SKILL), "sorties": int(entry.get("sorties", 0)),
+		"occupation": str(entry.get("occupation", CrewNames.occupation_for(name)))}
 
 
 ## Berths on the active vessel's design.
@@ -376,8 +410,9 @@ func hire(i: int, catalog: ConstructionCatalog) -> String:
 	if credits < int(c.fee):
 		return "%s's fee is %d credits; you have %d" % [c.name, c.fee, credits]
 	credits -= int(c.fee)
-	vessel.crew.append({"name": c.name, "role": c.role, "skill": c.skill, "sorties": 0})
-	hire_pool.remove_at(i)
+	vessel.crew.append({"name": c.name, "role": c.role, "skill": c.skill, "sorties": 0, "occupation": str(c.get("occupation", ""))})
+	# The hall never runs dry (play-test batch 11): someone new steps up.
+	hire_pool[i] = _candidate()
 	vessel.record("Hired %s (%s)" % [c.name, CrewRoster.ROLE_NAMES[c.role]])
 	return ""
 
@@ -388,6 +423,90 @@ func dismiss(i: int) -> String:
 	var c: Dictionary = vessel.crew.pop_at(i)
 	vessel.record("Dismissed %s" % c.name)
 	return ""
+
+
+# --- Resting crew (play-test batch 11) --------------------------------------------
+
+## Send crew member `i` ashore to rest (unpaid).
+func rest_crew(i: int) -> String:
+	if i < 0 or i >= vessel.crew.size():
+		return "no such crew member"
+	var c: Dictionary = vessel.crew.pop_at(i)
+	resting.append(c)
+	vessel.record("%s went ashore to rest" % c.name)
+	return ""
+
+
+## Bring resting crew member `j` aboard (as `role`, or their own post).
+func board_resting(j: int, berths: int, role: int = -1) -> String:
+	if j < 0 or j >= resting.size():
+		return "no such crew member"
+	if vessel.crew.size() >= berths:
+		return "no free berth aboard — rest someone or build more quarters"
+	var c: Dictionary = resting.pop_at(j)
+	if role >= 0:
+		c.role = clampi(role, 0, CrewRoster.Role.size() - 1)
+	vessel.crew.append(c)
+	vessel.record("%s came aboard from the station" % c.name)
+	return ""
+
+
+func dismiss_resting(j: int) -> String:
+	if j < 0 or j >= resting.size():
+		return "no such crew member"
+	var c: Dictionary = resting.pop_at(j)
+	vessel.record("Dismissed %s (resting)" % c.name)
+	return ""
+
+
+## More aboard than `berths`: the last of them go ashore to rest. Returns
+## how many.
+func fit_crew(berths: int) -> int:
+	var n := 0
+	while vessel.crew.size() > maxi(berths, 0):
+		resting.append(vessel.crew.pop_back())
+		n += 1
+	if n > 0:
+		vessel.record("%d crew without a berth went ashore to rest" % n)
+	return n
+
+
+## Fill the empty berths: resting crew first, then new hands from the hall
+## (general crew at the base fee, as many as the credits allow — the hall
+## never runs out). Returns the line for the status bar.
+func fill_berths(berths: int) -> String:
+	var boarded := 0
+	while vessel.crew.size() < berths and not resting.is_empty():
+		vessel.crew.append(resting.pop_front())
+		boarded += 1
+	var fee := roundi(HIRE_FEE * Location.by_id(location).price_factor)
+	var hired := 0
+	var taken := taken_names()
+	while vessel.crew.size() < berths and credits >= fee:
+		credits -= fee
+		vessel.crew.append({"name": CrewNames.pick_unique(_rng, taken), "role": CrewRoster.Role.GENERAL, "skill": 0, "sorties": 0,
+			"occupation": CrewNames.occupation(_rng)})
+		hired += 1
+	if boarded + hired > 0:
+		vessel.record("Berths filled: %d back aboard, %d hired" % [boarded, hired])
+	var left := berths - vessel.crew.size()
+	return "%d back aboard from rest, %d hired (%d cr)%s" % [boarded, hired, hired * fee,
+		" — %d berths still empty: short of credits" % left if left > 0 else ""]
+
+
+## Fly vessel `index`: the crew come with you; anyone it has no berth for
+## rests at the station.
+func _move_crew_to(index: int, catalog: ConstructionCatalog) -> void:
+	if index == active_vessel or index < 0 or index >= vessels.size():
+		return
+	var from := vessel
+	var to: ShipInstance = vessels[index]
+	resting.append_array(to.crew)
+	to.crew = from.crew if from != null else []
+	if from != null:
+		from.crew = []
+	active_vessel = index
+	fit_crew(berths(catalog))
 
 
 ## A pilot for each of the vessel's fighters, posted from its general crew
@@ -641,7 +760,7 @@ func commission(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
 	var v := ShipInstance.fresh(bp)
 	v.record("Commissioned as %s (%d spare parts, %d credits)" % [bp.name, cost.x, cost.y])
 	vessels.append(v)
-	active_vessel = vessels.size() - 1
+	_move_crew_to(vessels.size() - 1, catalog)
 	return ""
 
 
@@ -656,11 +775,30 @@ func buy_ship(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
 	for id: StringName in price.unit_ids:
 		inventory[String(id)] = owned(id) + int(price.unit_ids[id])
 	var v := ShipInstance.fresh(bp.duplicate_blueprint())
+	# Its standard crew are hired with it: they join yours (crew are yours,
+	# not a ship's), and whoever has a berth goes aboard.
 	v.ensure_crew(catalog)
+	var taken := taken_names()
+	for c: Dictionary in v.crew:
+		if taken.has(str(c.name)):
+			c.name = CrewNames.pick_unique(_rng, taken)
+		taken[str(c.name)] = true
+	resting.append_array(v.crew)
+	v.crew = []
 	v.record("Bought from the dealer for %d credits (crew of %d included)" % [price.total, price.crew_count])
 	vessels.append(v)
-	active_vessel = vessels.size() - 1
+	_move_crew_to(vessels.size() - 1, catalog)
+	fill_from_resting(berths(catalog))
 	return ""
+
+
+## Bring resting crew aboard while there are berths. Returns how many.
+func fill_from_resting(berths: int) -> int:
+	var n := 0
+	while vessel.crew.size() < berths and not resting.is_empty():
+		vessel.crew.append(resting.pop_front())
+		n += 1
+	return n
 
 
 ## Scrap vessel `index` for spare parts (ServiceYard.scrap_value); its hold
@@ -670,6 +808,9 @@ func scrap_vessel(index: int, catalog: ConstructionCatalog) -> int:
 		return -1
 	var parts := ServiceYard.scrap_value(vessels[index], catalog)
 	spare_parts += parts
+	if index == active_vessel:
+		_move_crew_to(0 if index != 0 else 1, catalog)
+	resting.append_array(vessels[index].crew)
 	vessels.remove_at(index)
 	active_vessel = clampi(active_vessel if active_vessel < index else active_vessel - 1, 0, vessels.size() - 1)
 	return parts
@@ -687,7 +828,7 @@ func sorties_flown() -> int:
 func select_vessel(index: int) -> bool:
 	if index < 0 or index >= vessels.size():
 		return false
-	active_vessel = index
+	_move_crew_to(index, ConstructionCatalog.default_catalog())
 	return true
 
 
@@ -780,6 +921,7 @@ func to_dict() -> Dictionary:
 		"vessels": vessels.map(func(v: ShipInstance) -> Dictionary: return v.to_dict()),
 		"active_vessel": active_vessel,
 		"hire_pool": hire_pool.duplicate(true),
+		"resting": resting.duplicate(true),
 		"vendor_stock": vendor_stock.duplicate(true),
 		"tech": tech.duplicate(),
 		"bank_deposit": bank_deposit,
@@ -853,7 +995,20 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 	p.active_vessel = clampi(int(d.get("active_vessel", 0)), 0, maxi(p.vessels.size() - 1, 0))
 	for c in d.get("hire_pool", []):
 		if c is Dictionary:
-			p.hire_pool.append({"name": str(c.get("name", "")), "role": int(c.get("role", 6)), "skill": int(c.get("skill", 0)), "fee": int(c.get("fee", HIRE_FEE))})
+			var who := read_crew(c)
+			who["fee"] = int(c.get("fee", HIRE_FEE))
+			p.hire_pool.append(who)
+	for c in d.get("resting", []):
+		if c is Dictionary:
+			p.resting.append(read_crew(c))
+	if p.loaded_schema < 14 and not p.vessels.is_empty():
+		# Crew are yours now: other vessels' crews rest; the active one keeps
+		# as many as its berths (2 a quarters cell) hold.
+		for k in p.vessels.size():
+			if k != p.active_vessel:
+				p.resting.append_array(p.vessels[k].crew)
+				p.vessels[k].crew = []
+		p.fit_crew(p.berths(ConstructionCatalog.default_catalog()))
 	for s in d.get("vendor_stock", []):
 		if s is Dictionary:
 			p.vendor_stock.append({"id": str(s.get("id", "")), "price": int(s.get("price", 0))})

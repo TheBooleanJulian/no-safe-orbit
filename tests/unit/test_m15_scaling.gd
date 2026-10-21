@@ -55,7 +55,9 @@ func test_the_standard_complement_scales_with_the_hull() -> void:
 		var w: Array[int] = by_ship[big]
 		for r in CrewRoster.specialist_roles():
 			assert_true(w[r] >= by_ship.frigate_mk1[r], "%s: at least a frigate's %s" % [big, CrewRoster.ROLE_NAMES[r]])
-		assert_true(_specialists(w) > 3 * _specialists(by_ship.frigate_mk1), "%s: over three times the specialists (%d)" % [big, _specialists(w)])
+		# At least three times (play-test batch 11: 2 berths a quarters cell
+		# now bound the destroyer's to exactly 3 ×).
+		assert_true(_specialists(w) >= 3 * _specialists(by_ship.frigate_mk1), "%s: three times the specialists or more (%d)" % [big, _specialists(w)])
 
 
 func test_damage_control_teams_repair_at_the_same_time() -> void:

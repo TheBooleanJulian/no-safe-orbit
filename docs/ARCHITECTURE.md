@@ -265,6 +265,19 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Crew manifest (play-test batch 11, part 2)**: `PlayerProfile.resting`
+  (schema 14), `rest_crew` / `board_resting` / `dismiss_resting` /
+  `fit_crew` / `fill_berths` / `fill_from_resting`; `_move_crew_to` carries
+  the crew on `select_vessel`, `commission`, `buy_ship` (its crew join you)
+  and `scrap_vessel`; `_candidate` refills the hall on each hire;
+  `taken_names` + `CrewNames.pick_unique`; `read_crew` (occupation, given to
+  older entries by `CrewNames.occupation_for`). Crew quarters hold 2 a cell.
+  Rooms `armoury` (security's first station; `ShipSystems.armoury_factor` in
+  `BoardingAction._fight`) and `cafeteria` (`crew_skill_factor` in gunnery,
+  `reactor_output`, `_repairer_skill`, in-place repairs and treatment).
+  `Shipyard._refresh_station_tabs` builds the manifest (`_crew_department`
+  with role -1 for resting; `CrewDepartment.resting_dropped`; `CrewBadge`
+  `resting`) from the editor's live berths.
 - **Combat and craft (play-test batch 11, part 1)**: no `toggle_target_ai`
   action; `Main._check_missile_locks` turns a contact hostile when a player
   missile homing on it is inside its `sensor_range_m`. `CraftAI.default_directive`

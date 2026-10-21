@@ -19,7 +19,7 @@ const HINTS := {
 	"DEALER": "Ships for credits, crew included",
 	"HANGAR": "Your vessels and their service record",
 	"REFIT": "Design and refit: the builder",
-	"CREW": "Who serves aboard, who is for hire",
+	"CREW": "Who serves aboard, who rests ashore, who is for hire",
 	"SERVICES": "Repair, rearm and refuel — and the cargo hold",
 	"QUARTERMASTER": "Parts and spare parts for sale",
 	"UPGRADES": "Station technology for your ships",
@@ -30,7 +30,7 @@ const HINTS := {
 ## The directory: [district, [[section, place name], ...]].
 const DIRECTORY := [
 	["DRYDOCK", [["STATION", "Berth"], ["REFIT", "Refit bay"], ["SERVICES", "Service bay"]]],
-	["CONCOURSE", [["MISSIONS", "Mission board"], ["CREW", "Crew quarters"], ["DEALER", "Ship dealer"], ["QUARTERMASTER", "Quartermaster"]]],
+	["CONCOURSE", [["MISSIONS", "Mission board"], ["CREW", "Crew manifest"], ["DEALER", "Ship dealer"], ["QUARTERMASTER", "Quartermaster"]]],
 	["OPERATIONS", [["HANGAR", "Hangar & bank"], ["UPGRADES", "Station tech"], ["MAP", "Nav chart"], ["LOOT", "Salvage odds"]]],
 ]
 const DIRECTORY_WIDTH := 232.0
@@ -230,7 +230,7 @@ func directory_status() -> Dictionary:
 			else ["repaired, armed, fuelled", false],
 		"QUARTERMASTER": ["%d on the shelf · %d parts" % [p.vendor_stock.size(), p.spare_parts], false],
 		"MISSIONS": ["on contract · %s" % p.active_contract.title, false] if not p.active_contract.is_empty() else ["%d offers posted" % p.board.size(), not p.board.is_empty()],
-		"CREW": ["%d / %d aboard · %d for hire" % [v.crew.size(), berths, p.hire_pool.size()], v.crew.size() < berths],
+		"CREW": ["%d / %d aboard · %d resting" % [v.crew.size(), berths, p.resting.size()], v.crew.size() < berths],
 		"DEALER": ["%d hulls for sale" % BlueprintIO.list_templates().size(), false],
 		"HANGAR": ["%d vessel%s%s" % [p.vessels.size(), "" if p.vessels.size() == 1 else "s",
 			" · owe %d cr" % p.debt() if p.debt() > 0 else (" · %d cr deposited" % p.bank_deposit if p.bank_deposit > 0 else "")], held > 0.0 or p.debt() > 0],
@@ -426,7 +426,7 @@ func _build_station() -> void:
 	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bay.add_child(side)
 	for spec in [["repairs", "Repairs", "SERVICES", CyberTheme.AMBER], ["rearm", "Rearm & refuel", "SERVICES", CyberTheme.AMBER],
-			["crew", "Crew quarters", "CREW", CyberTheme.CYAN], ["sortie", "Next sortie", "MISSIONS", CyberTheme.AMBER]]:
+			["crew", "Crew manifest", "CREW", CyberTheme.CYAN], ["sortie", "Next sortie", "MISSIONS", CyberTheme.AMBER]]:
 		var c := card(side, spec[1], spec[3])
 		var label := _rich()
 		c.add_child(label)
@@ -509,7 +509,7 @@ func _refresh_station() -> void:
 		else "%d credits to fill propellant, rounds, missiles and flares (or at launch)" % need.credits
 	(station_buttons.rearm as Button).text = "Service bay ›"
 	(station_cards.crew as RichTextLabel).text = "%d / %d aboard · %d for hire" % [v.crew.size(), stats.crew_capacity, p.hire_pool.size()]
-	(station_buttons.crew as Button).text = "Crew quarters ›"
+	(station_buttons.crew as Button).text = "Crew manifest ›"
 	var contract := p.active_contract
 	var course := Location.by_id(p.launch_point())
 	var where := here.display_name if course == here else "jump to %s (%s) at launch" % [course.display_name, JumpDrive.dv_text(p.jump_dv(course.id))]

@@ -97,7 +97,9 @@ func test_default_crew_fills_the_berths_by_role() -> void:
 	for role in CrewRoster.Role.size():
 		counts.append(_roles(s, role).size())
 	assert_true(s.crew.members.size() == s.stats.crew_capacity, "one person per berth (%d)" % s.stats.crew_capacity)
-	assert_true(counts == [2, 2, 2, 1, 4, 1, 11, 1], "command, eng, DC, weapons, security, medical, general, pilot = %s" % [counts])
+	# 16 berths (play-test batch 11: 2 a quarters cell, was 3): the
+	# specialists as before, 3 general hands (were 11).
+	assert_true(counts == [2, 2, 2, 1, 4, 1, 3, 1], "command, eng, DC, weapons, security, medical, general, pilot = %s" % [counts])
 	assert_true(_roles(s, CrewRoster.Role.COMMAND).all(func(m: CrewRoster.Member) -> bool: return m.location == s.command_room()),
 		"command crew start on the bridge")
 
