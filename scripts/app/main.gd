@@ -108,6 +108,17 @@ const DEFAULT_AIM_RANGE_M := 2000.0
 const JUMP_HOLD_S := 5.0
 ## The jump drive is blocked while a hostile has fired on us this recently.
 const UNDER_FIRE_S := 10.0
+## The rescue tow (play-test batch 8: "the ship is sometimes stranded and
+## unable to jump back to the shipyard"): keep holding B while the jump is
+## blocked under fire for TOW_HOLD_S, or call it from the Tab drawer (press
+## twice within TOW_CONFIRM_S), and a station tug brings the ship home for
+## JumpDrive.tow_credits — TOW_HAZARD times that under fire — or every
+## credit there is if that is fewer. Never stranded.
+const TOW_HOLD_S := 8.0
+const TOW_HAZARD := 2.0
+const TOW_CONFIRM_S := 5.0
+var _tow_hold := 0.0
+var _tow_armed_ms := -100_000
 ## When a hostile (ship or craft) last fired, and the rounds counted so far.
 var _last_enemy_fire := -INF
 var _enemy_rounds_seen := {}
@@ -1317,9 +1328,17 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 	var state := {}
 	if Input.is_action_pressed("open_shipyard") and player.is_active() and not hud.controls.visible:
 		if in_combat():
+			# The drive won't charge under fire; held on, the tug comes instead.
 			_jump_hold = 0.0
-			state = {"blocked": "under fire — disable the hostile, or get out of its reach until it stops shooting"}
+			_tow_hold = minf(_tow_hold + delta, TOW_HOLD_S)
+			state = {"blocked": "under fire — disable the hostile, or get out of its reach until it stops shooting; keep holding for a rescue tow",
+				"tow_left_s": TOW_HOLD_S - _tow_hold, "tow_fee": rescue_tow_fee(player)}
+			if _tow_hold >= TOW_HOLD_S:
+				hud.jump_state = {}
+				rescue_tow(player)
+				return true
 		else:
+			_tow_hold = 0.0
 			_jump_hold = minf(_jump_hold + delta, JUMP_HOLD_S)
 			var waiting := jump_waiting()
 			var cost := jump_home_cost_kg(player)
@@ -1342,8 +1361,53 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 				return true
 	else:
 		_jump_hold = 0.0
+		_tow_hold = 0.0
 	hud.jump_state = state
 	return false
+
+
+## What the rescue tow costs now (credits): hazard pay under fire.
+func rescue_tow_fee(player: ShipState) -> int:
+	var fee := JumpDrive.standard().tow_credits(player.mass_kg() + jump_reserve_kg)
+	return roundi(fee * TOW_HAZARD) if in_combat() else fee
+
+
+## The tug brings the ship home: paid in credits (all there are, if fewer),
+## no propellant; craft and boarders still out are left behind, as in an
+## emergency jump. Returns the log line (the scene is changing).
+func rescue_tow(player: ShipState) -> String:
+	var p := get_profile()
+	var hazard := in_combat()
+	var fee := rescue_tow_fee(player)
+	var charged := mini(fee, p.credits)
+	p.credits -= charged
+	var waiting := jump_waiting()
+	var line := "Rescue tow: a station tug brought %s in to %s for %d credits%s%s%s" % [p.vessel.name, location.station_name, charged,
+		" (all you had)" if charged < fee else "", " — hazard pay, under fire" if hazard else "",
+		" — left behind: %s" % ", ".join(waiting) if not waiting.is_empty() else ""]
+	if player.systems != null:
+		var vented := p.vessel.vent_excess(player.systems.stats.cargo_m3, ConstructionCatalog.default_catalog())
+		if not vented.is_empty():
+			combat_log.record(world.sim_time, "jump", "Vented before the tow: %s" % ", ".join(vented))
+	combat_log.record(world.sim_time, "jump", line)
+	GameLog.info("main", line)
+	open_shipyard()
+	return line
+
+
+## Tab › Call rescue tow: the first press quotes the fee, a second within
+## TOW_CONFIRM_S calls the tug.
+func request_rescue_tow() -> void:
+	var me := world.get_ship(PLAYER_ID)
+	if me == null or not me.is_active() or player_captured() or _sortie_closed:
+		return
+	if Time.get_ticks_msec() - _tow_armed_ms <= int(TOW_CONFIRM_S * 1000.0):
+		_tow_armed_ms = -100_000
+		rescue_tow(me)
+		return
+	_tow_armed_ms = Time.get_ticks_msec()
+	hud.notice("RESCUE TOW: a tug brings the %s in to %s for %d cr%s — press again to confirm" % [get_profile().vessel.name,
+		location.station_name, rescue_tow_fee(me), " (hazard pay: under fire)" if in_combat() else ""], world.sim_time)
 
 
 func _on_overview_command(name: StringName, arg: Variant) -> void:
@@ -1367,6 +1431,8 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			sys.preferred_repair_id = str(arg)
 		&"repair":
 			start_field_repair()
+		&"tow":
+			request_rescue_tow()
 		&"power_toggle":
 			sys.set_switched_off(str(arg), not sys.switched_off.has(str(arg)))
 		&"isolate":
