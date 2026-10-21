@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_def")
 id = &"laser_turret"
-display_name = "Pulse laser turret"
+display_name = "Nd:YAG pulse laser turret"
 kind = 3
 mount = 1
 footprint_cells = Vector2i(1, 1)

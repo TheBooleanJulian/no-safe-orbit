@@ -20,5 +20,5 @@ assist_max_rate_rad_s = Vector3(1.5, 1.5, 2.0)
 hit_box_center = Vector3(0, 0, 0)
 hit_box_half_extents = Vector3(1.2, 0.8, 1.8)
 cannon_muzzles_body = PackedVector3Array()
-hull_hp = 18.0
+hull_hp = 27.0
 craft_role = &"salvage"

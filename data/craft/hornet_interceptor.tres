@@ -22,5 +22,5 @@ hit_box_center = Vector3(0, 0, 0)
 hit_box_half_extents = Vector3(3, 1.2, 4)
 cannon = ExtResource("2_gun")
 cannon_muzzles_body = PackedVector3Array(0, 0, -6)
-hull_hp = 25.0
+hull_hp = 50.0
 craft_role = &"interceptor"

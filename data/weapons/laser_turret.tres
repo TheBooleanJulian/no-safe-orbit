@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_gun")
-display_name = "Pulse laser"
+display_name = "Nd:YAG pulse laser"
 muzzle_velocity_mps = 299792458.0
 rate_of_fire_rpm = 30.0
 magazine_rounds = 0

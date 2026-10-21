@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="KineticCannonConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/kinetic_cannon_config.gd" id="1_gun"]
+
+[resource]
+script = ExtResource("1_gun")
+display_name = "Free-electron laser"
+muzzle_velocity_mps = 299792458.0
+rate_of_fire_rpm = 12.0
+magazine_rounds = 0
+round_mass_kg = 0.001
+penetration_mm = 170.0
+traverse_deg_s = 20.0
+dispersion_deg = 0.0
+beam_range_m = 8000.0
+beam_color = Color(0.35, 0.8, 1.0, 1)

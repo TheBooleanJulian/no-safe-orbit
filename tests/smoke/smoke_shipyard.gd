@@ -106,7 +106,8 @@ func _run() -> void:
 	yard.palette_category.select(Shipyard.CATEGORIES.find("Weapons"))
 	yard.palette_category.item_selected.emit(yard.palette_category.selected)
 	var weapons := yard.palette_items()
-	_check(weapons.size() == 11 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Pulse laser turret") and " ".join(weapons).contains("Point-defence")
+	_check(weapons.size() == 13 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Yb-fibre laser turret")
+		and " ".join(weapons).contains("Nd:YAG pulse laser turret") and " ".join(weapons).contains("Free-electron laser turret") and " ".join(weapons).contains("Point-defence")
 		and " ".join(weapons).contains("Missile rack") and " ".join(weapons).contains("Flare launcher") and " ".join(weapons).contains("EW jammer"),
 		"the Weapons category lists the guns, point defence, launchers and countermeasures: %s" % ", ".join(weapons))
 	var first := 0

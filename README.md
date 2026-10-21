@@ -199,10 +199,9 @@ steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
 | Grappling arm: grab / release | Y | — |
 | Missile volley at the U target (the ship needs a sensor lock): one launch from each pod the mode allows | M | — |
 | Missile mode: all / conventional / EMP / nuclear / sequence | , | — |
-| Countermeasures: flares from every ready launcher | Space | — |
+| Countermeasures: a burst of three flares, one at a time round the ship | Space | — |
 | Acknowledge the top non-critical alert | . | — |
 | Orbit details / details & combat log / help panels | O / P / H | — (use Tab) |
-| Target hostile on/off | T | B |
 | Drop a salvage beacon on a disabled target / close the loot window | G | D-pad up |
 | Damage control (workshop field repair) | C | D-pad down |
 | Extend / release a boarding gangway | V | D-pad left |
@@ -222,8 +221,9 @@ steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
 (Isp 900 s), so manoeuvring costs no more per m/s than the mains. Flight assist's target-matching and
 every manoeuvre spend it. Empty tanks mean no thrust and no RCS.
 
-**Combat:** T makes the target shoot back — and a contact you (or your craft)
-hit turns hostile on its own. Rounds penetrate armour (thicker at angles),
+**Combat:** a contact turns hostile on its own when you or your craft hit it,
+or when it sees one of your missiles locked on to it (inside its sensor
+range) — your craft merely flying about don't provoke it. Rounds penetrate armour (thicker at angles),
 then breach rooms, destroy hatches, cut power conduits and damage whatever
 systems lie on their path. Lost reactors, wrecked modules, cut conduits and
 overheating (throttle at 380 K, scram at 450 K) take systems offline. The
@@ -334,10 +334,12 @@ INBOUND x.x s**. The yard restocks spent missiles at launch, cheaply.
 | Nuclear missile launcher | legendary | 3 | radiation, heat and EMP; no blast wave in vacuum | 30 cr |
 
 **Countermeasures (Milestone 11):**
-- **Flares.** A flare launcher (common, Weapons palette) carries 30 flares
-  and fires three per launch: Space, or automatically under a policy that
-  allows it (Defensive, Standard and Aggressive do: when a missile is 4 s
-  out). Each flare is a bright heat source that burns for 6 s.
+- **Flares.** A flare launcher (common, Weapons palette) carries 30 flares.
+  They go out one at a time, 0.25 s apart, from each launcher round the
+  ship in turn: Space puts out a burst of three; a policy that allows it
+  (Defensive, Standard and Aggressive do: when a missile is 4 s out) puts
+  out up to three for each missile inbound, no more. Each flare is a bright
+  heat source that burns for 6 s, trailing sparks that fade over 3 s.
 - **How a missile sees a flare.** A missile that sees one inside its seeker
   cone, near its target, may chase it instead. The odds are the flare's
   signature against the ship's, weighted by the seeker:
@@ -583,9 +585,9 @@ or the repairer is hurt. Destroyed parts still need the yard. Crew in a
 damaged room fix it first: with a working workshop aboard, everyone fit
 in a room with a damaged system patches it where they stand (damage
 control and engineers at 0.5 hp/s each, anyone else half that, faster
-with a bigger workshop), and no team is sent to it. When the crew
-  can patch something, an amber line in the middle of the screen says
-  "press [C]".
+with a bigger workshop), and no team is sent to it. Damage control is
+  automatic: when a team is free and something can be patched, it goes
+  (the notice says who patches what; **C** still sends one at once).
 
 ## The HUD
 
@@ -736,11 +738,18 @@ rack. They fly with the same physics as every ship and can be shot down.
   slowly); **]** recalls. A craft is recovered when it comes within 10 m of
   its door or rack at under 2 m/s, then rearmed and refuelled for 40 s.
 - Orders, per craft, in the tactical overview (Tab): **Strike** (gun runs
-  on the target, aimed at hull, guns, engines or reactor), **Intercept**
-  (enemy craft first), **Recon** (hold 1.5 km off the target, never fire),
-  **Escort** (fly beside you), **Return**. **Risk tolerance**
-  (conservative / balanced / aggressive) decides when a craft breaks off on
-  its own for damage, propellant or ammunition.
+  on the target, aimed at hull, guns, engines, reactor or — the fighters'
+  default — its **weak spot**, the most damaged system outside its hull),
+  **Intercept** (enemy craft first), **Recon** (hold 1.5 km off the target,
+  never fire), **Escort** (fly beside you), **Return**. Each starts on its
+  role's own order: fighters and bombers strike, interceptors intercept,
+  recon and EW drones watch, repair and salvage drones escort. **Risk
+  tolerance** (conservative / balanced / aggressive) decides when a craft
+  breaks off on its own for damage (70 / 50 / 30 % hull), propellant or
+  ammunition — and every craft heads home while it still has half as much
+  propellant again as the trip back takes. Craft carry the light tier of
+  weapons (8–12 mm guns, the Yb-fibre laser); fighters have 80 hull points
+  (were 40), drones half as many again as before.
 - **Strikes move on**: once the target is beaten (disabled, captured or a
   wreck) the fighters take the nearest combat-ready enemy; with none left
   they come home.
@@ -814,7 +823,10 @@ role: command (bridge), engineering, damage control, weapons (magazine),
 security, medical and general crew. They are not drawn; moving between
 rooms takes 5 s per room. While anything hostile is about — a hostile
 ship, its craft still out, a missile on its way, fire taken in the last
-10 s — the crew are at **battle stations in spacesuits**: they keep command of a vented bridge, cross vented rooms and survive a room venting
+10 s — the crew are at **battle stations in spacesuits**, the emergency
+doors between rooms of one kind (stacked corridors, say) shut so one breach
+doesn't vent them all, and general and damage-control hands spread out to
+every room with systems in it and nobody there: they keep command of a vented bridge, cross vented rooms and survive a room venting
 around them (otherwise venting wounds or kills whoever is in it). They
 **stand down** only once it has been confirmed clear for 10 s. No command
 crew on a pressurised bridge hands the ship to the ship AI (half thrust and

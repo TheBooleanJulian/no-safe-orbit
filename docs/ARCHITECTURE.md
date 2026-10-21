@@ -265,6 +265,18 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Combat and craft (play-test batch 11, part 1)**: no `toggle_target_ai`
+  action; `Main._check_missile_locks` turns a contact hostile when a player
+  missile homing on it is inside its `sensor_range_m`. `CraftAI.default_directive`
+  by `craft_role`; `WEAK_SPOT` priority in `aim_point`; `DISENGAGE` hull
+  0.7 / 0.5 / 0.3 and `disengage_reason(..., home_dv_mps)` with
+  `HOME_PROPELLANT_MARGIN` (AirWing passes the speed off the carrier plus
+  twice `MAX_CLOSING_MPS`). Lasers: `fibre_laser_turret`, `laser_turret`
+  (Nd:YAG), `free_electron_laser_turret`. Flares: `WorldSimulation`
+  `_flare_queue` / `_fire_flare` (one at a time, `FLARE_INTERVAL_S`, launchers
+  in turn), `flare_due`; Main's `FLARES_PER_MISSILE` budget; `DecoyView`
+  trail (a second MultiMesh, cleared on a rebase). `ShipSystems.update_pressure`
+  skips `open_rooms` while `suited`; `spread_crew(on)`; Main's `_auto_patch`.
 - **Retrieve contracts (Milestone 13, part 3)**: `ContractBoard._retrieve_offer`
   (kind "retrieve", `MissionChain.Goal.RETRIEVE`, `deliver_to` the offering
   station, guards as `ships`); `carries_freight` / `deliver_to` let
