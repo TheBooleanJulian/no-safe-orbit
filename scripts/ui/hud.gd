@@ -264,7 +264,7 @@ func _build_cards() -> void:
 const HELP_TEXT := """FLIGHT     W/S pitch · A/D yaw · Q/E roll · R/F main engine / reverse · IJKL strafe
            arrows pitch & yaw · right-drag orbits the camera (right click resets)
 ASSIST     Z on/off · X cycles: hold orbit → match target → target markers (yellow, coast)
-GUNNERY    mouse aims the turrets (click captures; Esc releases) · LMB / Enter fire
+GUNNERY    mouse aims the turrets (click captures; Esc frees it: settings menu) · LMB / Enter fire
            Shift zoom on/off, wheel = magnification · ◇ lead marker (needs a lock) · U next target
 MISSILES   M volley at the U target (one launch per pod; needs a lock) · , mode: all / conventional / EMP / nuclear / sequence
 COUNTER    Space flares (automatic once an inbound missile is armed and 4 s out) · a jammer works beyond 3 km

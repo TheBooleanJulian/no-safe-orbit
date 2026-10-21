@@ -2,7 +2,44 @@
 
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/).
 
+**Versions** follow [Semantic Versioning](https://semver.org/), staying at
+**0.x.0** until the game is declared ready for 1.0: each promotion of `dev`
+to `main` is one release and raises the minor number; work not yet promoted
+sits under [Unreleased]. `application/config/version` in `project.godot`
+(shown in game) is the latest release.
+
 ## [Unreleased]
+
+### Settings menu (2026-10-22)
+
+#### Added
+- **Settings menu on Esc**, in flight (the sortie pauses) and at the
+  station: Display (fullscreen, UI scale), Graphics (V-Sync, frame-rate cap,
+  MSAA, 3D resolution), Audio (master, effects, ambience, alarms), Controls
+  (the key bindings), Save data (where everything is saved, last saved,
+  open the folder, **Back up now**), Stats, Changelog, About and **Dev
+  support** (a feedback and bug-report form), Resume and Quit to desktop.
+  Saved per user in `settings.cfg`.
+- The exported game includes `CHANGELOG.md` for the Changelog tab.
+
+#### Changed
+- **Esc opens the settings menu** (it still frees the mouse); in the refit
+  bay it first puts down the tool in hand, as before.
+- **Versions follow SemVer** (0.x.0 until 1.0): the changelog is split into
+  0.11.0–0.16.0, one per promotion to `main`; the game is 0.16.0.
+
+#### Tests changed (and why)
+- New `test_settings_menu` (2): settings saved, read back, clamped and
+  applied (UI ×1.25, MSAA 4×, 3D ×0.75, half volume −6 dB, zero muted),
+  reset; stats, save data, Back up now (two copies, the save untouched)
+  and the changelog as BBCode.
+- `smoke_encounter`: Esc opens the menu (8 tabs), the sortie pauses, the
+  CONTROLS and STATS tabs fill, Esc closes it and the sortie runs on.
+- `smoke_shipyard`: Esc drops the hatch tool, then opens the menu (the
+  changelog shows 0.16.0), then closes it.
+- `test_pass_a`: ducking is measured from the effects volume setting.
+
+## [0.16.0] — 2026-10-22 — Play-test batch 11: combat rules, crew manifest, refit bay, flight and shipyard
 
 ### Play-test batch 11, part 4 — flight and shipyard (2026-10-22)
 
@@ -176,6 +213,8 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
   to flare until it loses the ship).
 - `test_air_wing`: a fighter may break off for the propellant home.
 - `smoke_shipyard`: the Weapons palette has the two new lasers.
+
+## [0.15.0] — 2026-10-22 — Play-test batches 9–10, Milestone 13 part 3: contracts, the bank, the Moon's ground, new hulls
 
 ### Milestone 13, part 3 — retrieve contracts (2026-10-22)
 
@@ -570,6 +609,8 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 - `test_pass_a` (every alert follows its condition): a round on a
   collision course now raises no alert (it checked the `RND` alert).
 
+## [0.14.0] — 2026-10-21 — Play-test batch 8: a rescue tow; enemies field the newer kit
+
 ### Enemies field the newer kit (2026-10-21)
 
 #### Changed
@@ -612,6 +653,8 @@ shipyard. Give an option to get tow rescued for credits."
   the ship home for the hazard fee (904 cr for the Frigate); the Tab
   button quotes first and tows on the second press, at the plain fee
   (462 cr).
+
+## [0.13.0] — 2026-10-21 — Milestones 14–15, play-test batches 6–7: artifacts, derelicts, drones, beam weapons, capital ships
 
 ### Milestone 15, part 2 — crew, damage control, medics and PD that scale with the hull (2026-10-21)
 
@@ -983,6 +1026,8 @@ shipyard. Give an option to get tow rescued for credits."
 - `test_m13_jumps` schema test: the current schema (now 10), not exactly 9.
 - `test_release`: the Horizons row joins the credited sources.
 
+## [0.12.0] — 2026-10-20 — Milestones 11–12, Milestone 13 parts 1–2: countermeasures, the station and dealer, jump fuel, Mars, alerts and audio, Steam preparation
+
 ### Milestone 13, part 2 — Mars, brokers, Sun-centred positions (2026-10-20)
 
 #### Added
@@ -1264,6 +1309,8 @@ shipyard. Give an option to get tow rescued for credits."
 - `smoke_main`: M fires one missile from the rack, a second press the next
   (was: the salvo empties the rack); "M starts a salvo" accepts a volley
   already finished in the same frame.
+
+## [0.11.0] — 2026-10-20 — Milestones 7–10: EMP, polish, salvos and wrecks, multi-contact encounters; the Moon and Earth in each other's sky
 
 ### Moonlight, earthlight and earthshine (2026-10-20)
 
@@ -1548,7 +1595,7 @@ shipyard. Give an option to get tow rescued for credits."
 #### Fixed
 - Rate of fire compounding on every recompute (no bullets / sudden bursts).
 
-### Added
+### Added (play-test fixes, 2026-10-20)
 - Enemies board a disabled player (from mission 2); crew defence policy
   (hold the bridge / counter-attack); V cuts their gangway.
 - Point-defence turrets (two on the Frigate Mk I) engage hostile craft.
@@ -1557,7 +1604,7 @@ shipyard. Give an option to get tow rescued for credits."
   sections to blocks.
 - Medics treat the wounded in flight; craft fly in formation.
 
-### Fixed
+### Fixed (play-test fixes, 2026-10-20)
 - The drawer keeps the target card in view; collisions respect wedges;
   a magazine and lead marker per gun type; wrecked modules break up.
 - The enemy uses its power pips and works round to your stern.
