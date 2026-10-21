@@ -108,6 +108,10 @@ const DEFAULT_AIM_RANGE_M := 2000.0
 const JUMP_HOLD_S := 5.0
 ## The jump drive is blocked while a hostile has fired on us this recently.
 const UNDER_FIRE_S := 10.0
+## Battle stations (play-test batch 10): the crew stay in their suits until
+## it is confirmed clear — no hostile contact, no hostile craft out, no
+## missile on its way to us and no fire taken — for this long.
+const STAND_DOWN_CLEAR_S := 10.0
 ## The rescue tow (play-test batch 8: "the ship is sometimes stranded and
 ## unable to jump back to the shipyard"): keep holding B while the jump is
 ## blocked under fire for TOW_HOLD_S, or call it from the Tab drawer (press
@@ -121,6 +125,10 @@ var _tow_hold := 0.0
 var _tow_armed_ms := -100_000
 ## When a hostile (ship or craft) last fired, and the rounds counted so far.
 var _last_enemy_fire := -INF
+## When a threat was last seen (battle stations); fires and foam announced.
+var _threat_seen := -INF
+var _fires_known: Dictionary = {}
+var _foam_known: Dictionary = {}
 var _enemy_rounds_seen := {}
 ## A beaten enemy that runs this far is gone: no payout, the next contact comes.
 const ESCAPE_RANGE_M := 40_000.0
@@ -1259,6 +1267,45 @@ func in_combat() -> bool:
 	return false
 
 
+## Anything that could still hurt us: a hostile contact, a hostile's craft
+## out, a missile on its way to us or ours, fire taken within UNDER_FIRE_S.
+func threat_present() -> bool:
+	if encounter.any_hostile(world) or world.sim_time - _last_enemy_fire < UNDER_FIRE_S:
+		return true
+	for c in encounter.contacts:
+		if not c.wing.flying().is_empty():
+			return true
+	for m in world.missiles:
+		if m.side != &"player" and m.is_active():
+			return true
+	return false
+
+
+## A notice when a fire takes hold aboard, and when the foam is deployed
+## (play-test batch 10).
+func _announce_fires(player: ShipState) -> void:
+	var sys := player.systems
+	if sys == null:
+		return
+	for room: int in sys.fires:
+		if not _fires_known.has(room):
+			var left := sys.foam_left(room)
+			var where := "%s %s" % [sys._room_name(room), sys.blueprint.rooms[room].id]
+			hud.notice("FIRE in %s — %s" % [where, "foam in %.0f s (%d charge%s)" % [ShipSystems.FOAM_DELAY_S, left, "" if left == 1 else "s"]
+				if left > 0 else "no foam left: damage control"], world.sim_time)
+			if combat_log != null:
+				combat_log.record(world.sim_time, "fire", "Fire in %s" % where)
+	_fires_known = sys.fires.duplicate()
+	for room: int in sys.foam_used:
+		if int(sys.foam_used[room]) > int(_foam_known.get(room, 0)):
+			var where := "%s %s" % [sys._room_name(room), sys.blueprint.rooms[room].id]
+			var left := sys.foam_left(room)
+			hud.notice("FOAM deployed in %s — fire out (%d charge%s left this sortie)" % [where, left, "" if left == 1 else "s"], world.sim_time)
+			if combat_log != null:
+				combat_log.record(world.sim_time, "fire", "Foam deployed in %s" % where)
+	_foam_known = sys.foam_used.duplicate()
+
+
 ## Note hostile fire: every hostile contact's rounds and its craft's.
 func _note_enemy_fire() -> void:
 	for c in encounter.contacts:
@@ -1990,11 +2037,17 @@ func _process(delta: float) -> void:
 				hud.notice("Prize crew aboard %s — it holds station" % s.display_name, world.sim_time)
 				_next_contact(true, c)
 	target = target_ship()
-	# General quarters while a hostile is about: every crew in spacesuits.
-	var quarters := encounter.any_hostile(world)
+	# Battle stations while anything hostile is about: every crew in
+	# spacesuits; stand down only once it is confirmed clear.
+	if threat_present():
+		_threat_seen = world.sim_time
+	var quarters := world.sim_time - _threat_seen < STAND_DOWN_CLEAR_S
 	if player.systems != null and player.systems.suited != quarters:
 		player.systems.suited = quarters
-		hud.notice("General quarters — crew in spacesuits" if quarters else "Stand down — suits off", world.sim_time)
+		hud.notice("BATTLE STATIONS — crew in spacesuits" if quarters else "Stand down — confirmed clear, suits off", world.sim_time)
+		if combat_log != null:
+			combat_log.record(world.sim_time, "crew", "Battle stations" if quarters else "Stand down: confirmed clear")
+	_announce_fires(player)
 	var courier := world.get_ship(COURIER_ID) if world.has_ship(COURIER_ID) and world.get_ship(COURIER_ID).is_active() else null
 	# What the enemy may shoot at: us, our craft out, an escorted courier
 	# (never a wreck); with focus fire the courier first, else the player.

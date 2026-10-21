@@ -23,6 +23,8 @@ class Model:
 	## normal of the face each sits on (the plume's direction).
 	var engine_nozzles: Array[Vector3] = []
 	var engine_normals: Array[Vector3] = []
+	## Each engine's bell mouth radius (m): the plume is as wide.
+	var engine_widths: Array[float] = []
 	## Armour plate meshes by plate key (views char and crumple worn ones).
 	var plates: Dictionary = {}
 	## Radar arrays that turn while their sensor mast works: {id, node}.
@@ -95,13 +97,47 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 		model.parts[bp.equipment[i].id] = part
 		match def.kind:
 			EquipmentDefinition.Kind.MAIN_ENGINE:
-				# Cylinder +Y is rotated to +Z (aft): top = aft end = wide mouth.
-				var bell := _cylinder(part, 1.4, 0.7, 2.4, mount + normal * 1.2, mat)
-				bell.basis = _basis_y_along(normal)
-				model.engine_nozzles.append(mount + normal * 2.4)
+				# A gimbal mount and combustion chamber on the hull, feed lines
+				# into it, and the bell (cylinder +Y out along the face: top =
+				# the wide mouth) with cooling bands — longer and a little wider
+				# the more thrust (play-test batch 10).
+				var b := _basis_y_along(normal)
+				var dark := _mat(mats, Color(0.16, 0.17, 0.19) * tint)
+				var size := engine_bell(def.thrust_n)
+				var gimbal := _cylinder(part, 0.75, 0.85, 0.35, Vector3.ZERO, dark)
+				gimbal.transform = Transform3D(b, mount + normal * 0.17)
+				var chamber := _cylinder(part, 0.5, 0.6, 0.7, Vector3.ZERO, mat)
+				chamber.transform = Transform3D(b, mount + normal * 0.7)
+				var throat := 1.05
+				var bell := _cylinder(part, size.x, 0.45, size.y, Vector3.ZERO, mat)
+				bell.transform = Transform3D(b, mount + normal * (throat + size.y * 0.5))
+				for f: float in [0.3, 0.65]:
+					var r := lerpf(0.45, size.x, f) + 0.05
+					var band := _cylinder(part, r, r, 0.14, Vector3.ZERO, dark)
+					band.transform = Transform3D(b, mount + normal * (throat + size.y * f))
+				for s: float in [-1.0, 1.0]:
+					var pipe := _cylinder(part, 0.08, 0.08, 0.9, Vector3.ZERO, dark)
+					pipe.transform = Transform3D(b, mount + normal * 0.55 + b.x * s * 0.68)
+				model.engine_nozzles.append(mount + normal * (throat + size.y))
 				model.engine_normals.append(normal)
+				model.engine_widths.append(size.x)
 			EquipmentDefinition.Kind.RCS:
-				_box(part, Vector3.ONE * 0.9, mount + normal * 0.45, mat)
+				# A housing with a nozzle out each side and one off the face;
+				# the heavy block bigger, with an armour cap.
+				var b := _basis_y_along(normal)
+				var dark := _mat(mats, Color(0.16, 0.17, 0.19) * tint)
+				var heavy := def.thrust_n > RCS_HEAVY_N
+				var s := 1.15 if heavy else 1.0
+				var housing := _box(part, Vector3(0.8, 0.5, 0.8) * s, Vector3.ZERO, mat)
+				housing.transform = Transform3D(b, mount + normal * 0.25 * s)
+				if heavy:
+					var cap := _box(part, Vector3(0.95, 0.14, 0.95) * s, Vector3.ZERO, dark)
+					cap.transform = Transform3D(b, mount + normal * 0.57 * s)
+				for dir: Vector3 in [b.x, -b.x, b.z, -b.z]:
+					var nozzle := _cylinder(part, 0.17 * s, 0.07 * s, 0.3 * s, Vector3.ZERO, dark)
+					nozzle.transform = Transform3D(_basis_y_along(dir), mount + normal * 0.25 * s + dir * 0.55 * s)
+				var out := _cylinder(part, 0.17 * s, 0.07 * s, 0.3 * s, Vector3.ZERO, dark)
+				out.transform = Transform3D(b, mount + normal * (0.65 * s + 0.15))
 				model.rcs_blocks.append({"id": bp.equipment[i].id, "position": mount + normal * 0.45, "normal": normal})
 			EquipmentDefinition.Kind.CANNON:
 				# Ring base on the hull; the turret (house and barrel) trains on
@@ -113,9 +149,23 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				pivot.position = mount + normal * WorldSimulation.TURRET_HEIGHT_M
 				part.add_child(pivot)
 				var house_mat := _mat(mats, (def.color * tint).darkened(0.25))
+				var dark := _mat(mats, Color(0.14, 0.15, 0.17) * tint)
 				_box(pivot, Vector3(1.7, 0.9, 1.9), Vector3(0, 0, 0.2), house_mat)
+				# Mantlet, the barrel in a recoil sleeve, a sight and a hatch;
+				# a muzzle brake (a beam weapon: an emitter lens instead).
+				_box(pivot, Vector3(0.9, 0.7, 0.4), Vector3(0, 0, -0.85), dark)
+				var sleeve := _cylinder(pivot, 0.28, 0.3, 1.2, Vector3(0, 0, -1.5), dark)
+				sleeve.rotation_degrees = Vector3(90, 0, 0)
 				var barrel := _cylinder(pivot, 0.16, 0.2, 5.0, Vector3(0, 0, -2.6), mat)
 				barrel.rotation_degrees = Vector3(90, 0, 0)
+				if def.cannon != null and def.cannon.is_beam():
+					var lens := _cylinder(pivot, 0.3, 0.24, 0.2, Vector3(0, 0, -5.15), _mat(mats, Color(0.5, 0.85, 1.0)))
+					lens.rotation_degrees = Vector3(90, 0, 0)
+				else:
+					_box(pivot, Vector3(0.46, 0.3, 0.5), Vector3(0, 0, -5.1), dark)
+				_box(pivot, Vector3(0.3, 0.35, 0.6), Vector3(0.98, 0.25, 0.1), dark)
+				_cylinder(pivot, 0.3, 0.3, 0.08, Vector3(0.3, 0.48, 0.5), dark)
+				_merge_static(pivot)
 				model.turrets.append({"id": bp.equipment[i].id, "pivot": pivot})
 			EquipmentDefinition.Kind.RADIATOR:
 				# A folded (accordion) fin standing 3 m off the face, as long
@@ -125,20 +175,14 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				var along := Vector3(cells[1] - cells[0]).abs() if cells.size() > 1 else Vector3(0, 0, 1)
 				var long_m := cells.size() * c - 0.2
 				var tall := 3.0
-				if ShipGrid.is_fin(def, bp.equipment[i].rotation):
+				var fin := ShipGrid.is_fin(def, bp.equipment[i].rotation)
+				if fin:
 					tall = def.length_cells * c - 0.2
 					along = Vector3(ShipGrid.external_step(bp.equipment[i].face, 0)).abs()
 				var side := along.cross(normal).normalized()
-				var folds := cells.size() * 4
-				var seg := long_m / folds
-				var start := mount - along * long_m * 0.5
-				for k in folds:
-					var a0 := 0.35 if k % 2 == 0 else -0.35
-					var p0 := start + along * (seg * k) + side * a0
-					var p1 := start + along * (seg * (k + 1)) - side * a0
-					var dir := (p1 - p0).normalized()
-					var panel := _box(part, Vector3((p1 - p0).length() + 0.04, tall, 0.06), (p0 + p1) * 0.5 + normal * tall * 0.5, mat)
-					panel.basis = Basis(dir, normal, dir.cross(normal))
+				for pl: Array in radiator_panels(mount, normal, along, side, long_m, tall, cells.size(), def.length_cells if fin else 0):
+					var panel := _box(part, pl[1], pl[0], mat)
+					panel.basis = pl[2]
 				# Header pipe along the top edge, and the root fairing on the hull.
 				_box(part, Vector3.ONE * 0.16 + along * (long_m - 0.16), mount + normal * tall, _mat(mats, Color(0.55, 0.57, 0.6) * tint))
 				_box(part, Vector3.ONE * 0.5 + along * (long_m - 0.5), mount + normal * 0.15, _mat(mats, Color(0.3, 0.32, 0.35) * tint))
@@ -155,6 +199,13 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				for side in [-0.18, 0.18]:
 					var tube := _cylinder(pd_pivot, 0.06, 0.07, 1.8, Vector3(side, 0, -0.9), mat)
 					tube.rotation_degrees = Vector3(90, 0, 0)
+				# A cradle for the barrels, an ammunition drum, a fire-control dish.
+				var pd_dark := _mat(mats, Color(0.14, 0.15, 0.17) * tint)
+				_box(pd_pivot, Vector3(0.6, 0.35, 0.5), Vector3(0, 0, -0.1), pd_dark)
+				var drum := _cylinder(pd_pivot, 0.24, 0.24, 0.45, Vector3(0.48, 0, 0.1), pd_dark)
+				drum.rotation_degrees = Vector3(0, 0, 90)
+				_cylinder(pd_pivot, 0.28, 0.06, 0.12, Vector3(-0.42, 0.32, 0.05), mat)
+				_merge_static(pd_pivot)
 				model.turrets.append({"id": bp.equipment[i].id, "pivot": pd_pivot, "pd": true})
 			EquipmentDefinition.Kind.SENSOR:
 				model.spinners.append({"id": bp.equipment[i].id,
@@ -221,6 +272,45 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				model.docked_craft[bp.equipment[i].id] = craft
 		_merge_static(part)
 	return model
+
+
+## A radiator's accordion: [centre, size, basis] per panel (model space).
+## Laid flat (`fin_cells` 0) the zigzag runs along the `long_m` span, each
+## panel `tall` off the face; as a fin of `fin_cells` it runs out from the
+## hull along `normal`, each fold line across the fin's `long_m` width — so
+## both fold along their length (play-test batch 10).
+static func radiator_panels(mount: Vector3, normal: Vector3, along: Vector3, side: Vector3, long_m: float, tall: float,
+		span_cells: int, fin_cells: int) -> Array:
+	var out := []
+	var folds := (fin_cells if fin_cells > 0 else span_cells) * 4
+	var run := tall if fin_cells > 0 else long_m
+	var axis := normal if fin_cells > 0 else along
+	var start := mount if fin_cells > 0 else mount - along * long_m * 0.5
+	var seg := run / folds
+	for k in folds:
+		var a0 := 0.35 if k % 2 == 0 else -0.35
+		var p0 := start + axis * (seg * k) + side * a0
+		var p1 := start + axis * (seg * (k + 1)) - side * a0
+		var dir := (p1 - p0).normalized()
+		if fin_cells > 0:
+			out.append([(p0 + p1) * 0.5, Vector3((p1 - p0).length() + 0.04, long_m, 0.06), Basis(dir, along, dir.cross(along))])
+		else:
+			out.append([(p0 + p1) * 0.5 + normal * tall * 0.5, Vector3((p1 - p0).length() + 0.04, tall, 0.06), Basis(dir, normal, dir.cross(normal))])
+	return out
+
+
+## Engine bells by thrust (play-test batch 10): (mouth radius, length) in
+## metres — the length grows faster than the mouth, which stays within a cell.
+const ENGINE_REF_THRUST_N := 800_000.0
+const RCS_HEAVY_N := 150_000.0
+## The docking collar and its gangway are hexagonal.
+const COLLAR_SIDES := 6
+const COLLAR_RADIUS_M := 1.35
+
+
+static func engine_bell(thrust_n: float) -> Vector2:
+	var k := maxf(thrust_n, 1.0) / ENGINE_REF_THRUST_N
+	return Vector2(minf(1.4 * pow(k, 0.3), 1.5), 2.4 * pow(k, 0.6))
 
 
 ## Fold a part's fixed pieces (its direct mesh children with nothing hung on
@@ -483,18 +573,19 @@ static func _collar(part: Node3D, mount: Vector3, normal: Vector3) -> Node3D:
 	ring_mat.emission_enabled = true
 	ring_mat.emission = Color(1.0, 0.75, 0.1)
 	ring_mat.emission_energy_multiplier = 0.35
-	var ring := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 1.0
-	torus.outer_radius = 1.6
-	ring.mesh = torus
-	ring.material_override = ring_mat
-	ring.transform = Transform3D(basis, mount + normal * 0.25)
-	part.add_child(ring)
+	# A hexagonal ring (play-test batch 10): six hazard-striped edges round a
+	# hexagonal hatch.
+	for k in COLLAR_SIDES:
+		var a := TAU * k / COLLAR_SIDES
+		var out := basis.x * cos(a) + basis.z * sin(a)
+		var along := basis.z * cos(a) - basis.x * sin(a)
+		var edge := _box(part, Vector3(COLLAR_RADIUS_M * 1.02 + 0.3, 0.45, 0.55), Vector3.ZERO, ring_mat)
+		edge.transform = Transform3D(Basis(along, normal, along.cross(normal)), mount + normal * 0.25 + out * COLLAR_RADIUS_M * cos(PI / COLLAR_SIDES))
 	var hatch_mat := StandardMaterial3D.new()
 	hatch_mat.albedo_color = Color(0.08, 0.08, 0.09)
 	var hatch := _cylinder(part, 1.0, 1.0, 0.2, Vector3.ZERO, hatch_mat)
-	hatch.transform = Transform3D(basis, mount + normal * 0.12)
+	(hatch.mesh as CylinderMesh).radial_segments = COLLAR_SIDES
+	hatch.transform = Transform3D(basis * Basis(Vector3.UP, PI / COLLAR_SIDES), mount + normal * 0.12)
 	var beacon_mat := StandardMaterial3D.new()
 	beacon_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	beacon_mat.albedo_color = Color(1.0, 0.85, 0.2)

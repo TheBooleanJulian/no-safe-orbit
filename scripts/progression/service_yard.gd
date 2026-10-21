@@ -384,18 +384,8 @@ static func repair_jobs(vessel: ShipInstance, catalog: ConstructionCatalog) -> A
 		j.label = "Re-run %s" % " and ".join(what)
 		j.order = 0.5
 		jobs.append(j)
-	var foam: Dictionary = vessel.condition.get("foam_used", {})
-	if not foam.is_empty():
-		var charges := 0
-		for id in foam:
-			charges += int(foam[id])
-		var j := Job.new()
-		j.kind = &"foam"
-		j.subject = "foam"
-		j.cost = charges
-		j.label = "Recharge %d foam suppression charge%s" % [charges, "" if charges == 1 else "s"]
-		j.order = 2.5
-		jobs.append(j)
+	# Foam is recharged every sortie (play-test batch 10): no job; an older
+	# save's "foam_used" is dropped with the next sortie's condition.
 	for id in vessel.condition.get("breached", []):
 		var j := Job.new()
 		j.kind = &"breach"
@@ -552,8 +542,6 @@ static func perform(jobs: Array[Job], vessel: ShipInstance, profile: PlayerProfi
 			&"bus":
 				c.erase("bus_cut")
 				c.erase("coolant_cut")
-			&"foam":
-				c.erase("foam_used")
 			&"breach":
 				(c.get("breached", []) as Array).erase(j.subject)
 			&"hatch":

@@ -292,7 +292,7 @@ func test_foam_puts_out_fires_until_it_runs_out() -> void:
 	s.fires[room] = {"burn_s": 0.0, "smoulder_s": 0.0}
 	s._advance_fires(ShipSystems.FOAM_DELAY_S + 1.0)
 	assert_true(s.fires.has(room), "no foam left: it keeps burning")
-	assert_true(s.condition().has("foam_used"), "the used charges are saved for the yard to recharge")
+	assert_true(not s.condition().has("foam_used"), "per sortie (play-test batch 10): the used charges aren't carried over")
 	s.breach_room(room)
 	for i in roundi(ShipSystems.SMOULDER_S / 5.0) + 1:
 		s._advance_fires(5.0)

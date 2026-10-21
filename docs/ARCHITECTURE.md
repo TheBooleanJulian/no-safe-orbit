@@ -265,6 +265,24 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Crew and models (play-test batch 10, part 1)**: `Main.threat_present`
+  (hostile contact, hostile craft flying, a non-player missile, fire within
+  `UNDER_FIRE_S`) stamps `_threat_seen`; `systems.suited` holds until
+  `STAND_DOWN_CLEAR_S` after it (battle stations / stand down);
+  `_announce_fires` diffs `systems.fires` and `foam_used` for notices.
+  `ShipSystems._advance_in_place_repairs` (before the repair tasks):
+  fit, free crew in a room patch `_damaged_in_room` while
+  `working_workshop() >= 0`; `in_place_repairs` keeps teams off those parts.
+  Foam: no power check; `foam_used` is no longer in `condition()` (the
+  yard's foam job is gone). Boarding: `GANGWAY_CROSS_S` 2.5, `HATCH_CUT_S`
+  10, `BOARDER_TRANSIT_S` (half a crew room), `KILL_RATE` 0.16;
+  `Docking.COLLAR_SEAL_S` 5, `HULL_CUT_S` 22.5. Models:
+  `ShipModelBuilder.radiator_panels` (flat or fin), `engine_bell(thrust)`
+  and `Model.engine_widths` (ShipView scales each plume), RCS nozzles,
+  turret/PD detail merged per pivot (`_merge_static(pivot)`), a hexagonal
+  `_collar` (`COLLAR_SIDES`), `GangwayView` hexagonal with a rib texture,
+  berth gantries of `_truss` bays in red with `_beacon` pivots turned in
+  `ShipPreview3D._process`, more `CraftView` / `MissileView` pieces.
 - **Effects and the opening range (play-test batch 9, part 7)**:
   `ShipView._show_emp` redraws an `ImmediateMesh` of jagged arcs (two
   crossed ribbons a segment) round each part with `disrupted_s > 0`, at its
@@ -734,7 +752,7 @@ bounding-box hit test.
   deck (crew routes, reachability, venting, validator access).
   `ShipSystems.room_bonus(role)` (1 + 25 % per extra cell, ≤ 2×) speeds
   scans (bridge), repairs and sealing (workshop) and treatment (life
-  support). `suited` (general quarters) lets the crew route through vacuum
+  support). `suited` (battle stations) lets the crew route through vacuum
   and survive venting. `_advance_hull_sealing` clears breaches.
 - **Fire** (`ShipSystems.fires`, `foam_used`): started from
   `damage_equipment` with the ship's seeded generator; burns only in

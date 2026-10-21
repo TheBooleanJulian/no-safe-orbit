@@ -570,7 +570,11 @@ In flight, a ship with a **workshop** (a found room blueprint) that is
 powered, pressurised and reachable can patch damaged systems to 75 % (**C**):
 a damage-control (or engineering) crew member walks there first, it costs
 spare parts, and it stops if the workshop or the part's room loses pressure
-or the repairer is hurt. Destroyed parts still need the yard. When the crew
+or the repairer is hurt. Destroyed parts still need the yard. Crew in a
+damaged room fix it first: with a working workshop aboard, everyone fit
+in a room with a damaged system patches it where they stand (damage
+control and engineers at 0.5 hp/s each, anyone else half that, faster
+with a bigger workshop), and no team is sent to it. When the crew
   can patch something, an amber line in the middle of the screen says
   "press [C]".
 
@@ -666,8 +670,9 @@ exit holes on the hull.
 - **Fire**: a hit system may catch fire. It burns only with air
   (smoulders in a vented room, flaring up if it is re-pressurised), damaging
   the room's systems and crew. Automatic **foam** puts it out in 3 s — two
-  charges per room, recharged at the yard — then damage control fight it
-  by hand.
+  charges per room each sortie, self-contained (no power needed) — then
+  damage control fight it by hand. A notice says when a fire takes hold and
+  when the foam goes off.
 - **Bigger rooms work harder**: each cell past the first adds 25 % (up to
   2×) — a bigger bridge scans faster, a bigger workshop repairs and seals
   faster, a bigger life support (the medbay) treats the wounded faster.
@@ -798,9 +803,11 @@ the next free one); every medic treats a patient of their own.
 Every berth (3 per crew-quarters cell) holds one named crew member with a
 role: command (bridge), engineering, damage control, weapons (magazine),
 security, medical and general crew. They are not drawn; moving between
-rooms takes 5 s per room. While a hostile is about the crew are at **general
-quarters in spacesuits**: they keep command of a vented bridge, cross vented rooms and survive a room venting
-around them (otherwise venting wounds or kills whoever is in it). No command
+rooms takes 5 s per room. While anything hostile is about — a hostile
+ship, its craft still out, a missile on its way, fire taken in the last
+10 s — the crew are at **battle stations in spacesuits**: they keep command of a vented bridge, cross vented rooms and survive a room venting
+around them (otherwise venting wounds or kills whoever is in it). They
+**stand down** only once it has been confirmed clear for 10 s. No command
 crew on a pressurised bridge hands the ship to the ship AI (half thrust and
 turn rate); no weapons crew able to reach the magazine halves the guns' rate
 of fire. Tab → CREW: cover a lost role with general crew, or **reassign**
@@ -813,16 +820,17 @@ anyone free to a new post (they walk there). The dead leave their berths
    tolerances: port gap ≤ 25 m, relative speed ≤ 0.5 m/s, turn rate ≤ 3.4°/s,
    gangway within 20° of square.
 2. **V** extends the gangway from your docking collar: mated to the target's
-   collar in 10 s, or cut into any outer hull face with a room behind it in
-   45 s (that room vents). A target that still has power, thrust and a crew
+   collar in 5 s, or cut into any outer hull face with a room behind it in
+   23 s (that room vents). A target that still has power, thrust and a crew
    in command thrusts away and tears the gangway — disable it first.
 3. **N** sends your security and general crew — the party size is set in
    Tab › CREW, up to 24, and the target card says how many would go before
-   you press it (enemy parties stay at 8). They walk to the
-   collar, cross, and fight room by room towards the bridge. Defenders lock
-   the doors ahead (20 s to cut each; hatches your guns already destroyed
-   are open) and their security falls back to hold the bridge. Fights are
-   resolved by numbers and roles, not instant kills: a full crew will
+   you press it (enemy parties stay at 8). They move at the double — 2.5 s
+   a room — to the collar, cross, and fight room by room towards the
+   bridge. Defenders lock the doors ahead (10 s to cut each; hatches your
+   guns already destroyed are open) and their security falls back to hold
+   the bridge. Fights are resolved by numbers and roles, not instant kills,
+   and twice as fast as they were (the same odds): a full crew will
    usually repel eight boarders, so thin them out first — venting their
    quarters, or cutting straight into a bridge that sits under the hull.
 The hit-cam window shows the boarded ship's rooms while the fight goes on:
