@@ -104,7 +104,8 @@ func test_every_alert_follows_its_condition() -> void:
 	checks.append(["prop", _hud_alerts(hud, world, player).has(&"prop")])
 	player.propellant_kg = prop
 	checks.append(["prop cleared", not _hud_alerts(hud, world, player).has(&"prop")])
-	# A round on a collision course.
+	# A round on a collision course: no alert since play-test batch 9 ("remove
+	# RND from critical screen alerts").
 	var shot := ProjectileState.new()
 	shot.shooter_id = &"target_01"
 	shot.position = Vector3(0, 0, -1500)
@@ -112,17 +113,8 @@ func test_every_alert_follows_its_condition() -> void:
 	shot.velocity = Vector3(0, 0, 1500)
 	shot.weapon = KineticCannonConfig.new()
 	world._rounds.append(shot)
-	var with_round := hud._alerts(world, player, null)
-	var round_alert: AlertQueue.Alert = null
-	for a in with_round:
-		if a.key == &"round":
-			round_alert = a
-	checks.append(["round", round_alert != null])
-	if round_alert != null:
-		checks.append(["round text %s" % round_alert.text(), round_alert.text().begins_with("RND 1.0s") and round_alert.text().contains("[")])
-		checks.append(["round direction", round_alert.dir_body.normalized().dot(Vector3(0, 0, -1)) > 0.99])
+	checks.append(["no round alert", not _hud_alerts(hud, world, player).has(&"round")])
 	world._rounds.clear()
-	checks.append(["round cleared", not _hud_alerts(hud, world, player).has(&"round")])
 	# Reactor scram.
 	sys.reactor_state = ShipSystems.Reactor.SCRAM
 	checks.append(["scram", _hud_alerts(hud, world, player).has(&"reactor")])
@@ -140,7 +132,11 @@ func test_every_alert_follows_its_condition() -> void:
 	checks.append(["jump cleared", not _hud_alerts(hud, world, player).has(&"jump")])
 	var bad := checks.filter(func(c: Array) -> bool: return not c[1]).map(func(c: Array) -> String: return str(c[0]))
 	assert_true(bad.is_empty(), "every alert appears with its condition and clears with it; failed: %s" % [bad])
-	for a in with_round:
+	# Several at once, each in its few words.
+	player.propellant_kg = 0.0
+	sys.fires[0] = {"burn_s": 0.0, "smoulder_s": 0.0}
+	sys.reactor_state = ShipSystems.Reactor.SCRAM
+	for a in hud._alerts(world, player, null):
 		assert_true(a.text().length() <= AlertQueue.MAX_TEXT, "%s fits (%s)" % [a.key, a.text()])
 	hud.free()
 

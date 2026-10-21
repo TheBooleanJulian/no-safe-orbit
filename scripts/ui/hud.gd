@@ -761,14 +761,6 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		a.short = msl_value
 		a.dir_body = player.orientation.inverse() * ((missile.position as Vector3) - player.position)
 		out.append(a)
-	var round := nearest_incoming_round(world, player)
-	if not round.is_empty():
-		var rel_v: Vector3 = round.velocity
-		var a := AlertQueue.make(&"round", &"threat", DANGER, "RND", "%.1fs" % float(round.time),
-			bearing_text(player, round.position), evade_chip(player, rel_v))
-		a.short = a.value
-		a.dir_body = player.orientation.inverse() * ((round.position as Vector3) - player.position)
-		out.append(a)
 	if player.systems != null:
 		var reset := player.systems.disrupted()
 		if not reset.is_empty():
@@ -1258,6 +1250,12 @@ func _update_weapon_strip(player: ShipState) -> void:
 		parts.append("GUN ▸ %s  %s %d/%d%s" % [battery_text(player.config, player), "▮".repeat(bars) + "▯".repeat(10 - bars),
 			player.cannon_rounds, cannon.magazine_rounds, "  EMPTY" if player.cannon_rounds == 0 else ""])
 	parts.append(pd_text(player))
+	if not player.config.unlimited_propellant and player.config.propellant_capacity_kg > 0.0:
+		# Propellant left, as the ammunition is shown (play-test batch 9).
+		var fuel := clampf(player.propellant_kg / player.config.propellant_capacity_kg, 0.0, 1.0)
+		var fuel_bars := roundi(fuel * 10.0)
+		parts.append("FUEL %s %d%% · %s" % ["▮".repeat(fuel_bars) + "▯".repeat(10 - fuel_bars), roundi(fuel * 100.0),
+			JumpDrive.dv_text(JumpDrive.delta_v_of(player.mass_kg(), player.propellant_kg, player.config.main_isp_s))])
 	var cm := countermeasure_text(player.systems)
 	if cm != "":
 		parts.append(cm)

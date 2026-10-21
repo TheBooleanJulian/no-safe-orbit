@@ -1809,8 +1809,8 @@ func _complete_mission() -> void:
 
 ## The escort mission's courier: ahead and to starboard, drifting with us.
 func _spawn_courier(player: ShipState) -> void:
-	var c := ShipState.create(COURIER_ID, "COURIER", MissionChain.courier_config(),
-		player.position + player.orientation * Vector3(300, 60, -400), player.velocity + player.orientation * Vector3(0, 0, -4), player.orientation)
+	var c := MissionChain.courier_ship(COURIER_ID, player.position + player.orientation * Vector3(300, 60, -400),
+		player.velocity + player.orientation * Vector3(0, 0, -4), player.orientation)
 	world.add_ship(c)
 	world.set_input(COURIER_ID, ShipControlInput.neutral())
 	hud.escort_id = COURIER_ID

@@ -17,6 +17,8 @@ var hull_name: String = ""
 var _plumes: Array[Node3D] = []
 var _plume_material: StandardMaterial3D
 var _parts: Dictionary = {}
+var _missile_cones: Dictionary = {}  # launcher id -> Array[Node3D]
+var _cones_shown: Dictionary = {}  # launcher id -> how many are shown
 var _wreck_material: StandardMaterial3D
 var _jets: Array[Dictionary] = []  # {pivot, id, position, normal}
 var _jet_material: StandardMaterial3D
@@ -52,6 +54,7 @@ func _ready() -> void:
 	var model := ShipModelBuilder.build(blueprint, grid, stats.center_of_mass_m, tint, hull_name)
 	add_child(model.root)
 	_parts = model.parts
+	_missile_cones = model.missile_cones
 	_beacons = model.beacons
 	_turrets = model.turrets
 	_docked_craft = model.docked_craft
@@ -288,6 +291,17 @@ func _char_material(level: int, current: Material) -> Material:
 ## blocks around it).
 func _show_damage(systems: ShipSystems) -> void:
 	_show_plate_wear(systems)
+	# Missiles left: a tube shows a white nose while its share is aboard.
+	for id: String in _missile_cones:
+		var e := systems.equipment_by_id(id)
+		if e == null:
+			continue
+		var cones: Array = _missile_cones[id]
+		var shown := ceili(float(systems.missiles_left(e)) / maxf(e.def.missile_capacity, 1.0) * cones.size())
+		if int(_cones_shown.get(id, -1)) != shown:
+			_cones_shown[id] = shown
+			for k in cones.size():
+				(cones[k] as Node3D).visible = k < shown
 	for e in systems.equipment:
 		if e.destroyed() and _parts.has(e.id):
 			(_parts[e.id] as Node3D).visible = false
