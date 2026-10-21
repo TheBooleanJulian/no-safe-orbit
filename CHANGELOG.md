@@ -4,6 +4,49 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 11, part 1 — combat rules, craft, lasers, flares, battle stations (2026-10-22)
+
+#### Changed
+- **No hostile toggle (T)**: a contact turns hostile when you or your craft
+  hit it, or when it sees one of your missiles locked on to it inside its
+  sensor range (no longer the moment a missile is launched); craft flying
+  about don't provoke it.
+- **Craft start on their role's order**: fighters and bombers Strike,
+  interceptors (Hornet, laser drone) Intercept, recon and EW drones Recon,
+  repair and salvage drones Escort; fighters aim at the **weak spot** (the
+  target's most damaged system outside its hull).
+- **Craft survive more**: fighters 80 hull points (were 40; Hornet 50,
+  Mantis 140), drones half as many again; they break off at 70 / 50 / 30 %
+  hull by risk (were 60 / 35 / 15) and head home while they still have
+  1.5 × the propellant the trip back takes.
+- **Lasers in three tiers**: Yb-fibre laser turret (light: 35 mm, 3 km,
+  600 kW, uncommon), Nd:YAG pulse laser turret (the old pulse laser: 80 mm,
+  5 km), free-electron laser turret (heavy: 170 mm, 8 km, 4 MW, epic). The
+  craft lasers are the light (Yb-fibre) tier.
+- **Flares one at a time**: 0.25 s apart, from each launcher round the ship
+  in turn; Space puts out three; the policy up to three per missile inbound
+  (one missile used to empty every tube). Each trails fading sparks; they
+  glow brighter.
+- **Battle stations** shut the emergency doors between rooms of a kind
+  (stacked corridors no longer vent together) and spread general and
+  damage-control hands to every room with systems in it and nobody there
+  (back to their stations at stand-down).
+- **Damage control patches on its own** (C still sends a team at once).
+
+#### Tests changed (and why)
+- New `test_batch11_combat` (6): no T action; role defaults; weak spots;
+  breaking off at 45 % hull and for the trip home (600 m/s away: yes, 50:
+  no); the laser tiers; four flares at 0.0 / 0.27 / 0.52 / 0.77 s from four
+  places, with trails; the destroyer's corridors held apart at battle
+  stations, the crew spread and back.
+- `smoke_main`: a passive target turns hostile on seeing our missile
+  (mutation-checked); no T. `smoke_campaign`: hostility set directly.
+- `test_m11_countermeasures`: flares go out one at a time; the "too early"
+  case puts out one flare (a staggered burst can hand a missile from flare
+  to flare until it loses the ship).
+- `test_air_wing`: a fighter may break off for the propellant home.
+- `smoke_shipyard`: the Weapons palette has the two new lasers.
+
 ### Milestone 13, part 3 — retrieve contracts (2026-10-22)
 
 #### Added

@@ -551,8 +551,10 @@ func update_pressure() -> void:
 			if other >= 0 and not vacuum.has(other):
 				vacuum[other] = true
 				queue.append(other)
-		# One space: a breach vents both halves.
-		for other: int in grid.open_rooms.get(i, []):
+		# One space: a breach vents both halves — unless the crew are at
+		# battle stations, with the emergency doors between them shut
+		# (play-test batch 11).
+		for other: int in ([] if suited else grid.open_rooms.get(i, [])):
 			if not vacuum.has(other):
 				vacuum[other] = true
 				queue.append(other)
@@ -1100,8 +1102,7 @@ func decoys_left(e: EquipmentState) -> int:
 func ready_decoy_launchers() -> Array[EquipmentState]:
 	var out: Array[EquipmentState] = []
 	for e in equipment:
-		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER and e.working() and decoys_left(e) > 0 \
-				and float(launcher_cooldown.get(e.id, 0.0)) <= 0.0:
+		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER and e.working() and decoys_left(e) > 0:
 			out.append(e)
 	return out
 
@@ -1810,6 +1811,45 @@ func apply_condition(c: Dictionary) -> void:
 
 
 # --- Field repair --------------------------------------------------------------
+
+## Battle stations (play-test batch 11): general and damage-control hands
+## spread out — one to each room with systems in it and nobody there, among
+## the rooms the crew can reach — so whatever is hit has someone beside it
+## to patch it; at stand-down (`on` false) they go back to their stations.
+## Returns how many moved.
+func spread_crew(on: bool) -> int:
+	if crew == null:
+		return 0
+	var moved := 0
+	var reach := reachable_rooms()
+	if not on:
+		for m in crew.members:
+			if m.available() and m.station >= 0 and m.location != m.station and reach.has(m.station):
+				m.location = m.station
+				moved += 1
+		return moved
+	var manned := {}
+	for m in crew.members:
+		if m.fit() and m.location >= 0:
+			manned[m.location] = true
+	var need: Array[int] = []
+	for e in equipment:
+		if e.def.is_external() or e.destroyed():
+			continue
+		var r: int = grid.room_at.get(blueprint.equipment[e.index].cell, -1)
+		if r >= 0 and not manned.has(r) and not need.has(r) and reach.has(r):
+			need.append(r)
+	for m in crew.members:
+		if need.is_empty():
+			break
+		if not m.available() or m.location < 0 or not reach.has(m.location):
+			continue
+		if m.role != CrewRoster.Role.GENERAL and m.role != CrewRoster.Role.DAMAGE_CONTROL:
+			continue
+		m.location = need.pop_front()
+		moved += 1
+	return moved
+
 
 ## Crew in a damaged room fix it first (play-test batch 10): with a working
 ## workshop aboard, every fit crew member not otherwise busy patches the

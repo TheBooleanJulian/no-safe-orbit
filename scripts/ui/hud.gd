@@ -1077,7 +1077,7 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 		])
 		return
 	var hostile := "%s HOSTILE" % CyberTheme.GLYPH_CRITICAL if target_hostile else "%s passive" % CyberTheme.GLYPH_OFFLINE
-	_target_heading.text = "TARGET · %s   %s [T]" % [target.display_name, hostile]
+	_target_heading.text = "TARGET · %s   %s" % [target.display_name, hostile]
 	var measured := track == null or track.in_contact
 	var quality := "MEAS" if track == null else track.quality(t)
 	var est := "" if measured else "~"

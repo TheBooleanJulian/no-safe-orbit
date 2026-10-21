@@ -518,6 +518,18 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 11 — part 1: combat rules, craft, lasers, flares, battle stations ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| No T toggle; hostile when fired on or a missile lock is seen (not for craft flying about) | `test_batch11_combat`, `smoke_main` (mutation-checked) | passive → hostile within 3 frames of our missile |
+| Craft default to their role's order | `test_batch11_combat` | repair/salvage Escort, recon/EW Recon, interceptors Intercept, fighters Strike |
+| Craft return with a safety margin; more survivable | `test_batch11_combat`, `test_air_wing` | home at 50 % hull (balanced); propellant for 1.5 × the trip back; fighters 80 hp |
+| Three laser tiers, scientifically named; craft carry the light tier | `test_batch11_combat` | Yb-fibre 35 mm / Nd:YAG 80 mm / free-electron 170 mm |
+| Fighters target weak spots | `test_batch11_combat` | aim at the most damaged external system |
+| Flares one by one, 0.25 s apart, round the ship; trails; brighter | `test_batch11_combat`, `test_m11_countermeasures` | 4 flares at 0.0/0.27/0.52/0.77 s from 4 places |
+| Close hatches at battle stations; crew spread out; automatic patching | `test_batch11_combat`, `smoke_encounter` | stacked corridors held apart; 2 empty rooms manned |
+
 ### Play-test batch 10 — part 3: more hulls, super-heavies ✅ (2026-10-22)
 
 | Requirement | Test | Measured |

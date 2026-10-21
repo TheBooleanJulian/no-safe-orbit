@@ -36,11 +36,19 @@ enum Risk { CONSERVATIVE, BALANCED, AGGRESSIVE }
 
 const DIRECTIVE_NAMES := ["Intercept", "Strike", "Recon", "Escort", "Return"]
 const RISK_NAMES := ["Conservative", "Balanced", "Aggressive"]
-## Strike aim points: hull centre, or a subsystem kind.
-const PRIORITY_NAMES := ["Hull", "Guns", "Engines", "Reactor"]
-const PRIORITY_KINDS := [-1, EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.MAIN_ENGINE, EquipmentDefinition.Kind.REACTOR]
-## [hull, propellant, ammunition] fractions below which a craft disengages.
-const DISENGAGE := [[0.6, 0.4, 0.3], [0.35, 0.25, 0.1], [0.15, 0.1, 0.0]]
+## Strike aim points: hull centre, a subsystem kind, or (play-test batch 11,
+## the fighters' default) the weak spot — the target's most damaged system
+## still standing outside its hull, where no plate covers it.
+const PRIORITY_NAMES := ["Hull", "Guns", "Engines", "Reactor", "Weak spot"]
+const PRIORITY_KINDS := [-1, EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.MAIN_ENGINE, EquipmentDefinition.Kind.REACTOR, -2]
+const WEAK_SPOT := 4
+## [hull, propellant, ammunition] fractions below which a craft disengages
+## (play-test batch 11: earlier on the hull — too many pilots were lost).
+const DISENGAGE := [[0.7, 0.4, 0.3], [0.5, 0.25, 0.1], [0.3, 0.1, 0.0]]
+## A craft heads home while it still has this much more propellant than the
+## trip back takes (its speed off the carrier, then out and back in at the
+## closing speed cap), so it never strands itself.
+const HOME_PROPELLANT_MARGIN := 1.5
 
 const STRIKE_RANGE_M := 600.0
 const INTERCEPT_RANGE_M := 300.0
@@ -102,10 +110,15 @@ static var _avoid := Vector3.ZERO
 
 
 ## Why a craft should break off ("" = it can carry on).
-static func disengage_reason(craft: ShipState, risk: Risk) -> String:
+## `home_dv_mps`: Δv the trip back to the carrier takes (0: not checked).
+static func disengage_reason(craft: ShipState, risk: Risk, home_dv_mps: float = 0.0) -> String:
 	var limits: Array = DISENGAGE[risk]
 	if craft.hull_fraction() < limits[0]:
 		return "hull %d %%" % roundi(craft.hull_fraction() * 100.0)
+	if home_dv_mps > 0.0 and not craft.config.unlimited_propellant and craft.config.main_isp_s > 0.0:
+		var need := craft.mass_kg() * (1.0 - exp(-home_dv_mps * HOME_PROPELLANT_MARGIN / (craft.config.main_isp_s * ShipDynamics.G0)))
+		if craft.propellant_kg < need:
+			return "propellant for the trip home"
 	if not craft.config.unlimited_propellant and craft.config.propellant_capacity_kg > 0.0 \
 			and craft.propellant_kg / craft.config.propellant_capacity_kg < limits[1]:
 		return "propellant low"
@@ -171,12 +184,32 @@ static func point_axis(ship: ShipState, axis_body: Vector3, dir_world: Vector3, 
 ## works, else the hull centre.
 static func aim_point(target: ShipState, priority: int) -> Vector3:
 	var body := target.config.hit_box_center
-	if target.systems != null and priority > 0:
+	if target.systems != null and priority == WEAK_SPOT:
+		var best := INF
+		for e in target.systems.equipment:
+			if e.def.is_external() and not e.destroyed() and e.hp / maxf(e.max_hp, 1e-6) < best:
+				best = e.hp / maxf(e.max_hp, 1e-6)
+				body = e.body_position
+	elif target.systems != null and priority > 0:
 		for e in target.systems.equipment:
 			if e.def.kind == PRIORITY_KINDS[priority] and not e.destroyed():
 				body = e.body_position
 				break
 	return target.position + target.orientation * body
+
+
+## What a craft does unless told otherwise (play-test batch 11): repair and
+## salvage drones stay by the carrier, recon and EW drones watch, the
+## interceptors screen, fighters and bombers strike.
+static func default_directive(cfg: ShipConfig) -> int:
+	match cfg.craft_role:
+		&"repair", &"salvage":
+			return Directive.ESCORT
+		&"recon", &"ew":
+			return Directive.RECON
+		&"interceptor":
+			return Directive.INTERCEPT
+	return Directive.RECON if cfg.cannon == null else Directive.STRIKE
 
 
 ## Attack run on `target`: hold a standoff range, nose on the lead point,
