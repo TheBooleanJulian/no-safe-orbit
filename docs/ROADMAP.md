@@ -607,7 +607,7 @@ fighters."
 | Many fighters, thousands of rounds | `tools/profile_frames.gd` (`--carrier`, `--carriers`; manual, needs a GPU) | 3-ship fight 77 → 139 fps; own Carrier vs 3 frigates ~34 → 50 fps; 4 carriers 7 → 20 fps |
 | Simulation still correct | full suite (orbits, rounds, PD, craft) | 374/374 |
 
-### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts
+### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts ✅ (2026-10-22)
 
 Done early (play-test batch 3): `Location` resource, Earth and Moon with
 per-body config and NASA textures, the shipyard map, known locations in the
@@ -636,8 +636,15 @@ Part 2 ✅ (2026-10-20) — Mars, brokers, Sun-centred positions:
 | Jumps pay the real distance | `test_m13_mars`, `test_m13_jumps` | Earth→Mars 229 Mkm: 64.6 t; Earth→Moon 400,985 km: 33.9 t |
 | Local traffic and shelves | `test_m13_mars` | destroyers among frigates, threat +2; 5 items ≤ epic ×1.5 |
 
-Not done: delivery and retrieve contracts (the board has bounty, capture,
-escort, defend and salvage).
+Delivery done in play-test batch 9 (cargo contracts). Part 3 ✅ (2026-10-22)
+— retrieve contracts:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Retrieve contracts on the board | `test_m13_retrieve` (mutation-checked on the station) | 21 of 160 offers over 40 boards; guarded by 1–2 ships |
+| Recover in flight, bring it back | `smoke_campaign`, `test_m13_retrieve` | pod 6.0 km out, marked; G refuses from there, stows it alongside; paid on docking (+400 cr); lost with the ship |
+
+Milestone 13 ✅.
 
 `Location` resource (body, start orbit, shipyard stock and prices,
 encounter table, broker). Per-body config (μ, radius, entry interface:
@@ -648,7 +655,7 @@ contract board (bounty, escort, delivery, defend, retrieve); the four-goal
 chain becomes the tutorial thread. Sun-centred locations need `Vec3d`
 precision, proven by a test.
 
-### Milestone 14 — orbital artifacts and derelicts
+### Milestone 14 — orbital artifacts and derelicts ✅ (2026-10-20)
 
 Part 1 ✅ (2026-10-20) — real artifacts:
 

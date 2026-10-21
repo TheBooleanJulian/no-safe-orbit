@@ -4,6 +4,25 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 13, part 3 — retrieve contracts (2026-10-22)
+
+#### Added
+- **Retrieve contracts** from the salvage boss: a pod (flight recorder,
+  survey capsule, data core…) lost at a charted station, guarded by one or
+  two ships. Accepting sets the course and the fight; in flight the pod's
+  beacon is marked 6 km out; **G** alongside it (within the beacon's reach —
+  8 km with a salvage drone — and 5 m/s, with 6 m³ free in the hold) stows
+  it; it pays once you dock at the station that offered the work. Abandoned
+  or lost with the ship, it is gone. Milestone 13 is complete.
+
+#### Tests changed (and why)
+- New `test_m13_retrieve` (2): offers (21 of 160 over 40 boards, back to
+  the offering station, guarded), accepting (course and guards, nothing
+  loaded), delivery only at that station with the pod aboard (mutation-
+  checked), lost with the ship.
+- `smoke_campaign`: a retrieve sortie — the pod marked 6.0 km out, G
+  refusing from there and stowing it alongside, paid on docking.
+
 ### Play-test batch 10, part 3 — more hulls at the dealer, super-heavies (2026-10-22)
 
 #### Added

@@ -303,6 +303,33 @@ func _run() -> void:
 		await _frames(3)
 		_check(current_scene is Shipyard and profile.credits == 5000 - fee2 - _wages_paid(profile) and fee2 < hazard_fee,
 			"the second calls it: home for %d cr, no hazard pay out of a fight (left %d)" % [fee2, profile.credits])
+	# Milestone 13: a retrieve contract — the pod in flight, G stows it, paid at the dock.
+	var yard3 := current_scene as Shipyard
+	if yard3 != null:
+		yard3.debrief.hide_debrief()
+		profile.active_contract = {}
+		var offer := ContractBoard._retrieve_offer(profile, RandomNumberGenerator.new(), [profile.location], 9)
+		profile.board = [offer]
+		_check(ContractBoard.accept(profile, str(offer.id)) == "", "a retrieve contract accepted")
+		_check(yard3.launch(), "launched for the pod")
+		await _frames(4)
+		var main3 := current_scene as Main
+		var pod := main3.world.get_ship(Main.POD_ID) if main3 != null and main3.world.has_ship(Main.POD_ID) else null
+		_check(pod != null and main3.hud.derelict_ids.has(Main.POD_ID), "the pod is out there, marked")
+		if pod != null:
+			var me3 := main3.world.get_ship(Main.PLAYER_ID)
+			var far := main3.recover_pod(me3)
+			_check(far.contains("close to"), "from %.1f km, G says to close (%s)" % [pod.position.distance_to(me3.position) / 1000.0, far])
+			pod.position = me3.position + Vector3(0, 0, -300)
+			pod.velocity = me3.velocity
+			main3._on_salvage_pressed()
+			_check(not main3.world.has_ship(Main.POD_ID) and profile.vessel.cargo.has("freight"), "G alongside: stowed in the hold")
+			var credits3 := profile.credits
+			main3.open_shipyard()
+			await _frames(4)
+			_check(profile.active_contract.is_empty() and not profile.vessel.cargo.has("freight")
+				and profile.credits == credits3 + int(offer.credits) - _wages_paid(profile),
+				"docked at the station that wanted it: paid %d cr" % int(offer.credits))
 	_finish()
 
 
