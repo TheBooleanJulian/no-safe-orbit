@@ -835,11 +835,40 @@ func _refresh_stats() -> void:
 		"TURN RATE  P %.0f  Y %.0f  R %.0f °/s" % [rad_to_deg(cfg.assist_max_rate_rad_s.x), rad_to_deg(cfg.assist_max_rate_rad_s.y), rad_to_deg(cfg.assist_max_rate_rad_s.z)],
 		"POWER      %.0f / %.0f kW" % [s.power_draw_kw, s.power_generation_kw],
 		"HEAT       %.0f / %.0f kW rejected" % [s.heat_generation_kw, s.heat_rejection_kw],
-		"CREW       %d berths" % s.crew_capacity,
+		"CREW       %d berths · standard %s" % [s.crew_capacity, _complement_text(CrewRoster.complement_for(editor.blueprint, editor.grid, s))],
+		_defence_text(PdCoverage.of(editor.grid)),
+		_craft_text(),
 		"MAGAZINE   %.1f t · %d rounds" % [s.magazine_kg / 1000.0, s.rounds_capacity],
 		"CARGO      %.0f m³" % s.cargo_m3,
 		"HULL       %.0f × %.0f × %.0f m" % [s.hull_bounds_m.size.x, s.hull_bounds_m.size.y, s.hull_bounds_m.size.z],
 	])
+
+
+## "CMD 2 · ENG 2 · …" (the specialists; the rest are general hands).
+static func _complement_text(want: Array[int]) -> String:
+	var parts := PackedStringArray()
+	for r in CrewRoster.Role.GENERAL:
+		parts.append("%s %d" % [CrewRoster.ROLE_SHORT[r], want[r]])
+	return " ".join(parts)
+
+
+## Point defence against what the hull wants (Milestone 15).
+static func _defence_text(pd: Dictionary) -> String:
+	return "DEFENCE    PD %d / %d for this hull · covers %d %% of approaches" % [pd.mounts, pd.recommended, roundi(float(pd.coverage) * 100.0)]
+
+
+## Craft aboard: hangar bays inside, racks outside.
+func _craft_text() -> String:
+	var bays := 0
+	var racks := 0
+	for i in editor.blueprint.equipment.size():
+		var def := editor.grid.equipment_def(i)
+		if def != null and def.kind == EquipmentDefinition.Kind.CRAFT_MOUNT:
+			if def.is_external():
+				racks += 1
+			else:
+				bays += 1
+	return "CRAFT      %d (%d in hangar bays, %d on racks)" % [bays + racks, bays, racks]
 
 
 func _refresh_issues() -> void:
@@ -1532,12 +1561,8 @@ func _refresh_station_tabs() -> void:
 	var by_role := {}
 	for i in v.crew.size():
 		(by_role.get_or_add(clampi(int(v.crew[i].role), 0, CrewRoster.ROLE_NAMES.size() - 1), []) as Array).append(i)
-	var guns := 0
-	for e in v.blueprint.equipment:
-		var gdef: EquipmentDefinition = catalog.equipment.get(e.def_id)
-		if gdef != null and gdef.kind == EquipmentDefinition.Kind.CANNON:
-			guns += 1
-	var want := CrewRoster.suggested(guns)
+	var vgrid := ShipGrid.build(v.blueprint, catalog)
+	var want := CrewRoster.complement_for(v.blueprint, vgrid, ShipStats.compute(v.blueprint, vgrid))
 	# The roster board (play-test batch 6): a card per department — who
 	# serves there, against the standard complement (amber when short).
 	var board := HFlowContainer.new()

@@ -686,10 +686,14 @@ static func power_pips_text(sys: ShipSystems) -> String:
 
 
 func _repair_text(sys: ShipSystems) -> String:
+	var why := sys.field_repair_block_reason()
 	if sys.repair_task != null:
 		var t := sys.repair_task
-		return "patching %s  %d%%  (%.0f s)" % [t.equipment_id, roundi(t.progress() * 100.0), t.remaining_s]
-	var why := sys.field_repair_block_reason()
+		var more := sys.repair_tasks.size() - 1
+		var line := "patching %s  %d%%  (%.0f s)%s" % [t.equipment_id, roundi(t.progress() * 100.0), t.remaining_s, "  +%d more" % more if more > 0 else ""]
+		if why == "":
+			line += "  ·  [C] another team on %s" % sys.field_repair_target().id
+		return line
 	if why == "":
 		var e := sys.field_repair_target()
 		return "[C] patch %s %s (%d%%)" % [e.def.display_name, e.id, roundi(100.0 * e.hp / e.max_hp)]

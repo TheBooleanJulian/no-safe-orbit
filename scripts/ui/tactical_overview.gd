@@ -398,8 +398,9 @@ func _equipment_text(sys: ShipSystems, e: ShipSystems.EquipmentState) -> String:
 		"Condition %d%% (%.0f / %.0f hp) · %s%s" % [roundi(100.0 * e.hp / e.max_hp), e.hp, e.max_hp, "powered" if e.powered else "UNPOWERED", power],
 		"Location: %s" % where,
 	])
-	if sys.repair_task != null and sys.repair_task.equipment_id == e.id:
-		lines.append(CyberTheme.tint("Being patched: %d%% (%.0f s left)" % [roundi(sys.repair_task.progress() * 100.0), sys.repair_task.remaining_s], CyberTheme.AMBER))
+	for task in sys.repair_tasks:
+		if task.equipment_id == e.id:
+			lines.append(CyberTheme.tint("Being patched: %d%% (%.0f s left)" % [roundi(task.progress() * 100.0), task.remaining_s], CyberTheme.AMBER))
 	return "\n".join(lines)
 
 

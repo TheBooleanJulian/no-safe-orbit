@@ -751,6 +751,14 @@ rack. They fly with the same physics as every ship and can be shot down.
 
 ## Crew and boarding
 
+**Crew size follows the ship**: the standard complement grows with the hull
+— a bridge watch per 200 modules beyond two, an engineer per reactor and
+per four engines, a gun crew per two guns or launchers, damage control per
+40 modules, a medic per 40 berths, security per 12 berths (a frigate's is
+2 / 2 / 2 / 1 / 4 / 1, a destroyer's 46 specialists). Two damage-control crew
+make a **team**, and every team patches a system at the same time ([C] sends
+the next free one); every medic treats a patient of their own.
+
 Every berth (3 per crew-quarters cell) holds one named crew member with a
 role: command (bridge), engineering, damage control, weapons (magazine),
 security, medical and general crew. They are not drawn; moving between
