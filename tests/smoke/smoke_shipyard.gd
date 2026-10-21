@@ -92,7 +92,7 @@ func _run() -> void:
 	_check(yard.issue_text.get_parsed_text().contains("No issues") and not yard.launch_button.disabled, "validation panel reads clean; launch enabled")
 	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   1.2 t · 1020 rounds · 600 PD rounds"), "stats panel shows mass and magazine (point defence drawing from it)")
 	await process_frame
-	_check(yard._crew_tab.get_child_count() > 2 and yard._vendor_tab.get_child_count() > 1 and yard._tech_tab.get_child_count() > 2,
+	_check(yard._crew_tab.get_child_count() > 2 and yard._vendor_tab.get_child_count() > 1 and yard._tech_tab.find_child("TechGraph", true, false) != null,
 		"the CREW, QUARTERMASTER and UPGRADES tabs are filled")
 
 	# Searchable, categorised palette.

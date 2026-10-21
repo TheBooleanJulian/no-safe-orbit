@@ -61,6 +61,10 @@ var service_labels: Dictionary = {}  # repair / rearm / refuel -> RichTextLabel
 var service_buttons: Dictionary = {}  # repair / rearm / refuel -> Button
 ## HANGAR.
 var scrap_button: Button
+## The station bank (play-test batch 9).
+var bank_label: RichTextLabel
+var bank_box: VBoxContainer
+var bank_amount: SpinBox
 var fleet_box: HFlowContainer
 ## Builder-only controls in the top bar (hidden outside REFIT).
 var _builder_bar: Array[Control] = []
@@ -109,6 +113,7 @@ func build() -> void:
 	_build_dealer()
 	_build_services()
 	_adopt_hangar_tabs()
+	_build_bank()
 
 
 # --- The directory ----------------------------------------------------------------
@@ -203,8 +208,8 @@ func directory_status() -> Dictionary:
 	var held := v.cargo_volume_m3(cat)
 	var affordable := 0
 	for n in TechTree.NODES:
-		var cost := TechTree.next_cost(p.tech_level(n.id))
-		if cost > 0 and cost <= p.credits:
+		var cost := TechTree.next_cost(p.tech_level(n.id), n.id)
+		if cost > 0 and cost <= p.credits and TechTree.block_reason(n.id, p.tech) == "":
 			affordable += 1
 	var here := Location.by_id(p.location)
 	return {
@@ -217,7 +222,8 @@ func directory_status() -> Dictionary:
 		"MISSIONS": ["on contract · %s" % p.active_contract.title, false] if not p.active_contract.is_empty() else ["%d offers posted" % p.board.size(), not p.board.is_empty()],
 		"CREW": ["%d / %d aboard · %d for hire" % [v.crew.size(), berths, p.hire_pool.size()], v.crew.size() < berths],
 		"DEALER": ["%d hulls for sale" % BlueprintIO.list_templates().size(), false],
-		"HANGAR": ["%d vessel%s · hold %.0f m³" % [p.vessels.size(), "" if p.vessels.size() == 1 else "s", held], held > 0.0],
+		"HANGAR": ["%d vessel%s%s" % [p.vessels.size(), "" if p.vessels.size() == 1 else "s",
+			" · owe %d cr" % p.debt() if p.debt() > 0 else (" · %d cr deposited" % p.bank_deposit if p.bank_deposit > 0 else "")], held > 0.0 or p.debt() > 0],
 		"UPGRADES": ["%d upgrade%s within reach" % [affordable, "" if affordable == 1 else "s"], affordable > 0],
 		"MAP": [("→ %s · %s" % [Location.by_id(p.launch_point()).display_name, JumpDrive.dv_text(p.jump_dv(p.launch_point()))])
 			if p.launch_point() != p.location else "%s · %d ship%s" % [here.display_name, p.encounter_size, "" if p.encounter_size == 1 else "s"], false],
@@ -725,6 +731,75 @@ func _armoury_text() -> String:
 
 # --- HANGAR -----------------------------------------------------------------------
 
+## The bank card: the deposit (deposit / withdraw an amount) and loans —
+## those on offer, those taken (repay).
+func _build_bank() -> void:
+	var c := card(_content("HANGAR"), "Station bank", CyberTheme.AMBER)
+	c.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_label = _rich()
+	c.add_child(bank_label)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	c.add_child(row)
+	bank_amount = SpinBox.new()
+	bank_amount.name = "BankAmount"
+	bank_amount.min_value = 100
+	bank_amount.max_value = 1_000_000
+	bank_amount.step = 100
+	bank_amount.value = 500
+	bank_amount.custom_minimum_size = Vector2(140, 0)
+	row.add_child(bank_amount)
+	for spec in [["Deposit", func() -> void: yard.bank_result(yard.profile.deposit(int(bank_amount.value)))],
+			["Withdraw", func() -> void: yard.bank_result(yard.profile.withdraw(int(bank_amount.value)))]]:
+		var b := Button.new()
+		b.text = spec[0]
+		CyberTheme.style_button(b, CyberTheme.AMBER)
+		b.pressed.connect(spec[1])
+		row.add_child(b)
+	bank_box = VBoxContainer.new()
+	bank_box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	c.add_child(bank_box)
+
+
+func _refresh_bank() -> void:
+	var p := yard.profile
+	bank_label.text = "DEPOSIT [color=#%s]%d cr[/color] · earns %d %% a sortie, compounding · credits on hand %d · owed %d" % [
+		CyberTheme.AMBER.to_html(false), p.bank_deposit, roundi(PlayerProfile.DEPOSIT_RATE * 100.0), p.credits, p.debt()]
+	for child in bank_box.get_children():
+		child.queue_free()
+	for o: Dictionary in PlayerProfile.LOAN_OFFERS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+		var text := _rich()
+		var l := p.loan(str(o.id))
+		var id: String = o.id
+		if l.is_empty():
+			text.text = "[b]%s[/b] · %d cr at %d %% a sortie over %d sorties (instalments taken on docking)" % [o.name, o.amount, roundi(float(o.rate) * 100.0), o.term]
+			row.add_child(text)
+			var take := Button.new()
+			take.text = "Take · +%d cr" % o.amount
+			CyberTheme.style_button(take, CyberTheme.AMBER)
+			take.pressed.connect(func() -> void: yard.bank_result(p.take_loan(id)))
+			row.add_child(take)
+		else:
+			text.text = "[b]%s[/b] · [color=#%s]%d cr owed[/color] · %d sorties left · next instalment ~%d cr" % [o.name, CyberTheme.AMBER.to_html(false),
+				l.balance, l.sorties_left, PlayerProfile.instalment({"balance": ceili(float(l.balance) * (1.0 + float(l.rate))), "sorties_left": l.sorties_left})]
+			row.add_child(text)
+			var part := Button.new()
+			part.text = "Repay %d" % int(bank_amount.value)
+			CyberTheme.style_button(part)
+			part.pressed.connect(func() -> void: yard.bank_result(p.repay(id, int(bank_amount.value))))
+			row.add_child(part)
+			var all := Button.new()
+			all.text = "Repay all · %d cr" % l.balance
+			all.disabled = p.credits < int(l.balance)
+			CyberTheme.style_button(all, CyberTheme.AMBER)
+			all.pressed.connect(func() -> void: yard.bank_result(p.repay(id)))
+			row.add_child(all)
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bank_box.add_child(row)
+
+
 func _refresh_fleet() -> void:
 	for c in fleet_box.get_children():
 		c.queue_free()
@@ -767,5 +842,6 @@ func refresh() -> void:
 			_refresh_services()
 		"HANGAR":
 			_refresh_fleet()
+			_refresh_bank()
 			scrap_button.disabled = yard.profile.vessels.size() <= 1
 			scrap_button.tooltip_text = "Scrap it for %d spare parts (not your last ship)" % ServiceYard.scrap_value(yard.profile.vessel, yard.editor.catalog)
