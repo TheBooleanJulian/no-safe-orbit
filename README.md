@@ -1029,12 +1029,13 @@ needed between them.
 
 | Action | How |
 |---|---|
-| Pick a part | Search box (/) and category: Hull, Armour, Interior, Propulsion, Power & thermal, Weapons, Sensors, Utility, Logistics |
+| Pick a part | Search box (/) and category: Hull, Armour, Interior, Propulsion, Power & thermal, Weapons, Sensors, Utility, Logistics. Each part's name is in its own colour — the colour its cells are drawn in on the deck — and families share one (lasers cyan, kinetic guns orange, kinetic fighters gold, EW magenta, RCS white, magazines red); a shape tells them apart (a gun's triangle, a laser's star, a fighter's chevron, a drone's diamond, a missile's arrow…), in the palette icon (its rarity's colour) and on the deck. Hull pieces: pressurised blocks 1×1, 2×2 and 3×3, slopes 1×1, 1×2 and 3×3, trusses 1×1, 1×2 and 3×3 |
 | Read a part | Its card: mass, power and heat, durability, cost, and what it does (gun rate of fire and penetration, thrust and burn, output…) |
 | Place | Click on the deck grid (rooms, armour, conduit: drag a rectangle). The ghost turns red and the hint bar names the problem before you click. |
+| Hangars | A craft bay inside the hull needs a way out: its cells or its room's must have a wall, floor or roof on the outside (not a slope). That is its door, which slides open as craft leave and come back |
 | External equipment face | Near a cell edge: that side; the middle: the top or the underside, whichever is open — when both are, **Mount on: TOP / UNDERSIDE [V]** decides (Shift: the other) |
 | Rotate a module | R or ⟳ Rotate (while placing, or with a module selected); R also turns a radiator across the ship |
-| Main view | TOP-DOWN ⇄ ISOMETRIC: the isometric view (from the front-left) cuts away the decks above, shows rooms and systems, turns with ⟲ ⟳ and edits like the deck editor |
+| Main view | TOP-DOWN ⇄ cycles the deck plan, **TOP-DOWN 3D** (the parts as built, straight down, fore to the right) and **ISOMETRIC** (from the front-left; ⟲ ⟳ turn it). The 3D views cut away the decks above, show rooms and systems and edit like the deck editor. A fin radiator's marker stands out from its face, as far as the fin does |
 | Zoom / pan | Mouse wheel / middle-drag on the deck editor |
 | Centre of mass | ◉ CoM [C]: a marker in the deck, side and front views and a sphere in 3D |
 | New ship | HANGAR → New ship: design on an empty slip, COMMISSION builds it (every part + 250 cr) as another vessel; the picker switches vessels |

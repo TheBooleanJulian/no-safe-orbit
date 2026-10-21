@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="HullModuleDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/hull_module_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"wedge_3x3"
+display_name = "Sloped hull 3×3 (wedge)"
+size_cells = Vector3i(3, 1, 3)
+structure_mass_kg = 6300.0
+interior = false
+armor_mm = 20.0
+shape = &"wedge"
+color = Color(0.5, 0.54, 0.6, 1)

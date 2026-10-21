@@ -18,5 +18,5 @@ heat_kw = 40.0
 heat_rejection_kw = 0.0
 thrust_n = 0.0
 cannon = ExtResource("2_gun")
-color = Color(1.0, 0.6, 0.4, 1)
+color = Color(1.0, 0.6, 0.3, 1)
 drop_weight = 10.0

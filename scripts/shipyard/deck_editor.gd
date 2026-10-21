@@ -37,6 +37,8 @@ var ghost_cells: Array[Vector3i] = []
 var ghost_ok: bool = true
 ## External-equipment ghost: the face being targeted.
 var ghost_face: StringName = &""
+## The ghost is a fin standing this many cells out (0: not a fin).
+var ghost_out := 0
 ## Middle of a cell open both ways picks the underside (shipyard [V]).
 var prefer_underside: bool = false
 var selection_cells: Array[Vector3i] = []
@@ -269,6 +271,8 @@ func _draw() -> void:
 		var er := _cells_rect(grid.equipment_cells(i)).grow(-_px * 0.18)
 		draw_rect(er, def.color.darkened(0.2))
 		draw_rect(er, def.color.lightened(0.4), false, 1.5)
+		# Its family's shape in the corner (play-test batch 11).
+		EquipmentIcons.draw(self, def, er.position + Vector2.ONE * _px * 0.28, _px * 0.2, Color(0, 0, 0, 0.7))
 		_label(font, er, def.display_name, Color.BLACK)
 
 	_draw_slopes()
@@ -301,7 +305,7 @@ func _draw() -> void:
 		if cell.y == deck:
 			draw_rect(cell_rect(cell).grow(-1), COLOR_GHOST_OK if ghost_ok else COLOR_GHOST_BAD)
 	if ghost_face != &"" and not ghost.is_empty():
-		_draw_face_marker(ghost[0], ghost_face, COLOR_GHOST_OK if ghost_ok else COLOR_GHOST_BAD, 1.0)
+		_draw_face_marker(ghost[0], ghost_face, COLOR_GHOST_OK if ghost_ok else COLOR_GHOST_BAD, 1.0, ghost_out)
 
 	var hint_col := Color(0.82, 0.9, 1.0, 0.55)
 	draw_string(font, Vector2(8, 18), "DECK %d" % deck, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.82, 0.9, 1.0))
@@ -460,26 +464,39 @@ func _draw_external_equipment() -> void:
 		var e := bp.equipment[i]
 		if def == null or not def.is_external():
 			continue
+		var out := def.length_cells if ShipGrid.is_fin(def, e.rotation) else 0
 		for cell in editor.grid.external_cells(i):
 			if cell.y == deck:
-				_draw_face_marker(cell, e.face, def.color, 1.0)
+				_draw_face_marker(cell, e.face, def.color, 1.0, out, def)
 
 
-## Edge faces: a bar just outside the edge. Dorsal: filled dot; ventral: ring.
-func _draw_face_marker(cell: Vector3i, face: StringName, color: Color, alpha: float) -> void:
+## Edge faces: a bar just outside the edge — or, for a fin standing `out`
+## cells off the hull, a bar out from it that long. Dorsal: the part's
+## shape filled; ventral: its outline (a dot / ring without one); a fin on
+## either is marked with how far it stands out.
+func _draw_face_marker(cell: Vector3i, face: StringName, color: Color, alpha: float, out: int = 0, def: EquipmentDefinition = null) -> void:
 	var c := Color(color, alpha)
 	var r := cell_rect(cell)
 	match face:
-		&"dorsal":
-			draw_circle(r.get_center(), _px * 0.2, c)
-		&"ventral":
-			draw_arc(r.get_center(), _px * 0.2, 0.0, TAU, 16, c, 2.5)
+		&"dorsal", &"ventral":
+			if def != null:
+				EquipmentIcons.draw(self, def, r.get_center(), _px * 0.26, c, face == &"dorsal")
+			elif face == &"dorsal":
+				draw_circle(r.get_center(), _px * 0.2, c)
+			else:
+				draw_arc(r.get_center(), _px * 0.2, 0.0, TAU, 16, c, 2.5)
+			if out > 0:
+				draw_string(get_theme_default_font(), r.position + Vector2(2, r.size.y - 3), "↕%d" % out, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, c)
 		_:
 			var seg := _edge(cell, face)
-			var outward: Vector2 = (seg[0] + seg[1]) * 0.5 - r.get_center()
-			var off: Vector2 = outward.normalized() * _px * 0.12
+			var outward: Vector2 = ((seg[0] + seg[1]) * 0.5 - r.get_center()).normalized()
+			var mid: Vector2 = (seg[0] + seg[1]) * 0.5
+			if out > 0:
+				# A fin: it stands out from the face, not along it.
+				draw_line(mid, mid + outward * _px * out, c, maxf(_px * 0.22, 3.0))
+				return
 			var along: Vector2 = (seg[1] - seg[0]) * 0.32
-			var mid: Vector2 = (seg[0] + seg[1]) * 0.5 + off
+			mid += outward * _px * 0.12
 			draw_line(mid - along, mid + along, c, maxf(_px * 0.22, 3.0))
 
 

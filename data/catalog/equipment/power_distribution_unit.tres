@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_def")
 id = &"power_distribution_unit"
-display_name = "Power distribution unit"
+display_name = "Power distro"
 kind = 9
 mount = 0
 footprint_cells = Vector2i(1, 1)

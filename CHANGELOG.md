@@ -4,6 +4,40 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 11, part 3 — the refit bay (2026-10-22)
+
+#### Added
+- **Hull pieces**: pressurised blocks 1×1 and 3×3, trusses 1×1 and 3×3, a
+  3×3 slope.
+- **A shape for each kind of part** (palette icon in its rarity's colour; on
+  the deck cells and the top/underside markers).
+- **TOP-DOWN 3D**: the parts as built, straight down, editable — the main
+  view cycles plan → top-down 3D → isometric.
+- **Hangar doors open** as craft leave and come back.
+
+#### Changed
+- **Palette text is the part's own colour** — the colour of its cells —
+  instead of its rarity's; families share a colour: lasers cyan (turrets,
+  laser fighters, laser drones), kinetic guns orange, kinetic fighters,
+  bombers and interceptors gold, EW magenta, sensors green, drones by job;
+  the dense magazine is the magazine's red; **RCS blocks are white**.
+- **Power distribution → Power distro**; the palette is wider with smaller
+  text, so long names fit.
+- **A hangar needs a way out**: an error if a craft bay's room has no wall,
+  floor or roof on the outside; its door (model and launch point) is that
+  face.
+- **Fin radiators** are drawn standing out from their face (the placement
+  ghost too), not along it.
+- **The berth's deck plate is see-through**: look under the ship.
+
+#### Tests changed (and why)
+- New `test_batch11_refit` (4): colours (the dense magazine's red, lasers
+  one cyan, RCS white, text = cell colour), five parts five shapes and an
+  icon; the new hull pieces joined and drawn; the frigate's bay opens at its
+  underside, walled in it is an error, its door open 2 s after a launch and
+  shut after 12; the top-down camera's axes.
+- `smoke_shipyard`: a fin's ghost stands 3 out; along the hull, 3 cells.
+
 ### Play-test batch 11, part 2 — the crew manifest (2026-10-22)
 
 #### Fixed

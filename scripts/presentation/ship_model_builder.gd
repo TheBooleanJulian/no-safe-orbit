@@ -25,6 +25,8 @@ class Model:
 	var engine_normals: Array[Vector3] = []
 	## Each engine's bell mouth radius (m): the plume is as wide.
 	var engine_widths: Array[float] = []
+	## Internal craft bays' doors: rack id -> {node, closed (transform), slide (m)}.
+	var hangar_doors: Dictionary = {}
 	## Armour plate meshes by plate key (views char and crumple worn ones).
 	var plates: Dictionary = {}
 	## Radar arrays that turn while their sensor mast works: {id, node}.
@@ -546,23 +548,25 @@ static func _add_lights(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_
 ## open face where its craft come and go.
 static func _hangar_door(model: Model, bp: ShipBlueprint, grid: ShipGrid, i: int, origin_m: Vector3, mats: Dictionary, tint: Color) -> void:
 	var e := bp.equipment[i]
-	var cells: Array = grid.equipment_cells(i)
-	for face: StringName in [&"ventral", &"port", &"starboard", &"dorsal", &"aft", &"fore"]:
-		for cell: Vector3i in cells:
-			if not grid.is_exterior_face(cell, face):
-				continue
-			var n := Vector3(ShipGrid.FACE_NORMALS[face])
-			var part := Node3D.new()
-			part.name = e.id
-			model.root.add_child(part)
-			model.parts[e.id] = part
-			var pos := ShipGrid.cell_center_m(cell) + n * ShipGrid.CELL_SIZE_M * 0.5 - origin_m
-			var b := _basis_y_along(n)
-			var frame := _box(part, Vector3(2.8, 0.1, 2.8), Vector3.ZERO, _mat(mats, Color(0.95, 0.75, 0.15) * tint))
-			frame.transform = Transform3D(b, pos + n * 0.05)
-			var door := _box(part, Vector3(2.4, 0.12, 2.4), Vector3.ZERO, _mat(mats, Color(0.06, 0.07, 0.08)))
-			door.transform = Transform3D(b, pos + n * 0.08)
-			return
+	# The door where its craft go out (ShipGrid.door_face: the same face
+	# ShipSystems.launch_door uses); it slides open while they come and go.
+	var found := ShipGrid.door_face(bp, grid, i)
+	if found.is_empty():
+		return
+	var cell: Vector3i = found[0]
+	var n := Vector3(ShipGrid.FACE_NORMALS[found[1]])
+	var part := Node3D.new()
+	part.name = e.id
+	model.root.add_child(part)
+	model.parts[e.id] = part
+	var pos := ShipGrid.cell_center_m(cell) + n * ShipGrid.CELL_SIZE_M * 0.5 - origin_m
+	var b := _basis_y_along(n)
+	var frame := _box(part, Vector3(2.8, 0.1, 2.8), Vector3.ZERO, _mat(mats, Color(0.95, 0.75, 0.15) * tint))
+	frame.transform = Transform3D(b, pos + n * 0.05)
+	var door := _box(part, Vector3(2.4, 0.12, 2.4), Vector3.ZERO, _mat(mats, Color(0.06, 0.07, 0.08)))
+	door.transform = Transform3D(b, pos + n * 0.1)
+	door.add_child(Node3D.new())  # not folded into the frame: it moves
+	model.hangar_doors[e.id] = {"node": door, "closed": door.transform, "slide": b.x * 2.5}
 
 
 ## Hazard-striped collar ring around a dark hatch, and a blinking beacon.

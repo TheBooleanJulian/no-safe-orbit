@@ -847,11 +847,12 @@ func _ghost_changed() -> void:
 func set_main_view(mode: String) -> void:
 	main_view = mode
 	if _view_toggle != null:
-		_view_toggle.text = "%s ⇄" % ("ISOMETRIC" if mode == "iso" else "TOP-DOWN")
+		_view_toggle.text = "%s ⇄" % {"iso": "ISOMETRIC", "plan": "TOP-DOWN 3D", "top": "TOP-DOWN"}.get(mode, "TOP-DOWN")
 	for b in _iso_turns:
 		b.visible = mode == "iso"
+	iso_view.plan = mode == "plan"
 	expand_view(_expanded_view)
-	if mode == "iso":
+	if mode == "iso" or mode == "plan":
 		iso_view.drag_rooms = deck_editor.drag_rooms
 		iso_view.deck = deck_editor.deck
 		iso_view.show_design(editor)
@@ -977,10 +978,18 @@ func _refresh_issues() -> void:
 
 # --- Hangar and service --------------------------------------------------------
 
+## A part's colour for palette text: its own (the cell's), lifted only if
+## it is nearly black.
+static func palette_color(c: Color) -> Color:
+	return c.lightened(0.25) if c.get_luminance() < 0.15 else c
+
+
 ## Searchable palette: a category picker, a search box and one list.
 func _build_palette() -> void:
 	palette.visible = false
 	var left := palette.get_parent()
+	# Wider, smaller text: long part names fit (play-test batch 11).
+	(left as Control).custom_minimum_size.x = maxf((left as Control).custom_minimum_size.x, 300.0)
 	var box := VBoxContainer.new()
 	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
@@ -996,6 +1005,7 @@ func _build_palette() -> void:
 	box.add_child(palette_category)
 	palette_list = ItemList.new()
 	palette_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	palette_list.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL + 1)
 	palette_list.item_selected.connect(func(i: int) -> void:
 		var m: Variant = palette_list.get_item_metadata(i)
 		if not m is Array:
@@ -1150,9 +1160,10 @@ func _fill_palette_list() -> void:
 			var place := palette_place(entry[0], def)
 			var text: String = def.display_name
 			var suffix := ""
-			var color := (def.color as Color).lightened(0.2)
+			# The part's own colour, as its cells are drawn (play-test batch 11);
+			# its rarity is the icon's colour and in the tooltip.
+			var color := palette_color(def.color)
 			if def.rarity != Rarity.Tier.COMMON:
-				color = Rarity.color_of(def.rarity)
 				if def is EquipmentDefinition:
 					suffix = "  ×%d" % profile.owned(id)
 				elif not profile.is_unlocked(def):
@@ -1199,10 +1210,14 @@ func _fill_palette_list() -> void:
 			palette_list.set_item_selectable(sh, false)
 			palette_list.set_item_custom_fg_color(sh, CyberTheme.TEXT_DIM)
 			last_section = r[1]
-		var i := palette_list.add_item("    " + str(r[3]))
+		var i := palette_list.add_item("  " + str(r[3]))
 		palette_list.set_item_metadata(i, r[4])
 		palette_list.set_item_custom_fg_color(i, r[5])
 		palette_list.set_item_tooltip(i, r[6])
+		if str(r[4][0]) == "equipment":
+			var edef: EquipmentDefinition = editor.catalog.equipment.get(r[4][1])
+			if edef != null:
+				palette_list.set_item_icon(i, EquipmentIcons.icon(edef, Rarity.color_of(edef.rarity)))
 
 
 ## Key figures above the detailed stats.
@@ -1252,9 +1267,9 @@ func _build_view_bar() -> void:
 	bar.add_child(cap)
 	_view_toggle = Button.new()
 	_view_toggle.text = "TOP-DOWN ⇄"
-	_view_toggle.tooltip_text = "Swap the main view between top-down and isometric (both edit the current deck)"
+	_view_toggle.tooltip_text = "Cycle the main view: top-down plan, top-down rendered (the parts as built), isometric — all edit the current deck"
 	CyberTheme.style_button(_view_toggle, CyberTheme.CYAN, true)
-	_view_toggle.pressed.connect(func() -> void: set_main_view("top" if main_view == "iso" else "iso"))
+	_view_toggle.pressed.connect(func() -> void: set_main_view({"top": "plan", "plan": "iso", "iso": "top"}.get(main_view, "top")))
 	bar.add_child(_view_toggle)
 	for turn in [[-1, "⟲"], [1, "⟳"]]:
 		var tb := Button.new()
@@ -1287,7 +1302,7 @@ func expand_view(which: String) -> void:
 	var views := side_view.get_parent() as Control
 	deck_editor.visible = which == "" and main_view == "top"
 	if iso_view != null:
-		iso_view.visible = which == "" and main_view == "iso"
+		iso_view.visible = which == "" and (main_view == "iso" or main_view == "plan")
 	views.size_flags_vertical = Control.SIZE_EXPAND_FILL if which != "" else Control.SIZE_FILL
 	side_view.visible = which in ["", "side"]
 	front_view.visible = which in ["", "front"]
@@ -1993,6 +2008,7 @@ func _on_hover(cell: Vector3i, face: StringName, shift: bool) -> void:
 func _update_ghost() -> void:
 	deck_editor.ghost_cells = []
 	deck_editor.ghost_face = &""
+	deck_editor.ghost_out = 0
 	var hint := ""
 	var cell := _hover_cell
 	if tool == Tool.PLACE and place_def != &"":
@@ -2032,6 +2048,7 @@ func _update_ghost() -> void:
 					for k in (1 if ShipGrid.is_fin(def, place_rotation) else maxi(def.length_cells, 1)):
 						deck_editor.ghost_cells.append(cell + step * k)
 					deck_editor.ghost_face = _hover_face
+					deck_editor.ghost_out = def.length_cells if ShipGrid.is_fin(def, place_rotation) else 0
 					hint = "%s — %s face (near an edge: that side; middle: %s — [V] switches, Shift: the other)" % [
 						def.display_name, _hover_face, "underside" if deck_editor.prefer_underside else "top"]
 				else:

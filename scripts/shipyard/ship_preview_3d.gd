@@ -19,6 +19,9 @@ const ISO_PITCH := -0.6154797
 const EDGE_ZONE := 0.28
 
 var isometric: bool = false
+## With `isometric`: straight down instead (play-test batch 11's rendered
+## top-down view), fore to the right and port at the top like the deck plan.
+var plan: bool = false
 ## Middle of a cell open both ways picks the underside (shipyard [V]).
 var prefer_underside: bool = false
 var editable: bool = false
@@ -145,7 +148,13 @@ func _build_berth(half: Vector3) -> void:
 	steel.roughness = 0.45
 	var floor_y := -half.y - 5.0
 	var reach := half.x + 14.0
-	_berth_box(Vector3(reach * 2.0 + 24.0, 0.6, half.z * 2.0 + 36.0), Vector3(0, floor_y, 0), steel)
+	# A see-through deck plate (play-test batch 11): look under the ship.
+	var glass := StandardMaterial3D.new()
+	glass.albedo_color = Color(0.12, 0.16, 0.2, 0.28)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass.metallic = 0.3
+	glass.roughness = 0.2
+	_berth_box(Vector3(reach * 2.0 + 24.0, 0.2, half.z * 2.0 + 36.0), Vector3(0, floor_y, 0), glass)
 	# Guide lines along the berth, a hazard bar across its head.
 	var guide := _glow(CyberTheme.CYAN * 0.5, 0.5)
 	for side: float in [-1.0, 1.0]:
@@ -331,6 +340,11 @@ func _update_camera() -> void:
 		return
 	if still and _viewport != null:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	if isometric and plan:
+		_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+		_camera.size = _extent * 1.1
+		_camera.transform = Transform3D(Basis(Vector3(0, 0, -1), Vector3(-1, 0, 0), Vector3(0, 1, 0)), Vector3(0, 400, 0))
+		return
 	if isometric:
 		_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 		_camera.size = _extent * 1.1
