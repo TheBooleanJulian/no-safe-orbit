@@ -51,7 +51,7 @@ const ACTIONS := [
 	[&"countermeasures", "Countermeasures: flares and decoys"],
 	[&"ack_alert", "Acknowledge the top non-critical alert"],
 	[&"tutorial", "Guided first sortie: start / skip"],
-	[&"release_mouse", "Release mouse"],
+	[&"release_mouse", "Settings menu (frees the mouse)"],
 	[&"toggle_controls", "Controls panel, credits"],
 	[&"toggle_fullscreen", "Fullscreen / window"],
 ]

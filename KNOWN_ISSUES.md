@@ -90,6 +90,8 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **"Banking cargo fully repairs the ship" was not reproduced** (play-test
   batch 11): banking leaves the damage and the repair jobs as they were
   (`smoke_campaign` checks it). Steps to reproduce are welcome.
+- **The settings menu has no gamepad default** (Esc; every pad button is
+  taken) — bind one under Controls.
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the
   old large sections from blocks, but a section of odd length (the old
   3-long engine section) doesn't tile and stays as it was.
@@ -177,6 +179,8 @@ rare part · Earth texture 5400 × 2700.
   through 11 → 9 km its drawn heights are still growing in, so near the
   highest summits the ground drawn can sit below the ground flown into.
 - **The station is reached by jump drive**, not flown to (decided 2026-10-20).
+- **The settings menu pauses a sortie** (2026-10-22): Esc stops the
+  simulation until the menu closes.
 - **Crew are named, with a role and a skill (0–2 stars)** — no morale or
   individual kit; the wounded recover with a medic aboard or at the yard;
   the dead leave their berths for new hires.

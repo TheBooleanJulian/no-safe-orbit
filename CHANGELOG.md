@@ -10,6 +10,35 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
 
 ## [Unreleased]
 
+### Settings menu (2026-10-22)
+
+#### Added
+- **Settings menu on Esc**, in flight (the sortie pauses) and at the
+  station: Display (fullscreen, UI scale), Graphics (V-Sync, frame-rate cap,
+  MSAA, 3D resolution), Audio (master, effects, ambience, alarms), Controls
+  (the key bindings), Save data (where everything is saved, last saved,
+  open the folder, **Back up now**), Stats, Changelog, About and **Dev
+  support** (a feedback and bug-report form), Resume and Quit to desktop.
+  Saved per user in `settings.cfg`.
+- The exported game includes `CHANGELOG.md` for the Changelog tab.
+
+#### Changed
+- **Esc opens the settings menu** (it still frees the mouse); in the refit
+  bay it first puts down the tool in hand, as before.
+- **Versions follow SemVer** (0.x.0 until 1.0): the changelog is split into
+  0.11.0–0.16.0, one per promotion to `main`; the game is 0.16.0.
+
+#### Tests changed (and why)
+- New `test_settings_menu` (2): settings saved, read back, clamped and
+  applied (UI ×1.25, MSAA 4×, 3D ×0.75, half volume −6 dB, zero muted),
+  reset; stats, save data, Back up now (two copies, the save untouched)
+  and the changelog as BBCode.
+- `smoke_encounter`: Esc opens the menu (8 tabs), the sortie pauses, the
+  CONTROLS and STATS tabs fill, Esc closes it and the sortie runs on.
+- `smoke_shipyard`: Esc drops the hatch tool, then opens the menu (the
+  changelog shows 0.16.0), then closes it.
+- `test_pass_a`: ducking is measured from the effects volume setting.
+
 ## [0.16.0] — 2026-10-22 — Play-test batch 11: combat rules, crew manifest, refit bay, flight and shipyard
 
 ### Play-test batch 11, part 4 — flight and shipyard (2026-10-22)

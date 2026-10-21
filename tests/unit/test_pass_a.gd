@@ -165,13 +165,13 @@ func test_every_class_has_a_sound_and_samples_fill_the_slots() -> void:
 		assert_true(AudioServer.get_bus_index(bus) >= 0, "bus %s exists" % bus)
 	audio.alarm(&"threat", DANGER)
 	var effects := AudioServer.get_bus_index(ShipAudio.BUS_EFFECTS)
-	assert_true(audio.ducking() and AudioServer.get_bus_volume_db(effects) <= ShipAudio.DUCK_DB + 0.01,
+	assert_true(audio.ducking() and AudioServer.get_bus_volume_db(effects) <= GameSettings.volume_db(ShipAudio.BUS_EFFECTS) + ShipAudio.DUCK_DB + 0.01,
 		"an alarm ducks the effects (%.1f dB)" % AudioServer.get_bus_volume_db(effects))
 	assert_true(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(ShipAudio.BUS_ALARMS)) == 0.0, "the alarm itself is not ducked")
 	assert_true(audio._pending.size() == 3, "a danger sounds three blips (%d)" % audio._pending.size())
 	for i in 200:
 		audio._process(0.02)
-	assert_true(not audio.ducking() and AudioServer.get_bus_volume_db(effects) == 0.0, "and the effects come back")
+	assert_true(not audio.ducking() and is_equal_approx(AudioServer.get_bus_volume_db(effects), GameSettings.volume_db(ShipAudio.BUS_EFFECTS)), "and the effects come back")
 	var total := 0
 	for f in DirAccess.get_files_at("res://data/audio"):
 		if f.ends_with(".ogg"):

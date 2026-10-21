@@ -210,7 +210,7 @@ func _apply_duck() -> void:
 	for bus in [BUS_EFFECTS, BUS_AMBIENCE]:
 		var i := AudioServer.get_bus_index(bus)
 		if i >= 0:
-			AudioServer.set_bus_volume_db(i, DUCK_DB * k)
+			AudioServer.set_bus_volume_db(i, GameSettings.volume_db(bus) + DUCK_DB * k)
 
 
 ## Effects, Alarms and Ambience buses (sending to Master), made if missing.

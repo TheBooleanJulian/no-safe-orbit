@@ -123,11 +123,14 @@ var _artifact_box: VBoxContainer
 var _hangar_tabs: TabContainer
 ## The station's sections (Milestone 12): the builder is REFIT, one of them.
 var sections: ShipyardSections
+## The settings menu (Esc).
+var settings: SettingsMenu
 
 
 func _ready() -> void:
 	InputBindings.apply_saved()
 	DisplaySettings.apply_saved()
+	GameSettings.apply(get_tree())
 	theme = CyberTheme.build_theme()
 	var catalog := ConstructionCatalog.default_catalog()
 	profile = Main.get_profile()
@@ -145,6 +148,7 @@ func _ready() -> void:
 	CyberTheme.style_button(launch_button, CyberTheme.CYAN, true)
 	launch_button.custom_minimum_size = Vector2(200, 34)
 	launch_button.clip_text = true
+	settings = SettingsMenu.attach(self, false)
 	debrief = DebriefPanel.new()
 	debrief.name = "Debrief"
 	add_child(debrief)
@@ -209,6 +213,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_fullscreen"):
 		DisplaySettings.toggle_fullscreen()
 		return
+	if settings.visible:
+		return
+	# Esc: drop the tool in hand (in the builder), else the settings menu.
+	if event.is_action_pressed("release_mouse"):
+		if sections != null and sections.current == "REFIT" and tool != Tool.SELECT:
+			set_tool(Tool.SELECT)
+		else:
+			settings.profile = profile
+			settings.open()
+		get_viewport().set_input_as_handled()
+		return
 	# Builder keys act in the builder only.
 	if sections != null and sections.current != "REFIT":
 		return
@@ -260,8 +275,6 @@ func _unhandled_input(event: InputEvent) -> void:
 					editor.move_group(group_ids, d[key])
 				else:
 					editor.move(selected_id, d[key])
-		KEY_ESCAPE:
-			set_tool(Tool.SELECT)
 		_:
 			return
 	get_viewport().set_input_as_handled()
