@@ -567,6 +567,8 @@ bounding-box hit test.
   saved as JSON; `CombatLog.insights()` turns it into lessons.
 - **Enemies** (`EnemyFactory`): the template with parts swapped for rarer
   ones, chances rising per mission, deterministic per mission, validated.
+  `_fit_new_kit` (after Milestone 15) adds lasers and the newer craft with
+  an RNG of its own, so the older rolls — and older designs — are unchanged.
 - **UI** (`CyberTheme`, `ShipSchematic`, `TacticalOverview`, `DockingCam`,
   hit-cam boarding mode, `DebriefPanel`): cyan/magenta panels; the docking
   cam renders the main World3D from a second camera at the collar.

@@ -16,6 +16,13 @@ extends RefCounted
 ##              m ≥ 6 (p = 0.5) — each on a free exterior face, dropped again
 ##              if it makes the design invalid
 ## Mission 1 is always the plain template.
+## The newer kit (a pass of its own, with its own rolls, so the swaps above
+## come out as they always have):
+##   laser      a gun turned pulse laser from m ≥ LASER_FROM_MISSION
+##              (p = 0.08·(m − 4), ≤ 0.35), if the reactors carry its draw
+##   drones     the drone rack's craft a laser drone from m ≥ 6 (p = 0.3),
+##              else a repair drone from m ≥ 4 (p = 0.25)
+##   fighters   the fighter bay's Lancer laser fighters from m ≥ 8 (p = 0.3)
 
 const MISSILE_RACK_FROM_MISSION := 4
 const EMP_LAUNCHER_FROM_MISSION := 6
@@ -23,6 +30,11 @@ const EMP_LAUNCHER_FROM_MISSION := 6
 ## ships from mission 6.
 const FLARES_FROM_MISSION := 3
 const JAMMER_FROM_MISSION := 6
+## The newer kit (after Milestone 15).
+const LASER_FROM_MISSION := 5
+const LASER_DRONE_FROM_MISSION := 6
+const REPAIR_DRONE_FROM_MISSION := 4
+const LASER_FIGHTER_FROM_MISSION := 8
 
 const CLASS_NAMES := ["Kestrel", "Harrier", "Shrike", "Goshawk", "Peregrine", "Merlin", "Hobby", "Saker"]
 
@@ -107,6 +119,7 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 		_fit_launcher(bp, catalog, &"flare_launcher", rng)
 	if mission >= JAMMER_FROM_MISSION and rng.randf() < 0.4:
 		_fit_launcher(bp, catalog, &"jammer", rng)
+	_fit_new_kit(bp, catalog, mission, variant)
 	if mission >= 2:
 		var grid := ShipGrid.build(bp, catalog)
 		var cells: Array = grid.module_at.keys()
@@ -121,6 +134,35 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 		plain.name = bp.name
 		return plain
 	return bp
+
+
+## The newer kit: lasers and the newer craft (see the top). Its own RNG, so
+## the older swaps — and every design fitted before — stay as they were. A
+## laser the reactors can't power is put back.
+static func _fit_new_kit(bp: ShipBlueprint, catalog: ConstructionCatalog, mission: int, variant: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 15_485_863 * mission + 31 + 999_983 * variant
+	var m := float(mission)
+	for e in bp.equipment:
+		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
+		if def == null:
+			continue
+		match def.kind:
+			EquipmentDefinition.Kind.CANNON:
+				if mission >= LASER_FROM_MISSION and rng.randf() < minf(0.08 * (m - 4.0), 0.35):
+					var was := e.def_id
+					e.def_id = &"laser_turret"
+					var stats := ShipStats.compute(bp, ShipGrid.build(bp, catalog))
+					if stats.power_draw_kw > stats.power_generation_kw:
+						e.def_id = was
+			EquipmentDefinition.Kind.CRAFT_MOUNT:
+				if e.def_id in [&"drone_rack", &"interceptor_rack"]:
+					if mission >= LASER_DRONE_FROM_MISSION and rng.randf() < 0.3:
+						e.def_id = &"laser_drone_rack"
+					elif mission >= REPAIR_DRONE_FROM_MISSION and e.def_id == &"drone_rack" and rng.randf() < 0.25:
+						e.def_id = &"repair_drone_rack"
+				elif e.def_id == &"fighter_bay" and mission >= LASER_FIGHTER_FROM_MISSION and rng.randf() < 0.3:
+					e.def_id = &"laser_fighter_bay"
 
 
 ## Mount a launcher on a free exterior face it allows (top faces first, then
