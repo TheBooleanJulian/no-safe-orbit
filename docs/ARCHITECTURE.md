@@ -633,6 +633,13 @@ bounding-box hit test.
   beacon / takeover rates, `PlayerProfile.open_crates` (chance per crate),
   cargo volumes (`ShipInstance.cargo_volume_m3`, `vent_excess`), hangar of
   vessels (`vessels`, `active_vessel`, `commission`).
+- **Rescue tow (play-test batch 8)**: `Main.rescue_tow(player)` charges
+  `rescue_tow_fee` (`JumpDrive.tow_credits`, × `TOW_HAZARD` while
+  `in_combat()`; all the credits if fewer), vents excess cargo, logs and
+  opens the shipyard. `_update_jump` counts `_tow_hold` up to `TOW_HOLD_S`
+  while blocked under fire (`hud.jump_state` `tow_left_s`, `tow_fee`);
+  the overview's header button emits `&"tow"` → `request_rescue_tow` (two
+  presses within `TOW_CONFIRM_S`).
 - **Jump drive** (`Main._update_jump`): hold `open_shipyard` 5 s; blocked by
   `in_combat()`, waits on `jump_waiting()`.
 - **Isometric view** (`ShipPreview3D`, `isometric` + `editable`): picks on the

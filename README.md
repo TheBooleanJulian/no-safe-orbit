@@ -513,7 +513,11 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
    the main tank first, then the drive's own reserve); with too little, a
    **rescue tow** brings you in for credits instead. Backspace while flying
    counts as a jump home too. It won't charge while a hostile has fired on you in the
-   last 10 s (one that hasn't opened fire doesn't stop it). Craft still out
+   last 10 s (one that hasn't opened fire doesn't stop it) — **keep holding
+   B** and after 8 s a **rescue tow** comes for you anyway, at hazard pay
+   (twice the tow fee). **Tab › Call rescue tow** (press twice) calls one
+   any time. A tow costs credits, no propellant; with too few credits it
+   takes all you have — you are never stranded. Craft still out
    and boarders still across are **left behind** — an emergency jump, with
    a red countdown naming them; release B to wait for them. The vessel
    keeps exactly the damage it came back with (also when you restart, or
