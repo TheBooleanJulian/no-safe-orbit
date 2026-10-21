@@ -4,6 +4,50 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 9, part 4 — pilots, crew quarters, experience, wages (2026-10-21)
+
+#### Added
+- **Pilots**: a new post. Every fighter, bomber and interceptor needs a fit
+  pilot aboard to launch ("no pilot aboard for Wasp F1 — post someone as
+  pilot"); drones fly themselves. The pilot flies out with the craft, comes
+  back with it, and dies with it if it is lost. The standard complement has
+  a pilot per fighter.
+- **Experience and training**: crew rise a level with sorties served (3, 8,
+  15) or training at the station (60 / 140 / 260 cr), up to a specialist
+  with a title per post (Tactician, Reactor chief, Rigger, Gunnery chief,
+  Marine, Surgeon, Bosun, Ace). Levels already sped repairs and treatment;
+  now gunners fire 3 % faster and engineers draw 2 % more from the reactors
+  per level of their post's average.
+- **Wages**: each sortie (on docking) 1 cr per crew member and 2 cr per
+  level — a frigate of rookies 24 cr; short of credits, the debrief says by
+  how much.
+
+#### Changed
+- **Crew quarters**: all eight departments as drop targets, the crew as
+  badges with placeholder portraits (a face and hair from the name, the
+  post's colour, initials), level, sorties and wage — drag a badge onto a
+  department to repost them (no role menus), ▲ to train, ✕ to dismiss.
+  Portraits in the hiring hall too.
+
+#### Save format
+- **Schema 12**: crew entries carry the sorties they have served; a v11
+  vessel with fighters gets general crew posted as pilots (one per fighter,
+  as far as it has general crew). The original is kept as `.v11`.
+
+#### Tests changed (and why)
+- New `test_batch9_crew` (5): a fighter grounded without a pilot, the pilot
+  out and back with it and lost with it, drones need none; the v11 → v12
+  migration (one pilot posted, original kept); levels with sorties, wages
+  each sortie, training to a specialist; skilled gunners 120 → 131 rpm and
+  engineers ×1.06; a department posts a dropped crew member.
+- `test_m15_scaling`: the frigate's complement includes its pilot; loops
+  over the specialist posts include pilots.
+- `test_boarding`: the default frigate crew has a pilot (11 general, 1
+  pilot).
+- `smoke_wing`: the lost fighter's pilot is lost with it; a new one is
+  posted before the replacement launches.
+- `smoke_campaign`: the tow checks count the crew's wages paid on docking.
+
 ### Play-test batch 9, part 3 — the service bay and the quartermaster (2026-10-21)
 
 #### Changed

@@ -769,6 +769,20 @@ rack. They fly with the same physics as every ship and can be shot down.
 
 ## Crew and boarding
 
+**Pilots**: every fighter, bomber or interceptor needs a pilot aboard to
+launch (drones fly themselves); the pilot flies out with it, comes home with
+it — and is lost with it. The standard complement has one per fighter; post
+or hire more in crew quarters.
+
+**Experience, training, wages**: each crew member's level (☆☆☆ Rookie →
+Able → Veteran → a specialist: Tactician, Reactor chief, Rigger, Gunnery
+chief, Marine, Surgeon, Bosun, Ace) rises with sorties served (3, 8, 15) or
+with training at the station (60 / 140 / 260 cr). Levels make them faster at
+their post: repairs and treatment, and gunners fire 3 % faster and
+engineers draw 2 % more from the reactors per level (the crew's average).
+Each sortie the crew are paid 1 cr each and 2 cr per level — a frigate of
+rookies 24 cr.
+
 **Crew size follows the ship**: the standard complement grows with the hull
 — a bridge watch per 200 modules beyond two, an engineer per reactor and
 per four engines, a gun crew per two guns or launchers, damage control per
@@ -861,7 +875,7 @@ Beside the builder the directory narrows to the names.
 | **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the service record |
 | **REFIT** | The builder below |
-| **CREW** (Crew quarters) | The roster board: a card per department with who serves there against the standard complement (amber when short), each with their post and a ✕ to dismiss; the **hiring hall** below, a card per spacer for hire |
+| **CREW** (Crew quarters) | The roster board: all eight departments (pilots too), each against the standard complement (amber when short), its crew as badges with a placeholder portrait, level and wage — **drag a badge onto another department** to post them there, ▲ to train, ✕ to dismiss; the **hiring hall** below, a card and portrait per spacer for hire |
 | **SERVICES** (Service bay) | Three large buttons — **REPAIR** (the spare parts it takes), **REARM** (rounds, point defence, missiles and flares) and **REFUEL** (propellant and the jump reserve, with the Δv it gives) — each buying what the credits allow (or leave it to the launch); the damage report with what to fix first; the **cargo hold** and Bank cargo |
 | **QUARTERMASTER** | The quartermaster's rarer parts, and **spare parts in any amount** (a counter, 25 cr per 10) |
 | **UPGRADES** | Station technology |

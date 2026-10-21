@@ -33,7 +33,10 @@ extends RefCounted
 ##     objects surveyed; older saves have surveyed nothing.
 ## v11: the derelict fields (derelicts, DerelictField); older saves start
 ##     with none.
-const SCHEMA_VERSION := 11
+## v12 (play-test batch 9): pilots — a vessel's fighters each need one, so
+## general crew are posted as pilots where a v11 vessel has none; crew keep
+## the sorties they have served.
+const SCHEMA_VERSION := 12
 ## Ships per encounter the map offers (EnemyFactory spawns them).
 const MAX_ENCOUNTER := 3
 ## Locations every player knows from the start (brokers sell more).
@@ -366,7 +369,7 @@ func hire(i: int, catalog: ConstructionCatalog) -> String:
 	if credits < int(c.fee):
 		return "%s's fee is %d credits; you have %d" % [c.name, c.fee, credits]
 	credits -= int(c.fee)
-	vessel.crew.append({"name": c.name, "role": c.role, "skill": c.skill})
+	vessel.crew.append({"name": c.name, "role": c.role, "skill": c.skill, "sorties": 0})
 	hire_pool.remove_at(i)
 	vessel.record("Hired %s (%s)" % [c.name, CrewRoster.ROLE_NAMES[c.role]])
 	return ""
@@ -377,6 +380,63 @@ func dismiss(i: int) -> String:
 		return "no such crew member"
 	var c: Dictionary = vessel.crew.pop_at(i)
 	vessel.record("Dismissed %s" % c.name)
+	return ""
+
+
+## A pilot for each of the vessel's fighters, posted from its general crew
+## (the v11 → v12 migration; a vessel short of general crew hires the rest).
+## Returns how many were posted.
+func post_pilots(v: ShipInstance, catalog: ConstructionCatalog) -> int:
+	if v.crew.is_empty():
+		return 0
+	var fighters := 0
+	for e in v.blueprint.equipment:
+		if CrewRoster.needs_pilot(catalog.equipment.get(e.def_id)):
+			fighters += 1
+	var pilots := v.crew.filter(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.PILOT).size()
+	var posted := 0
+	for c: Dictionary in v.crew:
+		if pilots + posted >= fighters:
+			break
+		if int(c.role) == CrewRoster.Role.GENERAL:
+			c.role = CrewRoster.Role.PILOT
+			posted += 1
+	if posted > 0:
+		v.record("%d general crew posted as pilots for the fighters" % posted)
+	return posted
+
+
+## Wages for a sortie (play-test batch 9): WAGE_BASE per crew member and
+## WAGE_PER_LEVEL per level of skill — a frigate's rookies 24 cr.
+const WAGE_BASE := 1
+const WAGE_PER_LEVEL := 2
+## Training a crew member to the next level, by the level reached (credits).
+const TRAINING_COSTS := [0, 60, 140, 260]
+
+
+func wages(v: ShipInstance = null) -> int:
+	if v == null:
+		v = vessel
+	var total := 0
+	for c: Dictionary in v.crew:
+		total += WAGE_BASE + WAGE_PER_LEVEL * int(c.get("skill", 0))
+	return total
+
+
+## Train crew member `i` one level at the station. "" or why not.
+func train(i: int) -> String:
+	if i < 0 or i >= vessel.crew.size():
+		return "no such crew member"
+	var c: Dictionary = vessel.crew[i]
+	var level := int(c.get("skill", 0))
+	if level >= CrewRoster.MAX_SKILL:
+		return "%s is already a %s" % [c.name, CrewRoster.title(int(c.role), level)]
+	var cost: int = TRAINING_COSTS[level + 1]
+	if credits < cost:
+		return "training %s costs %d credits; you have %d" % [c.name, cost, credits]
+	credits -= cost
+	c.skill = level + 1
+	vessel.record("Trained %s to %s" % [c.name, CrewRoster.title(int(c.role), level + 1)])
 	return ""
 
 
@@ -512,6 +572,18 @@ func dock(after: Dictionary, _catalog: ConstructionCatalog) -> PackedStringArray
 		vessel.condition.erase("crew")
 	for n in vessel.bury_dead():
 		lost.append("%s killed in action" % n)
+	# Experience and wages (play-test batch 9): the crew who came back each
+	# count the sortie (and may rise a level), and are paid.
+	for c: Dictionary in vessel.crew:
+		c["sorties"] = int(c.get("sorties", 0)) + 1
+		var earned := CrewRoster.level_for(int(c.sorties))
+		if earned > int(c.get("skill", 0)):
+			c["skill"] = earned
+			lost.append("%s is now %s" % [c.name, CrewRoster.title(int(c.role), earned)])
+	var due := wages()
+	var paid := mini(due, credits)
+	credits -= paid
+	lost.append("Wages: %d credits to %d crew%s" % [paid, vessel.crew.size(), "" if paid == due else " — short by %d" % (due - paid)])
 	vessel.sorties += 1
 	refresh_station(ConstructionCatalog.default_catalog())
 	vessel.record("Sortie %d: docked%s" % [vessel.sorties, " damaged" if vessel.is_damaged() else ""])
@@ -635,6 +707,9 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 			var v := ShipInstance.from_dict(vd, errors)
 			if v != null:
 				p.vessels.append(v)
+	if p.loaded_schema < 12:
+		for v in p.vessels:
+			p.post_pilots(v, ConstructionCatalog.default_catalog())
 	for v in p.vessels:
 		BlueprintFix.fit_spans(v.blueprint, ConstructionCatalog.default_catalog())
 		BlueprintFix.prune_plates(v.blueprint, ShipGrid.build(v.blueprint, ConstructionCatalog.default_catalog()))

@@ -140,6 +140,11 @@ func _run() -> void:
 	profile.spare_parts = 200
 	yard.repair(ServiceYard.Priority.FULL)
 	_check(not profile.vessel.wing.has(fighter.rack_id), "replaced at the station")
+	# Its pilot was lost with it (play-test batch 9): post a new one.
+	var general := profile.vessel.crew.find_custom(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.GENERAL)
+	var pilots_left := profile.vessel.crew.filter(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.PILOT).size()
+	_check(pilots_left == 0, "the lost fighter's pilot was lost with it")
+	profile.set_crew_role(general, CrewRoster.Role.PILOT)
 	yard.launch()
 	for i in 4:
 		await process_frame

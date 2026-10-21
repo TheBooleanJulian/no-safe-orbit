@@ -80,6 +80,9 @@ class Craft:
 	## nothing left to fight) rather than recalled: it goes out again once
 	## refuelled and rearmed (AirWing.auto_relaunch).
 	var came_back_itself: bool = false
+	## The crew member flying it (fighters; play-test batch 9) — off the
+	## carrier while it is out.
+	var pilot_id: String = ""
 	## A salvage drone's load (spare parts) and its cutting clock (s).
 	var cargo_parts: int = 0
 	var work_s: float = 0.0
@@ -179,7 +182,21 @@ func launch_block_reason(world: WorldSimulation, c: Craft) -> String:
 		return "%s's rack %s is down" % [c.label, c.rack_id]
 	if carrier.angular_velocity.length() > MAX_LAUNCH_RATE_RAD_S:
 		return "turning too fast to launch (%.1f°/s)" % rad_to_deg(carrier.angular_velocity.length())
+	if CrewRoster.needs_pilot(rack.def) and _free_pilot(carrier) == null:
+		return "no pilot aboard for %s — post someone as pilot (crew quarters, or Tab › CREW)" % c.label
 	return ""
+
+
+## A fit pilot aboard and free to fly (null: none). A carrier with no
+## crew model (no rooms) needs none.
+static func _free_pilot(carrier: ShipState) -> CrewRoster.Member:
+	var crew := carrier.systems.crew if carrier.systems != null else null
+	if crew == null or crew.members.is_empty():
+		return CrewRoster.Member.new()
+	for m in crew.members:
+		if m.role == CrewRoster.Role.PILOT and m.available() and m.location >= 0:
+			return m
+	return null
 
 
 func launch(world: WorldSimulation, c: Craft) -> String:
@@ -195,6 +212,13 @@ func launch(world: WorldSimulation, c: Craft) -> String:
 	ship.hull_damage = (1.0 - c.hull_fraction) * c.config.hull_hp
 	ship.side = carrier.side
 	world.add_ship(ship)
+	var rack_def := carrier.systems.equipment_by_id(c.rack_id).def
+	if CrewRoster.needs_pilot(rack_def):
+		var pilot := _free_pilot(carrier)
+		if pilot != null and pilot.id != "":
+			pilot.busy = true
+			pilot.location = -1
+			c.pilot_id = pilot.id
 	c.status = Status.FLYING
 	c.comms_lost_s = 0.0
 	_note("%s launched — %s" % [c.label, CraftAI.DIRECTIVE_NAMES[c.directive]])
@@ -305,6 +329,7 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 	if s == null or not s.is_active():
 		c.status = Status.LOST
 		c.hull_fraction = 0.0
+		_pilot_home(carrier, c, false)
 		if s != null:
 			world.remove_ship(c.id)
 		_note("%s LOST" % c.label)
@@ -487,6 +512,23 @@ func _work(c: Craft, s: ShipState, job: Dictionary, dt: float) -> void:
 		c.cargo_parts, SALVAGE_CAPACITY])
 
 
+## The pilot back aboard at their station (`alive`), or lost with the craft.
+func _pilot_home(carrier: ShipState, c: Craft, alive: bool) -> void:
+	if c.pilot_id == "" or carrier == null or carrier.systems == null or carrier.systems.crew == null:
+		return
+	var m := carrier.systems.crew.by_id(c.pilot_id)
+	c.pilot_id = ""
+	if m == null:
+		return
+	m.busy = false
+	if alive:
+		m.location = m.station
+	else:
+		m.state = CrewRoster.State.DEAD
+		_note("%s's pilot %s was lost with it" % [c.label, m.label()])
+	carrier.systems.invalidate()
+
+
 ## Refuel and rearm a docked craft from the carrier's own stores: its
 ## propellant from the carrier's tanks, its rounds from the carrier's
 ## magazine by mass. Returns what happened.
@@ -529,6 +571,7 @@ func _slot_of(c: Craft, directive: int) -> int:
 
 func _recover(world: WorldSimulation, c: Craft) -> void:
 	world.remove_ship(c.id)
+	_pilot_home(world.get_ship(carrier_id), c, true)
 	c.status = Status.DOCKED
 	c.override_reason = ""
 	c.comms_lost_s = 0.0
