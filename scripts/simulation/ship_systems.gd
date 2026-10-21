@@ -271,6 +271,7 @@ var _treatment_s := 0.0
 var _module_faces: PackedInt32Array = PackedInt32Array()
 var _config: ShipConfig
 var _rounds_seen: int = 0
+var _pulses_seen: int = 0
 
 
 static func create(bp: ShipBlueprint, p_grid: ShipGrid, p_stats: ShipStats, config: ShipConfig) -> ShipSystems:
@@ -847,10 +848,19 @@ func tick(ship: ShipState, dt: float) -> bool:
 	if shots > 0 and cfg.cannon != null:
 		var per_shot_kj := 0.0
 		for e in equipment:
-			if e.def.kind == EquipmentDefinition.Kind.CANNON:
+			if e.def.kind == EquipmentDefinition.Kind.CANNON and (e.def.cannon == null or not e.def.cannon.is_beam()):
 				per_shot_kj = e.def.heat_kw * cfg.cannon.fire_interval_s()
 				break
 		gen += shots * per_shot_kj / dt
+	# Beam pulses: each is its mount's heat_kw for one firing interval —
+	# a beam at full rate makes heat_kw continuously (play-test batch 6).
+	var pulses := ship.beam_pulses - _pulses_seen
+	_pulses_seen = ship.beam_pulses
+	if pulses > 0:
+		for e in equipment:
+			if e.def.kind == EquipmentDefinition.Kind.CANNON and e.def.cannon != null and e.def.cannon.is_beam():
+				gen += pulses * e.def.heat_kw * e.def.cannon.fire_interval_s() / dt
+				break
 	var t4 := pow(temperature_k, 4.0)
 	var scale := maxf(t4 - pow(SINK_TEMP_K, 4.0), 0.0) / (pow(NOMINAL_TEMP_K, 4.0) - pow(SINK_TEMP_K, 4.0))
 	heat_generation_kw = gen

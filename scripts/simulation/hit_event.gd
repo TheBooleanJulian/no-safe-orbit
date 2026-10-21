@@ -17,3 +17,5 @@ var energy_j: float
 var report: DamageReport
 ## A missile's warhead, not a gun round (counted apart from gun accuracy).
 var missile: bool = false
+## A beam pulse, not a round (play-test batch 6).
+var beam: bool = false

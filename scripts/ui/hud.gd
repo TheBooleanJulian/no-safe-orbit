@@ -1243,6 +1243,8 @@ func _update_weapon_strip(player: ShipState) -> void:
 	var parts := PackedStringArray()
 	if cannon == null:
 		parts.append("GUN  none fitted")
+	elif _beams_only(player.config) and player.systems != null:
+		parts.append("GUN ▸ %s  on power" % battery_text(player.config, player))
 	else:
 		var frac := float(player.cannon_rounds) / maxf(cannon.magazine_rounds, 1.0)
 		var bars := roundi(frac * 10.0)
@@ -1324,8 +1326,17 @@ static func battery_text(cfg: ShipConfig, ship: ShipState = null) -> String:
 	var parts := PackedStringArray()
 	for gun in order:
 		var rounds := " · %d rds" % ship.rounds_for(gun) if ship != null and order.size() > 1 else ""
+		if gun.is_beam():
+			rounds = " · beam %.1f km" % (gun.beam_range_m / 1000.0)
 		parts.append("%s ×%d %.0f rpm%s" % [gun.display_name, counts[gun.display_name], gun.rate_of_fire_rpm, rounds])
 	return " · ".join(parts)
+
+
+static func _beams_only(cfg: ShipConfig) -> bool:
+	for k in cfg.cannon_muzzles_body.size():
+		if not cfg.mount_cannon(k).is_beam():
+			return false
+	return true
 
 
 ## "● 2 on · ▲ 1 training · ✕ 1 blocked" — what the guns are doing.

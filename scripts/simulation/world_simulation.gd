@@ -753,6 +753,9 @@ func step() -> void:
 		if ship.systems != null and ship.systems.tick(ship, fixed_dt):
 			ship.config = ship.systems.effective_config()
 		_phase("systems")
+	for p in _pending_beams:
+		_fire_beam(p[0], p[1], p[2], p[3], p[4])
+	_pending_beams.clear()
 	_step_missiles()
 	_step_decoys()
 	_phase("missiles")
@@ -851,7 +854,16 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		elif locked:
 			status = ShipState.Turret.LOCKED
 		ship.turret_status[k] = status
-		if status != ShipState.Turret.READY or not input.fire or ship.cannon_cooldowns[k] > 1e-9 or ship.rounds_for(cannon) <= 0:
+		if status != ShipState.Turret.READY or not input.fire or ship.cannon_cooldowns[k] > 1e-9:
+			continue
+		if cannon.is_beam() and input.lead_target_id != &"":
+			var aim := get_ship(input.lead_target_id)
+			if aim != null and aim.position.distance_squared_to(ship.position) > cannon.beam_range_m * cannon.beam_range_m:
+				continue  # fire control holds a beam until its target is in reach
+		# A ship's beam fires on power; everything else (a craft's beam too)
+		# needs rounds / charges.
+		var on_power := cannon.is_beam() and ship.systems != null
+		if not on_power and ship.rounds_for(cannon) <= 0:
 			continue
 		var dir_body := ship.turret_dirs[k]
 		var muzzle_body := muzzles[k]
@@ -861,6 +873,13 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 			if spread > 0.0:
 				dir_body = _scatter(dir_body, spread)
 		var dir := ship.orientation * dir_body
+		if cannon.is_beam():
+			_pending_beams.append([ship, cannon, muzzle_body, dir_body, input.lead_target_id])
+			if not on_power:
+				ship.spend_round(cannon)
+			ship.beam_pulses += 1
+			ship.cannon_cooldowns[k] += cannon.fire_interval_s() / clampf(input.fire_rate, 0.1, 1.0)
+			continue
 		var shot := ProjectileState.new()
 		shot.id = _next_round_id
 		_next_round_id += 1
@@ -881,6 +900,105 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		ship.spend_round(cannon)
 		ship.rounds_fired += 1
 		ship.cannon_cooldowns[k] += cannon.fire_interval_s() / clampf(input.fire_rate, 0.1, 1.0)
+
+
+## Beam pulses fired since the views last took them: {shooter_id,
+## from_body (muzzle, shooter's body frame), target_id (&"" = it reached
+## full reach), to_body (where it struck, target's body frame; else its end
+## relative to the muzzle, world axes), color}.
+var _beams: Array[Dictionary] = []
+## Pulses fired this tick, resolved once every ship has moved: [ship, gun,
+## muzzle (body), direction (body), fire-control target].
+var _pending_beams: Array = []
+## A beam's steering mirror lays it on a small target (a craft or missile)
+## within this cone of the barrel (°): a fixed gun pointed by the whole
+## craft lags a fast missile by metres, the mirror does not.
+const BEAM_STEER_DEG := 2.0
+## Beam pulses that struck something (all ships), for tests and stats.
+var beam_hits: int = 0
+
+
+func take_beams() -> Array[Dictionary]:
+	var out := _beams
+	_beams = []
+	return out
+
+
+## One beam pulse (play-test batch 6): no round — the first hull on the
+## line out to the beam's reach takes it at once, with the penetration its
+## range leaves (KineticCannonConfig.beam_penetration_at). It is resolved
+## after every ship has moved, against where they all were at the start of
+## the tick — what fire control aimed at — so a light, fast target is where
+## the beam was laid (a mid-tick test would see half the ships moved).
+## Nothing to push: light carries no momentum worth the name. Same
+## friend-or-foe rules as a round: never the shooter or its own missiles; a
+## craft's IFF spares its side.
+func _fire_beam(ship: ShipState, cannon: KineticCannonConfig, muzzle_body: Vector3, dir_body: Vector3, aim_id: StringName) -> void:
+	var from := ship.prev_position + ship.prev_orientation * muzzle_body
+	var aim := get_ship(aim_id) if aim_id != &"" else null
+	if aim != null and aim.systems == null:
+		var want := ship.prev_orientation.inverse() * (aim.prev_position + aim.prev_orientation * aim.config.hit_box_center - from)
+		if want.length() > 1.0 and rad_to_deg(dir_body.angle_to(want)) <= BEAM_STEER_DEG:
+			dir_body = want.normalized()
+	var dir := ship.prev_orientation * dir_body
+	var seg := dir * cannon.beam_range_m
+	var iff := ship.side if ship.systems == null and ship.config.hull_hp > 0.0 and ship.missile == null else &""
+	var best_t := INF
+	var best: ShipState = null
+	for id in _ship_order:
+		var other: ShipState = _ships[id]
+		if other == ship or not other.is_active() or other.missile_owner == ship.id:
+			continue
+		if iff != &"" and other.side == iff and other.missile == null:
+			continue
+		var p0 := from - other.prev_position
+		var u := clampf(-p0.dot(seg) / seg.length_squared(), 0.0, 1.0)
+		var reach := other.config.hit_box_center.length() + other.config.hit_box_half_extents.length()
+		if (p0 + seg * u).length_squared() > reach * reach:
+			continue
+		var inv := other.prev_orientation.inverse()
+		var a := inv * p0
+		var b := inv * (p0 + seg)
+		var t := HitTest.segment_box(a, b, other.config.hit_box_center, other.config.hit_box_half_extents)
+		if t >= 0.0 and other.systems != null:
+			# The hull cells from where it enters the box: the grid walk is
+			# short (ShipGrid.traverse), a beam kilometres long.
+			var t_hull := Penetration.first_hull_entry(other.systems, a.lerp(b, t), b)
+			t = t + t_hull * (1.0 - t) if t_hull >= 0.0 else -1.0
+		if t >= 0.0 and t < best_t:
+			best_t = t
+			best = other
+	var pulse := {"shooter_id": ship.id, "from_body": muzzle_body, "target_id": &"", "to_body": seg, "color": cannon.beam_color}
+	_beams.append(pulse)
+	if best == null:
+		return
+	var inv_q := best.prev_orientation.inverse()
+	var range_m := best_t * cannon.beam_range_m
+	var pen := cannon.beam_penetration_at(range_m)
+	var ev := HitEvent.new()
+	ev.tick = tick
+	ev.round_id = _next_round_id
+	_next_round_id += 1
+	ev.shooter_id = ship.id
+	ev.target_id = best.id
+	ev.point_body = inv_q * (from + seg * best_t - best.prev_position)
+	ev.beam = true
+	pulse.target_id = best.id
+	pulse.to_body = ev.point_body
+	if best.systems != null:
+		ev.report = Penetration.apply(best.systems, ev.point_body, inv_q * dir, pen)
+		ev.report.lines[0] = "Beam pulse arrives with %.0f mm penetration (%.1f km)" % [pen, range_m / 1000.0]
+		ev.report.ricochet = false  # a beam is stopped by a plate, it does not bounce
+		_apply_damage(best, ev.report)
+	elif best.config.hull_hp > 0.0:
+		best.hull_damage += pen
+		if best.hull_damage >= best.config.hull_hp:
+			best.status = ShipState.Status.DESTROYED
+			best.status_time = sim_time
+			GameLog.info("sim", "%s destroyed at T+%.2f s" % [best.display_name, sim_time])
+	_hit_events.append(ev)
+	best.hits_taken += 1
+	beam_hits += 1
 
 
 ## Point-defence range (m) and how close to the lead a barrel must be (deg).

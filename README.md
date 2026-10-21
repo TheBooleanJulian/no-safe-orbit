@@ -236,7 +236,15 @@ armour you face (the hull skin is 20 mm; plates add 40 or 80 mm):
 | Railgun | rare | 220 mm | 24 rpm | everything, unless it glances off at a steep angle |
 
 Penetration doesn't fall off with range (vacuum); a head-on closing speed
-adds up to 30 %. **Magazines hold mass** (300 kg a cell, 540 kg dense),
+adds up to 30 %.
+
+**Lasers** (beam weapons): the **pulse laser turret** (epic; 30 pulses a
+minute, 5 km reach, 80 mm close in falling to 40 mm at full reach) hits the
+moment it fires — nothing to lead, dodge or shoot down — but it draws
+1,500 kW from your reactors and makes 1,500 kW of heat while it fires, so it
+needs power and radiators, not magazines. Fire control holds it until the
+locked target is within reach. Fighters and drones can carry lasers too
+(below); their charges are recharged aboard. **Magazines hold mass** (300 kg a cell, 540 kg dense),
 shared between the gun types aboard by mount count: heavier rounds, fewer of
 them.
 
@@ -725,6 +733,8 @@ rack. They fly with the same physics as every ship and can be shot down.
   | Mantis bomber | bomber bay | heavy 45 mm cannon from long range; keeps its distance |
   | Recon drone | drone rack | the close look at the target's systems; never fires |
   | EW drone | EW drone rack | holds 1.2 km out towards the threat and jams for ships within 3 km |
+  | Lancer laser fighter | fighter bay (Lancer laser) | gun runs like the Wasp with a laser: 1.5 km reach, 40 charges, no lead needed |
+  | Laser drone | drone rack (laser) | an interceptor drone: lasers inbound missiles (one pulse each, 2 km) and craft; 30 charges |
 
 - **How they fly:** a craft never fires with a friend within 25 m of its
   line of fire, its rounds carry an IFF interlock that passes through your

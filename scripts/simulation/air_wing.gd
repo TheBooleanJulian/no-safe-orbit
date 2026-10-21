@@ -333,7 +333,8 @@ func _resupply_from(carrier: ShipState, c: Craft) -> String:
 	if c.config.cannon != null:
 		var need_rounds := c.config.cannon.magazine_rounds - c.ammo
 		var got := need_rounds
-		if carrier != null and carrier.config.cannon != null and need_rounds > 0:
+		# A beam's charges come back from the carrier's power, not its magazine.
+		if carrier != null and carrier.config.cannon != null and need_rounds > 0 and not c.config.cannon.is_beam():
 			var per_round := c.config.cannon.round_mass_kg / maxf(carrier.config.cannon.round_mass_kg, 1e-3)
 			var cost := ceili(need_rounds * per_round - 1e-9)
 			if cost > carrier.cannon_rounds:

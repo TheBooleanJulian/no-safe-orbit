@@ -526,6 +526,18 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Enemies not too strong beyond 1v1 | `tools/balance_sim.gd` (manual), `test_balance_batch6`, `smoke_encounter` | 1v2/1v3 lost in 14–20 s before; now 1v2 survives 480 s at m3/m7, lost 327 s at m5; 1v3 lost 188–273 s |
 | Suited crew keep a vented bridge | `test_balance_batch6` | disabled before, fighting now |
 
+### Play-test batch 6 — beam weapons ✅ (2026-10-21)
+
+"Beam and laser weapons can be added (0 travel time but high energy and
+heat) to main weapons, drones and fighters."
+
+| Requirement | Test | Measured |
+|---|---|---|
+| No travel time | `test_beams` | struck in the tick it fired; no round in flight; 56.3 mm at 3 km (expected 56.0) |
+| High energy and heat | `test_beams` | +1,440 kW demand over the autocannon; +180,000 kW on the pulse's tick (1,500 kW × 2 s) |
+| On fighters and drones | `test_beams` (laser drone mutation-checked) | Lancer: a charge a pulse, IFF through a friend, recharged 40/40 aboard; laser drone shoots down a missile |
+| Parts and palette | `test_beams` | turret under Weapons › Guns, Lancer bay under Fighters, laser rack under Drones |
+
 ### Play-test batch 6 — performance ✅ (2026-10-21)
 
 "Lag issues are back when thousands of projectiles are fired by many
