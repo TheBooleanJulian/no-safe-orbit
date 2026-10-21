@@ -101,7 +101,9 @@ var cannon_cooldowns: PackedFloat32Array = PackedFloat32Array()
 ## and the craft it is engaging ("" = none).
 var pd_dirs: PackedVector3Array = PackedVector3Array()
 var pd_cooldowns: PackedFloat32Array = PackedFloat32Array()
-var pd_rounds: PackedInt32Array = PackedInt32Array()
+## Point-defence rounds left, one store for every mount (from the magazine).
+var pd_rounds: int = 0
+var pd_rounds_capacity: int = 0
 var pd_targets: PackedStringArray = PackedStringArray()
 ## Each mount's barrel direction (body frame) and what it is doing.
 var turret_dirs: PackedVector3Array = PackedVector3Array()
@@ -175,8 +177,8 @@ static func create(
 			state.pd_dirs[k] = p_config.pd_normals_body[k]
 		state.pd_cooldowns.resize(n)
 		state.pd_cooldowns.fill(0.0)
-		state.pd_rounds.resize(n)
-		state.pd_rounds.fill(p_config.pd_gun.magazine_rounds)
+		state.pd_rounds_capacity = p_config.pd_magazine_rounds if p_config.pd_magazine_rounds > 0 else p_config.pd_gun.magazine_rounds * n
+		state.pd_rounds = state.pd_rounds_capacity
 		state.pd_targets.resize(n)
 	if not p_config.unlimited_propellant:
 		state.propellant_kg = p_config.propellant_capacity_kg

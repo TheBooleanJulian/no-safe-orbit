@@ -4,6 +4,46 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 9, part 2 — the builder (2026-10-21)
+
+#### Changed
+- **The 3×1 radiator is a fin**: one cell on the hull, standing its three
+  cells straight out (it lay across the hull before; designs saved that way
+  keep it). Refused where hull is in the way (`fin_blocked`); rejects as
+  much as lying flat. Stored as rotation 4 (`ShipGrid.FIN_ROTATION`).
+- **Bigger rooms do more**: every cell beyond a room's first adds, with
+  diminishing returns — engine rooms main thrust, reactor rooms reactor
+  output (up to +25 %; the stock Frigate +11 % / +15 %, Destroyer +24 %), a
+  hangar's free deck its craft's turnaround (up to ×2). The room card and
+  the stats panel say what size does (workshops, medbays and bridges
+  already scaled; now it is shown). Every design with roomy engine and
+  reactor rooms is a little faster and better powered.
+- **Point defence draws from the magazine**: 15 % of its mass beside guns
+  (all of it without guns), one store for every mount, kept between
+  sorties and restocked at the yard. The Frigate: 600 PD rounds (was
+  2 × 200 built in) and 1,020 gun rounds (was 1,200). A warning when there
+  is PD but no magazine.
+- **The grappling arm** lies folded along four cells (a 4 × 1 mount) and,
+  holding, unfolds and telescopes out to the target's hull (up to 60 m),
+  folding back when it lets go. The Frigate's and Corvette's arms were
+  moved to fit (`tools/fit_grapple_arms.gd`); a saved design whose arm no
+  longer fits is slid to the nearest spot on load, or flagged.
+
+#### Tests changed (and why)
+- New `test_batch9_builder` (4): the fin (one hull cell, three out, valid,
+  saved and loaded, flat-panel rejection; refused when blocked; rotation 1
+  still lies across); room factors on three templates (engine thrust in
+  the stats and in flight; diminishing gains); PD from the magazine (600
+  rounds, more with a dense magazine, restocked, warned without); the arm
+  (4 cells, the Frigate valid, unfolds to a grip 39 m out and folds back).
+- `test_m7_weapons`, `test_m10_contacts`, `test_m9_weapons_crew`,
+  `test_turrets_and_collisions`: point-defence rounds are one store
+  (`pd_rounds`), not one per mount.
+- `smoke_shipyard`: the magazine line now reads "1020 rounds · 600 PD
+  rounds"; the radiator search finds "3×1 — fin, 3 out".
+- `test_blueprint`, `test_feedback_pass`: main thrust is the engines' times
+  the engine rooms' factor.
+
 ### Play-test batch 9, part 1 — fixes and quick wins (2026-10-21)
 
 #### Fixed

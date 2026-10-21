@@ -61,6 +61,17 @@ static func gap_to(b: ShipState, point: Vector3) -> float:
 	return local.distance_to(nearest)
 
 
+## Where arm `arm_id` of `a` grips `b`: the point of `b`'s hull box nearest
+## the arm (world), for the views.
+static func grip_point(a: ShipState, b: ShipState, arm_id: String) -> Vector3:
+	var e := a.systems.equipment_by_id(arm_id) if a.systems != null else null
+	var from := arm_position(a, e) if e != null else a.position
+	var local := b.orientation.inverse() * (from - b.position) - b.config.hit_box_center
+	var h := b.config.hit_box_half_extents
+	var nearest := Vector3(clampf(local.x, -h.x, h.x), clampf(local.y, -h.y, h.y), clampf(local.z, -h.z, h.z))
+	return b.position + b.orientation * (nearest + b.config.hit_box_center)
+
+
 ## The arm nearest to `b`, or null.
 static func nearest_arm(a: ShipState, b: ShipState) -> ShipSystems.EquipmentState:
 	var best: ShipSystems.EquipmentState

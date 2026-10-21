@@ -69,6 +69,9 @@ extends Resource
 ## Point-defence turrets: gun, mounts (body), face normals and ids. They
 ## pick their own targets (hostile craft) and have their own magazines.
 @export var pd_gun: KineticCannonConfig
+## Point-defence rounds in the magazine, shared by every mount (0: each
+## mount carries its gun's own magazine_rounds — craft and hand-built configs).
+@export var pd_magazine_rounds: int = 0
 @export var pd_mounts_body: PackedVector3Array = PackedVector3Array()
 @export var pd_normals_body: PackedVector3Array = PackedVector3Array()
 @export var pd_mount_ids: PackedStringArray = PackedStringArray()

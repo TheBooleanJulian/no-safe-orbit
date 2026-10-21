@@ -282,7 +282,9 @@ func update(world: WorldSimulation, dt: float) -> void:
 		match c.status:
 			Status.DOCKED:
 				if c.service_left_s > 0.0:
-					c.service_left_s = maxf(c.service_left_s - dt, 0.0)
+					# A roomier hangar turns its craft round faster (play-test batch 9).
+					var deck := carrier.systems.stats.hangar_factor if carrier != null and carrier.systems != null else 1.0
+					c.service_left_s = maxf(c.service_left_s - dt * deck, 0.0)
 					if c.service_left_s <= 0.0:
 						_note("%s %s" % [c.label, _resupply_from(carrier, c)])
 				elif c.came_back_itself and auto_relaunch and c.hull_fraction > 0.5 and launch_block_reason(world, c) == "" \

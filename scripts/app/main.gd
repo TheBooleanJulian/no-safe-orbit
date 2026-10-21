@@ -289,6 +289,7 @@ func _start_scenario() -> void:
 		player.propellant_kg = minf(float(stores.get("propellant_kg", player.propellant_kg)), player.propellant_kg)
 		player.propellant_kg = minf(player.propellant_kg, _intact_tank_capacity(systems))
 		player.set_rounds(mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds))
+		player.pd_rounds = mini(int(stores.get("pd_rounds", player.pd_rounds)), player.pd_rounds_capacity)
 	var reserve_cap := JumpDrive.standard().reserve_capacity_kg(player.config.propellant_capacity_kg)
 	jump_reserve_kg = reserve_cap
 	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
@@ -1003,7 +1004,7 @@ func close_sortie() -> void:
 		GameLog.info("main", "Vessel %s — the hold is gone; the station rebuilds the same design" % ("captured" if player_captured() else "lost"))
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
 		var after := player.systems.condition()
-		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds,
+		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds, "pd_rounds": player.pd_rounds,
 			"missiles": player.systems.missile_count(), "jump_reserve_kg": jump_reserve_kg}
 		lines.append_array(p.dock(after, catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
@@ -2103,10 +2104,19 @@ func _process(delta: float) -> void:
 	_sync_courier_view(alpha, render_origin)
 	if _artifact_view != null and world.has_ship(ARTIFACT_ID):
 		_artifact_view.sync_from(world.get_ship(ARTIFACT_ID), alpha, render_origin)
+	# Grappling arms: where each holding arm grips its target (the attacker's body frame).
+	var holds := {}
+	for g in world.grapples:
+		var a := world.get_ship(g.attacker_id)
+		var b := world.get_ship(g.target_id)
+		if g.holding() and a != null and b != null:
+			var grip := Grapple.grip_point(a, b, g.arm_id)
+			(holds.get_or_add(g.attacker_id, {}) as Dictionary)[g.arm_id] = a.orientation.inverse() * (grip - a.position)
 	for id: StringName in _views:
 		var ship := world.get_ship(id)
 		var view: ShipView = _views[id]
 		view.visible = ship.is_active()
+		view.grapple_holds = holds.get(id, {})
 		view.sync_from(ship, alpha, render_origin)
 
 	if player_input.zoom_changed:

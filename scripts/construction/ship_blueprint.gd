@@ -124,7 +124,8 @@ func add_equipment(def_id: StringName, cell: Vector3i, face: StringName = &"", r
 	e.def_id = def_id
 	e.cell = cell
 	e.face = face
-	e.rotation = posmod(rotation, 4)
+	# 0–3 turn a part; ShipGrid.FIN_ROTATION stands a long radiator out as a fin.
+	e.rotation = rotation if rotation == ShipGrid.FIN_ROTATION else posmod(rotation, 4)
 	equipment.append(e)
 	return e
 
@@ -266,7 +267,8 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipBlueprint
 		e.def_id = StringName(str(edd.get("def", "")))
 		e.cell = _to_v3(edd.get("cell"), errors, "equipment %s cell" % e.id)
 		e.face = StringName(str(edd.get("face", "")))
-		e.rotation = posmod(int(edd.get("rot", 0)), 4)
+		var rot := int(edd.get("rot", 0))
+		e.rotation = rot if rot == ShipGrid.FIN_ROTATION else posmod(rot, 4)
 		bp.equipment.append(e)
 	bp._reset_next_id()
 	return bp

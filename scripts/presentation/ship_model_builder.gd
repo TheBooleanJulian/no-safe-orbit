@@ -42,6 +42,9 @@ class Model:
 	var turrets: Array[Dictionary] = []
 	## Craft shown docked on their external racks, by rack id.
 	var docked_craft: Dictionary = {}
+	## Grappling arm id -> {segments: [3 Node3D], claw: Node3D, folded: [4
+	## joints, model space]} (ShipView unfolds it onto what it holds).
+	var grapple_arms: Dictionary = {}
 	## Launcher id -> its missile cones, one per tube (ShipView shows the
 	## missiles left).
 	var missile_cones: Dictionary = {}
@@ -117,9 +120,14 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 			EquipmentDefinition.Kind.RADIATOR:
 				# A folded (accordion) fin standing 3 m off the face, as long
 				# as the cells it spans: thin panels zigzagging along the span.
+				# Turned out as a fin, it stands its full length off one cell.
 				var cells := grid.external_cells(i)
 				var along := Vector3(cells[1] - cells[0]).abs() if cells.size() > 1 else Vector3(0, 0, 1)
 				var long_m := cells.size() * c - 0.2
+				var tall := 3.0
+				if ShipGrid.is_fin(def, bp.equipment[i].rotation):
+					tall = def.length_cells * c - 0.2
+					along = Vector3(ShipGrid.external_step(bp.equipment[i].face, 0)).abs()
 				var side := along.cross(normal).normalized()
 				var folds := cells.size() * 4
 				var seg := long_m / folds
@@ -129,10 +137,10 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 					var p0 := start + along * (seg * k) + side * a0
 					var p1 := start + along * (seg * (k + 1)) - side * a0
 					var dir := (p1 - p0).normalized()
-					var panel := _box(part, Vector3((p1 - p0).length() + 0.04, 3.0, 0.06), (p0 + p1) * 0.5 + normal * 1.5, mat)
+					var panel := _box(part, Vector3((p1 - p0).length() + 0.04, tall, 0.06), (p0 + p1) * 0.5 + normal * tall * 0.5, mat)
 					panel.basis = Basis(dir, normal, dir.cross(normal))
 				# Header pipe along the top edge, and the root fairing on the hull.
-				_box(part, Vector3.ONE * 0.16 + along * (long_m - 0.16), mount + normal * 3.0, _mat(mats, Color(0.55, 0.57, 0.6) * tint))
+				_box(part, Vector3.ONE * 0.16 + along * (long_m - 0.16), mount + normal * tall, _mat(mats, Color(0.55, 0.57, 0.6) * tint))
 				_box(part, Vector3.ONE * 0.5 + along * (long_m - 0.5), mount + normal * 0.15, _mat(mats, Color(0.3, 0.32, 0.35) * tint))
 			EquipmentDefinition.Kind.DOCKING_COLLAR:
 				model.beacons.append(_collar(part, mount, normal))
@@ -152,7 +160,10 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				model.spinners.append({"id": bp.equipment[i].id,
 					"node": _sensor_mast(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))})
 			EquipmentDefinition.Kind.GRAPPLE:
-				_grapple_arm(part, mount, normal, mat, _mat(mats, Color(0.22, 0.24, 0.27) * tint))
+				var span := grid.external_cells(i)
+				var along := Vector3(span[-1] - span[0]).normalized() if span.size() > 1 else Vector3(0, 0, 1)
+				model.grapple_arms[bp.equipment[i].id] = _grapple_arm(part, mount, normal, along, span.size() * c, mat,
+					_mat(mats, Color(0.22, 0.24, 0.27) * tint))
 			EquipmentDefinition.Kind.MISSILE_LAUNCHER:
 				# A box of tubes standing on the face, the muzzles facing out.
 				var b := _basis_y_along(normal)
@@ -302,18 +313,58 @@ static func _relative_transform(node: Node3D, ref: Node3D) -> Transform3D:
 
 ## Grappling arm: a shoulder, two boom segments folded back along the hull
 ## and a three-fingered claw.
-static func _grapple_arm(part: Node3D, mount: Vector3, normal: Vector3, mat: Material, dark: Material) -> void:
+## The grappling arm (play-test batch 9): a shoulder at one end of its
+## span and three hydraulic segments folded back and forth along it, a claw
+## at the tip. The segments are set by place_arm (folded here); ShipView
+## unfolds and telescopes them out to what the arm holds (Grapple.REACH_M).
+static func _grapple_arm(part: Node3D, mount: Vector3, normal: Vector3, along: Vector3, span_m: float, mat: Material, dark: Material) -> Dictionary:
 	var b := _basis_y_along(normal)
-	var shoulder := _cylinder(part, 0.5, 0.6, 0.6, Vector3.ZERO, dark)
-	shoulder.transform = Transform3D(b, mount + normal * 0.3)
-	var upper := _box(part, Vector3(0.35, 2.6, 0.35), Vector3.ZERO, mat)
-	upper.transform = Transform3D(b * Basis(Vector3.RIGHT, deg_to_rad(35)), mount + normal * 1.3 + b.z * 0.7)
-	var fore := _box(part, Vector3(0.3, 2.4, 0.3), Vector3.ZERO, mat)
-	fore.transform = Transform3D(b * Basis(Vector3.RIGHT, deg_to_rad(-60)), mount + normal * 2.2 + b.z * 0.4)
+	var root := mount - along * (span_m * 0.5 - 1.0)
+	var rail := _box(part, Vector3.ONE * 0.4 + along * (span_m - 0.6), mount + normal * 0.2, dark)
+	rail.name = "ArmRail"
+	var shoulder := _cylinder(part, 0.55, 0.65, 0.7, Vector3.ZERO, dark)
+	shoulder.transform = Transform3D(b, root + normal * 0.35)
+	var holder := Node3D.new()
+	holder.name = "Arm"
+	part.add_child(holder)
+	var reach := span_m - 2.0
+	var p0 := root + normal * 0.8
+	var p1 := p0 + along * reach + normal * 0.2
+	var p2 := p1 - along * (reach - 1.0) + normal * 0.55
+	var p3 := p2 + along * (reach - 2.0) + normal * 0.55
+	var segments: Array[Node3D] = []
 	for k in 3:
-		var finger := _box(part, Vector3(0.12, 0.7, 0.12), Vector3.ZERO, dark)
+		var seg := MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(1, 1, 1)
+		seg.mesh = box
+		seg.material_override = mat if k != 1 else dark
+		holder.add_child(seg)
+		segments.append(seg)
+	var claw := Node3D.new()
+	holder.add_child(claw)
+	for k in 3:
+		var finger := _box(claw, Vector3(0.14, 0.9, 0.14), Vector3.ZERO, dark)
 		var around := Basis(Vector3.UP, TAU * k / 3.0)
-		finger.transform = Transform3D(b * around * Basis(Vector3.RIGHT, deg_to_rad(25)), mount + normal * 2.5 + b * (around * Vector3(0, 0, -0.2)) - b.z * 0.6)
+		finger.transform = Transform3D(around * Basis(Vector3.RIGHT, deg_to_rad(25)), around * Vector3(0, 0.3, -0.25))
+	var arm := {"segments": segments, "claw": claw, "folded": [p0, p1, p2, p3], "normal": normal}
+	place_arm(arm, [p0, p1, p2, p3])
+	return arm
+
+
+## Set a grappling arm's three segments between four joints (model space).
+static func place_arm(arm: Dictionary, joints: Array) -> void:
+	var segs: Array = arm.segments
+	for k in 3:
+		var a: Vector3 = joints[k]
+		var d: Vector3 = (joints[k + 1] as Vector3) - a
+		var y := d if d.length() > 1e-4 else Vector3.UP * 1e-4
+		var x := y.cross(Vector3.UP if absf(y.normalized().y) < 0.9 else Vector3.RIGHT).normalized() * (0.42 - 0.06 * k)
+		var z := x.cross(y).normalized() * (0.42 - 0.06 * k)
+		(segs[k] as Node3D).transform = Transform3D(Basis(x, y, z), a + d * 0.5)
+	var tip: Vector3 = joints[3]
+	var last: Vector3 = (joints[3] as Vector3) - (joints[2] as Vector3)
+	(arm.claw as Node3D).transform = Transform3D(_basis_y_along(last.normalized() if last.length() > 1e-4 else arm.normal), tip)
 
 
 ## Sensor mast: a lattice pole with a dish and a sensor head on top.
