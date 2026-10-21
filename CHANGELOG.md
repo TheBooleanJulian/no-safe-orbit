@@ -4,6 +4,28 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 6, part 4 — builder: parts list, radiators, armour, wrecks (2026-10-21)
+
+#### Changed
+- **The builder's parts list is regrouped**: eight categories, each in
+  sections (e.g. Weapons › Guns, Point defence, Missile launchers,
+  Countermeasures & EW; Hangars & craft › Fighters, Drones), with headers,
+  rarest first within a section.
+- **Radiators 1×3 or 3×1**: the long radiators (the 3-cell panel, now named
+  "Radiator panel (3 cells)", and the heat-pipe radiator) are listed both
+  ways round (along the hull, across it).
+- **Armour stands out from bare hull**: gunmetal slabs, glossier, one panel
+  per cell, a little thicker (28 / 45 cm).
+- **Wrecked blocks keep their shape**: no longer shrunk (leaving gaps), but
+  full size, charred and dented — faces pushed in, edges and corners where
+  they were, so they still meet their neighbours.
+
+#### Tests changed (and why)
+- `smoke_shipyard` (palette): counts pickable rows (section headers are not
+  pickable); a search for "radiator" now finds four entries (both
+  long radiators, each both ways round); the Weapons list opens on
+  its "Guns" section.
+
 ### Play-test batch 6, part 3 — reduced-rate auto-fire and fairer multi-ship fights (2026-10-21)
 
 #### Added

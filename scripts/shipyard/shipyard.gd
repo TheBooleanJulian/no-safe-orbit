@@ -11,7 +11,19 @@ const FLIGHT_SCENE := "res://scenes/main/main.tscn"
 const COLOR_ERROR := CyberTheme.RED
 const COLOR_WARNING := CyberTheme.AMBER
 ## Palette categories (the part kinds the catalog supports).
-const CATEGORIES := ["All", "Hull", "Armour", "Interior", "Propulsion", "Power & thermal", "Weapons", "Sensors", "Utility", "Logistics"]
+const CATEGORIES := ["All", "Hull", "Armour", "Rooms", "Propulsion", "Power & thermal", "Weapons", "Hangars & craft", "Sensors & utility"]
+## Sections within each category, in palette order (play-test batch 6:
+## "reorganise and properly categorise the builder equipment list").
+const SECTIONS := {
+	"Hull": ["Blocks", "Slopes & noses", "Frames", "Armoured sections"],
+	"Armour": ["Plates"],
+	"Rooms": ["Crew & command", "Engineering", "Stores & hangars"],
+	"Propulsion": ["Main engines", "Thrusters (RCS)", "Propellant tanks"],
+	"Power & thermal": ["Reactors", "Radiators", "Power distribution", "Power bus"],
+	"Weapons": ["Guns", "Point defence", "Missile launchers", "Countermeasures & EW"],
+	"Hangars & craft": ["Fighters", "Drones"],
+	"Sensors & utility": ["Sensors", "Docking & salvage"],
+}
 ## Armour palette entries: id -> [mm (0 = remove), name, description].
 const ARMOR_ENTRIES := {
 	&"plate_40": [ShipBlueprint.PLATE_THIN_MM, "Thin armour plate (40 mm)",
@@ -862,8 +874,14 @@ func _build_palette() -> void:
 	palette_list = ItemList.new()
 	palette_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	palette_list.item_selected.connect(func(i: int) -> void:
-		var m: Array = palette_list.get_item_metadata(i)
-		select_palette(m[0], m[1]))
+		var m: Variant = palette_list.get_item_metadata(i)
+		if not m is Array:
+			return  # a section header
+		select_palette(m[0], m[1])
+		if (m as Array).size() > 2:
+			# A preset way round (the radiators' along / across entries).
+			place_rotation = int(m[2])
+			_update_ghost())
 	box.add_child(palette_list)
 	armor_faces = OptionButton.new()
 	for n in ["Plate every exposed face", "Sides only", "Top only", "Underside only"]:
@@ -920,74 +938,148 @@ func _build_palette() -> void:
 	_fill_palette_list()
 
 
-## Category of a part, adapted to the kinds the catalog has.
-static func category_of(kind: String, def: Resource) -> String:
+## Where a part sits in the palette: [category, section] (SECTIONS).
+static func palette_place(kind: String, def: Resource) -> Array:
 	match kind:
 		"hull":
-			return "Hull"
+			var id := String(def.id)
+			if id.contains("armored"):
+				return ["Hull", "Armoured sections"]
+			if id.contains("wedge") or id.contains("nose"):
+				return ["Hull", "Slopes & noses"]
+			if id.contains("truss"):
+				return ["Hull", "Frames"]
+			return ["Hull", "Blocks"]
 		"room":
-			return "Logistics" if def.role in [&"cargo", &"magazine"] else "Interior"
-	match (def as EquipmentDefinition).kind:
-		EquipmentDefinition.Kind.MAIN_ENGINE, EquipmentDefinition.Kind.RCS:
-			return "Propulsion"
-		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION:
-			return "Power & thermal"
-		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE, EquipmentDefinition.Kind.MISSILE_LAUNCHER, \
-				EquipmentDefinition.Kind.DECOY_LAUNCHER, EquipmentDefinition.Kind.JAMMER:
-			return "Weapons"
-		EquipmentDefinition.Kind.SENSOR, EquipmentDefinition.Kind.GRAPPLE:
-			return "Sensors"
+			match StringName(def.role):
+				&"command", &"quarters", &"life_support", &"access":
+					return ["Rooms", "Crew & command"]
+				&"engineering", &"workshop":
+					return ["Rooms", "Engineering"]
+			return ["Rooms", "Stores & hangars"]
+	var e := def as EquipmentDefinition
+	match e.kind:
+		EquipmentDefinition.Kind.MAIN_ENGINE:
+			return ["Propulsion", "Main engines"]
+		EquipmentDefinition.Kind.RCS:
+			return ["Propulsion", "Thrusters (RCS)"]
 		EquipmentDefinition.Kind.PROPELLANT_TANK:
-			return "Logistics"
-	return "Utility"
+			return ["Propulsion", "Propellant tanks"]
+		EquipmentDefinition.Kind.REACTOR:
+			return ["Power & thermal", "Reactors"]
+		EquipmentDefinition.Kind.RADIATOR:
+			return ["Power & thermal", "Radiators"]
+		EquipmentDefinition.Kind.POWER_DISTRIBUTION:
+			return ["Power & thermal", "Power distribution"]
+		EquipmentDefinition.Kind.CANNON:
+			return ["Weapons", "Guns"]
+		EquipmentDefinition.Kind.POINT_DEFENCE:
+			return ["Weapons", "Point defence"]
+		EquipmentDefinition.Kind.MISSILE_LAUNCHER:
+			return ["Weapons", "Missile launchers"]
+		EquipmentDefinition.Kind.DECOY_LAUNCHER, EquipmentDefinition.Kind.JAMMER:
+			return ["Weapons", "Countermeasures & EW"]
+		EquipmentDefinition.Kind.CRAFT_MOUNT:
+			return ["Hangars & craft", "Fighters" if e.craft != null and e.craft.cannon != null else "Drones"]
+		EquipmentDefinition.Kind.SENSOR:
+			return ["Sensors & utility", "Sensors"]
+	return ["Sensors & utility", "Docking & salvage"]
 
 
+## The category alone (older callers).
+static func category_of(kind: String, def: Resource) -> String:
+	return palette_place(kind, def)[0]
+
+
+## The pickable rows' text (section headers left out).
+func palette_items() -> PackedStringArray:
+	var out := PackedStringArray()
+	for i in palette_list.item_count:
+		if palette_list.is_item_selectable(i):
+			out.append(palette_list.get_item_text(i))
+	return out
+
+
+## The palette: grouped by category and section, a header for each (in
+## "All", the categories too), parts within a section by rarity, then size.
 func _fill_palette_list() -> void:
 	if palette_list == null:
 		return
 	palette_list.clear()
 	var want: String = CATEGORIES[maxi(palette_category.selected, 0)]
 	var query := palette_search.text.strip_edges().to_lower()
+	# Every row: [category, section, sort key, text, metadata, colour, tooltip].
+	var rows: Array = []
 	for id: StringName in BUS_ENTRIES:
 		var b_name: String = BUS_ENTRIES[id][1]
-		if (want != "All" and want != "Power & thermal") or (query != "" and not (b_name.to_lower().contains(query) or "bus".contains(query) or "power".contains(query))):
-			continue
-		var bi := palette_list.add_item(b_name if want != "All" else "%s · Power & thermal" % b_name)
-		palette_list.set_item_metadata(bi, ["bus", id])
-		palette_list.set_item_custom_fg_color(bi, CyberTheme.AMBER if BUS_ENTRIES[id][0] else CyberTheme.TEXT_DIM)
+		rows.append(["Power & thermal", "Power bus", "%s" % b_name, b_name, ["bus", id],
+			CyberTheme.AMBER if BUS_ENTRIES[id][0] else CyberTheme.TEXT_DIM, "Power conduit: " + b_name])
 	for id: StringName in ARMOR_ENTRIES:
 		var a_name: String = ARMOR_ENTRIES[id][1]
-		if (want != "All" and want != "Armour") or (query != "" and not (a_name.to_lower().contains(query) or "armour".contains(query))):
-			continue
-		var ai := palette_list.add_item(a_name if want == "Armour" else "%s · Armour" % a_name)
-		palette_list.set_item_metadata(ai, ["armor", id])
 		var mm: int = ARMOR_ENTRIES[id][0]
-		palette_list.set_item_custom_fg_color(ai, DeckEditor.COLOR_PLATE_THIN.lightened(0.3) if mm > 0 else CyberTheme.TEXT_DIM)
+		rows.append(["Armour", "Plates", "%04d" % (9999 - mm if mm > 0 else 9999), a_name, ["armor", id],
+			DeckEditor.COLOR_PLATE_THIN.lightened(0.3) if mm > 0 else CyberTheme.TEXT_DIM, a_name])
 	for entry in [["hull", editor.catalog.hull], ["room", editor.catalog.rooms], ["equipment", editor.catalog.equipment]]:
 		for id in ConstructionCatalog.sorted_ids(entry[1]):
 			var def: Resource = entry[1][id]
 			if (def is HullModuleDefinition or def is EquipmentDefinition) and def.legacy:
 				continue
-			var cat := category_of(entry[0], def)
-			if want != "All" and cat != want:
-				continue
-			if query != "" and not (def.display_name.to_lower().contains(query) or String(id).contains(query) or cat.to_lower().contains(query)):
-				continue
+			var place := palette_place(entry[0], def)
 			var text: String = def.display_name
+			var suffix := ""
 			var color := (def.color as Color).lightened(0.2)
 			if def.rarity != Rarity.Tier.COMMON:
 				color = Rarity.color_of(def.rarity)
 				if def is EquipmentDefinition:
-					text += "  ×%d" % profile.owned(id)
+					suffix = "  ×%d" % profile.owned(id)
 				elif not profile.is_unlocked(def):
-					text += "  (locked)"
+					suffix = "  (locked)"
 					color = color.darkened(0.45)
-			if want == "All":
-				text = "%s · %s" % [text, cat]
-			var i := palette_list.add_item(text)
-			palette_list.set_item_metadata(i, [entry[0], id])
-			palette_list.set_item_custom_fg_color(i, color)
-			palette_list.set_item_tooltip(i, "%s — %s · %s" % [def.display_name, cat, Rarity.name_of(def.rarity)])
+			var mass := float(def.get("mass_kg")) if def.get("mass_kg") != null else 0.0
+			var key := "%d|%09.0f|%s" % [def.rarity, mass, def.display_name]
+			var tip := "%s — %s › %s · %s" % [def.display_name, place[0], place[1], Rarity.name_of(def.rarity)]
+			if def is EquipmentDefinition and (def as EquipmentDefinition).kind == EquipmentDefinition.Kind.RADIATOR \
+					and (def as EquipmentDefinition).length_cells > 1:
+				# Long radiators: both ways round, as their own entries.
+				var n: int = (def as EquipmentDefinition).length_cells
+				rows.append([place[0], place[1], key + "|a", "%s 1×%d — along the hull%s" % [text, n, suffix], [entry[0], id, 0], color, tip])
+				rows.append([place[0], place[1], key + "|b", "%s %d×1 — across the hull%s" % [text, n, suffix], [entry[0], id, 1], color, tip])
+				continue
+			rows.append([place[0], place[1], key, text + suffix, [entry[0], id], color, tip])
+	var cat_order: Array = CATEGORIES.slice(1)
+	rows.sort_custom(func(a: Array, b: Array) -> bool:
+		var ca := cat_order.find(a[0])
+		var cb := cat_order.find(b[0])
+		if ca != cb:
+			return ca < cb
+		var sa: int = (SECTIONS[a[0]] as Array).find(a[1])
+		var sb: int = (SECTIONS[b[0]] as Array).find(b[1])
+		if sa != sb:
+			return sa < sb
+		return str(a[2]) < str(b[2]))
+	var last_cat := ""
+	var last_section := ""
+	for r: Array in rows:
+		if want != "All" and r[0] != want:
+			continue
+		if query != "" and not (str(r[3]).to_lower().contains(query) or str(r[0]).to_lower().contains(query)
+				or str(r[1]).to_lower().contains(query) or String(r[4][1]).contains(query)):
+			continue
+		if want == "All" and r[0] != last_cat:
+			var ch := palette_list.add_item(str(r[0]).to_upper())
+			palette_list.set_item_selectable(ch, false)
+			palette_list.set_item_custom_fg_color(ch, CyberTheme.AMBER)
+			last_cat = r[0]
+			last_section = ""
+		if r[1] != last_section:
+			var sh := palette_list.add_item("  " + str(r[1]))
+			palette_list.set_item_selectable(sh, false)
+			palette_list.set_item_custom_fg_color(sh, CyberTheme.TEXT_DIM)
+			last_section = r[1]
+		var i := palette_list.add_item("    " + str(r[3]))
+		palette_list.set_item_metadata(i, r[4])
+		palette_list.set_item_custom_fg_color(i, r[5])
+		palette_list.set_item_tooltip(i, r[6])
 
 
 ## Key figures above the detailed stats.

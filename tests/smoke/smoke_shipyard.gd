@@ -89,22 +89,24 @@ func _run() -> void:
 	# Searchable, categorised palette.
 	yard.palette_search.text = "radiator"
 	yard.palette_search.text_changed.emit("radiator")
-	var names := PackedStringArray()
-	for i in yard.palette_list.item_count:
-		names.append(yard.palette_list.get_item_text(i))
-	_check(names.size() == 2 and " ".join(names).contains("Radiator panel") and " ".join(names).contains("Heat-pipe radiator"),
-		"search 'radiator' lists both radiators: %s" % ", ".join(names))
+	var names := yard.palette_items()
+	_check(names.size() == 4 and " ".join(names).contains("Radiator panel (3 cells) 1×3 — along")
+		and " ".join(names).contains("Radiator panel (3 cells) 3×1 — across") and " ".join(names).contains("Heat-pipe radiator 3×1"),
+		"search 'radiator' lists both long radiators, each both ways round: %s" % ", ".join(names))
 	yard.palette_search.text = ""
 	yard.palette_category.select(Shipyard.CATEGORIES.find("Weapons"))
 	yard.palette_category.item_selected.emit(yard.palette_category.selected)
-	var weapons := PackedStringArray()
-	for i in yard.palette_list.item_count:
-		weapons.append(yard.palette_list.get_item_text(i))
+	var weapons := yard.palette_items()
 	_check(weapons.size() == 10 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Point-defence")
 		and " ".join(weapons).contains("Missile rack") and " ".join(weapons).contains("Flare launcher") and " ".join(weapons).contains("EW jammer"),
 		"the Weapons category lists the guns, point defence, launchers and countermeasures: %s" % ", ".join(weapons))
-	yard.palette_list.select(0)
-	yard.palette_list.item_selected.emit(0)
+	var first := 0
+	while first < yard.palette_list.item_count and not yard.palette_list.is_item_selectable(first):
+		first += 1
+	_check(not yard.palette_list.is_item_selectable(0) and yard.palette_list.get_item_text(0).strip_edges() == "Guns",
+		"sections head the list (%s)" % yard.palette_list.get_item_text(0).strip_edges())
+	yard.palette_list.select(first)
+	yard.palette_list.item_selected.emit(first)
 	_check(yard.tool == Shipyard.Tool.PLACE and yard.place_kind == "equipment", "picking from the list arms the place tool")
 	yard.set_tool(Shipyard.Tool.SELECT)
 	yard.expand_view("3d")

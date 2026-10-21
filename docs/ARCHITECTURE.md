@@ -235,6 +235,16 @@ and the location's central body:
   and derelict, at `spawn_offset`. G with nothing to beacon salvages the
   nearest in reach (`salvage_derelict`: `resalvage_yield`, strip, once per
   sortie). HUD `derelict_ids` marks them.
+- **Builder palette (play-test batch 6)**: `Shipyard.palette_place(kind, def)`
+  → [category, section] (`CATEGORIES`, `SECTIONS`); `_fill_palette_list`
+  sorts rows by category, section, rarity, mass and adds non-selectable
+  header rows; long radiators get two rows whose metadata carries a preset
+  `place_rotation` (0 along, 1 across). `palette_items()` lists pickable rows.
+- **Hull visuals (play-test batch 6)**: armour plates use
+  `ShipModelBuilder._armour_mat` (gunmetal, metallic 0.75, one panel per
+  cell); a wrecked module's mesh becomes `ShipModelBuilder.dented()`
+  (subdivided, inner face points pushed in, edge and corner points fixed)
+  at full scale.
 - **Brokers**: `Location.broker_price/name/pitch`;
   `PlayerProfile.brokers()` and `buy_location()` add to `known_locations`
   (already saved, so no schema change). Shipyard MAP lists them.

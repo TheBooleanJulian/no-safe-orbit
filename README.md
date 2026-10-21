@@ -856,8 +856,18 @@ longer offered.)
 **Templates**: Cutter Mk I (light, ~150 t), Corvette Mk I (medium, ~365 t)
 and Frigate Mk I (heavy) — common parts only, so any profile can fly them.
 
-**Armour** (palette → Armour): drag across cells to fit 40 mm (thin, grey)
-or 80 mm (thick, dark grey) plates on their exposed faces — all, sides only, top
+**The parts list** is grouped by category and section — Hull (blocks,
+slopes & noses, frames, armoured sections), Armour, Rooms (crew & command,
+engineering, stores & hangars), Propulsion (main engines, RCS, tanks),
+Power & thermal (reactors, radiators, distribution, power bus), Weapons
+(guns, point defence, missile launchers, countermeasures & EW), Hangars &
+craft (fighters, drones), Sensors & utility — rarest first within a
+section; search narrows it. The 3-cell radiator is listed both ways round:
+**1×3 along the hull** and **3×1 across it** (R turns any long part too).
+
+**Armour** (palette → Armour): drag across cells to fit 40 mm (thin, gunmetal)
+or 80 mm (thick, darker) slabs on their exposed faces — glossier and less
+blue than bare hull, one panel per cell, so plated faces stand out — all, sides only, top
 only or underside only — or strip them; **Clear all armour** strips the
 lot (Ctrl+Z puts it back). A plate on a face you later build over (a new
 deck or module) goes with that edit, mass and all. Plates add mass
