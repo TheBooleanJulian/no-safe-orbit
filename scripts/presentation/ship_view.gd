@@ -98,7 +98,9 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 	_plume_material.albedo_color.a = 0.15 + 0.4 * fwd_fraction
 	if state.systems != null:
 		_show_damage(state.systems)
+		_show_emp(state.systems, get_process_delta_time())
 		_update_lights_and_radar(state.systems, get_process_delta_time())
+	_update_spool(get_process_delta_time())
 	_drift_pieces(get_process_delta_time())
 	_train_turrets(state)
 	_move_arms(get_process_delta_time())
@@ -107,6 +109,152 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 	var on := fmod(_clock, BEACON_PERIOD_S) < 0.25
 	for b in _beacons:
 		b.visible = on and b.get_parent().visible
+
+
+## EMP (play-test batch 9): a part an EMP has reset crackles with light-blue
+## static — jagged arcs redrawn EMP_REDRAW_S apart — until it recovers; with
+## several parts down the static crawls over the hull too.
+const EMP_ARCS_PER_PART := 3
+const EMP_REDRAW_S := 0.07
+const EMP_ARC_RADIUS_M := 2.4
+const EMP_COLOR := Color(0.55, 0.85, 1.0, 0.9)
+## Parts crackling now (ids), and the arcs drawn last.
+var emp_sparking := PackedStringArray()
+var emp_arcs := 0
+var _emp_mesh: MeshInstance3D
+var _emp_clock := 0.0
+var _emp_rng := RandomNumberGenerator.new()
+
+
+func _show_emp(systems: ShipSystems, delta: float) -> void:
+	_emp_clock -= delta
+	if _emp_clock > 0.0:
+		return
+	_emp_clock = EMP_REDRAW_S
+	var points: Array[Vector3] = []
+	emp_sparking = PackedStringArray()
+	emp_arcs = 0
+	for e in systems.equipment:
+		if e.disrupted_s > 0.0 and not e.destroyed():
+			emp_sparking.append(e.id)
+			points.append(e.body_position)
+	if points.is_empty():
+		if _emp_mesh != null:
+			_emp_mesh.visible = false
+		return
+	if _emp_mesh == null:
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mat.albedo_color = EMP_COLOR
+		_emp_mesh = MeshInstance3D.new()
+		_emp_mesh.name = "EmpStatic"
+		_emp_mesh.mesh = ImmediateMesh.new()
+		_emp_mesh.material_override = mat
+		_emp_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_emp_mesh)
+	if points.size() >= 3:
+		# Over the hull: points on its bounding box's faces.
+		var b := stats.hull_bounds_m
+		for k in points.size():
+			var p := b.position + Vector3(_emp_rng.randf(), _emp_rng.randf(), _emp_rng.randf()) * b.size
+			var axis := _emp_rng.randi() % 3
+			p[axis] = b.position[axis] if _emp_rng.randf() < 0.5 else b.end[axis]
+			points.append(p - stats.center_of_mass_m)
+	var im := _emp_mesh.mesh as ImmediateMesh
+	im.clear_surfaces()
+	im.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for p in points:
+		for k in EMP_ARCS_PER_PART:
+			_emp_arc(im, p)
+			emp_arcs += 1
+	im.surface_end()
+	_emp_mesh.visible = true
+
+
+## One jagged arc near `centre`: five short kinked segments.
+func _emp_arc(im: ImmediateMesh, centre: Vector3) -> void:
+	var a := centre + _rand_dir() * EMP_ARC_RADIUS_M * 0.4
+	var heading := _rand_dir()
+	for k in 5:
+		heading = (heading + _rand_dir() * 0.9).normalized()
+		var b := a + heading * EMP_ARC_RADIUS_M * _emp_rng.randf_range(0.15, 0.3)
+		# Two crossed ribbons, so it reads from any side.
+		var dir := (b - a).normalized()
+		var u := dir.cross(Vector3.UP if absf(dir.y) < 0.9 else Vector3.RIGHT).normalized() * 0.11
+		var v := dir.cross(u).normalized() * 0.11
+		for side: Vector3 in [u, v]:
+			for q: Vector3 in [a - side, a + side, b + side, a - side, b + side, b - side]:
+				im.surface_add_vertex(q)
+		a = b
+
+
+func _rand_dir() -> Vector3:
+	var d := Vector3(_emp_rng.randf_range(-1, 1), _emp_rng.randf_range(-1, 1), _emp_rng.randf_range(-1, 1))
+	return d.normalized() if d.length_squared() > 1e-4 else Vector3.UP
+
+
+## Hold [B] (play-test batch 9): Main sets how far the jump drive has charged
+## (0–1). Rings of light gather along the hull and spin up, closing in on
+## its middle, brightening until it jumps.
+var jump_spool := 0.0
+const SPOOL_RINGS := 3
+const SPOOL_COLOR := Color(0.55, 0.8, 1.0)
+var _spool: Node3D
+var _spool_rings: Array[Node3D] = []
+var _spool_ring_z: Array[float] = []
+var _spool_mat: StandardMaterial3D
+
+
+func _update_spool(delta: float) -> void:
+	if jump_spool <= 0.0:
+		if _spool != null:
+			_spool.visible = false
+		return
+	if _spool == null:
+		_build_spool()
+	_spool.visible = true
+	var s := clampf(jump_spool, 0.0, 1.0)
+	for k in _spool_rings.size():
+		var ring := _spool_rings[k]
+		ring.rotate_object_local(Vector3.UP, (1.0 + 12.0 * s * s) * delta * (1.0 if k % 2 == 0 else -1.0))
+		ring.position.z = _spool_ring_z[k] * (1.0 - 0.7 * s)
+		ring.scale = Vector3.ONE * lerpf(1.2, 0.9, s)
+	_spool_mat.albedo_color.a = 0.2 + 0.6 * s
+
+
+func _build_spool() -> void:
+	var b := stats.hull_bounds_m
+	var centre := b.get_center() - stats.center_of_mass_m
+	var r := maxf(b.size.x, b.size.y) * 0.6 + 3.0
+	_spool = Node3D.new()
+	_spool.name = "JumpSpool"
+	_spool.position = Vector3(centre.x, centre.y, 0.0)
+	add_child(_spool)
+	_spool_mat = StandardMaterial3D.new()
+	_spool_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_spool_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_spool_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_spool_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_spool_mat.albedo_color = SPOOL_COLOR
+	var torus := TorusMesh.new()
+	torus.inner_radius = r * 0.94
+	torus.outer_radius = r
+	torus.rings = 48
+	for k in SPOOL_RINGS:
+		var holder := Node3D.new()
+		var z := centre.z + b.size.z * lerpf(-0.4, 0.4, float(k) / float(SPOOL_RINGS - 1))
+		holder.position.z = z
+		_spool.add_child(holder)
+		var ring := MeshInstance3D.new()
+		ring.mesh = torus
+		ring.material_override = _spool_mat
+		ring.rotation_degrees = Vector3(90, 0, 0)  # the torus's axis (+Y) along the ship's length
+		holder.add_child(ring)
+		_spool_rings.append(ring)
+		_spool_ring_z.append(z)
 
 
 ## A black shell hole where a round pierced the hull (body frame point and

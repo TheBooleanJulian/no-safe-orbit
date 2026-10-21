@@ -4,6 +4,42 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 9, part 7 — effects, the opening range, craft fire rate (2026-10-21)
+
+#### Added
+- **EMP static**: a part an EMP has reset crackles with light-blue static
+  outside the hull until it recovers; with three or more down it crawls
+  over the whole hull.
+- **Jump spool-up**: holding B, rings of light gather round the hull, spin
+  up and close in on its middle, brightening until the jump.
+- **The docking hall behind the berth**: a minimal station interior drawn as
+  the 3D view's sky — ribbed walls, two catwalks with amber lamps, a gridded
+  deck with teal guide lines, light strips overhead.
+
+#### Changed
+- **The encounter's lead starts 4 km out** (was 2.5 km), so the first
+  seconds aren't spent inside its guns' and fighters' reach. 5 km was tried
+  first: the balance sim's scripted (non-manoeuvring) player then lost the
+  mission-5 1v1 to missile salvos.
+- **Craft guns fire at half their old rate**: Hornet interceptor 600 → 300
+  rpm, Wasp fighter 300 → 150 rpm (yours and the enemy's alike; same
+  magazines, so they stay out longer). Balance sim, mission 5: 1 ship won
+  in 12 s (as before); 2 ships survived the 480 s limit at 84 % (lost at
+  333 s before); 3 ships lost at 401 s (259 s before).
+
+#### Tests changed (and why)
+- New `test_batch9_effects` (4): EMP static (10 parts reset → 10 crackling,
+  60 arcs; gone on recovery), the jump spool (3 rings, the end ring 20.8 →
+  7.5 m from the middle, glow 0.26 → 0.77, gone when B is let go), the
+  berth's sky shader, the 4 km opening range and the craft gun rates.
+  Shaders and effects also checked by a windowed render.
+- `smoke_encounter`: brings the two wingmen alongside at fixed close
+  positions instead of `Main.CONTACT_OFFSETS` (which moved out); the checks
+  are about the fight once they are close.
+- `smoke_campaign`: puts the mission-1 target at the old 2.5 km start
+  before the scripted burst — from the new 4 km angle its first round
+  disabled the ship before it could fire back, and the checks need its hits.
+
 ### Play-test batch 9, part 6 — cargo contracts, remote salvage (2026-10-21)
 
 #### Added

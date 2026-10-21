@@ -518,6 +518,16 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 9 — part 7: effects, opening range, craft fire rate ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| EMP light-blue static until recovery | `test_batch9_effects`, windowed render | 10 parts reset → 10 crackling, 60 arcs; none after recovery |
+| B-key jump spool-up animation | `test_batch9_effects`, windowed render | 3 rings close 20.8 → 7.5 m, glow 0.26 → 0.77 |
+| Shipyard interior as the berth's sky | `test_batch9_effects`, windowed render | sky shader in place of the flat background |
+| Spawn further than 2.5 km | `test_batch9_effects`, `tools/balance_sim.gd --quick` | lead at 4 km; m5 1v1 won 12 s, 1v2 survived 480 s (lost 333 s before), 1v3 lost 401 s (259 s) |
+| Enemy fighters' fire rate | `test_batch9_effects` | Hornet 600 → 300 rpm, Wasp 300 → 150 rpm |
+
 ### Play-test batch 9 — part 6: cargo contracts, remote salvage ✅ (2026-10-21)
 
 Parts 1–5 (fixes, builder, services, crew, economy) are in the CHANGELOG.

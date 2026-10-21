@@ -32,6 +32,10 @@ var ghost_ok: bool = true
 ## clamp arms reaching in, work lights. Set before show_design.
 var berth: bool = false
 var _berth: Node3D
+## Behind the berth: the station's docking hall, drawn as the sky (play-test
+## batch 9, shaders/shipyard_interior.gdshader).
+const INTERIOR_SKY: Shader = preload("res://shaders/shipyard_interior.gdshader")
+var _env: Environment
 
 var _viewport: SubViewport
 var _pivot: Node3D
@@ -62,6 +66,7 @@ func _ready() -> void:
 	_viewport.msaa_3d = Viewport.MSAA_2X
 	add_child(_viewport)
 	var env := Environment.new()
+	_env = env
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.03, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -113,6 +118,13 @@ func show_design(editor: ShipEditor) -> void:
 func _build_berth(half: Vector3) -> void:
 	if _berth != null:
 		_berth.queue_free()
+	if _env.background_mode != Environment.BG_SKY:
+		var mat := ShaderMaterial.new()
+		mat.shader = INTERIOR_SKY
+		var sky := Sky.new()
+		sky.sky_material = mat
+		_env.sky = sky
+		_env.background_mode = Environment.BG_SKY
 	_berth = Node3D.new()
 	_berth.name = "Berth"
 	_pivot.add_child(_berth)
