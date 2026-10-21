@@ -284,7 +284,8 @@ func _char_material(level: int, current: Material) -> Material:
 
 ## Destroyed external systems disappear; a wrecked module breaks up: its
 ## plating shears off in tumbling pieces that drift away from the hull,
-## leaving a charred, shrunken frame.
+## leaving a charred, dented frame at full size (its edges still meet the
+## blocks around it).
 func _show_damage(systems: ShipSystems) -> void:
 	_show_plate_wear(systems)
 	for e in systems.equipment:
@@ -297,7 +298,7 @@ func _show_damage(systems: ShipSystems) -> void:
 			var mi := _parts[id] as MeshInstance3D
 			_break_off(mi)
 			mi.material_override = _wreck_material
-			mi.scale = Vector3.ONE * 0.72
+			mi.mesh = ShipModelBuilder.dented(mi.mesh, hash(id))
 			_hull_flats[mi] = ShipModelBuilder.flat_arrays(mi, _model_root)
 			_hull_dirty = true
 	if _hull_dirty:

@@ -513,8 +513,9 @@ static func _wedge(parent: Node3D, def: HullModuleDefinition, m: ShipBlueprint.P
 	return mi
 
 
-## Armour plates as raised panels on their faces: slate for 40 mm, darker
-## and thicker for 80 mm; slope plates lie on the slope.
+## Armour plates as raised slabs on their faces, set apart from the bare
+## hull (play-test batch 6): a neutral gunmetal, glossier, one panel per
+## cell; darker and thicker for 80 mm; slope plates lie on the slope.
 static func _add_plates(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, mats: Dictionary, tint: Color) -> void:
 	if bp.armor.is_empty():
 		return
@@ -523,8 +524,8 @@ static func _add_plates(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_
 	holder.name = "Armour"
 	model.root.add_child(holder)
 	model.parts["armour"] = holder
-	var thin := _hull_mat(mats, Color(0.5, 0.53, 0.58) * tint)
-	var thick := _hull_mat(mats, Color(0.36, 0.38, 0.42) * tint)
+	var thin := _armour_mat(mats, Color(0.44, 0.45, 0.43) * tint)
+	var thick := _armour_mat(mats, Color(0.3, 0.31, 0.3) * tint)
 	for key: String in bp.armor:
 		var cf := ShipBlueprint.parse_plate_key(key)
 		var cell: Vector3i = cf[0]
@@ -532,7 +533,7 @@ static func _add_plates(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_
 		if not grid.is_hull(cell):
 			continue
 		var mm := int(bp.armor[key])
-		var depth := 0.35 if mm >= ShipBlueprint.PLATE_THICK_MM else 0.2
+		var depth := 0.45 if mm >= ShipBlueprint.PLATE_THICK_MM else 0.28
 		var mat := thick if mm >= ShipBlueprint.PLATE_THICK_MM else thin
 		var cell_center := ShipGrid.cell_center_m(cell) - origin_m
 		if grid.is_wedge_cell(cell) and grid.slope_faces(cell).has(face):
@@ -733,6 +734,69 @@ static func _hull_mat(cache: Dictionary, color: Color) -> StandardMaterial3D:
 		mat.roughness = 0.6
 		cache[key] = mat
 	return cache[key]
+
+
+## Armour plate: the hull's panel texture at one panel per cell (each plate
+## reads as a slab), less blue than the hull, more metallic and glossier.
+static func _armour_mat(cache: Dictionary, color: Color) -> StandardMaterial3D:
+	var key := "armour%s" % color
+	if not cache.has(key):
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = color
+		mat.albedo_texture = _plates()
+		mat.uv1_triplanar = true
+		mat.uv1_scale = Vector3.ONE / ShipGrid.CELL_SIZE_M
+		mat.metallic = 0.75
+		mat.roughness = 0.38
+		cache[key] = mat
+	return cache[key]
+
+
+## A wrecked module's mesh, dented but whole (play-test batch 6: wrecks used
+## to shrink, leaving gaps): its faces are subdivided and their inner points
+## pushed in by up to DENT_DEPTH of its smallest half-size; points on its
+## edges and corners stay put, so it still meets its neighbours. Seeded.
+const DENT_DEPTH := 0.35
+
+
+static func dented(mesh: Mesh, seed_value: int) -> ArrayMesh:
+	var src := mesh
+	if mesh is BoxMesh:
+		var b := (mesh as BoxMesh).duplicate() as BoxMesh
+		b.subdivide_width = 3
+		b.subdivide_height = 3
+		b.subdivide_depth = 3
+		src = b
+	elif mesh is PrismMesh:
+		var p := (mesh as PrismMesh).duplicate() as PrismMesh
+		p.subdivide_width = 3
+		p.subdivide_height = 3
+		p.subdivide_depth = 3
+		src = p
+	var arrays := src.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var box := src.get_aabb()
+	var lo := box.position
+	var hi := box.end
+	var depth := minf(minf(box.size.x, box.size.y), box.size.z) * 0.5 * DENT_DEPTH
+	var eps := 1e-3
+	for i in verts.size():
+		var v := verts[i]
+		var bounds := 0
+		for axis in 3:
+			if absf(v[axis] - lo[axis]) < eps or absf(v[axis] - hi[axis]) < eps:
+				bounds += 1
+		if bounds >= 2:
+			continue  # an edge or a corner: it touches the neighbours
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_value + hash(Vector3i((v * 100.0).round()))
+		verts[i] = v - normals[i] * depth * rng.randf_range(0.2, 1.0)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	var st := SurfaceTool.new()
+	st.create_from_arrays(arrays)
+	st.generate_normals()
+	return st.commit()
 
 
 ## Hull plating: panels with dark seams, rivet lines, a few weathered
