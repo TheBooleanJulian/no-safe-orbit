@@ -60,6 +60,9 @@ const BUS_ENTRIES := {
 @onready var stats_label: Label = %StatsLabel
 @onready var issue_text: RichTextLabel = %IssueText
 
+## The DEV button's free credits (a testing aid).
+const DEV_CREDITS := 100000
+
 var editor: ShipEditor
 ## Spare parts, found parts and the hangar vessel (Main.get_profile()).
 var profile: PlayerProfile
@@ -747,7 +750,7 @@ func _fill_vessel_picker() -> void:
 
 ## Testing aid: 100 free credits (saved at once).
 func dev_add_credits() -> void:
-	profile.dev_grant_credits(100)
+	profile.dev_grant_credits(DEV_CREDITS)
 	_save_profile()
 	_refresh_hangar()
 
@@ -1384,8 +1387,8 @@ func _build_hangar_panel() -> void:
 	debrief_button.text = "Last debrief"
 	debrief_button.pressed.connect(func() -> void: debrief.show_debrief(profile.last_debrief))
 	var dev_button := Button.new()
-	dev_button.text = "DEV +100 cr"
-	dev_button.tooltip_text = "Testing aid: 100 free credits"
+	dev_button.text = "DEV +100k cr"
+	dev_button.tooltip_text = "Testing aid: %d free credits" % DEV_CREDITS
 	dev_button.pressed.connect(func() -> void: dev_add_credits())
 	for b in [_bank_button, dev_button]:
 		row2.add_child(b)
@@ -1827,6 +1830,17 @@ func _refresh_station_tabs() -> void:
 			"Buy (%d cr)" % int(item.price), func() -> void: _station_result(profile.buy_stock(i, catalog)), profile.credits >= int(item.price)))
 	if profile.vendor_stock.is_empty():
 		_vendor_tab.add_child(_station_label("Sold out until the next sortie."))
+	# Found equipment still in the hold can be sold here (play-test batch 11).
+	var found: Dictionary = profile.vessel.cargo.get("equipment", {}) if profile.vessel != null else {}
+	if not found.is_empty():
+		_vendor_tab.add_child(_station_label("[b]SELL FROM THE HOLD[/b] · %d %% of shelf price" % roundi(PlayerProfile.SELL_SHARE * 100.0)))
+	for id: String in found:
+		var def: EquipmentDefinition = catalog.equipment.get(StringName(id))
+		if def == null:
+			continue
+		var price := profile.sell_price(def)
+		_vendor_tab.add_child(_station_row("[color=#%s]%s[/color] %s ×%d in the hold" % [Rarity.color_of(def.rarity).to_html(false), Rarity.name_of(def.rarity),
+			def.display_name, int(found[id])], "Sell (%d cr)" % price, func() -> void: _station_result(profile.sell_cargo_equipment(id, catalog)), true))
 	# Spare parts in any amount (play-test batch 9), at the lot's rate.
 	var parts_row := HBoxContainer.new()
 	parts_row.add_theme_constant_override("separation", CyberTheme.SPACE_S)

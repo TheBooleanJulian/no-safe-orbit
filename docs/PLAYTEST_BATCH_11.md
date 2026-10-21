@@ -54,16 +54,16 @@ Legend: ✅ done · 🔧 in progress · ⬜ to do
 - ✅ Remove the opaque floor in the 3D view (or make the clamps taller), so the camera can look at the bottom of the ship. The berth floor is now see-through.
 - ✅ Colour RCS blocks white; they blend into the armour now.
 
-## Part 4: flight and shipyard ⬜
+## Part 4: flight and shipyard ✅
 
-- ⬜ Atmospheric re-entry (Earth and Mars) shows a cone, not an ellipsoid.
-- ⬜ The cargo hold lists the mission items in text.
-- ⬜ With the ship-combat tab open, the hit cam doesn't block the centre, even with the orbit panel and combat log open.
-- ⬜ Docking collar and gangway are octagonal: long edges with short corners, like a rounded, filleted square.
-- ⬜ Found equipment in the cargo hold can be sold to the quartermaster.
-- ⬜ The DEV credit button gives 100k credits.
-- ⬜ Investigate the bug where banking cargo seems to fully repair the ship; fix it if it is one.
-- ⬜ Ship dealer: pre-rendered, decorated catalogue images (to remove the load lag), in 3 columns instead of 2.
+- ✅ Atmospheric re-entry (Earth and Mars) shows a cone, not an ellipsoid.
+- ✅ The cargo hold lists the mission items in text.
+- ✅ With the ship-combat tab open, the hit cam doesn't block the centre, even with the orbit panel and combat log open.
+- ✅ Docking collar and gangway are octagonal: long edges with short corners, like a rounded, filleted square.
+- ✅ Found equipment in the cargo hold can be sold to the quartermaster.
+- ✅ The DEV credit button gives 100k credits.
+- ✅ Investigate the bug where banking cargo seems to fully repair the ship; fix it if it is one. Not reproduced: banking leaves the damage as it was (now checked). Steps to reproduce are welcome.
+- ✅ Ship dealer: pre-rendered, decorated catalogue images (to remove the load lag), in 3 columns instead of 2.
 
 ## Afterwards
 

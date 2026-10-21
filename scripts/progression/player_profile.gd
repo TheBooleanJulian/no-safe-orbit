@@ -153,6 +153,10 @@ const HIRE_FEE_PER_SKILL := 40
 const VENDOR_STOCK_SIZE := 3
 ## Quartermaster prices by rarity (credits).
 const VENDOR_PRICES := [0, 450, 1200, 3000, 8000]
+## The quartermaster buys found equipment from the hold (play-test batch 11)
+## at this share of its shelf price (a common part as if it were 100 cr).
+const SELL_SHARE := 0.4
+const SELL_COMMON_BASE := 100
 
 
 func _init(seed_value: int = 0) -> void:
@@ -695,6 +699,31 @@ func bank_sortie() -> PackedStringArray:
 func set_crew_role(i: int, role: int) -> void:
 	if i >= 0 and i < vessel.crew.size():
 		vessel.crew[i].role = clampi(role, 0, CrewRoster.Role.size() - 1)
+
+
+## What this station's quartermaster pays for one `def`.
+func sell_price(def: EquipmentDefinition) -> int:
+	var base := maxi(int(VENDOR_PRICES[def.rarity]), SELL_COMMON_BASE)
+	return roundi(base * SELL_SHARE * Location.by_id(location).price_factor)
+
+
+## Sell one unit of found equipment `id` out of the cargo hold. "" or why not.
+func sell_cargo_equipment(id: String, catalog: ConstructionCatalog) -> String:
+	if vessel == null:
+		return "no ship"
+	var eq: Dictionary = vessel.cargo.get("equipment", {})
+	var def: EquipmentDefinition = catalog.equipment.get(StringName(id))
+	if int(eq.get(id, 0)) <= 0 or def == null:
+		return "none in the hold"
+	var price := sell_price(def)
+	eq[id] = int(eq[id]) - 1
+	if int(eq[id]) <= 0:
+		eq.erase(id)
+	if eq.is_empty():
+		vessel.cargo.erase("equipment")
+	credits += price
+	loot_log.append("Sold: %s for %d cr" % [def.display_name, price])
+	return ""
 
 
 ## Buy the quartermaster's item `i`: one unit into the station bank.

@@ -518,6 +518,19 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 11 — part 4: flight and shipyard ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Re-entry is a cone | `test_batch10_surface`, render review | tip 0.12 of the base, pointing into the flow |
+| The cargo hold names the mission items | `test_batch11_cargo` | "contract freight: medical supplies (40 m³)" |
+| Hit cam doesn't block the centre with the Tab drawer open | `smoke_encounter` | shut while the drawer is open; fails without the rule |
+| Octagonal collar and gangway | `test_batch10_models` | edges 1.92 / 1.06 m by turns; gangway 1.44 / 0.68 m |
+| Sell found equipment to the quartermaster | `test_batch11_cargo` | rare part 480 cr (shelf 1200) |
+| DEV +100k | `test_batch11_cargo`, `smoke_campaign` | +100 000 cr |
+| Banking repairs the ship? | `smoke_campaign` | not reproduced: same damage and jobs after banking |
+| Dealer: pre-rendered pictures, 3 columns | `test_batch11_cargo`, render review | 12 pictures kept; 3 across |
+
 ### Play-test batch 11 — part 3: the refit bay ✅ (2026-10-22)
 
 | Requirement | Test | Measured |
