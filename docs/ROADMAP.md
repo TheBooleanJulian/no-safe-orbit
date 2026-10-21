@@ -518,6 +518,15 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 9 — part 6: cargo contracts, remote salvage ✅ (2026-10-21)
+
+Parts 1–5 (fixes, builder, services, crew, economy) are in the CHANGELOG.
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Non-combat missions: cargo delivery | `test_batch9_cargo` (mutation-checked) | 40 of 120 offers cargo, 290–830 cr; 217 m³ refused by a 216 m³ hold; delivered at the Moon for 700 cr; fails when jettisoned or lost |
+| Salvage drones: remote G salvage, no slow cutting | `test_m15_drones` (mutation-checked), `smoke_wing` | beacon reach 8 km with the drone, 2 km without; out 60 s: wreck 90 % → 90 % |
+
 ### Play-test batch 6 — auto-fire rate and multi-ship balance ✅ (2026-10-21)
 
 | Requirement | Test | Measured |
@@ -662,7 +671,7 @@ Part 1 ✅ (2026-10-21) — repair and salvage drones:
 | Requirement | Test | Measured |
 |---|---|---|
 | Repair drone | `test_m15_drones` (mutation-checked) | two systems 20 % → 75 % (the field limit) in 20 s; destroyed mast left; no crew repair |
-| Salvage drone | `test_m15_drones`, `smoke_wing` | 6 systems cut, 30 parts home after 126 s, wreck 90 % → 58 %; parts into the hold |
+| Salvage drone | `test_m15_drones`, `smoke_wing` | 6 systems cut, 30 parts home after 126 s, wreck 90 % → 58 %; parts into the hold (replaced in play-test batch 9: it carries G's beacon 8 km instead) |
 
 Part 2 ✅ (2026-10-21) — hangar capacity, crew complement and PD that scale
 with hull size:

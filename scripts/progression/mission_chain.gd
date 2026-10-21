@@ -6,7 +6,9 @@ extends RefCounted
 ## pays its reward and moves the chain on. A goal not met stays for the next
 ## sortie. Saved in the profile as {"step": n} (PlayerProfile.campaign).
 
-enum Goal { DISABLE, CAPTURE, ESCORT, WAVES, PATROL }
+## DELIVER (play-test batch 9): a cargo contract — no fight; it is met on
+## arriving at the destination with the freight aboard (ContractBoard.deliver).
+enum Goal { DISABLE, CAPTURE, ESCORT, WAVES, PATROL, DELIVER }
 
 const CHAIN := [
 	{"goal": Goal.DISABLE, "title": "First blood",

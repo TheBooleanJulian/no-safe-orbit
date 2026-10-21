@@ -476,7 +476,8 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
 1. **Disable** the target — knock out its guns, its power or its bridge. A
    clean disabling shot pays better than shooting it to pieces.
 2. **Cash it in**, one of two ways:
-   - **Salvage beacon** (**G**, within 2 km): Earth Shipyard's tug brings
+   - **Salvage beacon** (**G**, within 2 km — **8 km** with a salvage drone
+     on the wing, which carries the beacon out): Earth Shipyard's tug brings
      the wreck in. You get **50 %** of its scrap value (what its intact parts
      are worth at the yard) and the bounty (`100 + 100 × intact`) in credits
      now; its 1–5 crates each hold loot **60 %** of the time and go into your
@@ -751,7 +752,7 @@ rack. They fly with the same physics as every ship and can be shot down.
   | Lancer laser fighter | fighter bay (Lancer laser) | gun runs like the Wasp with a laser: 1.5 km reach, 40 charges, no lead needed |
   | Laser drone | drone rack (laser) | an interceptor drone: lasers inbound missiles (one pulse each, 2 km) and craft; 30 charges |
   | Repair drone | drone rack (repair) | patches damaged systems outside your hulls — guns, radiators, engines, sensors, racks — to 75 % (the field-repair limit) at 1.5 hp/s, your own ship first, then your side's; no walk or airlock, so it frees the crew for the inside. Destroyed parts still need the yard |
-  | Salvage drone | drone rack (salvage) | strips disabled hostiles and derelicts (your target first, else the nearest within 8 km): it cuts the most valuable system free every 4 s into half its worth in spare parts, and brings 30 home at a time — into the hold, at risk until banked. A stripped wreck is worth less to a beacon later |
+  | Salvage drone | drone rack (salvage) | carries the salvage beacon: while one is on the wing (aboard or out, not lost) **G** drops a beacon on a disabled wreck or derelict up to 8 km off instead of 2 km — the whole wreck paid at once, rather than cut up a part at a time. Otherwise it escorts |
 
 - **How they fly:** a craft never fires with a friend within 25 m of its
   line of fire, its rounds carry an IFF interlock that passes through your
@@ -871,7 +872,7 @@ Beside the builder the directory narrows to the names.
 | Place (section) | What's there |
 |---|---|
 | **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights), turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
-| **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage. Accepting one sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
+| **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage — and **cargo** (about one offer in three once a second station is charted): no fight, 20–90 m³ of freight to another station, loaded into your hold on accepting (refused if it won't fit), paid on arriving there with it aboard (120 cr + 4 cr a m³, more the further the jump). Banking leaves the freight aboard; jettisoning it, abandoning the contract or losing the ship fails it. Accepting a combat contract sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
 | **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** (Hangar & bank) | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the service record — and the **station bank**: a deposit (1 % a sortie, compounding) and three loans, one of each at a time — Dockyard credit 1,000 cr at 5 % over 5 sorties, Guild loan 5,000 cr at 4 % over 10, Shipbuilder's mortgage 25,000 cr at 3 % over 20 — paid off in instalments on docking (a shortfall adds 10 % of it) or repaid early |
 | **REFIT** | The builder below |

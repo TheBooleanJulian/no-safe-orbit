@@ -570,6 +570,8 @@ func _refresh_missions() -> void:
 
 static func _contract_text(c: Dictionary) -> String:
 	var loc := Location.by_id(str(c.location))
+	if str(c.get("kind", "")) == "cargo":
+		return "%s\nto %s · %d m³ of hold · no fight · pays %s on arrival" % [c.brief, loc.display_name, int(c.freight_m3), MissionChain.reward_text(c)]
 	return "%s\n%s · %d ship%s · threat %d · pays %s" % [c.brief, loc.display_name, int(c.ships), "" if int(c.ships) == 1 else "s",
 		int(c.threat), MissionChain.reward_text(c)]
 

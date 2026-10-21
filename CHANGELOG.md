@@ -4,6 +4,46 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 9, part 6 — cargo contracts, remote salvage (2026-10-21)
+
+#### Added
+- **Cargo contracts** on the missions board — work without a fight. About
+  one offer in three once a second station is charted: 20–90 m³ of freight
+  (medical supplies, reactor spares, colonist mail, …) to another station,
+  paying 120 cr + 4 cr a m³, more the further the jump. Accepting loads it
+  into the hold (refused if there is no room) and sets the course; it pays
+  on arriving there (at LAUNCH, after the jump). It has a line of its own in
+  the hold, the last to vent; banking leaves it aboard; jettisoning it,
+  abandoning the contract or losing the ship fails the contract.
+
+#### Changed
+- **Salvage drones carry the salvage beacon**: with one on the wing (aboard
+  or out, not lost), **G** reaches a disabled wreck or derelict 8 km off
+  instead of 2 km, paying for the whole wreck at once. They no longer cut
+  systems off one at a time into spare parts (removed with their 30-part
+  load and the delivered-parts hand-over); otherwise they escort. The HUD's
+  BEACON line and the 2 km refusal mention the drone.
+
+#### Save format
+- None: the freight lives in the hold's cargo dictionary (schema 13).
+
+#### Tests changed (and why)
+- New `test_batch9_cargo` (4): offers (40 of 120 over 30 boards, 290–830
+  cr, none with one station charted), accepting (a 217 m³ load refused by a
+  216 m³ hold; 20 m³ loaded, the course the Moon, the chosen fight size
+  kept), delivery (banking keeps it, saved, paid once at the Moon), failure
+  (jettisoned, abandoned, lost with the ship). Mutation-checked: a
+  `bank_cargo` that wipes the freight fails it.
+- `test_m15_drones`: the salvage-drone test now measures the beacon reach (8
+  km with the drone, 2 km without or once it is lost) and that a drone out
+  for 60 s cuts nothing (90 % → 90 % intact); the old cutting test is gone
+  with the behaviour. Mutation-checked.
+- `smoke_wing`: the beacon reach follows the wing, instead of salvage
+  drones' parts going into the hold.
+- `smoke_shipyard`: accepting the first offer — a cargo one keeps the
+  chosen fight size and loads its freight (it expected the offer's ship
+  count, 0 for cargo).
+
 ### Play-test batch 9, part 5 — the bank, a branching tech tree (2026-10-21)
 
 #### Added

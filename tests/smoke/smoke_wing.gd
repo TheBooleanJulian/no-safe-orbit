@@ -153,13 +153,10 @@ func _run() -> void:
 		if not c.is_drone():
 			fighter = c
 	_check(fighter.status == AirWing.Status.DOCKED and main.player_wing.launch(main.world, fighter) == "", "the replacement launches")
-	# Milestone 15: what salvage drones bring aboard goes into the hold.
-	var held := int(profile.vessel.cargo.get("spare_parts", 0))
-	main.player_wing.delivered_parts = 12
-	for i in 3:
-		await process_frame
-	_check(int(profile.vessel.cargo.get("spare_parts", 0)) == held + 12 and main.player_wing.delivered_parts == 0,
-		"salvage drones' 12 spare parts go into the hold (%d → %d)" % [held, int(profile.vessel.cargo.get("spare_parts", 0))])
+	# Play-test batch 9: G's beacon reach follows the wing (a salvage drone carries it 8 km).
+	var has_salvage := main.player_wing.crafts.any(func(c: AirWing.Craft) -> bool: return c.config.craft_role == &"salvage")
+	_check(main.beacon_reach_m() == (AirWing.SALVAGE_RANGE_M if has_salvage else Salvage.BEACON_RANGE_M),
+		"the beacon reaches %.0f km (salvage drone aboard: %s)" % [main.beacon_reach_m() / 1000.0, has_salvage])
 	_finish()
 
 

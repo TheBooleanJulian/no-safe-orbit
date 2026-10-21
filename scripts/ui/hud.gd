@@ -1084,7 +1084,8 @@ func _update_target_card(world: WorldSimulation, player: ShipState, target: Ship
 		if not close_look:
 			lines.append("STATUS  %s hull only — close look needs < %.0f km or a recon drone" % [CyberTheme.GLYPH_OFFLINE, AirWing.INSPECT_RANGE_M / 1000.0])
 		elif target.systems.is_disabled():
-			var why := Salvage.block_reason(player, target)
+			var reach := player_wing.beacon_reach_m() if player_wing != null else Salvage.BEACON_RANGE_M
+			var why := Salvage.block_reason(player, target, reach)
 			lines.append("STATUS  %s DISABLED — %s · %d%% intact" % [CyberTheme.GLYPH_DESTROYED, target.systems.disabled_reason().to_upper(), roundi(target.systems.intact_fraction() * 100.0)])
 			if not target.systems.captured:
 				lines.append("BEACON  %s" % ("READY — press [G] · %d%% of scrap · or board it for %d%%" % [

@@ -265,6 +265,17 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Contracts and salvage (play-test batch 9, part 6)**: cargo offers
+  (`ContractBoard._cargo_offer`, kind "cargo", `MissionChain.Goal.DELIVER`,
+  `freight_m3` / `freight`); `accept` checks the hold and puts
+  `vessel.cargo["freight"] = {contract, m3, what}`; `ContractBoard.deliver`
+  (called by `Shipyard.launch` after the jump) pays through
+  `MissionChain.complete`, or fails the contract when the freight is gone.
+  `ShipInstance.cargo_volume_m3` / `cargo_lines` / `vent` know the freight;
+  `PlayerProfile.bank_cargo` keeps it; `lose_vessel` fails the contract.
+  `AirWing.beacon_reach_m` (SALVAGE_RANGE_M with a salvage drone, else
+  `Salvage.BEACON_RANGE_M`) feeds `Salvage.block_reason(ship, wreck,
+  reach_m)` in `Main` and the HUD; `_work_job` / `_work` are repair only.
 - **Economy (play-test batch 9, part 5)**: `TechTree.NODES` carry `after`
   [parent, level] and `levels`; `requirement`, `tier` (parent's tier +
   level), `block_reason`; `PlayerProfile.buy_tech` follows it. New factors

@@ -652,6 +652,10 @@ func launch() -> bool:
 		var topped := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
 		if topped != "":
 			GameLog.info("shipyard", "%s on arrival: %s" % [jumped.station_name, topped])
+	# A cargo contract's freight is handed over on arrival (play-test batch 9).
+	var delivered := ContractBoard.deliver(profile)
+	if delivered != "":
+		GameLog.info("shipyard", delivered)
 	# A deep-space survey's round trip is paid from what is aboard now.
 	var survey := Artifact.by_id(profile.survey_target)
 	if survey != null and survey.is_deep_space():

@@ -283,7 +283,9 @@ func bank_cargo(catalog: ConstructionCatalog) -> PackedStringArray:
 			d.display_name = table[d.def_id].display_name if table.has(d.def_id) else str(id)
 			_bank_blueprint(d)
 			out.append(d.describe())
-	vessel.cargo = {}
+	# A contract's freight is not ours to bank: it stays aboard.
+	var freight: Dictionary = cargo.get("freight", {})
+	vessel.cargo = {"freight": freight} if not freight.is_empty() else {}
 	if not out.is_empty():
 		vessel.record("Banked: %s" % ", ".join(out))
 	return out
@@ -741,6 +743,9 @@ func lose_vessel(catalog: ConstructionCatalog) -> PackedStringArray:
 		lost.append("%s ×%d in the hold lost" % [id, int(cargo.equipment[id])])
 	for id in cargo.get("blueprints", {}):
 		lost.append("%s blueprint in the hold lost" % id)
+	if not cargo.get("freight", {}).is_empty() and not active_contract.is_empty():
+		lost.append("Contract failed: %s — the freight was lost with the ship" % active_contract.title)
+		active_contract = {}
 	var fee := respawn_fee(catalog)
 	var paid := mini(fee, credits)
 	credits -= paid

@@ -141,6 +141,13 @@ rare part · Earth texture 5400 × 2700.
 
 ## Design decisions (not defects)
 
+- **A cargo contract is delivered at LAUNCH** (decided 2026-10-21): the jump
+  to its station hands the freight over and pays; the sortie that follows is
+  an ordinary one there. There is no flying leg to escort the freight.
+- **Salvage drones extend the beacon; they don't cut parts** (decided
+  2026-10-21, play-test batch 9): G pays for the whole wreck at once from up
+  to 8 km. Their old part-by-part stripping is gone.
+
 - **No drag; the 100 km Kármán line is a hard entry interface** (decided
   2026-10-19). Crossing it removes the vessel or round; skimming above it costs
   nothing.
