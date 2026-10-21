@@ -78,7 +78,7 @@ func _run() -> void:
 	# with its live line; the berth has the dockmaster's log.
 	var lines := yard.sections.directory_status()
 	_check(yard.sections.buttons.size() == ShipyardSections.SECTIONS.size() and lines.size() == ShipyardSections.SECTIONS.size()
-		and (yard.sections.status_labels["REPAIRS"] as Label).text != ""
+		and (yard.sections.status_labels["SERVICES"] as Label).text != ""
 		and (yard.sections.station_cards["log"] as RichTextLabel).get_parsed_text().contains("DOCKMASTER"),
 		"the station directory lists every place with a live line (%s); the berth has the dockmaster's log" % (yard.sections.status_labels["CREW"] as Label).text)
 	(yard.sections.buttons["CREW"] as Button).pressed.emit()
@@ -298,7 +298,34 @@ func _dealer_and_services(yard: Shipyard) -> void:
 	yard.sections.abandon_button.pressed.emit()
 	await _frames(2)
 	_check(p.active_contract.is_empty(), "and it can be abandoned")
-	yard.show_section("ARMOURY")
+	# The service bay (play-test batch 9): a big button each to repair,
+	# rearm and refuel, with the cargo hold; spare parts are the quartermaster's.
+	var cat := yard.editor.catalog
+	var st := ShipStats.compute(p.vessel.blueprint, ShipGrid.build(p.vessel.blueprint, cat))
+	p.vessel.condition["stores"] = {"propellant_kg": st.propellant_capacity_kg * 0.5, "rounds": st.rounds_capacity / 2,
+		"pd_rounds": st.pd_rounds_capacity / 2, "jump_reserve_kg": JumpDrive.standard().reserve_capacity_kg(st.propellant_capacity_kg)}
+	p.credits = 5000
+	yard.show_section("SERVICES")
 	await _frames(2)
-	_check(yard.sections.armoury_label.get_parsed_text().contains("PROPELLANT") and yard.sections.resupply_button.is_visible_in_tree(),
-		"the ARMOURY lists what needs restocking")
+	var sb: Dictionary = yard.sections.service_buttons
+	_check((sb.repair as Button).is_visible_in_tree() and (sb.rearm as Button).is_visible_in_tree() and (sb.refuel as Button).is_visible_in_tree()
+		and (sb.refuel as Button).text.begins_with("REFUEL ·") and (sb.rearm as Button).text.begins_with("REARM ·"),
+		"the SERVICE BAY has its three buttons (%s / %s / %s)" % [(sb.repair as Button).text, (sb.rearm as Button).text, (sb.refuel as Button).text])
+	(sb.refuel as Button).pressed.emit()
+	await _frames(2)
+	var after: Dictionary = ServiceYard.resupply_needs(p.vessel, cat)
+	_check(float(after.propellant_kg) <= 0.0 and int(after.rounds) > 0, "REFUEL fills the tanks, not the magazine")
+	(sb.rearm as Button).pressed.emit()
+	await _frames(2)
+	after = ServiceYard.resupply_needs(p.vessel, cat)
+	_check(int(after.rounds) == 0 and int(after.pd_rounds) == 0 and not p.vessel.condition.has("stores"), "REARM fills the magazine and point defence")
+	_check(not (yard._bank_button.get_parent() as Node).get_children().any(func(n: Node) -> bool: return n is Button and (n as Button).text.contains("parts")),
+		"the cargo hold no longer sells spare parts")
+	yard.show_section("QUARTERMASTER")
+	await _frames(2)
+	var parts_before := p.spare_parts
+	var credits_before := p.credits
+	yard.parts_amount = 120
+	_check(yard.buy_spare_parts(yard.parts_amount) and p.spare_parts == parts_before + 120 and p.credits == credits_before - PlayerProfile.parts_price(120),
+		"the QUARTERMASTER sells any number of spare parts (120 for %d cr)" % PlayerProfile.parts_price(120))
+	_check(yard._vendor_tab.find_child("BuyParts", true, false) != null and yard._vendor_tab.is_visible_in_tree(), "with a counter and a buy button")

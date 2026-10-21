@@ -304,13 +304,20 @@ func _bank_blueprint(d: LootRoller.Drop) -> void:
 		unlocks[String(d.def_id)] = true
 
 
-## Buy a lot of spare parts at the station. False if credits are short.
-func buy_spare_parts() -> bool:
-	if credits < PARTS_LOT_PRICE:
+## Buy `amount` spare parts at the station (play-test batch 9: any amount,
+## at the lot's rate). False if credits are short.
+func buy_spare_parts(amount: int = PARTS_LOT) -> bool:
+	var cost := parts_price(amount)
+	if amount <= 0 or credits < cost:
 		return false
-	credits -= PARTS_LOT_PRICE
-	spare_parts += PARTS_LOT
+	credits -= cost
+	spare_parts += amount
 	return true
+
+
+## What `amount` spare parts cost (credits): PARTS_LOT_PRICE per PARTS_LOT.
+static func parts_price(amount: int) -> int:
+	return ceili(float(maxi(amount, 0)) * PARTS_LOT_PRICE / PARTS_LOT - 1e-9)
 
 
 ## Pulls left until each pity guarantee (1 = the next pull).
@@ -829,7 +836,7 @@ func buy_location(location_id: String) -> String:
 
 ## Jump the docked vessel to the station at a known location, paying the
 ## propellant from its main tank, then the drive's reserve (the yard refills
-## both, for credits, at the next launch or in the ARMOURY). Returns "" or
+## both, for credits, at the next launch or in the SERVICE BAY). Returns "" or
 ## why not.
 func relocate(location_id: String, catalog: ConstructionCatalog = null) -> String:
 	if location_id not in known_locations:
@@ -844,7 +851,7 @@ func relocate(location_id: String, catalog: ConstructionCatalog = null) -> Strin
 	var paid := JumpDrive.pay(float(tanks.main_kg), float(tanks.reserve_kg), cost)
 	if not paid.ok:
 		var short := ServiceYard.resupply_needs(vessel, catalog)
-		return "The jump to %s needs %s; the tanks and the reserve aboard give %s — refuel in the ARMOURY (%d cr)" % [
+		return "The jump to %s needs %s; the tanks and the reserve aboard give %s — refuel in the SERVICE BAY (%d cr)" % [
 			there.station_name, JumpDrive.dv_text(jump_dv(there.id)), JumpDrive.dv_text(tanks.dv_mps), int(short.credits)]
 	var stores: Dictionary = vessel.condition.get("stores", {})
 	if stores.is_empty():

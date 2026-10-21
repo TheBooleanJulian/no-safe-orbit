@@ -67,7 +67,7 @@ func test_relocation_is_paid_or_refused() -> void:
 	_set_tanks(p, 10_000.0, 2_000.0)
 	var why := p.relocate("moon", _cat())
 	print("    measured: refused — %s" % why)
-	assert_true(why.contains("ARMOURY") and p.location == "earth", "too little propellant: refused with the reason, still at Earth")
+	assert_true(why.contains("SERVICE BAY") and p.location == "earth", "too little propellant: refused with the reason, still at Earth")
 	# The cost counts the propellant aboard, so it is read with the tanks set.
 	_set_tanks(p, 20_000.0, 20_000.0)
 	var cost := p.jump_cost_kg("moon", _cat())
@@ -99,7 +99,7 @@ func test_a_contract_sets_the_course_and_the_launch_pays() -> void:
 	_set_tanks(p, 0.0, 0.0)
 	assert_true(ContractBoard.accept(p, "c1") == "" and not p.active_contract.is_empty() and p.location == "earth" and p.launch_point() == "moon",
 		"accepted: the course is the Moon, still docked at Earth")
-	assert_true(p.relocate(p.launch_point(), _cat()).contains("ARMOURY") and p.location == "earth", "the launch can't pay it with empty tanks")
+	assert_true(p.relocate(p.launch_point(), _cat()).contains("SERVICE BAY") and p.location == "earth", "the launch can't pay it with empty tanks")
 	_set_tanks(p, 80_000.0, 20_000.0)
 	assert_true(p.relocate(p.launch_point(), _cat()) == "" and p.location == "moon" and p.launch_point() == "moon", "topped up: the launch jumps there")
 

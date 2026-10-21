@@ -846,8 +846,8 @@ no usable backup. Loading an older save version first keeps a copy
 
 **Earth Shipyard** (or the **Lunar Shipyard**) opens after a jump (hold B in
 flight). It is a station: the **station directory** down the left lists its
-places by district — DRYDOCK (Berth, Refit bay, Repair crews, Armoury),
-CONCOURSE (Mission board, Crew quarters, Ship dealer), OPERATIONS (Hangar &
+places by district — DRYDOCK (Berth, Refit bay, Service bay),
+CONCOURSE (Mission board, Crew quarters, Ship dealer, Quartermaster), OPERATIONS (Hangar &
 bank, Station tech, Nav chart, Salvage odds) — with your credits and spare
 parts on top. Each place has a live line under its name: amber when it
 needs you (repair jobs waiting, a restock due, offers posted, an empty
@@ -859,11 +859,11 @@ Beside the builder the directory narrows to the names.
 | **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights), turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
 | **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage. Accepting one sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
 | **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
-| **HANGAR** | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the hold and the bank, the service record |
+| **HANGAR** | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the service record |
 | **REFIT** | The builder below |
 | **CREW** (Crew quarters) | The roster board: a card per department with who serves there against the standard complement (amber when short), each with their post and a ✕ to dismiss; the **hiring hall** below, a card per spacer for hire |
-| **ARMOURY** | Rearm and refuel now (or leave it to the launch), the quartermaster's parts |
-| **REPAIRS** | Damage and what fixing it costs |
+| **SERVICES** (Service bay) | Three large buttons — **REPAIR** (the spare parts it takes), **REARM** (rounds, point defence, missiles and flares) and **REFUEL** (propellant and the jump reserve, with the Δv it gives) — each buying what the credits allow (or leave it to the launch); the damage report with what to fix first; the **cargo hold** and Bank cargo |
+| **QUARTERMASTER** | The quartermaster's rarer parts, and **spare parts in any amount** (a counter, 25 cr per 10) |
 | **UPGRADES** | Station technology |
 | **MAP** | Where you launch from, how many you meet |
 | **LOOT** | Every crate drop and its odds |
@@ -896,10 +896,10 @@ start; an **information broker** on the same page sells the charts for Mars
   487 m/s Earth ↔ Moon, 928 m/s Earth → Mars (the real distances on the
   scenario date). Each ship pays it in propellant by the rocket equation at
   its own main-engine Isp: the Frigate Mk I burns 33 t for the Moon, the
-  Cutter 8.5 t. The chart, the artifacts list and the ARMOURY show the Δv
+  Cutter 8.5 t. The chart, the artifacts list and the SERVICE BAY show the Δv
   your tanks give (Frigate: 1,557 m/s with full tanks and the reserve).
 - **Jump reserve**: a quarter of your tankage that only the jump drive can
-  burn, used after the main tank. The ARMOURY shows and refills it.
+  burn, used after the main tank. The SERVICE BAY shows and refills it.
 - **Not enough?** A course beyond what the ship can carry even full is
   refused; LAUNCH tops the tanks up first (credits allowing) and refuses a
   jump the tanks still can't pay, with the Δv missing and the refuel price.
