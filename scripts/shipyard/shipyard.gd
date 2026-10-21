@@ -60,6 +60,9 @@ const BUS_ENTRIES := {
 @onready var stats_label: Label = %StatsLabel
 @onready var issue_text: RichTextLabel = %IssueText
 
+## The DEV button's free credits (a testing aid).
+const DEV_CREDITS := 100000
+
 var editor: ShipEditor
 ## Spare parts, found parts and the hangar vessel (Main.get_profile()).
 var profile: PlayerProfile
@@ -747,7 +750,7 @@ func _fill_vessel_picker() -> void:
 
 ## Testing aid: 100 free credits (saved at once).
 func dev_add_credits() -> void:
-	profile.dev_grant_credits(100)
+	profile.dev_grant_credits(DEV_CREDITS)
 	_save_profile()
 	_refresh_hangar()
 
@@ -847,11 +850,12 @@ func _ghost_changed() -> void:
 func set_main_view(mode: String) -> void:
 	main_view = mode
 	if _view_toggle != null:
-		_view_toggle.text = "%s ⇄" % ("ISOMETRIC" if mode == "iso" else "TOP-DOWN")
+		_view_toggle.text = "%s ⇄" % {"iso": "ISOMETRIC", "plan": "TOP-DOWN 3D", "top": "TOP-DOWN"}.get(mode, "TOP-DOWN")
 	for b in _iso_turns:
 		b.visible = mode == "iso"
+	iso_view.plan = mode == "plan"
 	expand_view(_expanded_view)
-	if mode == "iso":
+	if mode == "iso" or mode == "plan":
 		iso_view.drag_rooms = deck_editor.drag_rooms
 		iso_view.deck = deck_editor.deck
 		iso_view.show_design(editor)
@@ -977,10 +981,18 @@ func _refresh_issues() -> void:
 
 # --- Hangar and service --------------------------------------------------------
 
+## A part's colour for palette text: its own (the cell's), lifted only if
+## it is nearly black.
+static func palette_color(c: Color) -> Color:
+	return c.lightened(0.25) if c.get_luminance() < 0.15 else c
+
+
 ## Searchable palette: a category picker, a search box and one list.
 func _build_palette() -> void:
 	palette.visible = false
 	var left := palette.get_parent()
+	# Wider, smaller text: long part names fit (play-test batch 11).
+	(left as Control).custom_minimum_size.x = maxf((left as Control).custom_minimum_size.x, 300.0)
 	var box := VBoxContainer.new()
 	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
@@ -996,6 +1008,7 @@ func _build_palette() -> void:
 	box.add_child(palette_category)
 	palette_list = ItemList.new()
 	palette_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	palette_list.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL + 1)
 	palette_list.item_selected.connect(func(i: int) -> void:
 		var m: Variant = palette_list.get_item_metadata(i)
 		if not m is Array:
@@ -1150,9 +1163,10 @@ func _fill_palette_list() -> void:
 			var place := palette_place(entry[0], def)
 			var text: String = def.display_name
 			var suffix := ""
-			var color := (def.color as Color).lightened(0.2)
+			# The part's own colour, as its cells are drawn (play-test batch 11);
+			# its rarity is the icon's colour and in the tooltip.
+			var color := palette_color(def.color)
 			if def.rarity != Rarity.Tier.COMMON:
-				color = Rarity.color_of(def.rarity)
 				if def is EquipmentDefinition:
 					suffix = "  ×%d" % profile.owned(id)
 				elif not profile.is_unlocked(def):
@@ -1199,10 +1213,14 @@ func _fill_palette_list() -> void:
 			palette_list.set_item_selectable(sh, false)
 			palette_list.set_item_custom_fg_color(sh, CyberTheme.TEXT_DIM)
 			last_section = r[1]
-		var i := palette_list.add_item("    " + str(r[3]))
+		var i := palette_list.add_item("  " + str(r[3]))
 		palette_list.set_item_metadata(i, r[4])
 		palette_list.set_item_custom_fg_color(i, r[5])
 		palette_list.set_item_tooltip(i, r[6])
+		if str(r[4][0]) == "equipment":
+			var edef: EquipmentDefinition = editor.catalog.equipment.get(r[4][1])
+			if edef != null:
+				palette_list.set_item_icon(i, EquipmentIcons.icon(edef, Rarity.color_of(edef.rarity)))
 
 
 ## Key figures above the detailed stats.
@@ -1252,9 +1270,9 @@ func _build_view_bar() -> void:
 	bar.add_child(cap)
 	_view_toggle = Button.new()
 	_view_toggle.text = "TOP-DOWN ⇄"
-	_view_toggle.tooltip_text = "Swap the main view between top-down and isometric (both edit the current deck)"
+	_view_toggle.tooltip_text = "Cycle the main view: top-down plan, top-down rendered (the parts as built), isometric — all edit the current deck"
 	CyberTheme.style_button(_view_toggle, CyberTheme.CYAN, true)
-	_view_toggle.pressed.connect(func() -> void: set_main_view("top" if main_view == "iso" else "iso"))
+	_view_toggle.pressed.connect(func() -> void: set_main_view({"top": "plan", "plan": "iso", "iso": "top"}.get(main_view, "top")))
 	bar.add_child(_view_toggle)
 	for turn in [[-1, "⟲"], [1, "⟳"]]:
 		var tb := Button.new()
@@ -1287,7 +1305,7 @@ func expand_view(which: String) -> void:
 	var views := side_view.get_parent() as Control
 	deck_editor.visible = which == "" and main_view == "top"
 	if iso_view != null:
-		iso_view.visible = which == "" and main_view == "iso"
+		iso_view.visible = which == "" and (main_view == "iso" or main_view == "plan")
 	views.size_flags_vertical = Control.SIZE_EXPAND_FILL if which != "" else Control.SIZE_FILL
 	side_view.visible = which in ["", "side"]
 	front_view.visible = which in ["", "front"]
@@ -1369,8 +1387,8 @@ func _build_hangar_panel() -> void:
 	debrief_button.text = "Last debrief"
 	debrief_button.pressed.connect(func() -> void: debrief.show_debrief(profile.last_debrief))
 	var dev_button := Button.new()
-	dev_button.text = "DEV +100 cr"
-	dev_button.tooltip_text = "Testing aid: 100 free credits"
+	dev_button.text = "DEV +100k cr"
+	dev_button.tooltip_text = "Testing aid: %d free credits" % DEV_CREDITS
 	dev_button.pressed.connect(func() -> void: dev_add_credits())
 	for b in [_bank_button, dev_button]:
 		row2.add_child(b)
@@ -1627,6 +1645,46 @@ func _jump_note() -> String:
 		Rarity.NAMES[here.vendor_max_rarity].to_lower(), ", ".join(Array(here.enemy_templates).map(func(f: String) -> String: return f.get_basename().split("_")[0]))]
 
 
+## A department on the crew manifest (role -1: Resting crew): a drop target
+## with its heading; returns the box its contents go in.
+func _crew_department(parent: Control, role: int, title: String, color: Color, berths: int) -> VBoxContainer:
+	var dept := CrewDepartment.new()
+	dept.name = "Dept" + (str(CrewRoster.ROLE_SHORT[role]) if role >= 0 else "Resting")
+	dept.role = role
+	dept.custom_minimum_size = Vector2(CREW_CARD_WIDTH, 120)
+	dept.add_theme_stylebox_override("panel", CyberTheme.panel(color, CyberTheme.SPACE_S, 0.6))
+	dept.crew_dropped.connect(func(index: int, to_role: int) -> void:
+		if to_role < 0:
+			_station_result(profile.rest_crew(index))
+			return
+		profile.set_crew_role(index, to_role)
+		_save_profile()
+		_refresh_station_tabs())
+	dept.resting_dropped.connect(func(index: int, to_role: int) -> void:
+		_station_result(profile.board_resting(index, berths, to_role)))
+	parent.add_child(dept)
+	var box := VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_PASS
+	box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	dept.add_child(box)
+	var head := Label.new()
+	head.text = title
+	head.add_theme_color_override("font_color", color)
+	head.add_theme_font_size_override("font_size", CyberTheme.SIZE_TITLE)
+	head.mouse_filter = Control.MOUSE_FILTER_PASS
+	box.add_child(head)
+	return box
+
+
+func _badge_flow(box: VBoxContainer) -> HFlowContainer:
+	var badges := HFlowContainer.new()
+	badges.mouse_filter = Control.MOUSE_FILTER_PASS
+	badges.add_theme_constant_override("h_separation", CyberTheme.SPACE_XS)
+	badges.add_theme_constant_override("v_separation", CyberTheme.SPACE_XS)
+	box.add_child(badges)
+	return badges
+
+
 ## The station's people and shelves: the vessel's crew (roles, dismiss),
 ## who is for hire, the quartermaster's stock and the upgrades.
 func _refresh_station_tabs() -> void:
@@ -1640,61 +1698,69 @@ func _refresh_station_tabs() -> void:
 	for tab in [_crew_tab, _vendor_tab, _tech_tab]:
 		for c in tab.get_children():
 			c.queue_free()
-	var berths := profile.berths(catalog)
-	_crew_tab.add_child(_station_label("[b]%s[/b] · %d / %d berths · wages %d cr a sortie · drag a crew member onto a department to post them there (free here; in flight Tab › CREW)" % [
-		v.name, v.crew.size(), berths, profile.wages()]))
+	# Berths from the design on the slip (play-test batch 11: 2 a quarters
+	# cell; the manifest follows the refit live). Anyone over goes ashore.
+	var berths := editor.stats.crew_capacity if not building_new and editor.stats != null else profile.berths(catalog)
+	if profile.fit_crew(berths) > 0:
+		_save_profile()
+	var head_row := HBoxContainer.new()
+	head_row.add_theme_constant_override("separation", CyberTheme.SPACE_M)
+	_crew_tab.add_child(head_row)
+	var head_text := _station_label("[b]%s[/b] · %d / %d berths (2 a quarters cell) · wages %d cr a sortie · %d resting ashore, unpaid · drag a badge onto a department to post them there, onto Resting crew to send them ashore" % [
+		v.name, v.crew.size(), berths, profile.wages(), profile.resting.size()])
+	head_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head_row.add_child(head_text)
+	var fill := Button.new()
+	fill.name = "FillBerths"
+	fill.text = "Fill berths (%d)" % maxi(berths - v.crew.size(), 0)
+	fill.disabled = v.crew.size() >= berths
+	fill.tooltip_text = "Resting crew first, then new hands from the hiring hall at %d cr each" % roundi(PlayerProfile.HIRE_FEE * Location.by_id(profile.location).price_factor)
+	CyberTheme.style_button(fill, CyberTheme.AMBER)
+	fill.pressed.connect(func() -> void:
+		_set_status(profile.fill_berths(berths))
+		_save_profile()
+		_refresh_hangar())
+	head_row.add_child(fill)
 	# Grouped by post, with this design's standard complement beside each.
 	var by_role := {}
 	for i in v.crew.size():
 		(by_role.get_or_add(clampi(int(v.crew[i].role), 0, CrewRoster.ROLE_NAMES.size() - 1), []) as Array).append(i)
-	var vgrid := ShipGrid.build(v.blueprint, catalog)
-	var want := CrewRoster.complement_for(v.blueprint, vgrid, ShipStats.compute(v.blueprint, vgrid))
-	# The roster board (play-test batch 9): every department, each a drop
-	# target, its crew as badges with portraits — drag to repost, ▲ to
-	# train, ✕ to dismiss.
+	var vgrid := editor.grid if not building_new and editor.grid != null else ShipGrid.build(v.blueprint, catalog)
+	var want := CrewRoster.complement_for(editor.blueprint if not building_new else v.blueprint, vgrid,
+		editor.stats if not building_new and editor.stats != null else ShipStats.compute(v.blueprint, vgrid))
+	# The manifest (play-test batches 9 and 11): every department, each a
+	# drop target, its crew as badges with portraits — drag to repost, ▲ to
+	# train, ✕ to dismiss; the hiring hall top right, resting crew under it.
+	var columns := HBoxContainer.new()
+	columns.name = "Manifest"
+	columns.add_theme_constant_override("separation", CyberTheme.SPACE_M)
+	_crew_tab.add_child(columns)
 	var board := HFlowContainer.new()
 	board.name = "CrewBoard"
+	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	board.add_theme_constant_override("h_separation", CyberTheme.SPACE_M)
 	board.add_theme_constant_override("v_separation", CyberTheme.SPACE_M)
-	_crew_tab.add_child(board)
+	columns.add_child(board)
+	var side := VBoxContainer.new()
+	side.name = "HallAndRest"
+	side.custom_minimum_size = Vector2(CREW_CARD_WIDTH, 0)
+	side.add_theme_constant_override("separation", CyberTheme.SPACE_M)
+	columns.add_child(side)
 	for r in CrewRoster.ROLE_NAMES.size():
 		var members: Array = by_role.get(r, [])
 		var short := members.size() < want[r]
-		var dept := CrewDepartment.new()
-		dept.name = "Dept" + str(CrewRoster.ROLE_SHORT[r])
-		dept.role = r
-		dept.custom_minimum_size = Vector2(CREW_CARD_WIDTH, 120)
-		dept.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r], CyberTheme.SPACE_S, 0.6))
-		dept.crew_dropped.connect(func(index: int, role: int) -> void:
-			profile.set_crew_role(index, role)
-			_save_profile()
-			_refresh_station_tabs())
-		board.add_child(dept)
-		var box := VBoxContainer.new()
-		box.mouse_filter = Control.MOUSE_FILTER_PASS
-		box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
-		dept.add_child(box)
-		var head := Label.new()
-		head.text = "%s   %d%s" % [str(CrewRoster.ROLE_NAMES[r]).to_upper(), members.size(), " / %d" % want[r] if want[r] > 0 else ""]
-		head.add_theme_color_override("font_color", CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r])
-		head.add_theme_font_size_override("font_size", CyberTheme.SIZE_TITLE)
-		head.mouse_filter = Control.MOUSE_FILTER_PASS
-		box.add_child(head)
+		var box := _crew_department(board, r, "%s   %d%s" % [str(CrewRoster.ROLE_NAMES[r]).to_upper(), members.size(), " / %d" % want[r] if want[r] > 0 else ""],
+			CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r], berths)
 		if members.is_empty():
 			var hint := Label.new()
 			hint.text = "drop crew here" + (" — short of the standard complement" if short else "")
 			hint.add_theme_color_override("font_color", CyberTheme.AMBER if short else CyberTheme.TEXT_FAINT)
 			hint.mouse_filter = Control.MOUSE_FILTER_PASS
 			box.add_child(hint)
-		var badges := HFlowContainer.new()
-		badges.mouse_filter = Control.MOUSE_FILTER_PASS
-		badges.add_theme_constant_override("h_separation", CyberTheme.SPACE_XS)
-		badges.add_theme_constant_override("v_separation", CyberTheme.SPACE_XS)
-		box.add_child(badges)
+		var badges := _badge_flow(box)
 		for i: int in members:
 			var c: Dictionary = v.crew[i]
-			var skill := int(c.get("skill", 0))
-			var cost := profile.training_cost(skill)
+			var cost := profile.training_cost(int(c.get("skill", 0)))
 			var badge := CrewBadge.new()
 			badge.setup(i, c, cost, profile.credits >= cost)
 			badge.train_pressed.connect(func(index: int) -> void: _station_result(profile.train(index)))
@@ -1703,16 +1769,18 @@ func _refresh_station_tabs() -> void:
 				_save_profile()
 				_refresh_hangar())
 			badges.add_child(badge)
-	_crew_tab.add_child(_station_label("[b]HIRING HALL[/b] · credits %d · %d / %d berths filled · ★ = level (sorties or training: faster at their post)" % [
+	# Top right: the hiring hall — never empty (play-test batch 11).
+	var hall_card := ShipyardSections.card(side, "HIRING HALL", CyberTheme.AMBER)
+	hall_card.add_child(_station_label("credits %d · %d / %d berths filled · ★ = level (sorties or training: faster at their post)" % [
 		profile.credits, v.crew.size(), berths]))
-	var hall := HFlowContainer.new()
-	hall.add_theme_constant_override("h_separation", CyberTheme.SPACE_S)
-	hall.add_theme_constant_override("v_separation", CyberTheme.SPACE_S)
-	_crew_tab.add_child(hall)
+	var hall := VBoxContainer.new()
+	hall.name = "Hall"
+	hall.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	hall_card.add_child(hall)
 	for i in profile.hire_pool.size():
 		var c: Dictionary = profile.hire_pool[i]
 		var role_index := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
-		var who := ShipyardSections.card(hall, "", CrewRoster.ROLE_COLORS[role_index], Vector2(250, 0))
+		var who := ShipyardSections.card(hall, "", CrewRoster.ROLE_COLORS[role_index])
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
 		who.add_child(row)
@@ -1721,8 +1789,9 @@ func _refresh_station_tabs() -> void:
 		face.role = role_index
 		face.custom_minimum_size = Vector2(52, 52)
 		row.add_child(face)
-		var text := _station_label("[b]%s[/b]\n[color=#%s]%s[/color] %s" % [c.name, (CrewRoster.ROLE_COLORS[role_index] as Color).to_html(false),
-			CrewRoster.ROLE_NAMES[role_index], "★".repeat(int(c.skill))])
+		var text := _station_label("[b]%s[/b]\n[color=#%s]%s[/color] %s\n[color=#%s]formerly %s[/color]" % [c.name,
+			(CrewRoster.ROLE_COLORS[role_index] as Color).to_html(false), CrewRoster.ROLE_NAMES[role_index], "★".repeat(int(c.skill)),
+			CyberTheme.TEXT_FAINT.to_html(false), c.get("occupation", "a spacer")])
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(text)
 		var hire := Button.new()
@@ -1732,7 +1801,25 @@ func _refresh_station_tabs() -> void:
 		CyberTheme.style_button(hire, CyberTheme.AMBER)
 		var index := i
 		hire.pressed.connect(func() -> void: _station_result(profile.hire(index, catalog)))
-		who.add_child(hire)
+		row.add_child(hire)
+	# Below it: resting crew, ashore and unpaid — a drop target too.
+	var rest_box := _crew_department(side, -1, "RESTING CREW   %d" % profile.resting.size(), CyberTheme.TEXT_DIM, berths)
+	if profile.resting.is_empty():
+		var none := Label.new()
+		none.text = "nobody ashore — drop crew here to rest them (no wages)"
+		none.add_theme_color_override("font_color", CyberTheme.TEXT_FAINT)
+		none.mouse_filter = Control.MOUSE_FILTER_PASS
+		rest_box.add_child(none)
+	var rest_badges := _badge_flow(rest_box)
+	for j in profile.resting.size():
+		var badge := CrewBadge.new()
+		badge.setup(j, profile.resting[j], 0, false, true)
+		badge.board_pressed.connect(func(index: int) -> void: _station_result(profile.board_resting(index, berths)))
+		badge.dismiss_pressed.connect(func(index: int) -> void:
+			profile.dismiss_resting(index)
+			_save_profile()
+			_refresh_hangar())
+		rest_badges.add_child(badge)
 	_vendor_tab.add_child(_station_label("[b]QUARTERMASTER OKAFOR[/b] — \"Fresh off the freighters. Cash only, no questions.\" · credits %d · new stock after every sortie" % profile.credits))
 	for i in profile.vendor_stock.size():
 		var item: Dictionary = profile.vendor_stock[i]
@@ -1743,6 +1830,17 @@ func _refresh_station_tabs() -> void:
 			"Buy (%d cr)" % int(item.price), func() -> void: _station_result(profile.buy_stock(i, catalog)), profile.credits >= int(item.price)))
 	if profile.vendor_stock.is_empty():
 		_vendor_tab.add_child(_station_label("Sold out until the next sortie."))
+	# Found equipment still in the hold can be sold here (play-test batch 11).
+	var found: Dictionary = profile.vessel.cargo.get("equipment", {}) if profile.vessel != null else {}
+	if not found.is_empty():
+		_vendor_tab.add_child(_station_label("[b]SELL FROM THE HOLD[/b] · %d %% of shelf price" % roundi(PlayerProfile.SELL_SHARE * 100.0)))
+	for id: String in found:
+		var def: EquipmentDefinition = catalog.equipment.get(StringName(id))
+		if def == null:
+			continue
+		var price := profile.sell_price(def)
+		_vendor_tab.add_child(_station_row("[color=#%s]%s[/color] %s ×%d in the hold" % [Rarity.color_of(def.rarity).to_html(false), Rarity.name_of(def.rarity),
+			def.display_name, int(found[id])], "Sell (%d cr)" % price, func() -> void: _station_result(profile.sell_cargo_equipment(id, catalog)), true))
 	# Spare parts in any amount (play-test batch 9), at the lot's rate.
 	var parts_row := HBoxContainer.new()
 	parts_row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
@@ -1924,6 +2022,7 @@ func _on_hover(cell: Vector3i, face: StringName, shift: bool) -> void:
 func _update_ghost() -> void:
 	deck_editor.ghost_cells = []
 	deck_editor.ghost_face = &""
+	deck_editor.ghost_out = 0
 	var hint := ""
 	var cell := _hover_cell
 	if tool == Tool.PLACE and place_def != &"":
@@ -1963,6 +2062,7 @@ func _update_ghost() -> void:
 					for k in (1 if ShipGrid.is_fin(def, place_rotation) else maxi(def.length_cells, 1)):
 						deck_editor.ghost_cells.append(cell + step * k)
 					deck_editor.ghost_face = _hover_face
+					deck_editor.ghost_out = def.length_cells if ShipGrid.is_fin(def, place_rotation) else 0
 					hint = "%s — %s face (near an edge: that side; middle: %s — [V] switches, Shift: the other)" % [
 						def.display_name, _hover_face, "underside" if deck_editor.prefer_underside else "top"]
 				else:

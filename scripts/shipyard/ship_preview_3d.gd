@@ -19,6 +19,9 @@ const ISO_PITCH := -0.6154797
 const EDGE_ZONE := 0.28
 
 var isometric: bool = false
+## With `isometric`: straight down instead (play-test batch 11's rendered
+## top-down view), fore to the right and port at the top like the deck plan.
+var plan: bool = false
 ## Middle of a cell open both ways picks the underside (shipyard [V]).
 var prefer_underside: bool = false
 var editable: bool = false
@@ -114,7 +117,7 @@ func show_design(editor: ShipEditor) -> void:
 	_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.6, 30.0)
 	if still:
 		# A card: closer, and from higher up, so the hull's shape reads.
-		_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.25, 30.0)
+		_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.0, 30.0)
 		_pitch = -0.85
 	_extent = maxf(editor.grid.hull_bounds_m().size.length(), 20.0)
 	if berth:
@@ -123,6 +126,17 @@ func show_design(editor: ShipEditor) -> void:
 	_refresh_overlay()
 	_update_com()
 	_update_camera()
+
+
+## What the view last drew (null before it has drawn).
+func snapshot() -> Image:
+	return _viewport.get_texture().get_image() if _viewport != null else null
+
+
+## Draw once more (a still view draws only when asked).
+func redraw() -> void:
+	if _viewport != null:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 ## The docking bay around a hull of half-size `half` (m), centred on it.
@@ -145,7 +159,13 @@ func _build_berth(half: Vector3) -> void:
 	steel.roughness = 0.45
 	var floor_y := -half.y - 5.0
 	var reach := half.x + 14.0
-	_berth_box(Vector3(reach * 2.0 + 24.0, 0.6, half.z * 2.0 + 36.0), Vector3(0, floor_y, 0), steel)
+	# A see-through deck plate (play-test batch 11): look under the ship.
+	var glass := StandardMaterial3D.new()
+	glass.albedo_color = Color(0.12, 0.16, 0.2, 0.28)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass.metallic = 0.3
+	glass.roughness = 0.2
+	_berth_box(Vector3(reach * 2.0 + 24.0, 0.2, half.z * 2.0 + 36.0), Vector3(0, floor_y, 0), glass)
 	# Guide lines along the berth, a hazard bar across its head.
 	var guide := _glow(CyberTheme.CYAN * 0.5, 0.5)
 	for side: float in [-1.0, 1.0]:
@@ -331,6 +351,11 @@ func _update_camera() -> void:
 		return
 	if still and _viewport != null:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	if isometric and plan:
+		_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+		_camera.size = _extent * 1.1
+		_camera.transform = Transform3D(Basis(Vector3(0, 0, -1), Vector3(-1, 0, 0), Vector3(0, 1, 0)), Vector3(0, 400, 0))
+		return
 	if isometric:
 		_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 		_camera.size = _extent * 1.1
@@ -338,13 +363,12 @@ func _update_camera() -> void:
 		# turned to face the nose; ⟲ / ⟳ turn it in quarter steps.
 		var yaw := PI * 1.25 + _iso_turn * PI * 0.5
 		var dir := Vector3(sin(yaw) * cos(ISO_PITCH), -sin(ISO_PITCH), cos(yaw) * cos(ISO_PITCH))
-		_camera.position = dir * 400.0
-		_camera.look_at(Vector3.ZERO, Vector3.UP)
+		# Basis.looking_at, not look_at: the view may not be in the tree yet.
+		_camera.transform = Transform3D(Basis.looking_at(-dir, Vector3.UP), dir * 400.0)
 		return
 	_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	var d := Vector3(sin(_yaw) * cos(_pitch), -sin(_pitch), cos(_yaw) * cos(_pitch))
-	_camera.position = d * _distance
-	_camera.look_at(Vector3.ZERO, Vector3.UP)
+	_camera.transform = Transform3D(Basis.looking_at(-d, Vector3.UP), d * _distance)
 
 
 # --- Isometric editing ------------------------------------------------------------

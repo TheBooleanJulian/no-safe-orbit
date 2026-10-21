@@ -518,6 +518,63 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Next — to be decided (2026-10-22)
+
+The agreed roadmap (M10 → M15) and play-test batches up to 11 are done.
+Candidates proposed on 2026-10-22, **not agreed yet**: a play-test of
+batch 11; a balance pass with `tools/balance_sim.gd` for the new lasers,
+craft and crew numbers; big-fight performance; Steam release preparation
+(export templates, application icon — `docs/STEAM.md`); new content (more
+locations, mission types, a campaign arc).
+
+### Play-test batch 11 — part 4: flight and shipyard ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Re-entry is a cone | `test_batch10_surface`, render review | tip 0.12 of the base, pointing into the flow |
+| The cargo hold names the mission items | `test_batch11_cargo` | "contract freight: medical supplies (40 m³)" |
+| Hit cam doesn't block the centre with the Tab drawer open | `smoke_encounter` | shut while the drawer is open; fails without the rule |
+| Octagonal collar and gangway | `test_batch10_models` | edges 1.92 / 1.06 m by turns; gangway 1.44 / 0.68 m |
+| Sell found equipment to the quartermaster | `test_batch11_cargo` | rare part 480 cr (shelf 1200) |
+| DEV +100k | `test_batch11_cargo`, `smoke_campaign` | +100 000 cr |
+| Banking repairs the ship? | `smoke_campaign` | not reproduced: same damage and jobs after banking |
+| Dealer: pre-rendered pictures, 3 columns | `test_batch11_cargo`, render review | 12 pictures kept; 3 across |
+
+### Play-test batch 11 — part 3: the refit bay ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Text colours match cells; more colour variety; families share a colour, differ by shape; dense magazine red; RCS white | `test_batch11_refit`, render review | lasers 66f2ff, 5 parts 5 shapes, RCS ffffff |
+| 1×1 and 3×3 hull blocks, slopes, trusses | `test_batch11_refit` | 29 cells, joined, drawn |
+| "Power distro"; long names fit | `test_batch11_refit`, render review | palette 300 px, smaller text |
+| Top-down view shows the rendered parts | `test_batch11_refit`, render review | TOP-DOWN 3D, fore right, port up |
+| 3×1 radiator preview direction | `smoke_shipyard` | ghost 1 cell, 3 out |
+| Hangars open to the outside, doors open for deployment | `test_batch11_refit` | ventral door; walled in → error; open 2 s, shut by 12 s |
+| See the ship's underside in the berth | render review | glass deck plate |
+
+### Play-test batch 11 — part 2: the crew manifest ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Crew manifest; 2 crew a quarters cell, live with the refit | `test_batch11_crew`, `smoke_shipyard` | frigate 8 cells → 16 berths |
+| Ship-agnostic crew; resting crew below the hiring hall | `test_batch11_crew` | destroyer bought: 144 aboard (16 from the frigate); back: 16 aboard |
+| Occupations; more names, no duplicates | `test_batch11_crew` | 144 names, 144 different |
+| Hiring hall top right, never runs out | `test_batch11_crew`, render review | 5 hires, the hall still 4 |
+| Crew armoury, cafeteria; Medbay | `test_batch11_crew` | armoury ×1.50; cafeteria ×1.24 (12 cells) |
+| Save format | `test_batch11_crew` (v13 → v14), `compat_check` | 16 aboard, the rest ashore; `.v13` kept |
+
+### Play-test batch 11 — part 1: combat rules, craft, lasers, flares, battle stations ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| No T toggle; hostile when fired on or a missile lock is seen (not for craft flying about) | `test_batch11_combat`, `smoke_main` (mutation-checked) | passive → hostile within 3 frames of our missile |
+| Craft default to their role's order | `test_batch11_combat` | repair/salvage Escort, recon/EW Recon, interceptors Intercept, fighters Strike |
+| Craft return with a safety margin; more survivable | `test_batch11_combat`, `test_air_wing` | home at 50 % hull (balanced); propellant for 1.5 × the trip back; fighters 80 hp |
+| Three laser tiers, scientifically named; craft carry the light tier | `test_batch11_combat` | Yb-fibre 35 mm / Nd:YAG 80 mm / free-electron 170 mm |
+| Fighters target weak spots | `test_batch11_combat` | aim at the most damaged external system |
+| Flares one by one, 0.25 s apart, round the ship; trails; brighter | `test_batch11_combat`, `test_m11_countermeasures` | 4 flares at 0.0/0.27/0.52/0.77 s from 4 places |
+| Close hatches at battle stations; crew spread out; automatic patching | `test_batch11_combat`, `smoke_encounter` | stacked corridors held apart; 2 empty rooms manned |
+
 ### Play-test batch 10 — part 3: more hulls, super-heavies ✅ (2026-10-22)
 
 | Requirement | Test | Measured |

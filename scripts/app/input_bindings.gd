@@ -28,7 +28,6 @@ const ACTIONS := [
 	[&"toggle_velocity_hold", "Hold orbit / match target / target markers"],
 	[&"restart_scenario", "Restart scenario"],
 	[&"open_shipyard", "Open shipyard"],
-	[&"toggle_target_ai", "Target hostile on/off"],
 	[&"salvage", "Salvage disabled target"],
 	[&"field_repair", "Damage control (workshop repair)"],
 	[&"dock", "Extend / release gangway"],

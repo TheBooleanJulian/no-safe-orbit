@@ -92,8 +92,11 @@ func _run() -> void:
 	_check(yard.issue_text.get_parsed_text().contains("No issues") and not yard.launch_button.disabled, "validation panel reads clean; launch enabled")
 	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   1.2 t · 1020 rounds · 600 PD rounds"), "stats panel shows mass and magazine (point defence drawing from it)")
 	await process_frame
-	_check(yard._crew_tab.get_child_count() > 2 and yard._vendor_tab.get_child_count() > 1 and yard._tech_tab.find_child("TechGraph", true, false) != null,
-		"the CREW, QUARTERMASTER and UPGRADES tabs are filled")
+	var side := yard._crew_tab.find_child("HallAndRest", true, false)
+	_check(yard._crew_tab.find_child("CrewBoard", true, false) != null and side != null and side.find_child("Hall", true, false) != null
+		and side.find_child("DeptResting", true, false) != null and yard._crew_tab.find_child("FillBerths", true, false) != null
+		and yard._vendor_tab.get_child_count() > 1 and yard._tech_tab.find_child("TechGraph", true, false) != null,
+		"the crew manifest (departments; hiring hall and resting crew on the right; fill berths), quartermaster and upgrades are filled")
 
 	# Searchable, categorised palette.
 	yard.palette_search.text = "radiator"
@@ -102,11 +105,22 @@ func _run() -> void:
 	_check(names.size() == 4 and " ".join(names).contains("Radiator panel (3 cells) 1×3 — along")
 		and " ".join(names).contains("Radiator panel (3 cells) 3×1 — fin, 3 out") and " ".join(names).contains("Heat-pipe radiator 3×1"),
 		"search 'radiator' lists both long radiators, each both ways round: %s" % ", ".join(names))
+	# A fin's ghost stands out from the face (play-test batch 11), not along it.
+	yard.select_palette("equipment", &"radiator_long")
+	yard.place_rotation = ShipGrid.FIN_ROTATION
+	yard._hover_cell = Vector3i(2, 1, 6)
+	yard._hover_face = &"port"
+	yard._update_ghost()
+	_check(yard.deck_editor.ghost_out == 3 and yard.deck_editor.ghost_cells.size() == 1, "the fin's ghost: one cell, standing 3 out (%d)" % yard.deck_editor.ghost_out)
+	yard.place_rotation = 0
+	yard._update_ghost()
+	_check(yard.deck_editor.ghost_out == 0 and yard.deck_editor.ghost_cells.size() == 3, "laid along the hull: three cells")
 	yard.palette_search.text = ""
 	yard.palette_category.select(Shipyard.CATEGORIES.find("Weapons"))
 	yard.palette_category.item_selected.emit(yard.palette_category.selected)
 	var weapons := yard.palette_items()
-	_check(weapons.size() == 11 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Pulse laser turret") and " ".join(weapons).contains("Point-defence")
+	_check(weapons.size() == 13 and " ".join(weapons).contains("Railgun") and " ".join(weapons).contains("Yb-fibre laser turret")
+		and " ".join(weapons).contains("Nd:YAG pulse laser turret") and " ".join(weapons).contains("Free-electron laser turret") and " ".join(weapons).contains("Point-defence")
 		and " ".join(weapons).contains("Missile rack") and " ".join(weapons).contains("Flare launcher") and " ".join(weapons).contains("EW jammer"),
 		"the Weapons category lists the guns, point defence, launchers and countermeasures: %s" % ", ".join(weapons))
 	var first := 0

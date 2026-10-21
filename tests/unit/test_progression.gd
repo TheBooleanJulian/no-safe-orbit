@@ -414,8 +414,8 @@ func test_losing_the_vessel_loses_only_the_cargo_and_a_fee() -> void:
 	var lost := p.lose_vessel(_catalog())
 	assert_true(p.owned(&"railgun") == 1, "parts installed in the design are kept")
 	assert_true(p.vessel.cargo_is_empty() and p.owned(&"torch_drive") == 0, "the cargo is gone")
-	assert_true(credits - p.credits == fee and fee == PlayerProfile.RESPAWN_BASE_FEE + PlayerProfile.RESPAWN_FEE_PER_BERTH * 24,
-		"respawn fee %d credits (24 berths)" % fee)
+	assert_true(credits - p.credits == fee and fee == PlayerProfile.RESPAWN_BASE_FEE + PlayerProfile.RESPAWN_FEE_PER_BERTH * 16,
+		"respawn fee %d credits (16 berths: 2 a quarters cell)" % fee)
 	assert_true(JSON.stringify(p.vessel.blueprint.to_dict()) == design and not p.vessel.is_damaged(), "the same design, rebuilt and rearmed")
 	assert_true(lost.size() == 3 and p.vessels_lost == 1, "loss report: %s" % ", ".join(lost))
 	p.credits = 10

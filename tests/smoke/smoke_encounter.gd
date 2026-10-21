@@ -107,6 +107,12 @@ func _run() -> void:
 	_check(main.encounter.selected == &"target_02" and main.hud._target_heading.text.contains("TGT-07B")
 		and not main.hud.target_label.text.contains("TGT-07B"),
 		"the drawer selects TGT-07B; the card follows (heading: %s)" % main.hud._target_heading.text)
+	# With the drawer open the hit cam stays shut: beside the drawer it sat
+	# over the middle of the screen (play-test batch 11).
+	main.hud.hit_cam.visible = true
+	await process_frame
+	await process_frame
+	_check(main.hud.drawer_open and not main.hud.hit_cam.visible, "the drawer is open: no hit cam over the centre")
 
 	# The policy tab: Standard, saved with the vessel.
 	main.hud.overview.show_tab("POLICY")

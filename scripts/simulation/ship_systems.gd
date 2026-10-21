@@ -85,6 +85,15 @@ const ROLE_STATIONS := {
 ## give this much more.
 const GUNNER_SKILL_STEP := 0.03
 const ENGINEER_SKILL_STEP := 0.02
+## Play-test batch 11 rooms. A working cafeteria makes the whole crew this
+## much better at everything skill touches (gunnery, the reactor, repairs,
+## medicine) per cell, up to CAFETERIA_MAX; a working crew armoury makes the
+## ship's boarders and defenders fight this much harder per cell, up to
+## ARMOURY_MAX (it is also where security stand their watch).
+const CAFETERIA_PER_CELL := 0.02
+const CAFETERIA_MAX := 0.5
+const ARMOURY_PER_CELL := 0.1
+const ARMOURY_MAX := 0.5
 ## Crew reach external systems on EVA from rooms this close (cells).
 const EVA_REACH_CELLS := 2
 ## A medic treats one wounded crew member in this long (s), with a working
@@ -353,18 +362,10 @@ func launch_door(e: EquipmentState) -> Array:
 	var pe := blueprint.equipment[e.index]
 	if e.def.is_external():
 		return [e.body_position, Vector3(ShipGrid.FACE_NORMALS[pe.face])]
-	var cells: Array = grid.equipment_cells(e.index)
-	var r: int = grid.room_at.get(pe.cell, -1)
-	if r >= 0:
-		for c in ShipGrid.room_cells(blueprint.rooms[r]):
-			if not cells.has(c):
-				cells.append(c)
-	var com := stats.center_of_mass_m
-	for face: StringName in [&"ventral", &"port", &"starboard", &"dorsal", &"aft", &"fore"]:
-		for c: Vector3i in cells:
-			if grid.is_exterior_face(c, face) and not grid.slope_faces(c).has(face):
-				var n := Vector3(ShipGrid.FACE_NORMALS[face])
-				return [ShipGrid.cell_center_m(c) + n * ShipGrid.CELL_SIZE_M * 0.5 - com, n]
+	var door := ShipGrid.door_face(blueprint, grid, e.index)
+	if not door.is_empty():
+		var n := Vector3(ShipGrid.FACE_NORMALS[door[1]])
+		return [ShipGrid.cell_center_m(door[0]) + n * ShipGrid.CELL_SIZE_M * 0.5 - stats.center_of_mass_m, n]
 	return [e.body_position, Vector3.DOWN]
 
 
@@ -551,8 +552,10 @@ func update_pressure() -> void:
 			if other >= 0 and not vacuum.has(other):
 				vacuum[other] = true
 				queue.append(other)
-		# One space: a breach vents both halves.
-		for other: int in grid.open_rooms.get(i, []):
+		# One space: a breach vents both halves — unless the crew are at
+		# battle stations, with the emergency doors between them shut
+		# (play-test batch 11).
+		for other: int in ([] if suited else grid.open_rooms.get(i, [])):
 			if not vacuum.has(other):
 				vacuum[other] = true
 				queue.append(other)
@@ -773,7 +776,7 @@ func cut_bus(cell: Vector3i) -> bool:
 
 
 func reactor_output() -> float:
-	var crew_factor := 1.0 + ENGINEER_SKILL_STEP * _engineer_skill
+	var crew_factor := (1.0 + ENGINEER_SKILL_STEP * _engineer_skill) * crew_skill_factor()
 	match reactor_state:
 		Reactor.THROTTLED:
 			return THROTTLE_OUTPUT * tech_factor("reactor") * stats.reactor_room_factor * crew_factor
@@ -790,7 +793,7 @@ func tech_factor(id: String) -> float:
 ## The member on a field repair works faster with skill.
 func _repairer_skill(task: RepairTask) -> float:
 	var m: CrewRoster.Member = crew.by_id(task.member_id) if crew != null else null
-	return 1.0 + 0.2 * m.skill if m != null else 1.0
+	return (1.0 + 0.2 * m.skill if m != null else 1.0) * crew_skill_factor()
 
 
 ## Damage-control teams (Milestone 15): one per two fit damage-control crew,
@@ -1100,8 +1103,7 @@ func decoys_left(e: EquipmentState) -> int:
 func ready_decoy_launchers() -> Array[EquipmentState]:
 	var out: Array[EquipmentState] = []
 	for e in equipment:
-		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER and e.working() and decoys_left(e) > 0 \
-				and float(launcher_cooldown.get(e.id, 0.0)) <= 0.0:
+		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER and e.working() and decoys_left(e) > 0:
 			out.append(e)
 	return out
 
@@ -1228,6 +1230,25 @@ func foam_left(room: int) -> int:
 ## What a role's rooms are worth: 0 with none working (powered and, unless
 ## the crew are suited, pressurised); 1 for one cell, ROOM_BONUS_PER_CELL more
 ## for each further cell, up to ROOM_BONUS_MAX.
+## Cells of working (powered, and pressurised or the crew suited) rooms of `role`.
+func working_cells(role: StringName) -> int:
+	var cells := 0
+	for i in blueprint.rooms.size():
+		if room_role(i) == role and rooms[i].powered and (suited or rooms[i].pressurized):
+			cells += blueprint.rooms[i].rect.size.x * blueprint.rooms[i].rect.size.y
+	return cells
+
+
+## The cafeteria's lift to everything the crew's skill touches (1 without one).
+func crew_skill_factor() -> float:
+	return 1.0 + minf(CAFETERIA_PER_CELL * working_cells(&"cafeteria"), CAFETERIA_MAX)
+
+
+## The crew armoury's lift to the ship's fighting crew in a boarding (1 without one).
+func armoury_factor() -> float:
+	return 1.0 + minf(ARMOURY_PER_CELL * working_cells(&"armoury"), ARMOURY_MAX)
+
+
 func room_bonus(role: StringName) -> float:
 	var cells := 0
 	for i in blueprint.rooms.size():
@@ -1343,7 +1364,7 @@ func effective_config() -> ShipConfig:
 	if cfg.pd_gun != null and tech_factor("pd_control") != 1.0:
 		cfg.pd_gun = cfg.pd_gun.duplicate()
 		cfg.pd_gun.rate_of_fire_rpm *= tech_factor("pd_control")
-	var gunnery := channel_factor(Channel.WEP) * tech_factor("gunnery") * (1.0 + GUNNER_SKILL_STEP * _gunner_skill)
+	var gunnery := channel_factor(Channel.WEP) * tech_factor("gunnery") * (1.0 + GUNNER_SKILL_STEP * _gunner_skill) * crew_skill_factor()
 	if cfg.cannon != null and gunnery != 1.0:
 		cfg.scale_rate_of_fire(gunnery)
 	if not has_command():
@@ -1465,7 +1486,7 @@ func _advance_medical(dt: float) -> bool:
 				continue
 			cur = {"patient": patient.id, "s": 0.0}
 			taken[patient.id] = medic.id
-		cur.s = float(cur.s) + dt * maxf(room_bonus(&"life_support"), 0.5) * tech_factor("medicine") * (1.0 + 0.2 * medic.skill)
+		cur.s = float(cur.s) + dt * maxf(room_bonus(&"life_support"), 0.5) * tech_factor("medicine") * (1.0 + 0.2 * medic.skill) * crew_skill_factor()
 		if float(cur.s) < MEDICAL_TREATMENT_S:
 			_treating[medic.id] = cur
 			continue
@@ -1811,6 +1832,45 @@ func apply_condition(c: Dictionary) -> void:
 
 # --- Field repair --------------------------------------------------------------
 
+## Battle stations (play-test batch 11): general and damage-control hands
+## spread out — one to each room with systems in it and nobody there, among
+## the rooms the crew can reach — so whatever is hit has someone beside it
+## to patch it; at stand-down (`on` false) they go back to their stations.
+## Returns how many moved.
+func spread_crew(on: bool) -> int:
+	if crew == null:
+		return 0
+	var moved := 0
+	var reach := reachable_rooms()
+	if not on:
+		for m in crew.members:
+			if m.available() and m.station >= 0 and m.location != m.station and reach.has(m.station):
+				m.location = m.station
+				moved += 1
+		return moved
+	var manned := {}
+	for m in crew.members:
+		if m.fit() and m.location >= 0:
+			manned[m.location] = true
+	var need: Array[int] = []
+	for e in equipment:
+		if e.def.is_external() or e.destroyed():
+			continue
+		var r: int = grid.room_at.get(blueprint.equipment[e.index].cell, -1)
+		if r >= 0 and not manned.has(r) and not need.has(r) and reach.has(r):
+			need.append(r)
+	for m in crew.members:
+		if need.is_empty():
+			break
+		if not m.available() or m.location < 0 or not reach.has(m.location):
+			continue
+		if m.role != CrewRoster.Role.GENERAL and m.role != CrewRoster.Role.DAMAGE_CONTROL:
+			continue
+		m.location = need.pop_front()
+		moved += 1
+	return moved
+
+
 ## Crew in a damaged room fix it first (play-test batch 10): with a working
 ## workshop aboard, every fit crew member not otherwise busy patches the
 ## damaged internal systems of the room they are in, where they stand —
@@ -1828,7 +1888,7 @@ func _advance_in_place_repairs(dt: float) -> bool:
 	in_place_repairs.clear()
 	if crew == null or working_workshop() < 0:
 		return false
-	var rate := dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * maxf(room_bonus(&"workshop"), 1.0)
+	var rate := dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * maxf(room_bonus(&"workshop"), 1.0) * crew_skill_factor()
 	var changed := false
 	for m in crew.members:
 		if not m.available() or m.location < 0 or not (suited or rooms[m.location].pressurized):

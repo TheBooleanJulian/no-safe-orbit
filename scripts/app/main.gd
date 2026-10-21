@@ -810,9 +810,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("divert_wep"):
 		world.get_ship(PLAYER_ID).systems.divert(ShipSystems.Channel.WEP)
 		return
-	elif event.is_action_pressed("toggle_target_ai"):
-		set_target_hostile(not target_hostile)
-		return
 	elif event.is_action_pressed("tactical_overview"):
 		hud.overview.toggle()
 		if hud.overview.visible:
@@ -841,7 +838,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 ## The encounter turns hostile (or stands down) together: fire on one of
-## its ships and they all fight. T toggles it.
+## its ships — or let it see one of our missiles locked on — and they all
+## fight (play-test batch 11: no toggle any more).
 func set_target_hostile(on: bool, why: String = "") -> void:
 	var lead := target_ship()
 	for c in encounter.live(world):
@@ -921,9 +919,10 @@ func _apply_automation(input: ShipControlInput, player: ShipState, target: ShipS
 					str(policy.salvo_count) if policy.salvo_count > 0 else "all", target.display_name], world.sim_time)
 
 
-## Space: fire flares from every ready launcher (manual always works).
+## Space: a burst of flares, one at a time from the launchers round the ship
+## (manual always works).
 func fire_countermeasures() -> String:
-	var why := world.launch_decoys(PLAYER_ID)
+	var why := world.launch_decoys(PLAYER_ID, MANUAL_FLARES)
 	if why == "":
 		audio.play("launch", -8.0)
 	else:
@@ -933,6 +932,9 @@ func fire_countermeasures() -> String:
 
 ## Automatic flares by policy, for the player and every live contact: as
 ## soon as an inbound missile is armed and within the policy's lead time.
+const FLARES_PER_MISSILE := 3
+const MANUAL_FLARES := 3
+var _flares_spent: Dictionary = {}  # ship id -> flares put out against what is inbound now
 func _auto_countermeasures(player: ShipState) -> void:
 	var ships: Array[ShipState] = [player]
 	for c in encounter.live(world):
@@ -940,9 +942,17 @@ func _auto_countermeasures(player: ShipState) -> void:
 	for s in ships:
 		if s == null or not s.is_active() or s.derelict or s.policy == null or s.systems == null:
 			continue
+		# One flare at a time, up to FLARES_PER_MISSILE for each missile
+		# inbound (play-test batch 11: one missile used to empty every tube).
+		var inbound := world.missiles_at(s.id).size()
+		if inbound == 0:
+			_flares_spent.erase(s.id)
+			continue
 		var t := Hud.missile_inbound_time(world, s, true)
-		if s.policy.cm_due(t) and not s.systems.ready_decoy_launchers().is_empty():
-			world.launch_decoys(s.id)
+		if s.policy.cm_due(t) and world.flare_due(s.id) and int(_flares_spent.get(s.id, 0)) < inbound * FLARES_PER_MISSILE \
+				and not s.systems.ready_decoy_launchers().is_empty():
+			world.launch_decoys(s.id, 1)
+			_flares_spent[s.id] = int(_flares_spent.get(s.id, 0)) + 1
 			if s == player:
 				audio.play("launch", -8.0)
 
@@ -1351,6 +1361,36 @@ func in_combat() -> bool:
 		if c.hostile and s.systems != null and not s.systems.is_disabled():
 			return true
 	return false
+
+
+## Damage control on its own (play-test batch 11; C still sends a team at
+## once): every AUTO_PATCH_S, if a team is free and something can be patched,
+## it starts — with the notice saying who patches what. Short of spare parts,
+## it says so once.
+const AUTO_PATCH_S := 1.0
+var _auto_patch_clock := 0.0
+var _auto_patch_short := false
+
+
+func _auto_patch(delta: float) -> void:
+	_auto_patch_clock -= delta
+	if _auto_patch_clock > 0.0:
+		return
+	_auto_patch_clock = AUTO_PATCH_S
+	var player := world.get_ship(PLAYER_ID)
+	if player == null or not player.is_active() or player.systems == null:
+		return
+	var sys := player.systems
+	if sys.field_repair_block_reason() != "":
+		return
+	var e := sys.field_repair_target()
+	var cost := maxi(ServiceYard.damaged_cost(ServiceYard.equipment_cost(e.def), sys.field_repair_hp(e) / e.max_hp), 1)
+	if cost > get_profile().spare_parts:
+		if not _auto_patch_short:
+			_auto_patch_short = true
+			hud.notice("DAMAGE CONTROL: short of spare parts to patch %s (%d needed)" % [e.id, cost], world.sim_time)
+		return
+	start_field_repair()
 
 
 ## The body's surface turns: its fixed axes and spin for the simulation.
@@ -1927,11 +1967,27 @@ func _step_salvo() -> void:
 	if n > 0:
 		audio.play("launch")
 		combat_log.missiles_launched += n
-		var c := encounter.get_contact(salvo.target_id)
-		if c != null and not c.hostile:
-			set_target_hostile(true, "missiles launched at it")
 	if salvo.done():
 		salvo = null
+
+
+## A passive contact that sees one of our missiles locked on to it (inside
+## its sensor range) turns hostile (play-test batch 11). Our craft flying
+## about don't — only their rounds hitting it do.
+func _check_missile_locks() -> void:
+	for m in world.missiles:
+		if m.side != &"player" or not m.is_active():
+			continue
+		var c := encounter.get_contact(m.missile_target)
+		if c == null or c.hostile:
+			continue
+		var s := world.get_ship(c.id)
+		if s == null or not s.is_active():
+			continue
+		var sees := s.systems.sensor_range_m() if s.systems != null else SensorTrack.range_of(s)
+		if m.position.distance_to(s.position) <= sees:
+			set_target_hostile(true, "missile lock detected")
+			return
 
 
 ## Every contact's salvo in flight: fire what has cycled.
@@ -2162,10 +2218,13 @@ func _process(delta: float) -> void:
 	var quarters := world.sim_time - _threat_seen < STAND_DOWN_CLEAR_S
 	if player.systems != null and player.systems.suited != quarters:
 		player.systems.suited = quarters
-		hud.notice("BATTLE STATIONS — crew in spacesuits" if quarters else "Stand down — confirmed clear, suits off", world.sim_time)
+		var spread := player.systems.spread_crew(quarters)
+		hud.notice(("BATTLE STATIONS — crew in spacesuits, doors shut%s" % (", %d hands spread through the ship" % spread if spread > 0 else ""))
+			if quarters else "Stand down — confirmed clear, suits off", world.sim_time)
 		if combat_log != null:
 			combat_log.record(world.sim_time, "crew", "Battle stations" if quarters else "Stand down: confirmed clear")
 	_announce_fires(player)
+	_auto_patch(delta)
 	var courier := world.get_ship(COURIER_ID) if world.has_ship(COURIER_ID) and world.get_ship(COURIER_ID).is_active() else null
 	# What the enemy may shoot at: us, our craft out, an escorted courier
 	# (never a wreck); with focus fire the courier first, else the player.
@@ -2192,6 +2251,7 @@ func _process(delta: float) -> void:
 	_link_wings()
 	_update_goals(player)
 	_step_salvo()
+	_check_missile_locks()
 	_step_contact_salvos()
 	_auto_countermeasures(player)
 	hud.missile_chip = "[SPC]" if player.systems != null and player.systems.decoys_aboard() > 0 else ""
@@ -2325,7 +2385,8 @@ func _process(delta: float) -> void:
 	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
 		location.sky_body.radius_m if location.sky_body != null else 0.0)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera.global_position, _own_shooters())
-	decoy_view.sync(world.decoys, render_origin, camera.global_position, world.sim_time)
+	decoy_view.sync(world.decoys, render_origin, camera.global_position, world.sim_time,
+		world.frame.rebase_count if world.frame != null else 0)
 	beam_view.sync(world, alpha, render_origin, camera.global_position, delta)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
@@ -2355,6 +2416,11 @@ func _drive_contact(c: Contact, player: ShipState, prey_list: Array[ShipState], 
 		world.set_input(c.id, ShipControlInput.neutral())
 	elif link != null and link.attacker_id != c.id and GunneryAI.can_break_contact(s):
 		world.set_input(c.id, GunneryAI.break_contact(s, player))
+	elif link != null and link.attacker_id == c.id and link.target_id == PLAYER_ID:
+		# Its own gangway on us: hold station while its party is across —
+		# with every hand in the party it no longer "wants" to board, and
+		# flying off would tear the gangway (play-test batch 11).
+		_enemy_board(c, s, player)
 	elif engaging and may_board and not someone_else_boarding and get_profile().missions_completed + 1 >= ENEMY_BOARD_FROM_MISSION \
 			and GunneryAI.wants_to_board(s, player):
 		_enemy_board(c, s, player)

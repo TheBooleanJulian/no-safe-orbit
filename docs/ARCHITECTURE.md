@@ -265,6 +265,49 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Flight and shipyard (play-test batch 11, part 4)**: `Hud.drawer_open`
+  shuts the hit cam while the Tab drawer is open. `ShipInstance.cargo_summary`
+  names the contract freight. `PlayerProfile.sell_price` / `sell_cargo_equipment`
+  (`SELL_SHARE`). The dealer is a `GridContainer` of `DEALER_COLUMNS`;
+  `DealerShots` keeps each card's picture in `user://dealer_shots` keyed by
+  the template's MD5 and `STYLE` — `ShipyardSections._keep_picture` redraws
+  the card's `ShipPreview3D` at its laid-out size, keeps the frame only if it
+  is that size and `has_subject`, decorates and saves it, and swaps the view
+  for a `TextureRect`. `Shipyard.DEV_CREDITS`.
+- **Refit bay (play-test batch 11, part 3)**: `EquipmentIcons` (a shape per
+  kind; drones by `CrewRoster.needs_pilot`; a palette icon in the rarity
+  colour; `draw` on the deck). Palette text is `Shipyard.palette_color(def.color)`.
+  New hull `hull_block_1x1/3x3`, `truss_1x1/3x3`, `wedge_3x3`. Fins: the deck
+  editor's `_draw_face_marker(..., out, def)` and `ghost_out`.
+  `ShipGrid.door_face` (used by `ShipSystems.launch_door`, the model's
+  `_hangar_door` and the validator's `hangar_enclosed`); `Model.hangar_doors`
+  and `ShipView._move_hangar_doors`. `ShipPreview3D.plan` (straight down) for
+  the "plan" main view; the berth's glass deck plate.
+- **Crew manifest (play-test batch 11, part 2)**: `PlayerProfile.resting`
+  (schema 14), `rest_crew` / `board_resting` / `dismiss_resting` /
+  `fit_crew` / `fill_berths` / `fill_from_resting`; `_move_crew_to` carries
+  the crew on `select_vessel`, `commission`, `buy_ship` (its crew join you)
+  and `scrap_vessel`; `_candidate` refills the hall on each hire;
+  `taken_names` + `CrewNames.pick_unique`; `read_crew` (occupation, given to
+  older entries by `CrewNames.occupation_for`). Crew quarters hold 2 a cell.
+  Rooms `armoury` (security's first station; `ShipSystems.armoury_factor` in
+  `BoardingAction._fight`) and `cafeteria` (`crew_skill_factor` in gunnery,
+  `reactor_output`, `_repairer_skill`, in-place repairs and treatment).
+  `Shipyard._refresh_station_tabs` builds the manifest (`_crew_department`
+  with role -1 for resting; `CrewDepartment.resting_dropped`; `CrewBadge`
+  `resting`) from the editor's live berths.
+- **Combat and craft (play-test batch 11, part 1)**: no `toggle_target_ai`
+  action; `Main._check_missile_locks` turns a contact hostile when a player
+  missile homing on it is inside its `sensor_range_m`. `CraftAI.default_directive`
+  by `craft_role`; `WEAK_SPOT` priority in `aim_point`; `DISENGAGE` hull
+  0.7 / 0.5 / 0.3 and `disengage_reason(..., home_dv_mps)` with
+  `HOME_PROPELLANT_MARGIN` (AirWing passes the speed off the carrier plus
+  twice `MAX_CLOSING_MPS`). Lasers: `fibre_laser_turret`, `laser_turret`
+  (Nd:YAG), `free_electron_laser_turret`. Flares: `WorldSimulation`
+  `_flare_queue` / `_fire_flare` (one at a time, `FLARE_INTERVAL_S`, launchers
+  in turn), `flare_due`; Main's `FLARES_PER_MISSILE` budget; `DecoyView`
+  trail (a second MultiMesh, cleared on a rebase). `ShipSystems.update_pressure`
+  skips `open_rooms` while `suited`; `spread_crew(on)`; Main's `_auto_patch`.
 - **Retrieve contracts (Milestone 13, part 3)**: `ContractBoard._retrieve_offer`
   (kind "retrieve", `MissionChain.Goal.RETRIEVE`, `deliver_to` the offering
   station, guards as `ships`); `carries_freight` / `deliver_to` let
@@ -298,8 +341,9 @@ and the location's central body:
   player, rebuilt every 0.4 s, heights morphed in and faded at the edge).
   HUD `ground_text` and a GROUND alert. Earth: `Main._play_reentry` holds
   `close_sortie` for `REENTRY_CUTSCENE_S` while `ShipView.show_reentry`
-  grows the plasma sheath and breaks modules off (`mesh_from_flats` skips
-  emptied materials).
+  grows the plasma cone (a unit `CylinderMesh`, tip `REENTRY_TIP`, scaled
+  along the flow) and breaks modules off (`mesh_from_flats` skips emptied
+  materials).
 - **Crew and models (play-test batch 10, part 1)**: `Main.threat_present`
   (hostile contact, hostile craft flying, a non-player missile, fire within
   `UNDER_FIRE_S`) stamps `_threat_seen`; `systems.suited` holds until
@@ -314,8 +358,10 @@ and the location's central body:
   `Docking.COLLAR_SEAL_S` 5, `HULL_CUT_S` 22.5. Models:
   `ShipModelBuilder.radiator_panels` (flat or fin), `engine_bell(thrust)`
   and `Model.engine_widths` (ShipView scales each plume), RCS nozzles,
-  turret/PD detail merged per pivot (`_merge_static(pivot)`), a hexagonal
-  `_collar` (`COLLAR_SIDES`), `GangwayView` hexagonal with a rib texture,
+  turret/PD detail merged per pivot (`_merge_static(pivot)`), an octagonal
+  `_collar` (`octagon(COLLAR_RADIUS_M, COLLAR_CHAMFER)`: a square with its
+  corners cut; `prism_mesh` for the hatch), `GangwayView` the same octagon
+  (`outline()`) with a rib texture,
   berth gantries of `_truss` bays in red with `_beacon` pivots turned in
   `ShipPreview3D._process`, more `CraftView` / `MissileView` pieces.
 - **Effects and the opening range (play-test batch 9, part 7)**:

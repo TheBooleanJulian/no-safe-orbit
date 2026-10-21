@@ -128,7 +128,8 @@ static func for_ship(carrier: ShipState) -> AirWing:
 		var kind := "drone" if e.def.craft.cannon == null else "fighter"
 		n[kind] += 1
 		c.label = "%s %s%d" % [e.def.craft.display_name.split(" ")[0], kind.left(1).to_upper(), n[kind]]
-		c.directive = CraftAI.Directive.RECON if kind == "drone" else CraftAI.Directive.STRIKE
+		c.directive = CraftAI.default_directive(c.config)
+		c.priority = CraftAI.WEAK_SPOT if c.config.cannon != null else 0
 		c.ammo = c.config.cannon.magazine_rounds if c.config.cannon != null else 0
 		c.think_offset = wing.crafts.size() % THINK_EVERY
 		wing.crafts.append(c)
@@ -336,7 +337,8 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 		directive = CraftAI.Directive.RETURN
 		why = "no comms — returning"
 	elif directive != CraftAI.Directive.RETURN:
-		var d := CraftAI.disengage_reason(s, c.risk)
+		var home_dv := (s.velocity - carrier.velocity).length() + 2.0 * CraftAI.MAX_CLOSING_MPS if carrier != null else 0.0
+		var d := CraftAI.disengage_reason(s, c.risk, home_dv)
 		if d != "":
 			directive = CraftAI.Directive.RETURN
 			why = "disengaging: %s — back to refuel and rearm" % d
@@ -524,7 +526,7 @@ func _recover(world: WorldSimulation, c: Craft) -> void:
 	c.override_reason = ""
 	c.comms_lost_s = 0.0
 	if c.directive == CraftAI.Directive.RETURN:
-		c.directive = CraftAI.Directive.RECON if c.is_drone() else CraftAI.Directive.STRIKE
+		c.directive = CraftAI.default_directive(c.config)
 	var needs := c.propellant_fraction < 1.0 or (c.config.cannon != null and c.ammo < c.config.cannon.magazine_rounds)
 	c.service_left_s = SERVICE_S if needs else 0.0
 	_note("%s recovered%s" % [c.label, " — servicing %.0f s" % SERVICE_S if needs else ""])

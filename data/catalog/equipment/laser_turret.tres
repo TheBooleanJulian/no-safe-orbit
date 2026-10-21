@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_def")
 id = &"laser_turret"
-display_name = "Pulse laser turret"
+display_name = "Nd:YAG pulse laser turret"
 kind = 3
 mount = 1
 footprint_cells = Vector2i(1, 1)
@@ -20,6 +20,6 @@ thrust_n = 0.0
 hit_points = 30.0
 shield_mm = 10.0
 cannon = ExtResource("2_gun")
-color = Color(0.45, 1.0, 0.95, 1)
+color = Color(0.4, 0.95, 1.0, 1)
 rarity = 3
 drop_weight = 8.0

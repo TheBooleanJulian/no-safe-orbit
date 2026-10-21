@@ -1,7 +1,7 @@
 extends TestCase
 ## Measures: play-test batch 10 — models. A radiator fin folds along its
 ## length like the flat panel; engine bells grow with thrust (and their
-## plumes with them); the docking collar and gangway are hexagonal; the
+## plumes with them); the docking collar and gangway are octagonal (batch 11); the
 ## berth's gantries are red truss with rotating beacons; craft and missiles
 ## carry more detail.
 
@@ -45,22 +45,39 @@ func test_engine_bells_grow_with_thrust() -> void:
 	model.root.free()
 
 
-func test_hexagonal_collar_and_gangway() -> void:
+func test_octagonal_collar_and_gangway() -> void:
 	var part := Node3D.new()
 	ShipModelBuilder._collar(part, Vector3.ZERO, Vector3.UP)
-	var edges := 0
-	var hatch_sides := 0
+	var lengths := PackedFloat32Array()
+	var hatch: ArrayMesh = null
 	for c in part.get_children():
 		if c is MeshInstance3D and (c as MeshInstance3D).mesh is BoxMesh:
-			edges += 1
-		elif c is MeshInstance3D and (c as MeshInstance3D).mesh is CylinderMesh:
-			hatch_sides = ((c as MeshInstance3D).mesh as CylinderMesh).radial_segments
+			lengths.append(((c as MeshInstance3D).mesh as BoxMesh).size.x)
+		elif c is MeshInstance3D and (c as MeshInstance3D).mesh is ArrayMesh:
+			hatch = (c as MeshInstance3D).mesh
 	var gv := GangwayView.new()
 	var tube := gv._make_tube()
-	var sides := (tube.mesh as CylinderMesh).radial_segments
-	print("    measured: collar %d edges, hatch %d sides; gangway %d sides, ribbed %s" % [edges, hatch_sides, sides,
+	var outline := GangwayView.outline()
+	var sides := PackedFloat32Array()
+	for k in outline.size():
+		sides.append(outline[k].distance_to(outline[(k + 1) % outline.size()]))
+	print("    measured: collar edges %s; gangway sides %s m, ribbed %s" % [lengths, sides,
 		(tube.material_override as StandardMaterial3D).albedo_texture != null])
-	assert_true(edges == 6 and hatch_sides == 6 and sides == 6, "hexagonal")
+	assert_true(lengths.size() == 8 and hatch != null and outline.size() == 8, "octagonal")
+	var long_short := true
+	for k in 8:
+		if (k % 2 == 0) != (sides[k] > sides[(k + 1) % 8] * 1.5) or absf(lengths[k] - lengths[(k + 2) % 8]) > 1e-4:
+			long_short = false
+	assert_true(long_short and lengths[0] > lengths[1] * 1.5, "long sides and short corners by turns, the collar and the gangway alike")
+	# The tube's walls face out (front faces wind clockwise).
+	var arrays := (tube.mesh as ArrayMesh).surface_get_arrays(0)
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var nrm: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var outward := true
+	for t in range(0, v.size(), 3):
+		if (v[t + 1] - v[t]).cross(v[t + 2] - v[t]).dot(nrm[t]) > 0.0 or nrm[t].dot(v[t]) <= 0.0:
+			outward = false
+	assert_true(outward, "faces outward")
 	assert_true((tube.material_override as StandardMaterial3D).albedo_texture != null, "ribbed")
 	tube.free()
 	gv.free()

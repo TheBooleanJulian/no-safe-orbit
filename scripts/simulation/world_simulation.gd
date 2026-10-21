@@ -101,7 +101,6 @@ var _next_decoy_id := 1
 var _seen_decoys: Dictionary = {}
 ## A flare leaves its tube at this speed (m/s), fanned around the launcher's face.
 const DECOY_EJECT_MPS := 35.0
-const DECOY_CYCLE_S := 1.5
 ## Jamming does nothing inside BURN_THROUGH_M and is at full effect beyond
 ## JAM_FULL_M (the noise drowns the echo only at range).
 const BURN_THROUGH_M := 3000.0
@@ -261,36 +260,80 @@ func launch_missile(shooter_id: StringName, target_id: StringName, warhead: int 
 
 ## Fire every ready decoy launcher of `ship_id` once: decoy_salvo flares
 ## each, fanned out from the launcher's face. "" or why not.
-func launch_decoys(ship_id: StringName) -> String:
+## Flares go out one at a time (play-test batch 11: a single missile used to
+## empty every tube at once): FLARE_INTERVAL_S apart, each from the next
+## working launcher round the ship. `count` more are queued; the first goes
+## now if the last went long enough ago.
+const FLARE_INTERVAL_S := 0.25
+var _flare_queue: Dictionary = {}  # ship id -> flares still to go
+var _flare_next: Dictionary = {}  # ship id -> sim time the next may go
+var _flare_turn: Dictionary = {}  # ship id -> which launcher is next
+
+
+func launch_decoys(ship_id: StringName, count: int = 3) -> String:
 	var s := get_ship(ship_id)
 	if s == null or s.systems == null or not s.is_active():
 		return "no launcher"
-	var ready := s.systems.ready_decoy_launchers()
-	if ready.is_empty():
+	if _flare_launchers(s).is_empty():
 		for e in s.systems.equipment:
 			if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER:
-				return "flares empty, cycling or offline"
+				return "flares empty or offline"
 		return "no flare launcher fitted"
-	var fired := 0
-	for e in ready:
-		var normal := Vector3(ShipGrid.FACE_NORMALS.get(s.systems.blueprint.equipment[e.index].face, Vector3i.UP))
-		var out := s.orientation * normal
-		var side := out.cross(Vector3.UP if absf(out.y) < 0.95 else Vector3.RIGHT).normalized()
-		var up := side.cross(out)
-		var n := mini(e.def.decoy_salvo, s.systems.decoys_left(e))
-		for k in n:
-			var a := TAU * k / maxf(n, 1)
-			var dir := (out + (side * cos(a) + up * sin(a)) * 0.7).normalized()
-			decoys.append({"id": _next_decoy_id, "side": s.side, "owner": ship_id,
-				"position": s.position + s.orientation * e.body_position + out * 3.0,
-				"velocity": s.velocity + dir * DECOY_EJECT_MPS, "age": 0.0, "life": e.def.decoy_life_s,
-				"signature": e.def.decoy_signature})
-			_next_decoy_id += 1
-		s.systems.missiles_used[e.id] = int(s.systems.missiles_used.get(e.id, 0)) + n
-		s.systems.launcher_cooldown[e.id] = DECOY_CYCLE_S
-		fired += n
-	_link_events.append("%s: %d flares" % [s.display_name, fired])
+	if int(_flare_queue.get(ship_id, 0)) == 0:
+		_link_events.append("%s: flares" % s.display_name)
+	_flare_queue[ship_id] = int(_flare_queue.get(ship_id, 0)) + count
+	if sim_time >= float(_flare_next.get(ship_id, -INF)):
+		_fire_flare(ship_id)
 	return ""
+
+
+## Flares still waiting to go out.
+func flares_queued(ship_id: StringName) -> int:
+	return int(_flare_queue.get(ship_id, 0))
+
+
+## A flare may go now (nothing queued, the interval passed).
+func flare_due(ship_id: StringName) -> bool:
+	return flares_queued(ship_id) == 0 and sim_time >= float(_flare_next.get(ship_id, -INF))
+
+
+func _flare_launchers(s: ShipState) -> Array[ShipSystems.EquipmentState]:
+	var out: Array[ShipSystems.EquipmentState] = []
+	for e in s.systems.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.DECOY_LAUNCHER and e.working() and s.systems.decoys_left(e) > 0:
+			out.append(e)
+	return out
+
+
+func _step_flare_queues() -> void:
+	for id: StringName in _flare_queue.keys():
+		if int(_flare_queue[id]) > 0 and sim_time >= float(_flare_next.get(id, -INF)):
+			_fire_flare(id)
+
+
+func _fire_flare(ship_id: StringName) -> void:
+	var s := get_ship(ship_id)
+	var launchers := _flare_launchers(s) if s != null and s.is_active() and s.systems != null else ([] as Array[ShipSystems.EquipmentState])
+	if launchers.is_empty():
+		_flare_queue.erase(ship_id)
+		return
+	var turn := int(_flare_turn.get(ship_id, 0))
+	var e := launchers[turn % launchers.size()]
+	_flare_turn[ship_id] = turn + 1
+	var normal := Vector3(ShipGrid.FACE_NORMALS.get(s.systems.blueprint.equipment[e.index].face, Vector3i.UP))
+	var out := s.orientation * normal
+	var side := out.cross(Vector3.UP if absf(out.y) < 0.95 else Vector3.RIGHT).normalized()
+	var up := side.cross(out)
+	var a := TAU * float(turn % 3) / 3.0  # successive flares fan three ways round the face
+	var dir := (out + (side * cos(a) + up * sin(a)) * 0.7).normalized()
+	decoys.append({"id": _next_decoy_id, "side": s.side, "owner": ship_id,
+		"position": s.position + s.orientation * e.body_position + out * 3.0,
+		"velocity": s.velocity + dir * DECOY_EJECT_MPS, "age": 0.0, "life": e.def.decoy_life_s,
+		"signature": e.def.decoy_signature})
+	_next_decoy_id += 1
+	s.systems.missiles_used[e.id] = int(s.systems.missiles_used.get(e.id, 0)) + 1
+	_flare_queue[ship_id] = maxi(int(_flare_queue.get(ship_id, 0)) - 1, 0)
+	_flare_next[ship_id] = sim_time + FLARE_INTERVAL_S
 
 
 ## A flare's signature now: bright at first, burning down to nothing.
@@ -757,6 +800,7 @@ func step() -> void:
 		_fire_beam(p[0], p[1], p[2], p[3], p[4])
 	_pending_beams.clear()
 	_step_missiles()
+	_step_flare_queues()
 	_step_decoys()
 	_phase("missiles")
 	_step_collisions()

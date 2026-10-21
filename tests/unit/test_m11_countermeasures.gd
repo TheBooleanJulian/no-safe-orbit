@@ -52,7 +52,7 @@ func _count(sys: ShipSystems, def_id: StringName) -> int:
 ## A missile duel: `a` (a missile rack) fires one anti-ship missile at `b`
 ## `range_m` away; `b` fires flares when the missile is `flare_at_s` out
 ## (< 0: never). Returns {hit, decoyed, lost, hull_before, hull_after}.
-func _engagement(range_m: float, flare_at_s: float, b_parts: Array = [&"flare_launcher"]) -> Dictionary:
+func _engagement(range_m: float, flare_at_s: float, b_parts: Array = [&"flare_launcher"], flares: int = 3) -> Dictionary:
 	var world := WorldSimulation.new(DT)
 	world.add_ship(_ship(&"a", _fitted([&"missile_rack"]), Vector3.ZERO, &"hostile"))
 	var b := _ship(&"b", _no_pd(_fitted(b_parts)), Vector3(0, 0, -range_m), &"player")
@@ -64,7 +64,7 @@ func _engagement(range_m: float, flare_at_s: float, b_parts: Array = [&"flare_la
 	var t := 0.0
 	while t < 60.0 and not world.missiles.is_empty():
 		if not flared and flare_at_s >= 0.0 and Hud.missile_inbound_time(world, b) <= flare_at_s and Hud.missile_inbound_time(world, b) >= 0.0:
-			flared = world.launch_decoys(&"b") == ""
+			flared = world.launch_decoys(&"b", flares) == ""
 		world.step()
 		events.append_array(world.take_link_events())
 		t += DT
@@ -97,9 +97,14 @@ func test_launching_flares() -> void:
 	var s := _ship(&"s", _fitted([&"flare_launcher"]), Vector3.ZERO, &"player")
 	world.add_ship(s)
 	var before := s.systems.decoys_aboard()
-	assert_true(world.launch_decoys(&"s") == "" and world.decoys.size() == 3, "one launch: three flares (%d)" % world.decoys.size())
+	assert_true(world.launch_decoys(&"s") == "" and world.decoys.size() == 1, "one launch: the first flare at once (%d)" % world.decoys.size())
+	for i in roundi(0.3 / DT):
+		world.step()
+	assert_true(world.decoys.size() == 2, "the next %.2f s later, not all at once (%d)" % [WorldSimulation.FLARE_INTERVAL_S, world.decoys.size()])
+	for i in roundi(0.3 / DT):
+		world.step()
+	assert_true(world.decoys.size() == 3 and world.flares_queued(&"s") == 0, "three in all (%d)" % world.decoys.size())
 	assert_true(s.systems.decoys_aboard() == before - 3, "taken from the magazine (%d → %d)" % [before, s.systems.decoys_aboard()])
-	assert_true(world.launch_decoys(&"s") != "", "the tube must cycle first")
 	var spread := (world.decoys[0].position as Vector3).distance_to(world.decoys[1].position)
 	for i in roundi(2.0 / DT):
 		world.step()
@@ -142,9 +147,12 @@ func test_flares_defeat_a_missile_fired_on_time() -> void:
 
 
 func test_flares_fired_too_early_burn_out() -> void:
-	var early := _engagement(9000.0, 14.0)
-	print("    measured: flares 14 s out — decoyed %s, hit %s" % [early.decoyed, early.hit])
-	assert_true(early.flared and early.hit, "flares fired 14 s out burn out first; the missile finds the ship again")
+	# One flare (play-test batch 11: a staggered burst can hand the missile
+	# from flare to flare until it loses the ship — bursts are put out on
+	# time, by the policy, one missile's worth at a time).
+	var early := _engagement(9000.0, 14.0, [&"flare_launcher"], 1)
+	print("    measured: a flare 14 s out — decoyed %s, hit %s" % [early.decoyed, early.hit])
+	assert_true(early.flared and early.hit, "a flare fired 14 s out burns out first; the missile finds the ship again")
 
 
 func test_jamming_degrades_tracks_beyond_burn_through() -> void:

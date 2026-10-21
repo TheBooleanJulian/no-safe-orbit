@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_gun")
-display_name = "Drone laser"
+display_name = "Yb-fibre laser (drone)"
 muzzle_velocity_mps = 299792458.0
 rate_of_fire_rpm = 60.0
 magazine_rounds = 30

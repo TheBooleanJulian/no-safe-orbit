@@ -4,6 +4,179 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 11, part 4 — flight and shipyard (2026-10-22)
+
+#### Added
+- **Sell found equipment** from the cargo hold to the quartermaster, at 40 %
+  of the shelf price (a common part as if it cost 100 cr).
+- **Ship dealer catalogue pictures**: each card shows a decorated picture of
+  the hull (vignette, faint grid, corner brackets in the card's colour). It
+  is drawn once — the first time the card scrolls into sight — and kept in
+  `user://dealer_shots`, keyed by the template's contents, so the dealer
+  opens without building a 3D view per card.
+
+#### Changed
+- **The re-entry plasma is a cone**, its tip just ahead of the nose and
+  opening aft, instead of a stretched ball.
+- **The docking collar and gangway are octagonal**: a square with its
+  corners cut short, almost a rounded square.
+- **The dealer shows three cards across** instead of two.
+- **The hold's line names the contract freight** ("contract freight:
+  medical supplies (40 m³)") in the shipyard and in flight; before, a hold
+  with only freight read "empty".
+- **The hit cam stays shut while the Tab drawer is open** (it sat over the
+  middle of the screen beside the drawer).
+- **DEV +100k cr** (was +100).
+- The shipyard's 3D views aim their camera without `look_at`, so building
+  one before it is on screen no longer logs an engine error.
+
+#### Not reproduced
+- Banking the cargo does not repair the ship: before and after banking the
+  vessel keeps the same damage and repair jobs (now checked in
+  `smoke_campaign`). Banking spare parts makes the REPAIR button affordable,
+  but it still has to be pressed.
+
+#### Docs
+- KNOWN_ISSUES: batch 11's first-guess numbers, the bank-cargo report (not
+  reproduced) and the dealer's timings; ROADMAP: candidates for what comes
+  next (not agreed).
+
+#### Tests changed (and why)
+- New `test_batch11_cargo` (4): the freight named; selling from the hold
+  (480 cr for a rare part, the hold emptied, the bank untouched); DEV 100k;
+  dealer pictures saved, loaded, decorated and keyed per template, empty
+  frames refused.
+- `test_batch10_models`: `test_hexagonal_collar_and_gangway` →
+  `test_octagonal_collar_and_gangway` — eight edges, long and short by turns,
+  the gangway's faces pointing out.
+- `test_batch10_surface`: the re-entry plasma is a cone with its tip into
+  the flow.
+- `smoke_campaign`: banking leaves the damage as it was; DEV +100k.
+- `smoke_encounter`: with the drawer open, the hit cam stays shut
+  (mutation-checked: fails without the rule).
+
+### Play-test batch 11, part 3 — the refit bay (2026-10-22)
+
+#### Added
+- **Hull pieces**: pressurised blocks 1×1 and 3×3, trusses 1×1 and 3×3, a
+  3×3 slope.
+- **A shape for each kind of part** (palette icon in its rarity's colour; on
+  the deck cells and the top/underside markers).
+- **TOP-DOWN 3D**: the parts as built, straight down, editable — the main
+  view cycles plan → top-down 3D → isometric.
+- **Hangar doors open** as craft leave and come back.
+
+#### Changed
+- **Palette text is the part's own colour** — the colour of its cells —
+  instead of its rarity's; families share a colour: lasers cyan (turrets,
+  laser fighters, laser drones), kinetic guns orange, kinetic fighters,
+  bombers and interceptors gold, EW magenta, sensors green, drones by job;
+  the dense magazine is the magazine's red; **RCS blocks are white**.
+- **Power distribution → Power distro**; the palette is wider with smaller
+  text, so long names fit.
+- **A hangar needs a way out**: an error if a craft bay's room has no wall,
+  floor or roof on the outside; its door (model and launch point) is that
+  face.
+- **Fin radiators** are drawn standing out from their face (the placement
+  ghost too), not along it.
+- **The berth's deck plate is see-through**: look under the ship.
+
+#### Tests changed (and why)
+- New `test_batch11_refit` (4): colours (the dense magazine's red, lasers
+  one cyan, RCS white, text = cell colour), five parts five shapes and an
+  icon; the new hull pieces joined and drawn; the frigate's bay opens at its
+  underside, walled in it is an error, its door open 2 s after a launch and
+  shut after 12; the top-down camera's axes.
+- `smoke_shipyard`: a fin's ghost stands 3 out; along the hull, 3 cells.
+
+### Play-test batch 11, part 2 — the crew manifest (2026-10-22)
+
+#### Fixed
+- **An enemy boarding us flew off mid-boarding** once every free security
+  and general hand was in its party (it no longer "wanted" to board), tearing
+  its own gangway: a contact whose gangway is on us now holds station.
+  Smaller crews (2 berths a cell) showed it in `smoke_boarding`.
+
+#### Added
+- **Resting crew**: crew without a berth rest at the station, unpaid; drag
+  them aboard (or ▲) when there is room, or rest someone by dragging their
+  badge to Resting crew.
+- **Fill berths**: resting crew first, then general hands from the hall.
+- **Previous occupations** (flavour) for every crew member and candidate.
+- **Crew armoury** (security's station; +10 % boarding strength a cell, up
+  to +50 %, attacking or defending) and **cafeteria** (+2 % to everything
+  crew skill touches a cell, up to +50 %) rooms.
+
+#### Changed
+- **Crew quarters → Crew manifest**, with the hiring hall top right and
+  resting crew below it.
+- **Crew are yours, not a ship's**: they move with you to the vessel you fly
+  (buying a ship, its crew join yours).
+- **Two berths a quarters cell** (were three); the manifest follows the
+  design on the slip live.
+- **The hiring hall never runs dry**: each hire is replaced at once.
+- **Names**: 120 × 100 combinations, and none twice among your people.
+- **Life support is shown as the Medbay**.
+
+#### Save format
+- **Schema 14**: `resting`; crew `occupation`. Older saves: other vessels'
+  crews go ashore to rest, the active vessel keeps what its berths hold
+  (original kept as `.v13`).
+
+#### Tests changed (and why)
+- New `test_batch11_crew` (5): 2 berths a cell and excess ashore; the hall
+  refilled after each hire and a destroyer filled with 144 different names;
+  resting and boarding, crew moving to a bought destroyer and back; a
+  12-cell cafeteria ×1.24 (gun 120 → 149 rpm) and armoury ×1.50 with security
+  posted there; v13 → v14.
+- `test_boarding` (3 general hands, were 11), `test_progression` (respawn
+  fee for 16 berths), `test_m15_scaling` (the destroyer's specialists exactly
+  3 × the frigate's): the berths went from 3 to 2 a cell.
+- `smoke_shipyard`: the manifest's layout.
+
+### Play-test batch 11, part 1 — combat rules, craft, lasers, flares, battle stations (2026-10-22)
+
+#### Changed
+- **No hostile toggle (T)**: a contact turns hostile when you or your craft
+  hit it, or when it sees one of your missiles locked on to it inside its
+  sensor range (no longer the moment a missile is launched); craft flying
+  about don't provoke it.
+- **Craft start on their role's order**: fighters and bombers Strike,
+  interceptors (Hornet, laser drone) Intercept, recon and EW drones Recon,
+  repair and salvage drones Escort; fighters aim at the **weak spot** (the
+  target's most damaged system outside its hull).
+- **Craft survive more**: fighters 80 hull points (were 40; Hornet 50,
+  Mantis 140), drones half as many again; they break off at 70 / 50 / 30 %
+  hull by risk (were 60 / 35 / 15) and head home while they still have
+  1.5 × the propellant the trip back takes.
+- **Lasers in three tiers**: Yb-fibre laser turret (light: 35 mm, 3 km,
+  600 kW, uncommon), Nd:YAG pulse laser turret (the old pulse laser: 80 mm,
+  5 km), free-electron laser turret (heavy: 170 mm, 8 km, 4 MW, epic). The
+  craft lasers are the light (Yb-fibre) tier.
+- **Flares one at a time**: 0.25 s apart, from each launcher round the ship
+  in turn; Space puts out three; the policy up to three per missile inbound
+  (one missile used to empty every tube). Each trails fading sparks; they
+  glow brighter.
+- **Battle stations** shut the emergency doors between rooms of a kind
+  (stacked corridors no longer vent together) and spread general and
+  damage-control hands to every room with systems in it and nobody there
+  (back to their stations at stand-down).
+- **Damage control patches on its own** (C still sends a team at once).
+
+#### Tests changed (and why)
+- New `test_batch11_combat` (6): no T action; role defaults; weak spots;
+  breaking off at 45 % hull and for the trip home (600 m/s away: yes, 50:
+  no); the laser tiers; four flares at 0.0 / 0.27 / 0.52 / 0.77 s from four
+  places, with trails; the destroyer's corridors held apart at battle
+  stations, the crew spread and back.
+- `smoke_main`: a passive target turns hostile on seeing our missile
+  (mutation-checked); no T. `smoke_campaign`: hostility set directly.
+- `test_m11_countermeasures`: flares go out one at a time; the "too early"
+  case puts out one flare (a staggered burst can hand a missile from flare
+  to flare until it loses the ship).
+- `test_air_wing`: a fighter may break off for the propellant home.
+- `smoke_shipyard`: the Weapons palette has the two new lasers.
+
 ### Milestone 13, part 3 — retrieve contracts (2026-10-22)
 
 #### Added

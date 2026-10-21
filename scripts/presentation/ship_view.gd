@@ -50,10 +50,21 @@ var _docked_craft: Dictionary = {}
 
 
 ## Show or hide the craft sitting on rack `rack_id` (Main: hidden while out).
+## A hangar door slides open while its craft come and go (play-test batch 11).
+const HANGAR_DOOR_OPEN_S := 6.0
+var _hangar_doors: Dictionary = {}
+var _door_open: Dictionary = {}  # rack id -> seconds it stays open
+var _door_shown: Dictionary = {}  # rack id -> how far open (0–1)
+
+
 func show_docked_craft(rack_id: String, docked: bool) -> void:
+	if _hangar_doors.has(rack_id) and bool(_docked_last.get(rack_id, true)) != docked:
+		_door_open[rack_id] = HANGAR_DOOR_OPEN_S
+	_docked_last[rack_id] = docked
 	var node: Node3D = _docked_craft.get(rack_id)
 	if node != null:
 		node.visible = docked
+var _docked_last: Dictionary = {}
 var _hole_material: StandardMaterial3D
 var _scorch_material: StandardMaterial3D
 
@@ -67,6 +78,7 @@ func _ready() -> void:
 	_beacons = model.beacons
 	_turrets = model.turrets
 	_docked_craft = model.docked_craft
+	_hangar_doors = model.hangar_doors
 	_plume_widths = model.engine_widths
 	_build_plumes(model.engine_nozzles, model.engine_normals)
 	_plates = model.plates
@@ -104,6 +116,7 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 		_show_emp(state.systems, get_process_delta_time())
 		_update_lights_and_radar(state.systems, get_process_delta_time())
 	_update_spool(get_process_delta_time())
+	_move_hangar_doors(get_process_delta_time())
 	_drift_pieces(get_process_delta_time())
 	_train_turrets(state)
 	_move_arms(get_process_delta_time())
@@ -205,6 +218,8 @@ func _rand_dir() -> Vector3:
 ## time (`f` 0 → 1 over the cutscene). `flow_body`: the air's direction past
 ## the hull (body frame).
 const REENTRY_BREAK_FROM := 0.2
+## The re-entry cone's blunt tip, as a share of its base.
+const REENTRY_TIP := 0.12
 var reentry_broken := 0
 var _plasma: MeshInstance3D
 var _plasma_mat: StandardMaterial3D
@@ -219,9 +234,14 @@ func show_reentry(f: float, flow_body: Vector3) -> void:
 		_plasma_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_plasma_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 		_plasma_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		var shell := SphereMesh.new()
-		shell.radius = b.size.length() * 0.45
-		shell.height = shell.radius * 2.0
+		# A unit cone (play-test batch 11: a shock cone, not a ball), its
+		# blunt tip at +Y, scaled to the hull below.
+		var shell := CylinderMesh.new()
+		shell.top_radius = REENTRY_TIP
+		shell.bottom_radius = 1.0
+		shell.height = 1.0
+		shell.cap_bottom = false
+		shell.radial_segments = 24
 		_plasma = MeshInstance3D.new()
 		_plasma.name = "Plasma"
 		_plasma.mesh = shell
@@ -240,10 +260,14 @@ func show_reentry(f: float, flow_body: Vector3) -> void:
 	var flow := flow_body.normalized() if flow_body.length_squared() > 1e-6 else Vector3.BACK
 	var side := Vector3.UP if absf(flow.y) < 0.9 else Vector3.RIGHT
 	var x := side.cross(flow).normalized()
-	# Stretched back along the flow, its leading edge just ahead of the hull.
-	var stretch := 1.0 + 1.5 * f
-	_plasma.transform = Transform3D(Basis(x, flow.cross(x), flow * stretch),
-		b.get_center() - stats.center_of_mass_m + flow * b.size.length() * 0.3 * (stretch - 1.0))
+	# The tip just ahead of the hull, into the flow; the cone opens back
+	# along it, longer and wider as the heating builds.
+	var r := b.size.length() * 0.5
+	# Tight enough that the chase camera stays outside it.
+	var length := r * (2.4 + 0.8 * f)
+	var width := r * (0.6 + 0.25 * f)
+	var tip := b.get_center() - stats.center_of_mass_m - flow * r * 1.1
+	_plasma.transform = Transform3D(Basis(x * width, -flow * length, x.cross(-flow) * width), tip + flow * length * 0.5)
 	_plasma_mat.albedo_color = Color(1.0, lerpf(0.35, 0.85, f), lerpf(0.1, 0.6, f), 0.06 + 0.3 * f)
 	var want := int(clampf((f - REENTRY_BREAK_FROM) / (1.0 - REENTRY_BREAK_FROM), 0.0, 1.0) * _break_order.size())
 	while reentry_broken < want:
@@ -259,6 +283,25 @@ func show_reentry(f: float, flow_body: Vector3) -> void:
 	if _hull_dirty:
 		_hull_dirty = false
 		_hull_batch.mesh = ShipModelBuilder.mesh_from_flats(_hull_pieces, _hull_flats)
+
+
+func _move_hangar_doors(delta: float) -> void:
+	for id: String in _hangar_doors:
+		var left := maxf(float(_door_open.get(id, 0.0)) - delta, 0.0)
+		_door_open[id] = left
+		var was := float(_door_shown.get(id, 0.0))
+		var now := clampf(was + (delta if left > 0.0 else -delta) / 1.2, 0.0, 1.0)
+		if is_equal_approx(now, was):
+			continue
+		_door_shown[id] = now
+		var d: Dictionary = _hangar_doors[id]
+		var closed: Transform3D = d.closed
+		(d.node as Node3D).transform = Transform3D(closed.basis, closed.origin + (d.slide as Vector3) * smoothstep(0.0, 1.0, now))
+
+
+## Is the door of rack `id` open (0–1)?
+func hangar_door_open(id: String) -> float:
+	return float(_door_shown.get(id, 0.0))
 
 
 ## Hold [B] (play-test batch 9): Main sets how far the jump drive has charged

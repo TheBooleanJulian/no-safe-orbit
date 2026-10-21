@@ -41,8 +41,10 @@ func ensure_crew(catalog: ConstructionCatalog) -> void:
 	var roster := CrewRoster.default_for(blueprint, grid, ShipStats.compute(blueprint, grid))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(name)
+	var taken := {}
 	for m in roster.members:
-		crew.append({"name": CrewNames.pick(rng), "role": m.role, "skill": 0})
+		crew.append({"name": CrewNames.pick_unique(rng, taken), "role": m.role, "skill": 0, "sorties": 0,
+			"occupation": CrewNames.occupation(rng)})
 
 
 ## Docked: the dead leave the roster (their berths are free to hire into);
@@ -200,16 +202,17 @@ func vent_excess(capacity_m3: float, catalog: ConstructionCatalog) -> PackedStri
 
 ## One line: what is in the hold.
 func cargo_summary() -> String:
-	if cargo_is_empty():
-		return "empty"
 	var parts := PackedStringArray()
+	var freight: Dictionary = cargo.get("freight", {})
+	if not freight.is_empty():
+		parts.append("contract freight: %s (%d m³)" % [freight.get("what", "cargo"), int(freight.get("m3", 0))])
 	if int(cargo.get("spare_parts", 0)) > 0:
 		parts.append("%d spare parts" % int(cargo.spare_parts))
 	for id in cargo.get("equipment", {}):
 		parts.append("%s ×%d" % [id, int(cargo.equipment[id])])
 	for id in cargo.get("blueprints", {}):
 		parts.append("%s blueprint" % id)
-	return ", ".join(parts)
+	return ", ".join(parts) if not parts.is_empty() else "empty"
 
 
 ## Crew killed, by role name ({} = full complement).
@@ -264,8 +267,7 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipInstance:
 	v.salvaged = int(d.get("salvaged", 0))
 	for entry in d.get("crew", []):
 		if entry is Dictionary:
-			v.crew.append({"name": str(entry.get("name", "")), "role": int(entry.get("role", 6)), "skill": int(entry.get("skill", 0)),
-				"sorties": int(entry.get("sorties", 0))})
+			v.crew.append(PlayerProfile.read_crew(entry))
 	for line in d.get("history", []):
 		v.history.append(str(line))
 	# Before schema 6 there was none: the Defensive preset (point defence on,

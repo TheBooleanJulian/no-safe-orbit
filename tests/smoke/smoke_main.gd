@@ -151,9 +151,9 @@ func _run() -> void:
 	_check(tgt.hits_taken > hits_before and main.hud.hit_cam.visible and main.hud.hit_cam._title.text.begins_with("HIT CAM"),
 		"our hit on the target opens the hit cam replay (%d hits)" % (tgt.hits_taken - hits_before))
 
-	# T: the target shoots back. Within 40 s the player takes a hit, and the
-	# HUD reports what it did. (Our hit above may already have turned it
-	# hostile — "fired upon" — and T would then toggle it back to passive.)
+	# The target shoots back. Within 40 s the player takes a hit, and the
+	# HUD reports what it did. (Our hit above has already turned it hostile —
+	# "fired upon".)
 	# Scaffolding: our hits above can knock out its only gun or cut the
 	# conduit feeding it (where they land depends on frame timing), and a
 	# gunless target can't shoot back. Restore both.
@@ -165,9 +165,9 @@ func _run() -> void:
 	tgt.systems.invalidate()
 	tgt.config = tgt.systems.effective_config()
 	if not main.target_hostile:
-		_press_action("toggle_target_ai")
+		main.set_target_hostile(true, "smoke")
 	await process_frame
-	_check(main.target_hostile, "the target is hostile (fired upon, or T)")
+	_check(main.target_hostile, "the target is hostile (fired upon)")
 	var t0 := main.world.sim_time
 	while player.hits_taken == 0 and main.world.sim_time - t0 < 40.0:
 		await process_frame
@@ -242,9 +242,15 @@ func _run() -> void:
 	var t_lock := main.world.sim_time
 	while not main.track.locked and main.world.sim_time - t_lock < 10.0:
 		await process_frame
+	# Play-test batch 11 (no T): a passive contact that sees our missile
+	# locked on to it turns hostile.
+	main.set_target_hostile(false)
+	_check(not main.target_hostile, "passive again, for the missile check")
 	_press_action("fire_missile")
 	await process_frame
 	await process_frame
+	await process_frame
+	_check(main.target_hostile, "it sees our missile locked on and turns hostile")
 	_check(main.track.locked and (main.salvo != null or main.combat_log.missiles_launched > 0) and main.hud.weapon_label.text.contains("MSL"),
 		"M fires a volley at the locked target (strip: %s)" % main.hud.weapon_label.text.get_slice("\n", 0))
 	await _run_until_sim_time(main, 1.0)

@@ -1,26 +1,34 @@
 class_name CrewBadge
 extends PanelContainer
-## A crew member on the crew quarters board (play-test batch 9): a
-## placeholder portrait, their name, level (or specialist title), sorties
-## and wage; drag the badge onto another department to repost them. Its
-## buttons train (a level, for credits) and dismiss.
+## A crew member on the crew manifest (play-test batches 9 and 11): a
+## placeholder portrait, their name, level (or specialist title), what they
+## did before and their sorties (wage on hover); drag the badge onto another
+## department to repost them, or onto Resting crew to send them ashore.
+## Aboard, its buttons train (a level, for credits) and dismiss; resting,
+## bring aboard and dismiss.
 
 signal train_pressed(index: int)
 signal dismiss_pressed(index: int)
+signal board_pressed(index: int)
 
 const SIZE := Vector2(232, 66)
 
 var index := -1
 var entry: Dictionary = {}
+var resting := false
 
 
-func setup(i: int, c: Dictionary, train_cost: int, can_train: bool) -> void:
+func setup(i: int, c: Dictionary, train_cost: int, can_train: bool, is_resting: bool = false) -> void:
 	index = i
 	entry = c
+	resting = is_resting
 	custom_minimum_size = SIZE
 	var role := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
 	add_theme_stylebox_override("panel", CyberTheme.panel(CrewRoster.ROLE_COLORS[role], CyberTheme.SPACE_XS, 0.55))
-	tooltip_text = "%s — drag onto another department to post them there" % c.name
+	var skill_now := int(c.get("skill", 0))
+	tooltip_text = "%s — formerly %s · %d cr a sortie%s\n%s" % [c.name, c.get("occupation", "a spacer"),
+		PlayerProfile.WAGE_BASE + PlayerProfile.WAGE_PER_LEVEL * skill_now, " aboard" if not resting else " (unpaid while resting)",
+		"drag onto a department to bring them aboard there" if resting else "drag onto another department to post them there, or onto Resting crew"]
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
@@ -49,7 +57,8 @@ func setup(i: int, c: Dictionary, train_cost: int, can_train: bool) -> void:
 	level.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(level)
 	var served := Label.new()
-	served.text = "%d sorties · %d cr a sortie" % [int(c.get("sorties", 0)), PlayerProfile.WAGE_BASE + PlayerProfile.WAGE_PER_LEVEL * skill]
+	served.text = "ex-%s · %d sorties" % [c.get("occupation", "spacer"), int(c.get("sorties", 0))]
+	served.clip_text = true
 	served.add_theme_color_override("font_color", CyberTheme.TEXT_FAINT)
 	served.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
 	served.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -63,7 +72,15 @@ func setup(i: int, c: Dictionary, train_cost: int, can_train: bool) -> void:
 	CyberTheme.style_button(out, CyberTheme.RED)
 	out.pressed.connect(func() -> void: dismiss_pressed.emit(index))
 	buttons.add_child(out)
-	if skill < CrewRoster.MAX_SKILL:
+	if resting:
+		var aboard := Button.new()
+		aboard.name = "Board"
+		aboard.text = "▲"
+		aboard.tooltip_text = "Bring %s aboard (their own post)" % c.name
+		CyberTheme.style_button(aboard, CyberTheme.CYAN)
+		aboard.pressed.connect(func() -> void: board_pressed.emit(index))
+		buttons.add_child(aboard)
+	elif skill < CrewRoster.MAX_SKILL:
 		var up := Button.new()
 		up.name = "Train"
 		up.text = "▲"
@@ -79,4 +96,4 @@ func _get_drag_data(_at: Vector2) -> Variant:
 	preview.text = "→ %s" % entry.get("name", "")
 	preview.add_theme_color_override("font_color", CyberTheme.CYAN)
 	set_drag_preview(preview)
-	return {"crew_index": index}
+	return {"crew_index": index, "resting": resting}

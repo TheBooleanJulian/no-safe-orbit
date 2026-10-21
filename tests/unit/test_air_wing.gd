@@ -118,8 +118,9 @@ func test_strike_closes_and_hits_the_target() -> void:
 	assert_true(hits >= 5, "the fighter lands >= 5 hits on the target (%d hits)" % hits)
 	assert_near(closest, float(CraftAI.RUN_IN_M[&"fighter"]), 150.0, "its gun runs bring it in to its run-in range (closest, m)")
 	# Gun runs spend propellant on every pass: it comes home when either
-	# runs low, on its own.
-	assert_true("\n".join(wing.log).contains("ammunition low") or "\n".join(wing.log).contains("propellant low"),
+	# runs low, on its own — or (play-test batch 11) while it still has the
+	# propellant to get back.
+	assert_true("\n".join(wing.log).contains("ammunition low") or "\n".join(wing.log).contains("propellant"),
 		"spent, it breaks off on its own:\n%s" % "\n".join(wing.log))
 
 
