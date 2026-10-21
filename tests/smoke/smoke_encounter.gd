@@ -71,12 +71,15 @@ func _run() -> void:
 		var w := world.get_ship(main.encounter.contacts[i].id)
 		far = far and main.encounter.contacts[i].arriving and w.position.distance_to(player.position) > 20000.0
 	_check(far, "only the lead starts close: the wingmen arrive from range")
-	# Bring them alongside, as they used to start, to test the rest.
+	# Bring them alongside, as they used to start, to test the rest (fixed
+	# here: the opening range moved out in play-test batch 9; this is about
+	# the fight once they are close).
+	var alongside := [Vector3.ZERO, Vector3(-1500, -250, -3800), Vector3(2300, 450, -4400)]
 	for i in range(1, main.encounter.contacts.size()):
 		var c: Contact = main.encounter.contacts[i]
 		var w := world.get_ship(c.id)
 		c.arriving = false
-		w.position = player.position + Main.CONTACT_OFFSETS[i % Main.CONTACT_OFFSETS.size()]
+		w.position = player.position + (alongside[i % alongside.size()] as Vector3)
 		w.velocity = player.velocity + Vector3(-25, 1.5, 6.0)
 	var roles := main.encounter.contacts.map(func(c: Contact) -> String: return ShipPolicy.ROLE_NAMES[c.policy.role])
 	_check(roles == ["closer", "standoff", "flanker"], "roles by place: %s" % [roles])

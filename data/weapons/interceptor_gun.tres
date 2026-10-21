@@ -6,7 +6,7 @@
 script = ExtResource("1_gun")
 display_name = "Interceptor gun"
 muzzle_velocity_mps = 1100.0
-rate_of_fire_rpm = 600.0
+rate_of_fire_rpm = 300.0
 magazine_rounds = 600
 round_mass_kg = 0.15
 penetration_mm = 8.0

@@ -72,7 +72,11 @@ func _run() -> void:
 	var player := main.world.get_ship(Main.PLAYER_ID)
 	var target := main.world.get_ship(Main.TARGET_ID)
 
-	# 1. Fight: we hit them (scripted aim, real fire action) ...
+	# 1. Fight: we hit them (scripted aim, real fire action) ... From the old
+	# 2.5 km start: the opening range moved out in play-test batch 9, and from
+	# there the first round disables this mission-1 ship before it can fire
+	# back — this is about hits and damage, not the opening range.
+	target.position = player.position + Vector3(400, 120, -2500)
 	Input.action_press("fire")
 	var t0 := main.world.sim_time
 	while target.hits_taken == 0 and main.world.sim_time - t0 < 8.0:

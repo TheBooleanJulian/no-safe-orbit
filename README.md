@@ -209,7 +209,7 @@ steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
 | Tactical overview (ship map, power, crew, damage control, air wing) | Tab | left stick click |
 | Launch craft / recall craft | [ / ] | paddle / Misc |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
-| Dimensional jump drive to the location's station (hold 5 s, not while under fire) | hold B | hold Start |
+| Dimensional jump drive to the location's station (hold 5 s, not while under fire — rings of light spool up round the hull) | hold B | hold Start |
 | Controls panel (rebinding), credits and licences | F1 | Guide |
 | Fullscreen / window (remembered) | F11 | — |
 | Guided first sortie: start / skip | F2 | — |
@@ -274,7 +274,8 @@ They are kept between sorties and restocked at the yard; with no magazine
 the shipyard warns that PD can't fire.
 
 **Encounters:** pick 1, 2 or 3 ships on the shipyard map. Only the lead
-starts close; the others come in from about 30 km and must be found
+starts close — 4 km ahead (it was 2.5), outside its guns' and fighters' easy reach, so
+there is time to launch, lock and line up; the others come in from about 30 km and must be found
 first, so you can deal with one before the next arrives. They are fitted
 as for earlier missions (the second two back, the third three) and their
 guns fire at 45 % of the rated rate (the lead's at 70 %): enemy guns are
@@ -363,7 +364,9 @@ INBOUND x.x s**. The yard restocks spent missiles at launch, cheaply.
 defence, sensors, power distribution, collars, racks, arms and launchers —
 for up to 20 s at full strength (90 s at most, falling with the square of
 the distance); internal systems see half, engines, tanks and radiators
-nothing. Each comes back on its own (the **EMP RESET** caution lists them).
+nothing. Each comes back on its own (the **EMP RESET** caution lists them);
+until it does, it crackles with light-blue static outside the hull (with
+three or more down, the static crawls over the whole hull).
 Hardened parts shrug off most of it: the **hardened sensor mast** and
 **hardened power distribution unit** (uncommon, heavier) by 85 %, reactors
 by 50 %.
@@ -744,8 +747,8 @@ rack. They fly with the same physics as every ship and can be shot down.
 
   | Craft | Carried in | Role |
   |---|---|---|
-  | Wasp fighter | fighter bay | gun runs on the target; screens the carrier |
-  | Hornet interceptor | interceptor rack | shoots down missiles aimed at its carrier (within 4 km) first, then fights craft |
+  | Wasp fighter | fighter bay | gun runs on the target (12 mm, 150 rpm); screens the carrier |
+  | Hornet interceptor | interceptor rack | shoots down missiles aimed at its carrier (within 4 km) first, then fights craft (8 mm, 300 rpm) |
   | Mantis bomber | bomber bay | heavy 45 mm cannon from long range; keeps its distance |
   | Recon drone | drone rack | the close look at the target's systems; never fires |
   | EW drone | EW drone rack | holds 1.2 km out towards the threat and jams for ships within 3 km |
@@ -871,7 +874,7 @@ Beside the builder the directory narrows to the names.
 
 | Place (section) | What's there |
 |---|---|
-| **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights), turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
+| **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights) inside the station's docking hall — ribbed walls, catwalks with amber lamps, a gridded deck, light strips overhead — turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
 | **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage — and **cargo** (about one offer in three once a second station is charted): no fight, 20–90 m³ of freight to another station, loaded into your hold on accepting (refused if it won't fit), paid on arriving there with it aboard (120 cr + 4 cr a m³, more the further the jump). Banking leaves the freight aboard; jettisoning it, abandoning the contract or losing the ship fails it. Accepting a combat contract sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
 | **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** (Hangar & bank) | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the service record — and the **station bank**: a deposit (1 % a sortie, compounding) and three loans, one of each at a time — Dockyard credit 1,000 cr at 5 % over 5 sorties, Guild loan 5,000 cr at 4 % over 10, Shipbuilder's mortgage 25,000 cr at 3 % over 20 — paid off in instalments on docking (a shortfall adds 10 % of it) or repaid early |

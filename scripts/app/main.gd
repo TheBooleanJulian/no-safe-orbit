@@ -166,8 +166,10 @@ var _wreck_count := 0
 ## An enemy boarding party is at most this big (ours: BoardingAction.MAX_TEAM).
 const ENEMY_BOARDING_TEAM := 8
 ## Where the encounter's ships start, relative to the player (the first of
-## a sortie; arrivals come from ARRIVAL_DISTANCE_M out).
-const CONTACT_OFFSETS := [Vector3(400, 120, -2500), Vector3(-1500, -250, -3800), Vector3(2300, 450, -4400)]
+## a sortie; arrivals come from ARRIVAL_DISTANCE_M out). The lead 4 km ahead
+## (play-test batch 9: 2.5 km put the player inside the enemy's gun and
+## fighter reach from the first second).
+const CONTACT_OFFSETS := [Vector3(640, 190, -4000), Vector3(-2400, -400, -6100), Vector3(3700, 720, -7000)]
 ## The campaign's current goal and the guided first sortie (Milestone 8).
 var mission: MissionChain
 var tutorial: Tutorial
@@ -512,7 +514,7 @@ func _update_survey(player: ShipState) -> void:
 
 ## The next encounter: the size picked on the shipyard map, in slots
 ## target_01, target_02, …, each with its own policy and role. The first of
-## a sortie is already close (the lead 2.5 km ahead, crossing the bow at
+## a sortie is already close (the lead 4 km ahead, crossing the bow at
 ## ~25 m/s); one arriving after a salvage (`arriving`) starts
 ## ARRIVAL_DISTANCE_M out and closes; it must be detected before it engages.
 func _spawn_encounter(arriving: bool = false) -> void:
@@ -1371,6 +1373,9 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 		_jump_hold = 0.0
 		_tow_hold = 0.0
 	hud.jump_state = state
+	# The drive spooling up around the hull (play-test batch 9).
+	if _views.has(PLAYER_ID):
+		(_views[PLAYER_ID] as ShipView).jump_spool = _jump_hold / JUMP_HOLD_S
 	return false
 
 

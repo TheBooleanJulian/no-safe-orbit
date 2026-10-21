@@ -265,6 +265,18 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Effects and the opening range (play-test batch 9, part 7)**:
+  `ShipView._show_emp` redraws an `ImmediateMesh` of jagged arcs (two
+  crossed ribbons a segment) round each part with `disrupted_s > 0`, at its
+  `body_position`, every `EMP_REDRAW_S`; `emp_sparking` / `emp_arcs` say
+  what it drew. `ShipView.jump_spool` (Main sets `_jump_hold /
+  JUMP_HOLD_S` in `_update_jump`) drives `_update_spool`: `SPOOL_RINGS`
+  additive tori along the hull, spinning up and closing in.
+  `ShipPreview3D._build_berth` switches its environment to `BG_SKY` with
+  `shaders/shipyard_interior.gdshader` (a sky shader: walls, catwalks,
+  deck grid, ceiling strips from `EYEDIR` alone). `Main.CONTACT_OFFSETS`
+  start the lead 4 km out; craft guns are data
+  (`interceptor_gun` 300 rpm, `fighter_gun` 150 rpm).
 - **Contracts and salvage (play-test batch 9, part 6)**: cargo offers
   (`ContractBoard._cargo_offer`, kind "cargo", `MissionChain.Goal.DELIVER`,
   `freight_m3` / `freight`); `accept` checks the hold and puts
