@@ -217,7 +217,8 @@ func directory_status() -> Dictionary:
 		"DEALER": ["%d hulls for sale" % BlueprintIO.list_templates().size(), false],
 		"HANGAR": ["%d vessel%s · hold %.0f m³" % [p.vessels.size(), "" if p.vessels.size() == 1 else "s", held], held > 0.0],
 		"UPGRADES": ["%d upgrade%s within reach" % [affordable, "" if affordable == 1 else "s"], affordable > 0],
-		"MAP": ["%s · %d ship%s" % [here.display_name, p.encounter_size, "" if p.encounter_size == 1 else "s"], false],
+		"MAP": [("→ %s · %s" % [Location.by_id(p.launch_point()).display_name, JumpDrive.dv_text(p.jump_dv(p.launch_point()))])
+			if p.launch_point() != p.location else "%s · %d ship%s" % [here.display_name, p.encounter_size, "" if p.encounter_size == 1 else "s"], false],
 		"LOOT": ["every crate's odds", false],
 	}
 
@@ -492,7 +493,9 @@ func _refresh_station() -> void:
 	(station_cards.crew as RichTextLabel).text = "%d / %d aboard · %d for hire" % [v.crew.size(), stats.crew_capacity, p.hire_pool.size()]
 	(station_buttons.crew as Button).text = "Crew quarters ›"
 	var contract := p.active_contract
-	(station_cards.sortie as RichTextLabel).text = "%s · %d ship%s\n%s" % [here.display_name, p.encounter_size, "" if p.encounter_size == 1 else "s",
+	var course := Location.by_id(p.launch_point())
+	var where := here.display_name if course == here else "jump to %s (%s) at launch" % [course.display_name, JumpDrive.dv_text(p.jump_dv(course.id))]
+	(station_cards.sortie as RichTextLabel).text = "%s · %d ship%s\n%s" % [where, p.encounter_size, "" if p.encounter_size == 1 else "s",
 		("CONTRACT  %s — %s" % [contract.title, MissionChain.reward_text(contract)]) if not contract.is_empty()
 		else CyberTheme.tint(MissionChain.from_dict(p.campaign).hud_line(), CyberTheme.TEXT_DIM)]
 	(station_buttons.sortie as Button).text = "Mission board ›"
@@ -663,6 +666,8 @@ func _armoury_text() -> String:
 	var tanks := yard.profile.vessel_tanks(cat)
 	lines.append("JUMP RESERVE  %s of %s%s — the jump drive's own; engines can't burn it" % [JumpDrive.tonnes(tanks.reserve_kg),
 		JumpDrive.tonnes(tanks.reserve_capacity_kg), "" if float(need.reserve_kg) <= 0.0 else " · %.1f t to fill" % (float(need.reserve_kg) / 1000.0)])
+	lines.append("JUMP Δv      %s aboard · %s with full tanks and reserve — jumps cost Δv, the same for every ship (NAV CHART)" % [
+		JumpDrive.dv_text(tanks.dv_mps), JumpDrive.dv_text(tanks.dv_full_mps)])
 	lines.append("ROUNDS      %s" % ("full" if int(need.rounds) <= 0 else "%d to fill" % need.rounds))
 	var msl :=ServiceYard.missile_needs(v, cat)
 	lines.append("MISSILES & FLARES  %s" % ("full" if int(msl.count) == 0 else "%d to restock (%d cr)" % [msl.count, msl.credits]))

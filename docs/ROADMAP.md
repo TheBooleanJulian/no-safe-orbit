@@ -526,6 +526,13 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Enemies not too strong beyond 1v1 | `tools/balance_sim.gd` (manual), `test_balance_batch6`, `smoke_encounter` | 1v2/1v3 lost in 14–20 s before; now 1v2 survives 480 s at m3/m7, lost 327 s at m5; 1v3 lost 188–273 s |
 | Suited crew keep a vented bridge | `test_balance_batch6` | disabled before, fighting now |
 
+### Play-test batch 7 — Δv jumps, the nav chart's course ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Space travel in Δv, not tonnes | `test_m13_jumps`, `test_m14_artifacts` | Moon 487 m/s for the Frigate and the Cutter alike (33.2 t / 8.5 t); Voyager 1 2,512 m/s vs the Frigate's 1,557 m/s |
+| Picking a launch point doesn't jump until LAUNCH | `test_m13_jumps` (course), `smoke_shipyard` | click the Moon: still docked at Earth, course Moon; LAUNCH: lunar orbit, 100.0 km |
+
 ### Play-test batch 6 — beam weapons ✅ (2026-10-21)
 
 "Beam and laser weapons can be added (0 travel time but high energy and

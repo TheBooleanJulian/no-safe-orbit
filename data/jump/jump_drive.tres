@@ -4,8 +4,8 @@
 
 [resource]
 script = ExtResource("1_jump")
-base_kg_per_t = 8.0
-distance_kg_per_t = 18.0
+base_dv_mps = 70.0
+distance_dv_mps = 160.0
 distance_scale_m = 1000000.0
 reserve_fraction = 0.25
 tow_base_credits = 150

@@ -83,6 +83,10 @@ func test_surveys_are_picked_where_they_can_be_flown() -> void:
 	assert_true(p.choose_survey("iss", _cat()) == "" and p.survey_target == "iss", "the ISS from Earth: yes")
 	var why := p.choose_survey("lro", _cat())
 	assert_true(why.contains("Lunar Shipyard") and p.survey_target == "iss", "LRO from Earth: jump to the Moon first")
+	p.jump_target = "moon"
+	assert_true(p.choose_survey("lro", _cat()) == "" and p.survey_target == "lro", "with a course for the Moon: yes")
+	p.jump_target = ""
+	p.survey_target = "iss"
 	var t := p.vessel_tanks(_cat())
 	var room := float(t.capacity_kg) + float(t.reserve_capacity_kg)
 	for id in ["roadster", "new_horizons", "voyager1"]:
@@ -92,7 +96,9 @@ func test_surveys_are_picked_where_they_can_be_flown() -> void:
 		print("    measured: %s round trip %.0f t for the Frigate (%.0f t of tank + reserve): %.0f %% of the ship's mass in propellant" % [
 			id, need / 1000.0, room / 1000.0, 100.0 * need / full_mass])
 	var refused := p.choose_survey("voyager1", _cat())
-	assert_true(refused.contains("more tankage") and p.survey_target == "iss", "Voyager 1 is beyond a Frigate: refused with the reason")
+	print("    measured: Voyager 1 round trip %s; the Frigate carries %s full — %s" % [JumpDrive.dv_text(p.survey_dv(Artifact.by_id("voyager1"))),
+		JumpDrive.dv_text(t.dv_full_mps), refused])
+	assert_true(refused.contains("more Δv") and p.survey_target == "iss", "Voyager 1 is beyond a Frigate: refused with the reason")
 	assert_true(p.choose_survey("", _cat()) == "" and p.survey_target == "", "and a survey can be cancelled")
 
 

@@ -4,6 +4,44 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 7 — jumps in Δv; the nav chart sets a course (2026-10-21)
+
+#### Changed
+- **Jumps cost Δv, the same for every ship** ("space travel should be in
+  terms of delta v rather than tons of fuel"): 70 m/s plus 160 m/s per
+  tenfold of distance — home 70 m/s, Earth ↔ Moon 487 m/s, Earth → Mars
+  928 m/s; Voyager 1 2,512 m/s round trip. Each ship pays in propellant by
+  the rocket equation at its main-engine Isp (the stock ships, all Isp
+  900 s, burn what they did: Frigate 33 t for the Moon). The nav chart,
+  route button, artifacts list ("round trip Δv … of this ship's …", amber
+  when out of reach), ARMOURY ("JUMP Δv"), refusals, the in-flight JUMP
+  alert and the logs speak Δv.
+- **The nav chart sets a course; LAUNCH jumps** ("selecting a different
+  launch point should not jump until the user presses launch"): clicking a
+  body lays in the course (cyan ring and line, "◎ → LUNAR ORBIT · Δv
+  487 m/s"); LAUNCH tops the tanks up at the berth, jumps, then flies the
+  sortie there. Accepting a contract elsewhere sets its location as the
+  course instead of jumping at once. A course is not saved; with none, an
+  accepted contract's location is used. A course beyond what the ship
+  carries even with full tanks is refused when picked; a jump the tanks
+  can't pay at launch is refused with the refuel price.
+- The directory's Nav chart line and the berth's next-sortie card show the
+  course.
+
+#### Tests changed (and why)
+- `test_m13_jumps`: the cost test is now Δv by distance (same for the
+  Frigate and the Cutter, 487 m/s; the Cutter burns 8.5 t, the Frigate
+  33.2 t), the rocket equation both ways, a lower Isp burns more; the
+  contract test checks it sets the course and the launch pays (it used to
+  jump on accepting); new `test_the_nav_chart_course_waits_for_launch`.
+- `test_m12_shipyard`: an accepted contract sets the launch point (it used
+  to move the berth).
+- `test_m14_artifacts`: Voyager 1 is refused for needing more Δv (2,512 vs
+  1,557 m/s); a survey from the Moon is allowed with a course there.
+- `smoke_shipyard`: clicking the Moon lays in a course and leaves the berth
+  at Earth (saved as Earth); LAUNCH still flies into lunar orbit; an
+  accepted contract sets the course (it used to move the berth).
+
 ### Play-test batch 6, part 7 — the shipyard as a place (2026-10-21)
 
 "More gameplay and immersive, and less spreadsheet tabs like."

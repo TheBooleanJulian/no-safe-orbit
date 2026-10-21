@@ -1,9 +1,10 @@
 extends TestCase
-## Measures: Milestone 13 (part 1) — the jump drive burns propellant by mass
-## and distance, from the main tank and then a jump-only reserve; jumps that
-## can't be paid are refused with the reason (a contract too); the yard
-## refills the reserve; each station has its own shelves, prices and local
-## traffic; v8 saves load with a full reserve.
+## Measures: Milestone 13 (part 1) — the jump drive costs Δv by distance, the
+## same for every ship (play-test batch 7), paid in propellant by the rocket
+## equation from the main tank and then a jump-only reserve; jumps that
+## can't be paid are refused with the reason; a contract sets the course and
+## the launch pays the jump; the yard refills the reserve; each station has
+## its own shelves, prices and local traffic; v8 saves load with a full reserve.
 
 
 func _profile(seed_value: int = 5) -> PlayerProfile:
@@ -21,18 +22,31 @@ func _set_tanks(p: PlayerProfile, main_kg: float, reserve_kg: float) -> void:
 	p.vessel.condition["stores"] = {"propellant_kg": main_kg, "rounds": stats.rounds_capacity, "jump_reserve_kg": reserve_kg}
 
 
-func test_cost_grows_with_mass_and_distance() -> void:
+func test_cost_is_delta_v_by_distance_paid_by_the_rocket_equation() -> void:
 	var p := _profile()
 	var drive := JumpDrive.standard()
 	var tanks := p.vessel_tanks(_cat())
-	var local := drive.cost_kg(tanks.mass_kg, 0.0)
+	var isp := float(tanks.isp_s)
+	var home_dv := drive.delta_v(0.0)
+	var moon_dv := p.jump_dv("moon")
+	var local := drive.cost_kg(tanks.mass_kg, 0.0, isp)
 	var moon := p.jump_cost_kg("moon", _cat())
-	print("    measured: Frigate %.0f t — jump home %.1f t, Earth→Moon %.1f t; tanks %.0f t + reserve %.0f t" % [
-		float(tanks.mass_kg) / 1000.0, local / 1000.0, moon / 1000.0, float(tanks.capacity_kg) / 1000.0, float(tanks.reserve_capacity_kg) / 1000.0])
-	assert_near(drive.cost_kg(2.0 * tanks.mass_kg, 1e8), 2.0 * drive.cost_kg(tanks.mass_kg, 1e8), 1.0, "twice the mass, twice the cost (kg)")
-	assert_true(drive.cost_kg(tanks.mass_kg, 1e9) > drive.cost_kg(tanks.mass_kg, 1e8), "farther costs more")
-	assert_true(local < 0.1 * float(tanks.capacity_kg), "a jump home is a small part of the tank")
-	assert_true(moon > 3.0 * local and moon < float(tanks.capacity_kg), "Earth to the Moon is a real cost, but one tank covers it")
+	print("    measured: Δv home %.0f m/s, Earth→Moon %.0f m/s · Frigate %.0f t at Isp %.0f s burns %.1f t / %.1f t; carries %.0f m/s full" % [
+		home_dv, moon_dv, float(tanks.mass_kg) / 1000.0, isp, local / 1000.0, moon / 1000.0, tanks.dv_full_mps])
+	assert_true(drive.delta_v(1e9) > drive.delta_v(1e8), "farther costs more Δv")
+	assert_true(moon_dv > 3.0 * home_dv, "Earth to the Moon is a real cost")
+	# Every ship pays the same Δv; the propellant follows from its mass and Isp.
+	var cutter := PlayerProfile.new(1)
+	cutter.ensure_vessel(BlueprintIO.load_file("res://data/blueprints/cutter_mk1.json", PackedStringArray()))
+	var ct := cutter.vessel_tanks(_cat())
+	print("    measured: the Cutter (%.0f t) pays the same %.0f m/s with %.1f t" % [float(ct.mass_kg) / 1000.0, cutter.jump_dv("moon"), cutter.jump_cost_kg("moon", _cat()) / 1000.0])
+	assert_near(cutter.jump_dv("moon"), moon_dv, 1e-6, "the same Δv for every ship (m/s)")
+	assert_true(cutter.jump_cost_kg("moon", _cat()) < 0.5 * moon, "a lighter ship burns fewer tonnes for it")
+	assert_near(drive.cost_kg(2.0 * tanks.mass_kg, 1e8, isp), 2.0 * drive.cost_kg(tanks.mass_kg, 1e8, isp), 1.0, "twice the mass, twice the propellant (kg)")
+	assert_true(drive.cost_kg(tanks.mass_kg, 1e8, 450.0) > drive.cost_kg(tanks.mass_kg, 1e8, 900.0), "a lower Isp burns more for the same Δv")
+	assert_near(JumpDrive.delta_v_of(tanks.mass_kg, moon, isp), moon_dv, 1e-3, "the rocket equation both ways (m/s)")
+	assert_near(float(tanks.dv_mps), JumpDrive.delta_v_of(tanks.mass_kg, float(tanks.main_kg) + float(tanks.reserve_kg), isp), 1e-6, "what the tanks aboard buy (m/s)")
+	assert_true(local < 0.1 * float(tanks.capacity_kg) and moon < float(tanks.capacity_kg), "a jump home is a small part of the tank; one tank covers the Moon")
 	assert_near(float(tanks.reserve_capacity_kg), 0.25 * float(tanks.capacity_kg), 1.0, "the reserve is a quarter of the tankage (kg)")
 
 
@@ -71,15 +85,37 @@ func test_relocation_is_paid_or_refused() -> void:
 	assert_true(str(p.vessel.history).contains("Jumped to Lunar Shipyard"), "the vessel's history has the jump")
 
 
-func test_a_contract_needs_the_jump_paid() -> void:
+func test_a_contract_sets_the_course_and_the_launch_pays() -> void:
 	var p := _profile()
 	p.board = [{"id": "c1", "title": "Bounty", "location": "moon", "ships": 1, "goal": "disable", "threat": 1, "credits": 100, "parts": 0}]
-	_set_tanks(p, 0.0, 0.0)
+	# Beyond what the ship could ever carry: refused, the offer stays up.
+	var drive := JumpDrive.standard()
+	var was := drive.base_dv_mps
+	drive.base_dv_mps = 1.0e5
 	var why := ContractBoard.accept(p, "c1")
-	assert_true(why != "" and p.active_contract.is_empty() and p.board.size() == 1 and p.location == "earth",
-		"unaffordable: the offer stays up, nothing accepted, no free trip")
+	drive.base_dv_mps = was
+	assert_true(why.contains("Δv") and p.active_contract.is_empty() and p.board.size() == 1, "out of reach: refused (%s)" % why)
+	# Within reach: accepted with empty tanks — nothing moves until launch.
+	_set_tanks(p, 0.0, 0.0)
+	assert_true(ContractBoard.accept(p, "c1") == "" and not p.active_contract.is_empty() and p.location == "earth" and p.launch_point() == "moon",
+		"accepted: the course is the Moon, still docked at Earth")
+	assert_true(p.relocate(p.launch_point(), _cat()).contains("ARMOURY") and p.location == "earth", "the launch can't pay it with empty tanks")
 	_set_tanks(p, 80_000.0, 20_000.0)
-	assert_true(ContractBoard.accept(p, "c1") == "" and p.location == "moon" and not p.active_contract.is_empty(), "paid: accepted and there")
+	assert_true(p.relocate(p.launch_point(), _cat()) == "" and p.location == "moon" and p.launch_point() == "moon", "topped up: the launch jumps there")
+
+
+func test_the_nav_chart_course_waits_for_launch() -> void:
+	var p := _profile()
+	assert_true(p.launch_point() == "earth", "no course: launch where docked")
+	p.jump_target = "moon"
+	assert_true(p.launch_point() == "moon" and p.location == "earth", "a course laid in moves nothing")
+	assert_true("jump_target" not in p.to_dict(), "a course is not saved")
+	p.active_contract = {"location": "earth"}
+	assert_true(p.launch_point() == "moon", "a course chosen on the chart beats the contract's")
+	p.jump_target = ""
+	assert_true(p.launch_point() == "earth", "without one, the contract's location")
+	p.active_contract = {}
+	assert_true(p.relocate("moon", _cat()) == "" and p.jump_target == "" and p.launch_point() == "moon", "after the jump the course is spent")
 
 
 func test_each_station_has_its_own_shelves() -> void:

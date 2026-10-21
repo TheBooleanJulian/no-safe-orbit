@@ -185,14 +185,24 @@ and the location's central body:
 - Shipyard HANGAR › MAP (`SystemMap`): click a body → `relocate`, save; three
   toggle buttons set the encounter size. The route button beside LAUNCH
   shows both and opens the tab.
-- **Jumps (Milestone 13)**: `JumpDrive` (data `data/jump/jump_drive.tres`):
-  `cost_kg(mass, distance)` = t × (base + per-decade × log10(1 + d / 1000 km));
+- **Jumps (Milestone 13; Δv in play-test batch 7)**: `JumpDrive` (data
+  `data/jump/jump_drive.tres`): `delta_v(distance)` = base + per-decade ×
+  log10(1 + d / 1000 km), the same for every ship; `propellant_for(mass, Δv,
+  Isp)` / `delta_v_of(mass, propellant, Isp)` are the rocket equation (the
+  ship's main-engine Isp, `FALLBACK_ISP_S` without engines);
+  `cost_kg(mass, distance, Isp)`; `dv_text`. `PlayerProfile.vessel_tanks`
+  adds `isp_s`, `dv_mps` (aboard) and `dv_full_mps`; `jump_dv(id)`.
+  The nav chart sets `PlayerProfile.jump_target` (not saved);
+  `launch_point()` = that, else an accepted contract's location, else the
+  berth. `Shipyard.launch` tops up (`ServiceYard.resupply`), then
+  `relocate(launch_point())`, then checks a deep-space survey;
+  `ContractBoard.accept` only refuses a jump beyond `dv_full_mps`.
   `pay(main, reserve, cost)` takes the main tank first; `tow_credits(mass)`.
   The reserve is `reserve_fraction` of the tankage, kept in the vessel's
   `condition.stores.jump_reserve_kg` (schema 9) and in `Main.jump_reserve_kg`
   during a sortie. `PlayerProfile.relocate(id, catalog)` charges the docked
-  vessel (`vessel_tanks`) or refuses with the refuel price;
-  `ContractBoard.accept` refuses when it does. `Main.pay_jump_home` charges
+  vessel (`vessel_tanks`) or refuses with the refuel price.
+  `Main.pay_jump_home` charges
   the B jump and an alive-ship restart, or tows (credits, floored at 0).
   `ServiceYard.resupply_needs` includes `reserve_kg`.
 - **Sun-centred positions (Milestone 13 part 2)**: `CelestialFrame.KEPLER_ELEMENTS`
@@ -208,7 +218,8 @@ and the location's central body:
   `center` at `epoch_utc` (the scenario epoch), source, uncertainty, size,
   mass, fee, record. `PlayerProfile.survey_target` / `codex` (schema 10),
   `choose_survey` (location rule; deep-space round trip ≤ full tanks +
-  reserve, `survey_cost_kg` = 2 × `JumpDrive.cost_kg`), `complete_survey`.
+  reserve in Δv: `survey_dv` = 2 × `JumpDrive.delta_v` from the launch
+  point, `survey_cost_kg` its propellant at full tanks), `complete_survey`.
   `Main` reads the target in `_ready`: a deep-space one swaps the location
   for `Location.deep_space(home)` (the Sun, `is_star`; station name from
   home). `_start_scenario` spawns the anchor `START_BEHIND_M` back along

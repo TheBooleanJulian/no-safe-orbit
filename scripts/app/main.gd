@@ -449,13 +449,14 @@ func _spawn_artifact(player: ShipState, offset: Vector3) -> void:
 	add_child(_artifact_view)
 	if artifact.is_deep_space():
 		var home := Location.by_id(get_profile().location)
-		var need := 2.0 * JumpDrive.standard().cost_kg(player.mass_kg() + jump_reserve_kg, artifact.distance_from(home))
+		var dv := 2.0 * JumpDrive.standard().delta_v(artifact.distance_from(home))
+		var need := JumpDrive.propellant_for(player.mass_kg() + jump_reserve_kg, dv, player.config.main_isp_s)
 		var paid := JumpDrive.pay(player.propellant_kg, jump_reserve_kg, need)
 		player.propellant_kg = paid.main_kg if paid.ok else 0.0
 		jump_reserve_kg = paid.reserve_kg if paid.ok else 0.0
 		_jump_prepaid = true
-		var line := "Jumped %s to %s; the round trip burned %s (the jump home is paid)" % [
-			SystemMap.distance_text(artifact.distance_from(home)), artifact.display_name, JumpDrive.tonnes(need)]
+		var line := "Jumped %s to %s; the round trip took %s (the jump home is paid)" % [
+			SystemMap.distance_text(artifact.distance_from(home)), artifact.display_name, JumpDrive.dv_text(dv)]
 		_prepaid_line = line
 		GameLog.info("main", line)
 
@@ -1268,7 +1269,12 @@ func jump_waiting() -> PackedStringArray:
 ## Propellant (kg) the jump home to the location's station costs now (the
 ## base cost: no distance within a location).
 func jump_home_cost_kg(player: ShipState) -> float:
-	return JumpDrive.standard().cost_kg(player.mass_kg() + jump_reserve_kg, 0.0)
+	return JumpDrive.standard().cost_kg(player.mass_kg() + jump_reserve_kg, 0.0, player.config.main_isp_s)
+
+
+## Δv (m/s) of the jump home (the base: no distance within a location).
+func jump_home_dv() -> float:
+	return JumpDrive.standard().delta_v(0.0)
 
 
 ## Pay for the jump home: the main tank, then the reserve; if they can't
@@ -1287,14 +1293,15 @@ func pay_jump_home(player: ShipState) -> String:
 	if paid.ok:
 		player.propellant_kg = paid.main_kg
 		jump_reserve_kg = paid.reserve_kg
-		line = "Jump drive burned %s of propellant" % JumpDrive.tonnes(cost)
+		line = "Jump drive: %s" % JumpDrive.dv_text(jump_home_dv())
 	else:
 		var p := get_profile()
 		var fee := drive.tow_credits(player.mass_kg() + jump_reserve_kg)
 		var charged := mini(fee, p.credits)
 		p.credits -= charged
-		line = "Not enough propellant to jump (%s needed) — a rescue tow brought the ship in for %d credits%s" % [
-			JumpDrive.tonnes(cost), charged, " (all you had)" if charged < fee else ""]
+		line = "Not enough propellant to jump (%s needed, %s aboard) — a rescue tow brought the ship in for %d credits%s" % [
+			JumpDrive.dv_text(jump_home_dv()), JumpDrive.dv_text(JumpDrive.delta_v_of(player.mass_kg() + jump_reserve_kg,
+			player.propellant_kg + jump_reserve_kg, player.config.main_isp_s)), charged, " (all you had)" if charged < fee else ""]
 	if combat_log != null:
 		combat_log.record(world.sim_time, "jump", line)
 	GameLog.info("main", line)
@@ -1317,7 +1324,7 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 			var waiting := jump_waiting()
 			var cost := jump_home_cost_kg(player)
 			state = {"progress": _jump_hold / JUMP_HOLD_S, "left_s": JUMP_HOLD_S - _jump_hold, "waiting": waiting,
-				"cost_kg": cost}
+				"cost_kg": cost, "dv_mps": jump_home_dv()}
 			if not JumpDrive.pay(player.propellant_kg, jump_reserve_kg, cost).ok:
 				state["tow"] = JumpDrive.standard().tow_credits(player.mass_kg() + jump_reserve_kg)
 			if _jump_hold >= JUMP_HOLD_S:

@@ -777,8 +777,8 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		if jump_state.has("tow"):
 			out.append(AlertQueue.make(&"jump", &"nav", CAUTION, "TOW", "%.1fs %dcr" % [jump_state.left_s, int(jump_state.tow)], "", "[B]"))
 		elif waiting.is_empty():
-			out.append(AlertQueue.make(&"jump", &"nav", ADVISORY, "JUMP", "%.1fs %s" % [jump_state.left_s,
-				JumpDrive.tonnes(float(jump_state.get("cost_kg", 0.0))).replace(" ", "")]))
+			out.append(AlertQueue.make(&"jump", &"nav", ADVISORY, "JUMP", "%.1fs Δv%.0f" % [jump_state.left_s,
+				float(jump_state.get("dv_mps", 0.0))]))
 		else:
 			out.append(AlertQueue.make(&"jump", &"nav", DANGER, "JUMP", "%.1fs −%d" % [jump_state.left_s, waiting.size()], "", "[B]"))
 	if not survey.is_empty() and not survey.done and float(survey.progress) > 0.0:

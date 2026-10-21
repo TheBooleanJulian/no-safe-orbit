@@ -198,12 +198,13 @@ func _run() -> void:
 	await _click(yard.system_map, moon_at)
 	await _frames(2)
 	var title := yard.get_node("Margin/VBox/TopBar/Title") as Label
-	_check(yard.profile.location == "moon" and title.text == "LUNAR SHIPYARD" and yard.route_button.text.contains("LUNAR ORBIT"),
-		"clicking the Moon docks the vessel at the Lunar Shipyard (%s · %s)" % [title.text, yard.route_button.text])
+	_check(yard.profile.location == "earth" and yard.profile.launch_point() == "moon" and title.text == "EARTH SHIPYARD"
+		and yard.route_button.text.contains("→ LUNAR ORBIT") and yard.route_button.text.contains("Δv"),
+		"clicking the Moon lays in a course — still docked at Earth until launch (%s · %s)" % [title.text, yard.route_button.text])
 	yard.size_buttons[1].pressed.emit()
 	var saved := PlayerProfile.load_file(PlayerProfile.path, PackedStringArray())
-	_check(yard.profile.encounter_size == 2 and saved.location == "moon" and saved.encounter_size == 2,
-		"two ships picked; both choices saved (%s, %d)" % [saved.location, saved.encounter_size])
+	_check(yard.profile.encounter_size == 2 and saved.location == "earth" and saved.encounter_size == 2,
+		"two ships picked and saved; the berth is still Earth's (%s, %d)" % [saved.location, saved.encounter_size])
 
 	# Launch and fly it.
 	var expected_mass := yard.editor.stats.mass_kg
@@ -284,8 +285,8 @@ func _dealer_and_services(yard: Shipyard) -> void:
 	var offer: Dictionary = p.board[0]
 	(yard.sections.accept_buttons[str(offer.id)] as Button).pressed.emit()
 	await _frames(2)
-	_check(p.active_contract.get("id", "") == offer.id and p.location == offer.location and p.encounter_size == int(offer.ships),
-		"MISSIONS: accepting %s sets the next sortie (%s, %d ships)" % [offer.title, p.location, p.encounter_size])
+	_check(p.active_contract.get("id", "") == offer.id and p.launch_point() == offer.location and p.encounter_size == int(offer.ships),
+		"MISSIONS: accepting %s sets the next sortie's course (%s → %s, %d ships)" % [offer.title, p.location, p.launch_point(), p.encounter_size])
 	yard.sections.abandon_button.pressed.emit()
 	await _frames(2)
 	_check(p.active_contract.is_empty(), "and it can be abandoned")
