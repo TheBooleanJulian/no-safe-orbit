@@ -377,10 +377,9 @@ func _work_job(world: WorldSimulation, c: Craft, from: Vector3, carrier: ShipSta
 		for ship in _friends:
 			if ship.systems == null or ship.missile != null or (carrier != null and ship.position.distance_to(carrier.position) > comms_range_m):
 				continue
-			var crew_on := ship.systems.repair_task.equipment_id if ship.systems.repair_task != null else ""
 			for e in ship.systems.equipment:
 				if e.destroyed() or not e.def.is_external() or e.hp >= ShipSystems.FIELD_REPAIR_LIMIT * e.max_hp - 1e-3 \
-						or e.id == crew_on or _claimed_by_other(ship, e, c):
+						or ship.systems.is_under_repair(e.id) or _claimed_by_other(ship, e, c):
 					continue
 				var site := _site(ship, e)
 				var score := from.distance_to(site[0]) + (0.0 if ship == carrier else 1.0e6)

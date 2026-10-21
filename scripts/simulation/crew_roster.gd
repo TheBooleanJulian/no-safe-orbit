@@ -27,10 +27,29 @@ const ROLE_COLORS := [Color("f5c842"), Color("ff9a3c"), Color("b98cff"), Color("
 const ROLE_SHORT := ["CMD", "ENG", "DC", "WPN", "SEC", "MED", "GEN"]
 
 
-## The standard complement per role (as default_for fills berths), for a
-## ship with `guns` guns: what the station suggests hiring towards.
-static func suggested(guns: int) -> Array[int]:
-	return [2, 2, 2, mini(guns, 2), 4, 1, 0]
+## The standard complement per role (indexed by Role; GENERAL 0 — the
+## rest of the berths), scaled to the ship (Milestone 15): a bridge watch
+## per 200 modules beyond the first two; an engineer per reactor and per
+## four main engines (two at least); a gun crew per two guns and per two
+## launchers (at least the old two for an armed ship); damage control per 40
+## modules; a medic per 40 berths; security per 12 berths (four at least).
+## A frigate's is unchanged: 2 / 2 / 2 / 1 / 4 / 1.
+static func complement(guns: int, launchers: int, engines: int, reactors: int, modules: int, berths: int) -> Array[int]:
+	var weapons := maxi(mini(guns, 2), ceili(guns / 2.0) + ceili(launchers / 2.0))
+	return [2 + floori(modules / 200.0), maxi(2, reactors + ceili(engines / 4.0)), maxi(2, ceili(modules / 40.0)),
+		weapons, maxi(4, ceili(berths / 12.0)), maxi(1, ceili(berths / 40.0)), 0]
+
+
+## complement() for a design.
+static func complement_for(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats) -> Array[int]:
+	var n := {}
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def != null:
+			n[def.kind] = int(n.get(def.kind, 0)) + 1
+	var K := EquipmentDefinition.Kind
+	return complement(n.get(K.CANNON, 0), n.get(K.MISSILE_LAUNCHER, 0), n.get(K.MAIN_ENGINE, 0), n.get(K.REACTOR, 0),
+		bp.modules.size(), stats.crew_capacity)
 
 
 ## "● command ● engineering …" in BBCode, for map legends.
@@ -73,18 +92,14 @@ static func default_for(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats) -> 
 	var roster := CrewRoster.new()
 	if bp.rooms.is_empty():
 		return roster
-	var guns := 0
-	for i in bp.equipment.size():
-		var def := grid.equipment_def(i)
-		if def != null and def.kind == EquipmentDefinition.Kind.CANNON:
-			guns += 1
+	var want := complement_for(bp, grid, stats)
 	var plan := [
-		[Role.COMMAND, 2, [&"command"]],
-		[Role.ENGINEERING, 2, [&"engineering"]],
-		[Role.WEAPONS, mini(guns, 2), [&"magazine", &"command"]],
-		[Role.DAMAGE_CONTROL, 2, [&"workshop", &"access"]],
-		[Role.MEDICAL, 1, [&"life_support", &"quarters"]],
-		[Role.SECURITY, 4, [&"quarters", &"access"]],
+		[Role.COMMAND, want[Role.COMMAND], [&"command"]],
+		[Role.ENGINEERING, want[Role.ENGINEERING], [&"engineering"]],
+		[Role.WEAPONS, want[Role.WEAPONS], [&"magazine", &"command"]],
+		[Role.DAMAGE_CONTROL, want[Role.DAMAGE_CONTROL], [&"workshop", &"access"]],
+		[Role.MEDICAL, want[Role.MEDICAL], [&"life_support", &"quarters"]],
+		[Role.SECURITY, want[Role.SECURITY], [&"quarters", &"access"]],
 	]
 	var berths := stats.crew_capacity
 	_index = _rooms_by_role(bp, grid)

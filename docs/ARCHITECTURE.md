@@ -256,6 +256,15 @@ and the location's central body:
   cell); a wrecked module's mesh becomes `ShipModelBuilder.dented()`
   (subdivided, inner face points pushed in, edge and corner points fixed)
   at full scale.
+- **Scaling with the hull (Milestone 15)**: `CrewRoster.complement(guns,
+  launchers, engines, reactors, modules, berths)` / `complement_for(bp,
+  grid, stats)` feed `default_for` and the yard's crew page (replacing
+  `suggested`). `ShipSystems.repair_tasks` (one per `repair_teams()` = ⌈fit
+  DC / 2⌉; `repair_task` is the first, read-only), `is_under_repair`;
+  `_advance_medical` keeps `_treating` (medic → patient, seconds).
+  `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
+  (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
+  grid ray clear of hull), area_m2} for the stats panel.
 - **Work drones (Milestone 15)**: `ShipConfig.craft_role` `repair` /
   `salvage` (`AirWing.WORK_ROLES`, `Craft.is_worker`). In `AirWing._fly`, on
   any directive but RETURN, `_work_job` picks the job (repair: external,

@@ -4,6 +4,38 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 15, part 2 — crew, damage control, medics and PD that scale with the hull (2026-10-21)
+
+#### Changed
+- **The standard complement scales with the ship** (`CrewRoster.complement`):
+  a bridge watch per 200 modules beyond two; an engineer per reactor and per
+  four main engines; a gun crew per two guns and per two launchers; damage
+  control per 40 modules; a medic per 40 berths; security per 12 berths.
+  A frigate's is unchanged (2 / 2 / 2 / 1 / 4 / 1); a destroyer's is 46
+  specialists (was 13), a cruiser's 68, a carrier's 77. The crew page, the
+  hiring tally and the stats panel use it.
+- **Damage-control teams work at the same time**: one team per two fit
+  damage-control crew (a frigate one, a destroyer three, a carrier eight);
+  each patches its own system — [C] sends the next free team. The HUD shows
+  "+N more" and the overview each system being patched.
+- **Every medic treats a patient of their own** at once (was one patient at
+  a time for the whole ship).
+- **Point defence against the hull's size**: the shipyard stats panel shows
+  DEFENCE — PD mounts against those the hull wants (one per 1,500 m² of
+  outside surface) and the share of approaches they cover (48 directions;
+  in arc and clear of the ship's own hull, as in flight) — and CRAFT (bays
+  and racks).
+
+#### Tests changed (and why)
+- New `test_m15_scaling` (4): complements by template (frigate unchanged,
+  capitals over three times the specialists, rosters filled to them);
+  three DC teams patch three systems in 14 s together (mutation-checked:
+  one team fails); six medics treat three wounded in one treatment time
+  (13 s); PD wanted vs carried and coverage by template (all 100 %, ≤ 10 ms),
+  one mount on a frigate 54 %, none 0 %; the carrier's craft.
+- `test_m9_weapons_crew`: gunners by guns now one crew per two guns
+  (`complement`, which replaced `suggested`).
+
 ### Milestone 15, part 1 — repair and salvage drones (2026-10-21)
 
 #### Added
