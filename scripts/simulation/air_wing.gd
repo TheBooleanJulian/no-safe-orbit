@@ -18,6 +18,17 @@ extends RefCounted
 ##   inert); it resumes its directive when contact is back.
 ## - A craft shot down or lost on entry is LOST; replacing it costs spare
 ##   parts at the station. Damage persists (ShipInstance.wing).
+## - Work drones (Milestone 15), on any directive but RETURN: a repair drone
+##   holds WORK_STANDOFF_M off a damaged system outside a friendly hull (the
+##   carrier's first) and patches it at REPAIR_HP_PER_S up to
+##   ShipSystems.FIELD_REPAIR_LIMIT — the crew's field-repair limit, without
+##   the walk or the airlock; a salvage drone holds off a disabled hostile
+##   or a derelict (the target first, else the nearest within
+##   SALVAGE_RANGE_M of the carrier) and cuts its most valuable system free
+##   every SALVAGE_CUT_S, into SALVAGE_PART_SHARE of its worth in spare
+##   parts; full (SALVAGE_CAPACITY) or out of wrecks it flies them home,
+##   where they are `delivered_parts` (Main puts them in the hold). With no
+##   work either escorts.
 
 enum Status { DOCKED, FLYING, LOST }
 
@@ -32,6 +43,16 @@ const COMMS_FALLBACK_S := 10.0
 ## Recon craft inside this range of the target give a close inspection.
 const INSPECT_RANGE_M := 3000.0
 const LOG_LIMIT := 20
+## Work drones (see above).
+const WORK_ROLES: Array[StringName] = [&"repair", &"salvage"]
+const WORK_STANDOFF_M := 12.0
+const WORK_RANGE_M := 20.0
+const WORK_SPEED_MPS := 3.0
+const REPAIR_HP_PER_S := 1.5
+const SALVAGE_CUT_S := 4.0
+const SALVAGE_PART_SHARE := 0.5
+const SALVAGE_CAPACITY := 30
+const SALVAGE_RANGE_M := 8000.0
 
 
 class Craft:
@@ -59,6 +80,12 @@ class Craft:
 	## nothing left to fight) rather than recalled: it goes out again once
 	## refuelled and rearmed (AirWing.auto_relaunch).
 	var came_back_itself: bool = false
+	## A salvage drone's load (spare parts) and its cutting clock (s).
+	var cargo_parts: int = 0
+	var work_s: float = 0.0
+
+	func is_worker() -> bool:
+		return config.craft_role in AirWing.WORK_ROLES
 
 	func is_drone() -> bool:
 		return config.cannon == null
@@ -85,6 +112,10 @@ var comms_range_m: float = 30_000.0
 var jammed: bool = false
 var log: PackedStringArray = PackedStringArray()
 var log_count: int = 0
+## Spare parts salvage drones have brought aboard and Main has not banked yet.
+var delivered_parts: int = 0
+## Systems a work drone has taken on this tick (ship id + part id -> craft id).
+var _claims: Dictionary = {}
 
 
 ## One craft per working craft rack on the carrier's blueprint.
@@ -232,6 +263,7 @@ func update(world: WorldSimulation, dt: float) -> void:
 		var h := world.get_ship(id)
 		if h != null and h.is_active():
 			hostiles.append(h)
+	_claims.clear()
 	# Our side (never in the line of fire) and hostile missiles (interceptors).
 	_friends.clear()
 	_enemy_missiles.clear()
@@ -253,11 +285,11 @@ func update(world: WorldSimulation, dt: float) -> void:
 					c.service_left_s = maxf(c.service_left_s - dt, 0.0)
 					if c.service_left_s <= 0.0:
 						_note("%s %s" % [c.label, _resupply_from(carrier, c)])
-				elif c.came_back_itself and auto_relaunch and target != null and c.hull_fraction > 0.5 \
-						and launch_block_reason(world, c) == "":
+				elif c.came_back_itself and auto_relaunch and c.hull_fraction > 0.5 and launch_block_reason(world, c) == "" \
+						and (target != null if not c.is_worker() else (carrier != null and not _work_job(world, c, carrier.position, carrier, target).is_empty())):
 					c.came_back_itself = false
 					launch(world, c)
-					_note("%s back out — %s" % [c.label, target.display_name])
+					_note("%s back out — %s" % [c.label, target.display_name if not c.is_worker() else "there is work"])
 			Status.FLYING:
 				_fly(world, c, carrier, target, hostiles, dt)
 
@@ -296,10 +328,26 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 			directive = CraftAI.Directive.RETURN
 			why = "nothing left to strike — returning"
 			c.came_back_itself = true
+	var job := {}
+	if c.is_worker() and directive != CraftAI.Directive.RETURN:
+		job = _work_job(world, c, s.position, carrier, target) if c.cargo_parts < SALVAGE_CAPACITY else {}
+		if not job.is_empty():
+			why = job.text
+		elif c.cargo_parts > 0:
+			directive = CraftAI.Directive.RETURN
+			why = "%s — bringing %d spare parts home" % ["hold full" if c.cargo_parts >= SALVAGE_CAPACITY else "nothing left to salvage", c.cargo_parts]
+			c.came_back_itself = true
+		else:
+			directive = CraftAI.Directive.ESCORT
 	if why != c.override_reason:
 		c.override_reason = why
 		if why != "":
 			_note("%s %s" % [c.label, why])
+	if not job.is_empty():
+		c.held_input = _work_input(s, job)
+		world.set_input(c.id, c.held_input)
+		_work(c, s, job, dt)
+		return
 	var rack_point := s.position
 	if carrier != null and carrier.is_active():
 		var frame := rack_frame(world, c)
@@ -316,6 +364,126 @@ func _fly(world: WorldSimulation, c: Craft, carrier: ShipState, target: ShipStat
 			and s.position.distance_to(rack_point) < RECOVER_RADIUS_M \
 			and (s.velocity - carrier.velocity).length() < RECOVER_SPEED_MPS:
 		_recover(world, c)
+
+
+# --- Work drones (Milestone 15) -------------------------------------------------------
+
+## The job for work drone `c` seen from `from`: {ship, part, point (where to
+## hold), look (the part), text} — {} if there is none.
+func _work_job(world: WorldSimulation, c: Craft, from: Vector3, carrier: ShipState, target: ShipState) -> Dictionary:
+	var best := {}
+	var best_score := INF
+	if c.config.craft_role == &"repair":
+		for ship in _friends:
+			if ship.systems == null or ship.missile != null or (carrier != null and ship.position.distance_to(carrier.position) > comms_range_m):
+				continue
+			var crew_on := ship.systems.repair_task.equipment_id if ship.systems.repair_task != null else ""
+			for e in ship.systems.equipment:
+				if e.destroyed() or not e.def.is_external() or e.hp >= ShipSystems.FIELD_REPAIR_LIMIT * e.max_hp - 1e-3 \
+						or e.id == crew_on or _claimed_by_other(ship, e, c):
+					continue
+				var site := _site(ship, e)
+				var score := from.distance_to(site[0]) + (0.0 if ship == carrier else 1.0e6)
+				if score < best_score:
+					best_score = score
+					best = {"ship": ship, "part": e, "point": site[0], "look": site[1],
+						"text": "patching %s %s on %s" % [e.def.display_name, e.id, ship.display_name]}
+	else:
+		var wreck: ShipState = target if _salvageable(target) else null
+		if wreck == null:
+			var nearest := INF
+			for id in world.ship_ids():
+				var w := world.get_ship(id)
+				if not _salvageable(w) or (carrier != null and w.position.distance_to(carrier.position) > SALVAGE_RANGE_M):
+					continue
+				var d := from.distance_to(w.position)
+				if d < nearest:
+					nearest = d
+					wreck = w
+		if wreck == null:
+			return {}
+		for e in wreck.systems.equipment:
+			if e.destroyed() or _claimed_by_other(wreck, e, c):
+				continue
+			var worth := ServiceYard.equipment_cost(e.def) * e.hp / maxf(e.max_hp, 1e-6)
+			if -worth < best_score:
+				best_score = -worth
+				var site := _site(wreck, e)
+				best = {"ship": wreck, "part": e, "point": site[0], "look": site[1],
+					"text": "salvaging %s (%d / %d parts aboard)" % [wreck.display_name, c.cargo_parts, SALVAGE_CAPACITY]}
+	if not best.is_empty():
+		_claims["%s/%s" % [(best.ship as ShipState).id, (best.part as ShipSystems.EquipmentState).id]] = c.id
+	return best
+
+
+## A disabled hostile or a derelict, not ours, with something left to cut.
+func _salvageable(w: ShipState) -> bool:
+	if w == null or not w.is_active() or w.systems == null or w.missile != null or w.systems.captured or w in _friends:
+		return false
+	if not (w.derelict or w.systems.is_disabled()):
+		return false
+	return w.systems.equipment.any(func(e: ShipSystems.EquipmentState) -> bool: return not e.destroyed())
+
+
+func _claimed_by_other(ship: ShipState, e: ShipSystems.EquipmentState, c: Craft) -> bool:
+	var who: StringName = _claims.get("%s/%s" % [ship.id, e.id], &"")
+	return who != &"" and who != c.id
+
+
+## [where to hold, the part] (world) for work on part `e` of `ship`: off its
+## mount's face for a system outside the hull, else off the hull towards it.
+func _site(ship: ShipState, e: ShipSystems.EquipmentState) -> Array:
+	var part := ship.position + ship.orientation * e.body_position
+	var face: StringName = ship.systems.blueprint.equipment[e.index].face
+	var out := Vector3(ShipGrid.FACE_NORMALS.get(face, Vector3i.ZERO))
+	var depth := WORK_STANDOFF_M
+	if out == Vector3.ZERO or not e.def.is_external():
+		out = e.body_position - ship.config.hit_box_center
+		depth += ship.config.hit_box_half_extents.length()
+	if out.length_squared() < 1e-6:
+		out = Vector3.UP
+	return [part + ship.orientation * out.normalized() * depth, part]
+
+
+## Hold the work station, nose on the part (no avoidance: it works close in).
+func _work_input(s: ShipState, job: Dictionary) -> ShipControlInput:
+	var input := ShipControlInput.create(Vector3.ZERO, Vector3.ZERO, true)
+	input.hold_translation = false
+	var point: Vector3 = job.point
+	CraftAI.steer(s, point, (job.ship as ShipState).velocity, input, clampf(s.position.distance_to(point) * 0.25, 2.0, CraftAI.MAX_CLOSING_MPS))
+	CraftAI.point(s, (job.look as Vector3) - s.position, input)
+	return input
+
+
+## On station and matched in speed: patch, or cut.
+func _work(c: Craft, s: ShipState, job: Dictionary, dt: float) -> void:
+	var ship: ShipState = job.ship
+	if s.position.distance_to(job.point) > WORK_RANGE_M or (s.velocity - ship.velocity).length() > WORK_SPEED_MPS:
+		return
+	var sys := ship.systems
+	var e: ShipSystems.EquipmentState = job.part
+	if c.config.craft_role == &"repair":
+		var limit := ShipSystems.FIELD_REPAIR_LIMIT * e.max_hp
+		e.hp = minf(e.hp + REPAIR_HP_PER_S * dt, limit)
+		if e.hp >= limit - 1e-6:
+			sys.solve_power()
+			ship.config = sys.effective_config()
+			_note("%s patched %s %s on %s to %d %%" % [c.label, e.def.display_name, e.id, ship.display_name, roundi(ShipSystems.FIELD_REPAIR_LIMIT * 100.0)])
+		return
+	c.work_s += dt
+	if c.work_s < SALVAGE_CUT_S:
+		return
+	c.work_s = 0.0
+	var parts := maxi(1, roundi(ServiceYard.equipment_cost(e.def) * e.hp / maxf(e.max_hp, 1e-6) * SALVAGE_PART_SHARE))
+	parts = mini(parts, SALVAGE_CAPACITY - c.cargo_parts)
+	# Cut free, not shot: a reactor is shut down and lifted out, no blast.
+	e.hp = 0.0
+	sys.solve_power()
+	sys._state_changed()
+	ship.config = sys.effective_config()
+	c.cargo_parts += parts
+	_note("%s cut %s %s free from %s: +%d spare parts (%d / %d)" % [c.label, e.def.display_name, e.id, ship.display_name, parts,
+		c.cargo_parts, SALVAGE_CAPACITY])
 
 
 ## Refuel and rearm a docked craft from the carrier's own stores: its
@@ -365,6 +533,10 @@ func _recover(world: WorldSimulation, c: Craft) -> void:
 	c.comms_lost_s = 0.0
 	if c.directive == CraftAI.Directive.RETURN:
 		c.directive = CraftAI.Directive.RECON if c.is_drone() else CraftAI.Directive.STRIKE
+	if c.cargo_parts > 0:
+		delivered_parts += c.cargo_parts
+		_note("%s brought %d spare parts aboard" % [c.label, c.cargo_parts])
+		c.cargo_parts = 0
 	var needs := c.propellant_fraction < 1.0 or (c.config.cannon != null and c.ammo < c.config.cannon.magazine_rounds)
 	c.service_left_s = SERVICE_S if needs else 0.0
 	_note("%s recovered%s" % [c.label, " — servicing %.0f s" % SERVICE_S if needs else ""])

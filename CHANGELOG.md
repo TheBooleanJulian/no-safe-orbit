@@ -4,6 +4,32 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 15, part 1 — repair and salvage drones (2026-10-21)
+
+#### Added
+- **Repair drone** (drone rack (repair), uncommon): flies to a damaged
+  system outside a friendly hull — your own ship's first — holds 12 m off
+  its mount and patches it at 1.5 hp/s to 75 %, the crew's field-repair
+  limit, without their walk or airlock. Destroyed parts still need the
+  yard; a part the crew is already on is left to them.
+- **Salvage drone** (drone rack (salvage), uncommon): strips a disabled
+  hostile or a derelict (the wing's target first, else the nearest within
+  8 km of your ship), cutting its most valuable system free every 4 s into
+  half its worth in spare parts (a reactor is lifted out, no blast). With 30
+  aboard, or nothing left to cut, it flies home; the parts go into the hold
+  (at risk until banked). A stripped wreck is worth less to a beacon.
+- Both escort when there is no work, go back out on their own once
+  serviced when there is (auto relaunch), and explain their role in the
+  WING tab and the shipyard.
+
+#### Tests changed (and why)
+- New `test_m15_drones` (3): two systems patched to exactly 75 % in 20 s,
+  a destroyed mast left alone, no crew repair involved, then escort
+  (mutation-checked: no patch at 0 hp/s); 6 systems cut, 30 parts
+  delivered after 126 s, wreck 90 % → 58 % intact, no reactor blast;
+  racks in the catalog under Drones.
+- `smoke_wing`: delivered parts go into the hold.
+
 ### Play-test batch 7 — jumps in Δv; the nav chart sets a course (2026-10-21)
 
 #### Changed

@@ -256,6 +256,20 @@ and the location's central body:
   cell); a wrecked module's mesh becomes `ShipModelBuilder.dented()`
   (subdivided, inner face points pushed in, edge and corner points fixed)
   at full scale.
+- **Work drones (Milestone 15)**: `ShipConfig.craft_role` `repair` /
+  `salvage` (`AirWing.WORK_ROLES`, `Craft.is_worker`). In `AirWing._fly`, on
+  any directive but RETURN, `_work_job` picks the job (repair: external,
+  damaged, not destroyed, not the crew's `repair_task`, on `_friends`, the
+  carrier first; salvage: `_salvageable` — disabled or derelict, not
+  captured, not a friend — the target first, else the nearest within
+  `SALVAGE_RANGE_M`, its most valuable live system); `_claims` keeps two
+  drones off one part per tick. `_site` = off the mount's face
+  (`ShipGrid.FACE_NORMALS`) or off the hull; `_work_input` steers there
+  without avoidance; `_work` patches (`REPAIR_HP_PER_S` to
+  `ShipSystems.FIELD_REPAIR_LIMIT`) or cuts (hp to 0 directly, no
+  `_explode`). A salvage load (`Craft.cargo_parts`) becomes
+  `AirWing.delivered_parts` on recovery; `Main` banks it into
+  `vessel.cargo.spare_parts`.
 - **Beam weapons (play-test batch 6)**: a `KineticCannonConfig` with
   `beam_range_m > 0` (`is_beam`, `beam_penetration_at`, `beam_color`;
   muzzle speed = c so fire control leads by nothing). `_update_cannon`

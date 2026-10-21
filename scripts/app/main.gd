@@ -1999,6 +1999,14 @@ func _process(delta: float) -> void:
 		_show_burst(burst, player)
 	beam_view.add(world.take_beams())
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
+	# Salvage drones' loads: into the hold (at risk until banked), like a beacon's crates.
+	if player_wing.delivered_parts > 0:
+		var parts := player_wing.delivered_parts
+		player_wing.delivered_parts = 0
+		var vessel := get_profile().vessel
+		vessel.cargo["spare_parts"] = int(vessel.cargo.get("spare_parts", 0)) + parts
+		hud.notice("Salvage drones: +%d spare parts into the hold" % parts, world.sim_time)
+		combat_log.record(world.sim_time, "salvage", "Salvage drones brought %d spare parts aboard" % parts)
 	var log_wings: Array[AirWing] = [player_wing]
 	for c in encounter.contacts:
 		log_wings.append(c.wing)
