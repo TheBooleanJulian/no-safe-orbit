@@ -775,7 +775,10 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 			out.append(AlertQueue.make(&"emp", &"systems", CAUTION, "EMP", "×%d %.0fs" % [reset.size(), reset[0].left_s], "", "",
 				str(reset[0].id)))
 	if jump_state.has("blocked"):
-		out.append(AlertQueue.make(&"jump", &"nav", CAUTION, "JUMP", "blocked", "", "[B]"))
+		if float(jump_state.get("tow_left_s", Main.TOW_HOLD_S)) < Main.TOW_HOLD_S - 0.05:
+			out.append(AlertQueue.make(&"jump", &"nav", CAUTION, "TOW", "%.1fs %dcr" % [jump_state.tow_left_s, int(jump_state.tow_fee)], "", "[B]"))
+		else:
+			out.append(AlertQueue.make(&"jump", &"nav", CAUTION, "JUMP", "blocked · hold: tow", "", "[B]"))
 	elif jump_state.has("progress"):
 		var waiting: PackedStringArray = jump_state.waiting
 		if jump_state.has("tow"):

@@ -253,6 +253,46 @@ func _run() -> void:
 	await _press("restart_scenario")
 	await _frames(3)
 	_check(profile.credits == 1000 - tow, "dry tanks: the rescue tow brings the ship home for %d credits (left %d)" % [tow, profile.credits])
+	# Stranded under fire (play-test batch 8): the jump is blocked, but held
+	# on, B calls a rescue tow at hazard pay.
+	var me := main.world.get_ship(Main.PLAYER_ID)
+	me.propellant_kg = me.config.propellant_capacity_kg
+	profile.credits = 5000
+	main.set_target_hostile(true, "smoke test")
+	var hazard_fee := 0
+	var saw_blocked := false
+	Engine.time_scale = 8.0
+	Input.action_press("open_shipyard")
+	for i in 900:
+		if current_scene is Shipyard:
+			break
+		main._last_enemy_fire = main.world.sim_time  # someone keeps shooting
+		if main.in_combat() and main.world.has_ship(Main.PLAYER_ID):
+			hazard_fee = main.rescue_tow_fee(main.world.get_ship(Main.PLAYER_ID))
+			saw_blocked = saw_blocked or main.hud.jump_state.has("blocked")
+		await process_frame
+	Input.action_release("open_shipyard")
+	Engine.time_scale = 1.0
+	await _frames(3)
+	var base_fee := JumpDrive.standard().tow_credits(me.mass_kg() + main.jump_reserve_kg) if is_instance_valid(main) else 0
+	_check(saw_blocked and current_scene is Shipyard and hazard_fee > 0 and profile.credits == 5000 - hazard_fee,
+		"under fire: the jump is blocked, holding on calls the tow — home for %d cr hazard pay (left %d)" % [hazard_fee, profile.credits])
+	# Tab › Call rescue tow: twice to confirm; out of a fight, the plain fee.
+	var yard2 := current_scene as Shipyard
+	if yard2 != null:
+		yard2.debrief.hide_debrief()
+		_check(yard2.launch(), "launched again")
+		await _frames(4)
+		var main2 := current_scene as Main
+		profile.credits = 5000
+		var fee2 := main2.rescue_tow_fee(main2.world.get_ship(Main.PLAYER_ID))
+		main2.request_rescue_tow()
+		await _frames(2)
+		_check(current_scene == main2 and profile.credits == 5000, "the first press only quotes the fee (%d cr)" % fee2)
+		main2.request_rescue_tow()
+		await _frames(3)
+		_check(current_scene is Shipyard and profile.credits == 5000 - fee2 and fee2 < hazard_fee,
+			"the second calls it: home for %d cr, no hazard pay out of a fight (left %d)" % [fee2, profile.credits])
 	_finish()
 
 

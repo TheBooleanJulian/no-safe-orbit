@@ -90,6 +90,9 @@ func _ready() -> void:
 	title.text = "SHIP · DAMAGE CONTROL"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
+	var tow := _button("Call rescue tow", func() -> void: command.emit(&"tow", null), CyberTheme.AMBER)
+	tow.tooltip_text = "A station tug brings the ship home for credits — even under fire (hazard pay, double). Press twice to confirm."
+	head.add_child(tow)
 	head.add_child(_button("Close [Tab]", func() -> void: visible = false))
 	root.add_child(head)
 	_caption = Label.new()

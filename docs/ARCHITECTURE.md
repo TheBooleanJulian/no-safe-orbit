@@ -567,6 +567,8 @@ bounding-box hit test.
   saved as JSON; `CombatLog.insights()` turns it into lessons.
 - **Enemies** (`EnemyFactory`): the template with parts swapped for rarer
   ones, chances rising per mission, deterministic per mission, validated.
+  `_fit_new_kit` (after Milestone 15) adds lasers and the newer craft with
+  an RNG of its own, so the older rolls — and older designs — are unchanged.
 - **UI** (`CyberTheme`, `ShipSchematic`, `TacticalOverview`, `DockingCam`,
   hit-cam boarding mode, `DebriefPanel`): cyan/magenta panels; the docking
   cam renders the main World3D from a second camera at the collar.
@@ -633,6 +635,13 @@ bounding-box hit test.
   beacon / takeover rates, `PlayerProfile.open_crates` (chance per crate),
   cargo volumes (`ShipInstance.cargo_volume_m3`, `vent_excess`), hangar of
   vessels (`vessels`, `active_vessel`, `commission`).
+- **Rescue tow (play-test batch 8)**: `Main.rescue_tow(player)` charges
+  `rescue_tow_fee` (`JumpDrive.tow_credits`, × `TOW_HAZARD` while
+  `in_combat()`; all the credits if fewer), vents excess cargo, logs and
+  opens the shipyard. `_update_jump` counts `_tow_hold` up to `TOW_HOLD_S`
+  while blocked under fire (`hud.jump_state` `tow_left_s`, `tow_fee`);
+  the overview's header button emits `&"tow"` → `request_rescue_tow` (two
+  presses within `TOW_CONFIRM_S`).
 - **Jump drive** (`Main._update_jump`): hold `open_shipyard` 5 s; blocked by
   `in_combat()`, waits on `jump_waiting()`.
 - **Isometric view** (`ShipPreview3D`, `isometric` + `editable`): picks on the

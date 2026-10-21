@@ -4,6 +4,49 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Enemies field the newer kit (2026-10-21)
+
+#### Changed
+- **Enemy ships carry the kit added since Milestone 14**, each from a
+  mission (as the ship is fitted — wingmen as for earlier missions): a
+  repair drone in place of the recon drone from mission 4 (25 %), a laser
+  drone from mission 6 (30 %), Lancer laser fighters in the bay from
+  mission 8 (30 %), and a gun turned pulse laser from mission 5
+  (8 % × (mission − 4), at most 35 %, and only if the reactors carry its
+  1,500 kW). These rolls have their own seed, so every enemy fitted before
+  is unchanged. Over missions 1–12 the first are: repair drone m6 (a
+  wingman), Lancer m8, laser drone m9, pulse laser m11.
+- KNOWN_ISSUES: the "capital templates are plain" entry was stale (they
+  were rebuilt as battleships, and Mars traffic includes destroyers); the
+  laser entry and a Milestone 15 entry are brought up to date.
+
+#### Tests changed (and why)
+- New `test_enemy_kit`: the newer kit never before its mission, valid
+  designs, lasers only within the reactors' output, all four seen by
+  mission 12, deterministic.
+
+### Play-test batch 8 — a rescue tow on call (2026-10-21)
+
+"Currently ship is sometimes stranded and unable to jump back to
+shipyard. Give an option to get tow rescued for credits."
+
+#### Added
+- **Rescue tow on call**: the jump home is refused under fire (a hostile
+  that fired in the last 10 s), and a crippled ship facing one that keeps
+  shooting could never leave. Now, holding **B** on through the refusal
+  calls a station tug after 8 s (HUD: "JUMP blocked · hold: tow", then
+  "TOW 7.2s 904cr"); **Tab › Call rescue tow** calls one any time (the first
+  press quotes the fee, a second within 5 s confirms). The fee is the tow's
+  (150 cr + 0.5 cr per tonne), twice that under fire; too few credits and
+  it takes what there is. No propellant; craft and boarders still out are
+  left behind, as in an emergency jump; the hold's excess is vented.
+
+#### Tests changed (and why)
+- `smoke_campaign`: under fire the jump is blocked and holding on brings
+  the ship home for the hazard fee (904 cr for the Frigate); the Tab
+  button quotes first and tows on the second press, at the plain fee
+  (462 cr).
+
 ### Milestone 15, part 2 — crew, damage control, medics and PD that scale with the hull (2026-10-21)
 
 #### Changed

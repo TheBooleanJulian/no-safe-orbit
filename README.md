@@ -513,7 +513,11 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
    the main tank first, then the drive's own reserve); with too little, a
    **rescue tow** brings you in for credits instead. Backspace while flying
    counts as a jump home too. It won't charge while a hostile has fired on you in the
-   last 10 s (one that hasn't opened fire doesn't stop it). Craft still out
+   last 10 s (one that hasn't opened fire doesn't stop it) — **keep holding
+   B** and after 8 s a **rescue tow** comes for you anyway, at hazard pay
+   (twice the tow fee). **Tab › Call rescue tow** (press twice) calls one
+   any time. A tow costs credits, no propellant; with too few credits it
+   takes all you have — you are never stranded. Craft still out
    and boarders still across are **left behind** — an emergency jump, with
    a red countdown naming them; release B to wait for them. The vessel
    keeps exactly the damage it came back with (also when you restart, or
@@ -745,7 +749,11 @@ rack. They fly with the same physics as every ship and can be shot down.
   a strike is a gun run (run in, break off at 600 m, come round). The WING
   tab's HOW THEY FLY block lists every directive and risk setting.
 - Enemies launch their own fighter from mission 3 once hostile,
-  interceptors from mission 5 and bombers from mission 7.
+  interceptors from mission 5 and bombers from mission 7; some carry a
+  repair drone from mission 4 (it patches their guns and radiators as
+  yours do), laser drones from mission 6 and Lancer laser fighters from
+  mission 8. From mission 5 a gun may be a pulse laser (more likely the
+  later the mission, and only on a ship whose reactors can feed it).
 - A craft still out when you dock is lost. Lost craft are replaced, and
   damaged ones repaired, at the station.
 

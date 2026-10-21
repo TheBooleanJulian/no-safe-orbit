@@ -526,6 +526,12 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Enemies not too strong beyond 1v1 | `tools/balance_sim.gd` (manual), `test_balance_batch6`, `smoke_encounter` | 1v2/1v3 lost in 14–20 s before; now 1v2 survives 480 s at m3/m7, lost 327 s at m5; 1v3 lost 188–273 s |
 | Suited crew keep a vented bridge | `test_balance_batch6` | disabled before, fighting now |
 
+### Play-test batch 8 — rescue tow on call ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Never stranded: a tow for credits | `smoke_campaign` | under fire: blocked, held on → home for 904 cr (hazard pay); Tab button: quote, then home for 462 cr |
+
 ### Play-test batch 7 — Δv jumps, the nav chart's course ✅ (2026-10-21)
 
 | Requirement | Test | Measured |
