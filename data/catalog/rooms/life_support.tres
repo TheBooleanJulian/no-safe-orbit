@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_def")
 id = &"life_support"
-display_name = "Life support"
+display_name = "Medbay"
 role = &"life_support"
 mass_per_cell_kg = 1400.0
 power_kw_per_cell = -15.0

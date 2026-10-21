@@ -566,10 +566,13 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
 
 **Earth Shipyard's station** (HANGAR tabs):
 
-- **CREW**: your vessel's named crew — change roles for free, dismiss; hire
-  from a pool that changes every sortie (★ skill: each star works 20 %
-  faster at repairs and treatment; 40 cr + 40 a star). The dead leave their
-  berths, which you fill by hiring.
+- **CREW** (the crew manifest): your crew — yours, not a ship's: they move
+  with you to whichever vessel you fly, and whoever it has no berth for
+  rests ashore, unpaid. Change roles for free, rest or dismiss; hire from a
+  hall that never runs dry (★ skill: each star works 20 % faster at repairs
+  and treatment; 40 cr + 40 a star), or **Fill berths** (resting crew
+  first, then new hands). Everyone has a previous occupation (flavour). The
+  dead leave their berths.
 - **QUARTERMASTER**: Okafor sells three rarer parts for credits (new stock
   every sortie) and spare parts.
 - **UPGRADES**: ship technology for every vessel (thrust +5 %, radiators
@@ -818,9 +821,13 @@ per four engines, a gun crew per two guns or launchers, damage control per
 make a **team**, and every team patches a system at the same time ([C] sends
 the next free one); every medic treats a patient of their own.
 
-Every berth (3 per crew-quarters cell) holds one named crew member with a
+Every berth (2 per crew-quarters cell) holds one named crew member with a
 role: command (bridge), engineering, damage control, weapons (magazine),
-security, medical and general crew. They are not drawn; moving between
+security (the **crew armoury** if there is one: +10 % boarding strength a
+cell, up to +50 %, for boarders and defenders alike), medical (the
+**medbay**, formerly "life support") and general crew. A **cafeteria** lifts
+everything crew skill touches — gunnery, the reactor, repairs, treatment —
+by 2 % a cell, up to +50 %. They are not drawn; moving between
 rooms takes 5 s per room. While anything hostile is about — a hostile
 ship, its craft still out, a missile on its way, fire taken in the last
 10 s — the crew are at **battle stations in spacesuits**, the emergency
@@ -894,7 +901,7 @@ no usable backup. Loading an older save version first keeps a copy
 **Earth Shipyard** (or the **Lunar Shipyard**) opens after a jump (hold B in
 flight). It is a station: the **station directory** down the left lists its
 places by district — DRYDOCK (Berth, Refit bay, Service bay),
-CONCOURSE (Mission board, Crew quarters, Ship dealer, Quartermaster), OPERATIONS (Hangar &
+CONCOURSE (Mission board, Crew manifest, Ship dealer, Quartermaster), OPERATIONS (Hangar &
 bank, Station tech, Nav chart, Salvage odds) — with your credits and spare
 parts on top. Each place has a live line under its name: amber when it
 needs you (repair jobs waiting, a restock due, offers posted, an empty
@@ -908,7 +915,7 @@ Beside the builder the directory narrows to the names.
 | **DEALER** | Every template for credits, with its standard crew hired — twelve hulls, cheapest first: Cutter, Corvette, Frigate, and capital ships (Halberd Frigate, Destroyer, Carrier, Cruiser, Wyvern Battlecruiser, Anvil Heavy Cruiser) up to the super-heavies (Sovereign Supercarrier, Colossus Battleship, Leviathan Dreadnought). The cards fill in as the dealer opens; each card's 3D view is drawn once it scrolls into sight. The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** (Hangar & bank) | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the service record — and the **station bank**: a deposit (1 % a sortie, compounding) and three loans, one of each at a time — Dockyard credit 1,000 cr at 5 % over 5 sorties, Guild loan 5,000 cr at 4 % over 10, Shipbuilder's mortgage 25,000 cr at 3 % over 20 — paid off in instalments on docking (a shortfall adds 10 % of it) or repaid early |
 | **REFIT** | The builder below |
-| **CREW** (Crew quarters) | The roster board: all eight departments (pilots too), each against the standard complement (amber when short), its crew as badges with a placeholder portrait, level and wage — **drag a badge onto another department** to post them there, ▲ to train, ✕ to dismiss; the **hiring hall** below, a card and portrait per spacer for hire |
+| **CREW** (Crew manifest) | All eight departments (pilots too), each against the standard complement (amber when short), its crew as badges with a placeholder portrait, level, previous occupation and sorties (wage on hover) — **drag a badge onto another department** to post them there, ▲ to train, ✕ to dismiss. Top right, the **hiring hall** (never empty: each hire is replaced; **Fill berths** brings resting crew aboard, then hires general hands). Below it, **resting crew**: ashore and unpaid — drag a badge there to rest them, back onto a department (or ▲) to bring them aboard. Berths follow the design on the slip live (2 a quarters cell); anyone over goes ashore |
 | **SERVICES** (Service bay) | Three large buttons — **REPAIR** (the spare parts it takes), **REARM** (rounds, point defence, missiles and flares) and **REFUEL** (propellant and the jump reserve, with the Δv it gives) — each buying what the credits allow (or leave it to the launch); the damage report with what to fix first; the **cargo hold** and Bank cargo |
 | **QUARTERMASTER** | The quartermaster's rarer parts, and **spare parts in any amount** (a counter, 25 cr per 10) |
 | **UPGRADES** (Station tech) | The **tech tree**, left to right: from the Shipyard charter it branches out — propulsion (thrusters, reactor, radiators, jump calibration −5 % Δv a level), weapons (gunnery, PD fire control +10 % PD rate, hangar crews +15 % turnaround, sensor suites +10 % range), crew (damage control, medicine, crew academy −20 % training, crew welfare −20 % wages) and salvage (salvage contacts, bounty licences +10 %). A node's first level needs its parent, each later level the one before: teal bought, gold buyable now, dim locked; hover for what it does. Upgrades bought before the tree branched are kept |

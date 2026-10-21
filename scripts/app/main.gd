@@ -2416,6 +2416,11 @@ func _drive_contact(c: Contact, player: ShipState, prey_list: Array[ShipState], 
 		world.set_input(c.id, ShipControlInput.neutral())
 	elif link != null and link.attacker_id != c.id and GunneryAI.can_break_contact(s):
 		world.set_input(c.id, GunneryAI.break_contact(s, player))
+	elif link != null and link.attacker_id == c.id and link.target_id == PLAYER_ID:
+		# Its own gangway on us: hold station while its party is across —
+		# with every hand in the party it no longer "wants" to board, and
+		# flying off would tear the gangway (play-test batch 11).
+		_enemy_board(c, s, player)
 	elif engaging and may_board and not someone_else_boarding and get_profile().missions_completed + 1 >= ENEMY_BOARD_FROM_MISSION \
 			and GunneryAI.wants_to_board(s, player):
 		_enemy_board(c, s, player)

@@ -145,7 +145,7 @@ static func default_for(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats) -> 
 		[Role.WEAPONS, want[Role.WEAPONS], [&"magazine", &"command"]],
 		[Role.DAMAGE_CONTROL, want[Role.DAMAGE_CONTROL], [&"workshop", &"access"]],
 		[Role.MEDICAL, want[Role.MEDICAL], [&"life_support", &"quarters"]],
-		[Role.SECURITY, want[Role.SECURITY], [&"quarters", &"access"]],
+		[Role.SECURITY, want[Role.SECURITY], [&"armoury", &"quarters", &"access"]],
 	]
 	var berths := stats.crew_capacity
 	_index = _rooms_by_role(bp, grid)
@@ -183,7 +183,7 @@ static func from_plan(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, plan:
 
 ## Where each role is stationed (first room role found), as in default_for.
 const STATION_ROLES := [[&"command"], [&"engineering"], [&"workshop", &"access"], [&"magazine", &"command"],
-	[&"quarters", &"access"], [&"life_support", &"quarters"], [&"quarters", &"access", &"command"], [&"hangar", &"quarters"]]
+	[&"armoury", &"quarters", &"access"], [&"life_support", &"quarters"], [&"quarters", &"access", &"command"], [&"hangar", &"quarters"]]
 
 
 ## k-th station among the rooms of the first role in `roles` that exists

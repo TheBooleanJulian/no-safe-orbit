@@ -4,6 +4,51 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 11, part 2 — the crew manifest (2026-10-22)
+
+#### Fixed
+- **An enemy boarding us flew off mid-boarding** once every free security
+  and general hand was in its party (it no longer "wanted" to board), tearing
+  its own gangway: a contact whose gangway is on us now holds station.
+  Smaller crews (2 berths a cell) showed it in `smoke_boarding`.
+
+#### Added
+- **Resting crew**: crew without a berth rest at the station, unpaid; drag
+  them aboard (or ▲) when there is room, or rest someone by dragging their
+  badge to Resting crew.
+- **Fill berths**: resting crew first, then general hands from the hall.
+- **Previous occupations** (flavour) for every crew member and candidate.
+- **Crew armoury** (security's station; +10 % boarding strength a cell, up
+  to +50 %, attacking or defending) and **cafeteria** (+2 % to everything
+  crew skill touches a cell, up to +50 %) rooms.
+
+#### Changed
+- **Crew quarters → Crew manifest**, with the hiring hall top right and
+  resting crew below it.
+- **Crew are yours, not a ship's**: they move with you to the vessel you fly
+  (buying a ship, its crew join yours).
+- **Two berths a quarters cell** (were three); the manifest follows the
+  design on the slip live.
+- **The hiring hall never runs dry**: each hire is replaced at once.
+- **Names**: 120 × 100 combinations, and none twice among your people.
+- **Life support is shown as the Medbay**.
+
+#### Save format
+- **Schema 14**: `resting`; crew `occupation`. Older saves: other vessels'
+  crews go ashore to rest, the active vessel keeps what its berths hold
+  (original kept as `.v13`).
+
+#### Tests changed (and why)
+- New `test_batch11_crew` (5): 2 berths a cell and excess ashore; the hall
+  refilled after each hire and a destroyer filled with 144 different names;
+  resting and boarding, crew moving to a bought destroyer and back; a
+  12-cell cafeteria ×1.24 (gun 120 → 149 rpm) and armoury ×1.50 with security
+  posted there; v13 → v14.
+- `test_boarding` (3 general hands, were 11), `test_progression` (respawn
+  fee for 16 berths), `test_m15_scaling` (the destroyer's specialists exactly
+  3 × the frigate's): the berths went from 3 to 2 a cell.
+- `smoke_shipyard`: the manifest's layout.
+
 ### Play-test batch 11, part 1 — combat rules, craft, lasers, flares, battle stations (2026-10-22)
 
 #### Changed

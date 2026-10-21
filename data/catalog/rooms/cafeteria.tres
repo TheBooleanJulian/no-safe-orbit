@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="RoomDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/room_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"cafeteria"
+display_name = "Cafeteria"
+role = &"cafeteria"
+mass_per_cell_kg = 900.0
+power_kw_per_cell = -8.0
+heat_kw_per_cell = 6.0
+crew_capacity_per_cell = 0
+rounds_per_cell = 0
+cargo_m3_per_cell = 0.0
+color = Color(0.95, 0.6, 0.3, 1)
