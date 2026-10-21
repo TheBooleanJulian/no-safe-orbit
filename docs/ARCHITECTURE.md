@@ -265,6 +265,16 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Crew (play-test batch 9, part 4)**: `CrewRoster.Role.PILOT` (appended:
+  saved role numbers keep their meaning), `needs_pilot(def)` (a craft rack
+  not named "drone"), `complement(..., fighters)`, `specialist_roles()`,
+  `MAX_SKILL` 3, `level_for(sorties)`, `title(role, skill)`. `AirWing`:
+  `launch_block_reason` / `_free_pilot`, `Craft.pilot_id` (the member off
+  the ship, busy, while out), `_pilot_home` (back at their station, or
+  DEAD with a lost craft). `ShipSystems.crew_skill(role)` → gunnery and
+  `reactor_output` factors. `PlayerProfile.dock`: sorties, levels, `wages`;
+  `train(i)`; schema 12 `post_pilots`. Shipyard crew board: `CrewDepartment`
+  (drop target), `CrewBadge` (drag source), `CrewPortrait` (placeholder).
 - **Builder (play-test batch 9, part 2)**: `ShipGrid.FIN_ROTATION` (4) /
   `is_fin` / `fin_cells` — a long radiator's span collapses to its root
   cell and the validator checks the cells out from its face

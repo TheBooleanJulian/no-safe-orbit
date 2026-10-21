@@ -879,7 +879,7 @@ func _refresh_stats() -> void:
 ## "CMD 2 · ENG 2 · …" (the specialists; the rest are general hands).
 static func _complement_text(want: Array[int]) -> String:
 	var parts := PackedStringArray()
-	for r in CrewRoster.Role.GENERAL:
+	for r in CrewRoster.specialist_roles():
 		parts.append("%s %d" % [CrewRoster.ROLE_SHORT[r], want[r]])
 	return " ".join(parts)
 
@@ -1626,57 +1626,69 @@ func _refresh_station_tabs() -> void:
 		for c in tab.get_children():
 			c.queue_free()
 	var berths := profile.berths(catalog)
-	_crew_tab.add_child(_station_label("[b]%s[/b] · %d / %d berths · posts change here for free; in flight Tab › CREW sends someone to a new post" % [
-		v.name, v.crew.size(), berths]))
+	_crew_tab.add_child(_station_label("[b]%s[/b] · %d / %d berths · wages %d cr a sortie · drag a crew member onto a department to post them there (free here; in flight Tab › CREW)" % [
+		v.name, v.crew.size(), berths, profile.wages()]))
 	# Grouped by post, with this design's standard complement beside each.
 	var by_role := {}
 	for i in v.crew.size():
 		(by_role.get_or_add(clampi(int(v.crew[i].role), 0, CrewRoster.ROLE_NAMES.size() - 1), []) as Array).append(i)
 	var vgrid := ShipGrid.build(v.blueprint, catalog)
 	var want := CrewRoster.complement_for(v.blueprint, vgrid, ShipStats.compute(v.blueprint, vgrid))
-	# The roster board (play-test batch 6): a card per department — who
-	# serves there, against the standard complement (amber when short).
+	# The roster board (play-test batch 9): every department, each a drop
+	# target, its crew as badges with portraits — drag to repost, ▲ to
+	# train, ✕ to dismiss.
 	var board := HFlowContainer.new()
+	board.name = "CrewBoard"
 	board.add_theme_constant_override("h_separation", CyberTheme.SPACE_M)
 	board.add_theme_constant_override("v_separation", CyberTheme.SPACE_M)
 	_crew_tab.add_child(board)
 	for r in CrewRoster.ROLE_NAMES.size():
 		var members: Array = by_role.get(r, [])
-		if members.is_empty() and want[r] == 0:
-			continue
 		var short := members.size() < want[r]
-		var dept := ShipyardSections.card(board, "%s   %d%s" % [str(CrewRoster.ROLE_NAMES[r]).to_upper(), members.size(), " / %d" % want[r] if want[r] > 0 else ""],
-			CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r], Vector2(CREW_CARD_WIDTH, 0))
+		var dept := CrewDepartment.new()
+		dept.name = "Dept" + str(CrewRoster.ROLE_SHORT[r])
+		dept.role = r
+		dept.custom_minimum_size = Vector2(CREW_CARD_WIDTH, 120)
+		dept.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r], CyberTheme.SPACE_S, 0.6))
+		dept.crew_dropped.connect(func(index: int, role: int) -> void:
+			profile.set_crew_role(index, role)
+			_save_profile()
+			_refresh_station_tabs())
+		board.add_child(dept)
+		var box := VBoxContainer.new()
+		box.mouse_filter = Control.MOUSE_FILTER_PASS
+		box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+		dept.add_child(box)
+		var head := Label.new()
+		head.text = "%s   %d%s" % [str(CrewRoster.ROLE_NAMES[r]).to_upper(), members.size(), " / %d" % want[r] if want[r] > 0 else ""]
+		head.add_theme_color_override("font_color", CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r])
+		head.add_theme_font_size_override("font_size", CyberTheme.SIZE_TITLE)
+		head.mouse_filter = Control.MOUSE_FILTER_PASS
+		box.add_child(head)
 		if members.is_empty():
-			dept.add_child(_station_label("[color=#%s]no one posted — short of the standard complement[/color]" % CyberTheme.AMBER.to_html(false)))
+			var hint := Label.new()
+			hint.text = "drop crew here" + (" — short of the standard complement" if short else "")
+			hint.add_theme_color_override("font_color", CyberTheme.AMBER if short else CyberTheme.TEXT_FAINT)
+			hint.mouse_filter = Control.MOUSE_FILTER_PASS
+			box.add_child(hint)
+		var badges := HFlowContainer.new()
+		badges.mouse_filter = Control.MOUSE_FILTER_PASS
+		badges.add_theme_constant_override("h_separation", CyberTheme.SPACE_XS)
+		badges.add_theme_constant_override("v_separation", CyberTheme.SPACE_XS)
+		box.add_child(badges)
 		for i: int in members:
 			var c: Dictionary = v.crew[i]
-			var row := HBoxContainer.new()
-			var who := Label.new()
-			who.text = "%s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
-			who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			who.clip_text = true
-			row.add_child(who)
-			var role := OptionButton.new()
-			for n in CrewRoster.ROLE_NAMES:
-				role.add_item(n)
-			role.select(int(c.role))
-			role.tooltip_text = "Post %s elsewhere" % c.name
-			role.item_selected.connect(func(post: int) -> void:
-				profile.set_crew_role(i, post)
-				_save_profile())
-			row.add_child(role)
-			var out := Button.new()
-			out.text = "✕"
-			out.tooltip_text = "Dismiss %s" % c.name
-			CyberTheme.style_button(out, CyberTheme.RED)
-			out.pressed.connect(func() -> void:
-				profile.dismiss(i)
+			var skill := int(c.get("skill", 0))
+			var cost: int = PlayerProfile.TRAINING_COSTS[mini(skill + 1, CrewRoster.MAX_SKILL)]
+			var badge := CrewBadge.new()
+			badge.setup(i, c, cost, profile.credits >= cost)
+			badge.train_pressed.connect(func(index: int) -> void: _station_result(profile.train(index)))
+			badge.dismiss_pressed.connect(func(index: int) -> void:
+				profile.dismiss(index)
 				_save_profile()
 				_refresh_hangar())
-			row.add_child(out)
-			dept.add_child(row)
-	_crew_tab.add_child(_station_label("[b]HIRING HALL[/b] · credits %d · %d / %d berths filled · ★ = skill (faster repairs and treatment)" % [
+			badges.add_child(badge)
+	_crew_tab.add_child(_station_label("[b]HIRING HALL[/b] · credits %d · %d / %d berths filled · ★ = level (sorties or training: faster at their post)" % [
 		profile.credits, v.crew.size(), berths]))
 	var hall := HFlowContainer.new()
 	hall.add_theme_constant_override("h_separation", CyberTheme.SPACE_S)
@@ -1686,8 +1698,18 @@ func _refresh_station_tabs() -> void:
 		var c: Dictionary = profile.hire_pool[i]
 		var role_index := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
 		var who := ShipyardSections.card(hall, "", CrewRoster.ROLE_COLORS[role_index], Vector2(250, 0))
-		who.add_child(_station_label("[b]%s[/b]\n[color=#%s]%s[/color] %s" % [c.name, (CrewRoster.ROLE_COLORS[role_index] as Color).to_html(false),
-			CrewRoster.ROLE_NAMES[role_index], "★".repeat(int(c.skill))]))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+		who.add_child(row)
+		var face := CrewPortrait.new()
+		face.person = str(c.name)
+		face.role = role_index
+		face.custom_minimum_size = Vector2(52, 52)
+		row.add_child(face)
+		var text := _station_label("[b]%s[/b]\n[color=#%s]%s[/color] %s" % [c.name, (CrewRoster.ROLE_COLORS[role_index] as Color).to_html(false),
+			CrewRoster.ROLE_NAMES[role_index], "★".repeat(int(c.skill))])
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(text)
 		var hire := Button.new()
 		hire.text = "Hire · %d cr" % int(c.fee)
 		hire.disabled = not (v.crew.size() < berths and profile.credits >= int(c.fee))
@@ -1744,7 +1766,7 @@ func _refresh_station_tabs() -> void:
 				"Upgrade (%d cr)" % cost if cost > 0 else "Max", func() -> void: _station_result(profile.buy_tech(id)), cost > 0 and profile.credits >= cost))
 
 
-const CREW_CARD_WIDTH := 400.0
+const CREW_CARD_WIDTH := 560.0
 
 
 func _station_label(text: String) -> RichTextLabel:

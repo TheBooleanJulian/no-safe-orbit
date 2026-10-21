@@ -24,7 +24,8 @@ var sorties: int = 0
 var salvaged: int = 0
 ## Service record, newest last.
 var history: PackedStringArray = PackedStringArray()
-## Hired crew, one per berth: [{name, role (CrewRoster.Role), skill}].
+## Hired crew, one per berth: [{name, role (CrewRoster.Role), skill,
+## sorties served}].
 ## Empty = the standard (unnamed) complement — older saves until named.
 var crew: Array = []
 ## The vessel's automation (ShipPolicy.to_dict()); set in Tab › POLICY.
@@ -254,7 +255,8 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipInstance:
 	v.salvaged = int(d.get("salvaged", 0))
 	for entry in d.get("crew", []):
 		if entry is Dictionary:
-			v.crew.append({"name": str(entry.get("name", "")), "role": int(entry.get("role", 6)), "skill": int(entry.get("skill", 0))})
+			v.crew.append({"name": str(entry.get("name", "")), "role": int(entry.get("role", 6)), "skill": int(entry.get("skill", 0)),
+				"sorties": int(entry.get("sorties", 0))})
 	for line in d.get("history", []):
 		v.history.append(str(line))
 	# Before schema 6 there was none: the Defensive preset (point defence on,

@@ -78,7 +78,13 @@ const ROLE_STATIONS := {
 	CrewRoster.Role.ENGINEERING: [&"engineering"],
 	CrewRoster.Role.DAMAGE_CONTROL: [&"workshop", &"access"],
 	CrewRoster.Role.WEAPONS: [&"magazine", &"command"],
+	CrewRoster.Role.PILOT: [&"hangar", &"quarters"],
 }
+## Experience at the post (play-test batch 9): each level of the gunners'
+## average skill fires this much faster; of the engineers', the reactors
+## give this much more.
+const GUNNER_SKILL_STEP := 0.03
+const ENGINEER_SKILL_STEP := 0.02
 ## Crew reach external systems on EVA from rooms this close (cells).
 const EVA_REACH_CELLS := 2
 ## A medic treats one wounded crew member in this long (s), with a working
@@ -767,12 +773,13 @@ func cut_bus(cell: Vector3i) -> bool:
 
 
 func reactor_output() -> float:
+	var crew_factor := 1.0 + ENGINEER_SKILL_STEP * _engineer_skill
 	match reactor_state:
 		Reactor.THROTTLED:
-			return THROTTLE_OUTPUT * tech_factor("reactor") * stats.reactor_room_factor
+			return THROTTLE_OUTPUT * tech_factor("reactor") * stats.reactor_room_factor * crew_factor
 		Reactor.SCRAM:
 			return 0.0
-	return tech_factor("reactor") * stats.reactor_room_factor
+	return tech_factor("reactor") * stats.reactor_room_factor * crew_factor
 
 
 ## Multiplier from an Earth Shipyard upgrade (1 without it).
@@ -808,7 +815,26 @@ func use_crew_plan(plan: Array) -> void:
 	if plan.is_empty():
 		return
 	crew = CrewRoster.from_plan(blueprint, grid, stats, plan)
+	_gunner_skill = crew_skill(CrewRoster.Role.WEAPONS)
+	_engineer_skill = crew_skill(CrewRoster.Role.ENGINEERING)
 	_config = null
+
+
+## The average skill of the crew at a post (0 with nobody there).
+func crew_skill(role: int) -> float:
+	if crew == null:
+		return 0.0
+	var n := 0
+	var total := 0
+	for m in crew.members:
+		if m.role == role:
+			n += 1
+			total += m.skill
+	return float(total) / n if n > 0 else 0.0
+
+
+var _gunner_skill := 0.0
+var _engineer_skill := 0.0
 
 
 ## FTL-style: send crew member `id` to take on `role` at its station (they
@@ -1312,8 +1338,9 @@ func effective_config() -> ShipConfig:
 	cfg.thrust_torque_body *= eng
 	cfg.max_torque_nm *= sys
 	cfg.assist_max_rate_rad_s *= sys
-	if cfg.cannon != null and channel_factor(Channel.WEP) * tech_factor("gunnery") != 1.0:
-		cfg.scale_rate_of_fire(channel_factor(Channel.WEP) * tech_factor("gunnery"))
+	var gunnery := channel_factor(Channel.WEP) * tech_factor("gunnery") * (1.0 + GUNNER_SKILL_STEP * _gunner_skill)
+	if cfg.cannon != null and gunnery != 1.0:
+		cfg.scale_rate_of_fire(gunnery)
 	if not has_command():
 		# Ship AI in control: limited mobility.
 		cfg.assist_max_rate_rad_s *= SHIP_AI_FACTOR

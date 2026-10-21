@@ -11,20 +11,61 @@ extends RefCounted
 ## at a workshop (else a corridor), 1 medical, 4 security in quarters, the
 ## rest general crew in quarters.
 
-enum Role { COMMAND, ENGINEERING, DAMAGE_CONTROL, WEAPONS, SECURITY, MEDICAL, GENERAL }
+## PILOT (play-test batch 9): one flies each fighter (drones fly themselves).
+enum Role { COMMAND, ENGINEERING, DAMAGE_CONTROL, WEAPONS, SECURITY, MEDICAL, GENERAL, PILOT }
 enum State { FIT, WOUNDED, DEAD }
 
-const ROLE_NAMES := ["command", "engineering", "damage control", "weapons", "security", "medical", "general"]
+const ROLE_NAMES := ["command", "engineering", "damage control", "weapons", "security", "medical", "general", "pilot"]
 ## Close-quarters fighting strength by role: security are trained and armed.
-const COMBAT_STRENGTH := [0.4, 0.4, 0.5, 0.4, 1.0, 0.2, 0.4]
+const COMBAT_STRENGTH := [0.4, 0.4, 0.5, 0.4, 1.0, 0.2, 0.4, 0.5]
 ## Abstract time to move through one room (s).
 const ROOM_TRANSIT_S := 5.0
 ## Map dot colour per role (functional, like rarity colours): command gold,
 ## engineering orange, damage control violet, weapons red, security teal,
-## medical green, general grey.
+## medical green, general grey, pilots sky blue.
 const ROLE_COLORS := [Color("f5c842"), Color("ff9a3c"), Color("b98cff"), Color("ff5a5a"), Color("00d4c8"),
-	Color("6fe08a"), Color("aab4bc")]
-const ROLE_SHORT := ["CMD", "ENG", "DC", "WPN", "SEC", "MED", "GEN"]
+	Color("6fe08a"), Color("aab4bc"), Color("7fb8ff")]
+const ROLE_SHORT := ["CMD", "ENG", "DC", "WPN", "SEC", "MED", "GEN", "PLT"]
+## Experience (play-test batch 9): a crew member's skill (0–MAX_SKILL) is
+## what they were hired with, raised by sorties served (LEVEL_SORTIES) or
+## by training at the station. Each level works faster at their post
+## (repairs, treatment; gunners fire faster, engineers get more from the
+## reactors); the top level is a specialist, with a title per post.
+const MAX_SKILL := 3
+const LEVEL_SORTIES := [0, 3, 8, 15]
+const LEVEL_NAMES := ["Rookie", "Able", "Veteran", "Specialist"]
+const SPECIALIST_TITLES := ["Tactician", "Reactor chief", "Rigger", "Gunnery chief", "Marine", "Surgeon", "Bosun", "Ace"]
+
+
+## Every post but general crew, in Role order.
+static func specialist_roles() -> Array[int]:
+	var out: Array[int] = []
+	for r in Role.size():
+		if r != Role.GENERAL:
+			out.append(r)
+	return out
+
+
+## The skill `sorties` of experience gives (0–MAX_SKILL).
+static func level_for(sorties: int) -> int:
+	var level := 0
+	for k in LEVEL_SORTIES.size():
+		if sorties >= LEVEL_SORTIES[k]:
+			level = k
+	return level
+
+
+## "Veteran" — or a specialist's title for their post.
+static func title(role: int, skill: int) -> String:
+	if skill >= MAX_SKILL:
+		return SPECIALIST_TITLES[clampi(role, 0, SPECIALIST_TITLES.size() - 1)]
+	return LEVEL_NAMES[clampi(skill, 0, MAX_SKILL)]
+
+
+## A fighter, bomber or interceptor rack: its craft needs a pilot aboard.
+## Drones (racks named so) fly themselves.
+static func needs_pilot(def: EquipmentDefinition) -> bool:
+	return def != null and def.kind == EquipmentDefinition.Kind.CRAFT_MOUNT and def.craft != null and not String(def.id).contains("drone")
 
 
 ## The standard complement per role (indexed by Role; GENERAL 0 — the
@@ -32,24 +73,28 @@ const ROLE_SHORT := ["CMD", "ENG", "DC", "WPN", "SEC", "MED", "GEN"]
 ## per 200 modules beyond the first two; an engineer per reactor and per
 ## four main engines (two at least); a gun crew per two guns and per two
 ## launchers (at least the old two for an armed ship); damage control per 40
-## modules; a medic per 40 berths; security per 12 berths (four at least).
-## A frigate's is unchanged: 2 / 2 / 2 / 1 / 4 / 1.
-static func complement(guns: int, launchers: int, engines: int, reactors: int, modules: int, berths: int) -> Array[int]:
+## modules; a medic per 40 berths; security per 12 berths (four at least);
+## a pilot per fighter (play-test batch 9). A frigate's: 2 / 2 / 2 / 1 / 4 /
+## 1, and a pilot for its fighter.
+static func complement(guns: int, launchers: int, engines: int, reactors: int, modules: int, berths: int, fighters: int = 0) -> Array[int]:
 	var weapons := maxi(mini(guns, 2), ceili(guns / 2.0) + ceili(launchers / 2.0))
 	return [2 + floori(modules / 200.0), maxi(2, reactors + ceili(engines / 4.0)), maxi(2, ceili(modules / 40.0)),
-		weapons, maxi(4, ceili(berths / 12.0)), maxi(1, ceili(berths / 40.0)), 0]
+		weapons, maxi(4, ceili(berths / 12.0)), maxi(1, ceili(berths / 40.0)), 0, fighters]
 
 
 ## complement() for a design.
 static func complement_for(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats) -> Array[int]:
 	var n := {}
+	var fighters := 0
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
 		if def != null:
 			n[def.kind] = int(n.get(def.kind, 0)) + 1
+			if needs_pilot(def):
+				fighters += 1
 	var K := EquipmentDefinition.Kind
 	return complement(n.get(K.CANNON, 0), n.get(K.MISSILE_LAUNCHER, 0), n.get(K.MAIN_ENGINE, 0), n.get(K.REACTOR, 0),
-		bp.modules.size(), stats.crew_capacity)
+		bp.modules.size(), stats.crew_capacity, fighters)
 
 
 ## "● command ● engineering …" in BBCode, for map legends.
@@ -96,6 +141,7 @@ static func default_for(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats) -> 
 	var plan := [
 		[Role.COMMAND, want[Role.COMMAND], [&"command"]],
 		[Role.ENGINEERING, want[Role.ENGINEERING], [&"engineering"]],
+		[Role.PILOT, want[Role.PILOT], [&"hangar", &"quarters"]],
 		[Role.WEAPONS, want[Role.WEAPONS], [&"magazine", &"command"]],
 		[Role.DAMAGE_CONTROL, want[Role.DAMAGE_CONTROL], [&"workshop", &"access"]],
 		[Role.MEDICAL, want[Role.MEDICAL], [&"life_support", &"quarters"]],
@@ -130,14 +176,14 @@ static func from_plan(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, plan:
 		roster._add(role, _station(bp, grid, STATION_ROLES[role], k))
 		var m := roster.members[-1]
 		m.name = str(entry.get("name", ""))
-		m.skill = clampi(int(entry.get("skill", 0)), 0, 2)
+		m.skill = clampi(int(entry.get("skill", 0)), 0, MAX_SKILL)
 	_index = {}
 	return roster
 
 
 ## Where each role is stationed (first room role found), as in default_for.
 const STATION_ROLES := [[&"command"], [&"engineering"], [&"workshop", &"access"], [&"magazine", &"command"],
-	[&"quarters", &"access"], [&"life_support", &"quarters"], [&"quarters", &"access", &"command"]]
+	[&"quarters", &"access"], [&"life_support", &"quarters"], [&"quarters", &"access", &"command"], [&"hangar", &"quarters"]]
 
 
 ## k-th station among the rooms of the first role in `roles` that exists
