@@ -291,9 +291,12 @@ func _dealer_and_services(yard: Shipyard) -> void:
 	yard.show_section("MISSIONS")
 	await _frames(2)
 	var offer: Dictionary = p.board[0]
+	var size_before := p.encounter_size
 	(yard.sections.accept_buttons[str(offer.id)] as Button).pressed.emit()
 	await _frames(2)
-	_check(p.active_contract.get("id", "") == offer.id and p.launch_point() == offer.location and p.encounter_size == int(offer.ships),
+	# A cargo contract (play-test batch 9) keeps the chosen fight size and loads its freight.
+	var sized := p.vessel.cargo.has("freight") and p.encounter_size == size_before if offer.kind == "cargo" else p.encounter_size == int(offer.ships)
+	_check(p.active_contract.get("id", "") == offer.id and p.launch_point() == offer.location and sized,
 		"MISSIONS: accepting %s sets the next sortie's course (%s → %s, %d ships)" % [offer.title, p.location, p.launch_point(), p.encounter_size])
 	yard.sections.abandon_button.pressed.emit()
 	await _frames(2)

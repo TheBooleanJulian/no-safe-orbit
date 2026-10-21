@@ -372,7 +372,7 @@ func _spawn_derelicts(player: ShipState) -> void:
 ## sortie (&"" if none).
 func derelict_in_reach(player: ShipState) -> StringName:
 	var best := &""
-	var best_d := Salvage.BEACON_RANGE_M
+	var best_d := beacon_reach_m()
 	for id: StringName in _field:
 		if _field_salvaged.has(id) or not world.has_ship(id):
 			continue
@@ -381,6 +381,11 @@ func derelict_in_reach(player: ShipState) -> StringName:
 			best_d = d
 			best = id
 	return best
+
+
+## How far off G drops a beacon: further with a salvage drone on the wing.
+func beacon_reach_m() -> float:
+	return player_wing.beacon_reach_m() if player_wing != null else Salvage.BEACON_RANGE_M
 
 
 ## G by a derelict: the tug takes what is left worth taking — the scrap
@@ -1042,7 +1047,7 @@ func _on_salvage_pressed() -> void:
 	if hud.loot.visible:
 		hud.loot.close()
 		return
-	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), target_ship())
+	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), target_ship(), beacon_reach_m())
 	if why != "":
 		# Nothing to beacon in the fight: an old derelict close by, then.
 		var old := derelict_in_reach(world.get_ship(PLAYER_ID))
@@ -1074,8 +1079,10 @@ func drop_beacon() -> Array:
 			p.stow(d)
 	p.credits += scrap + bounty
 	_salvaged = true
-	var summary := "Salvage beacon on %s (%d%% intact): %d cr scrap (%d%%) + %d cr bounty; %d crates into the hold" % [
-		target.display_name, roundi(intact * 100.0), scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), bounty, crates.size()]
+	var off_m := target.position.distance_to(world.get_ship(PLAYER_ID).position)
+	var carried := " (a salvage drone carried it %.1f km)" % (off_m / 1000.0) if off_m > Salvage.BEACON_RANGE_M else ""
+	var summary := "Salvage beacon on %s%s (%d%% intact): %d cr scrap (%d%%) + %d cr bounty; %d crates into the hold" % [
+		target.display_name, carried, roundi(intact * 100.0), scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), bounty, crates.size()]
 	_record_payout(target, summary, crates, "in the hold")
 	hud.loot.show_rewards("SALVAGE BEACON — %s" % target.display_name, PackedStringArray([
 		"Wreck %d%% intact · the station's tug brings it in" % roundi(intact * 100.0),
@@ -2066,14 +2073,6 @@ func _process(delta: float) -> void:
 		_show_burst(burst, player)
 	beam_view.add(world.take_beams())
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
-	# Salvage drones' loads: into the hold (at risk until banked), like a beacon's crates.
-	if player_wing.delivered_parts > 0:
-		var parts := player_wing.delivered_parts
-		player_wing.delivered_parts = 0
-		var vessel := get_profile().vessel
-		vessel.cargo["spare_parts"] = int(vessel.cargo.get("spare_parts", 0)) + parts
-		hud.notice("Salvage drones: +%d spare parts into the hold" % parts, world.sim_time)
-		combat_log.record(world.sim_time, "salvage", "Salvage drones brought %d spare parts aboard" % parts)
 	var log_wings: Array[AirWing] = [player_wing]
 	for c in encounter.contacts:
 		log_wings.append(c.wing)

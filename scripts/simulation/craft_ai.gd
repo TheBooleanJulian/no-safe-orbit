@@ -86,7 +86,7 @@ const ROLE_HELP := {
 	&"recon": "Recon drone: never fires; holds 1.5 km from the target and watches",
 	&"ew": "EW drone: never fires; holds 1.2 km out towards the threat so its jamming covers your ship",
 	&"repair": "Repair drone: patches damaged systems outside your hulls (guns, radiators, engines, sensors) to 75 %, your ship's first; no work → escorts",
-	&"salvage": "Salvage drone: strips disabled hostiles and derelicts, a system every 4 s, into spare parts; brings 30 home at a time; no work → escorts",
+	&"salvage": "Salvage drone: carries the salvage beacon — G drops one on a wreck up to 8 km off (2 km without); otherwise escorts",
 }
 const DIRECTIVE_HELP := [
 	"Intercept: engage the nearest hostile craft (interceptors: missiles first); none → screen the ship",
