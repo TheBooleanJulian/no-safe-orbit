@@ -629,6 +629,12 @@ func launch() -> bool:
 			_set_status(why_jump + " — or change course on the nav chart", true)
 			return false
 		GameLog.info("shipyard", "Jumped to %s at launch: %s" % [jumped.station_name, JumpDrive.dv_text(dv)])
+		# Docked there on arrival: its yard tops the tanks up again (credits
+		# allowing) — a long trip doesn't send the ship into a fight half
+		# empty (play-test batch 9).
+		var topped := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
+		if topped != "":
+			GameLog.info("shipyard", "%s on arrival: %s" % [jumped.station_name, topped])
 	# A deep-space survey's round trip is paid from what is aboard now.
 	var survey := Artifact.by_id(profile.survey_target)
 	if survey != null and survey.is_deep_space():
@@ -1210,6 +1216,10 @@ func expand_view(which: String) -> void:
 	side_view.visible = which in ["", "side"]
 	front_view.visible = which in ["", "front"]
 	preview.visible = which in ["", "3d"]
+	# Shown alone, a view takes the whole width (the front and 3D panes are
+	# fixed-width beside the side view otherwise — play-test batch 9).
+	front_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if which == "front" else Control.SIZE_FILL
+	preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL if which == "3d" else Control.SIZE_FILL
 	_refresh_views()
 
 
@@ -1491,7 +1501,7 @@ func _refresh_artifacts() -> void:
 				cost = CyberTheme.tint(cost + " — out of reach", CyberTheme.AMBER)
 		var done := profile.codex.has(a.id)
 		var status := CyberTheme.tint("✔ surveyed", CyberTheme.CYAN) if done else "%d cr" % a.survey_credits
-		var line := "%s — %s · %s%s" % [a.display_name, where, status, cost]
+		var line := "%s — %s · %s · %s%s" % [a.display_name, where, a.orbit_summary() if done else a.orbit_unknown(), status, cost]
 		if done:
 			line += "\n" + CyberTheme.tint("%s Launched %s. %s" % [a.lore, a.launched, a.uncertainty], CyberTheme.TEXT_DIM)
 		text.text = line
@@ -2006,9 +2016,8 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 					effect = "EMP: resets unhardened electronics (full strength within %.0f m), no damage" % m.effect_radius_m
 				MissileConfig.Warhead.NUCLEAR:
 					effect = "radiation, heat and EMP (full strength within %.0f m); armour facing it shields the crew" % m.effect_radius_m
-			lines.append("LAUNCHER %d × %s%s · [M] salvo (needs a lock) · a launch every %.1f s · restocked at the yard for %d cr each" % [
-				e.missile_capacity, m.display_name, ", %d per launch" % e.missile_salvo if e.missile_salvo > 1 else "",
-				ShipSystems.LAUNCHER_CYCLE_S, m.unit_credits])
+			lines.append("LAUNCHER %d × %s%s · [M] salvo (needs a lock) · restocked at the yard for %d cr each" % [
+				e.missile_capacity, m.display_name, ", %d per launch" % e.missile_salvo if e.missile_salvo > 1 else "", m.unit_credits])
 			lines.append("MISSILE %.0f m/s² · Δv %.1f km/s · turns %.0f°/s · %s · point defence can shoot it down" % [
 				m.accel_mps2, m.delta_v_mps / 1000.0, m.turn_rate_deg_s, effect])
 		EquipmentDefinition.Kind.DECOY_LAUNCHER:

@@ -4,6 +4,43 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 9, part 1 — fixes and quick wins (2026-10-21)
+
+#### Fixed
+- **Our point defence fired on the escorted courier**: it had no side, and
+  point defence takes an unaligned craft for hostile. It is on our side
+  now (craft IFF spares it too). Measured: 300 PD ticks on it in 5 s
+  before, none after.
+- **Front and 3D views** shown alone now fill the width (they kept their
+  narrow fixed widths).
+- **Jumping into a fight half empty after a long trip** (asked): LAUNCH
+  now docks you at the destination station on arrival, whose yard tops the
+  tanks up again (credits allowing) before the sortie — the trip costs
+  credits and propellant, not readiness.
+
+#### Changed
+- **The CoM orb** in the 3D views carries the centre-of-mass symbol's
+  black quarters (seen from any side).
+- **No incoming-round alert** (`RND`) in the banner.
+- **Missile racks are red, saturation pods green**; each tube shows a
+  white missile nose while its share of the load is aboard, fewer as they
+  fire. The part info no longer says "a launch every 0.4 s".
+- **Heavy RCS blocks come armoured**: 30 hp (was 10), 40 mm of shielding
+  (was 5), gunmetal, 2.6 t (was 2.0).
+- **The weapon strip shows the fuel left**: `FUEL ▮▮▮▮▮▮▮▯▯▯ 70 % · Δv 870 m/s`.
+- **Artifacts show their orbit** once surveyed (apoapsis × periapsis,
+  inclination, around what), question marks before.
+
+#### Tests changed (and why)
+- New `test_batch9_fixes` (4): PD on the courier (unaligned 300 ticks, ours
+  0); missile noses 4 / 2 / 0 full, half, empty, rack red, pod green; heavy
+  RCS 30 hp / 40 mm; artifact orbits (ISS 440 × 426 km 51.8°, Roadster
+  1.66 × 0.99 AU, Voyager 1 escaping) and the unknown form.
+- `smoke_shipyard`: the 3D and front views fill the row (700 of 700 px);
+  arrival at the Moon with full tanks (80 of 80 t); the strip shows FUEL.
+- `test_pass_a` (every alert follows its condition): a round on a
+  collision course now raises no alert (it checked the `RND` alert).
+
 ### Enemies field the newer kit (2026-10-21)
 
 #### Changed

@@ -42,6 +42,9 @@ class Model:
 	var turrets: Array[Dictionary] = []
 	## Craft shown docked on their external racks, by rack id.
 	var docked_craft: Dictionary = {}
+	## Launcher id -> its missile cones, one per tube (ShipView shows the
+	## missiles left).
+	var missile_cones: Dictionary = {}
 
 
 ## `origin_m`: grid-metre point placed at the model origin (normally the
@@ -157,11 +160,24 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				var housing := _box(part, Vector3(2.0, 1.2, 2.0), Vector3.ZERO, mat)
 				housing.transform = Transform3D(b, mount + normal * 0.6)
 				var n := clampi(def.missile_capacity, 1, 4)
+				var white := _mat(mats, Color(0.93, 0.94, 0.95))
+				var cones: Array[Node3D] = []
+				# The noses hang off a holder of their own: _merge_static
+				# folds a part's loose meshes into one, and these come and go.
+				var holder := Node3D.new()
+				holder.name = "Missiles"
+				part.add_child(holder)
 				for k in n:
 					var col := float(k % 2) - 0.5 if n > 1 else 0.0
 					var row := float(k >> 1) - 0.5 if n > 2 else 0.0
+					var at := mount + normal * 1.22 + b.x * col * 0.9 + b.z * row * 0.9
 					var tube := _cylinder(part, 0.3, 0.3, 0.08, Vector3.ZERO, dark)
-					tube.transform = Transform3D(b, mount + normal * 1.22 + b.x * col * 0.9 + b.z * row * 0.9)
+					tube.transform = Transform3D(b, at)
+					# A missile's nose in the tube: a white cone standing out of it.
+					var cone := _cylinder(holder, 0.0, 0.22, 0.5, Vector3.ZERO, white)
+					cone.transform = Transform3D(b, at + normal * 0.25)
+					cones.append(cone)
+				model.missile_cones[bp.equipment[i].id] = cones
 			EquipmentDefinition.Kind.DECOY_LAUNCHER:
 				# A squat dispenser: a block with a 3 × 3 grid of flare tubes.
 				var b := _basis_y_along(normal)

@@ -136,3 +136,12 @@ static func courier_config() -> ShipConfig:
 	cfg.cannon_muzzles_body = PackedVector3Array()
 	cfg.hull_hp = COURIER_HULL_HP
 	return cfg
+
+
+## The escort's courier as a ship on our side: with no side, our point
+## defence took it for hostile craft (play-test batch 9: "automatic weapons
+## fire upon friendly escorts"); our craft's IFF spares it too.
+static func courier_ship(id: StringName, position: Vector3, velocity: Vector3, orientation: Quaternion) -> ShipState:
+	var c := ShipState.create(id, "COURIER", courier_config(), position, velocity, orientation)
+	c.side = &"player"
+	return c

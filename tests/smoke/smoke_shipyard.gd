@@ -120,7 +120,12 @@ func _run() -> void:
 	yard.set_tool(Shipyard.Tool.SELECT)
 	yard.expand_view("3d")
 	await _frames(2)
-	_check(not yard.deck_editor.visible and yard.preview.visible and not yard.side_view.visible, "the 3D preview expands")
+	var row_w := (yard.preview.get_parent() as Control).size.x
+	_check(not yard.deck_editor.visible and yard.preview.visible and not yard.side_view.visible and yard.preview.size.x > 0.9 * row_w,
+		"the 3D preview expands, to the full width (%.0f of %.0f px)" % [yard.preview.size.x, row_w])
+	yard.expand_view("front")
+	await _frames(2)
+	_check(yard.front_view.visible and yard.front_view.size.x > 0.9 * row_w, "so does the front view (%.0f of %.0f px)" % [yard.front_view.size.x, row_w])
 	yard.expand_view("")
 	await _frames(2)
 	_check(yard.deck_editor.visible and yard.side_view.visible, "restore brings the deck editor back")
@@ -220,6 +225,9 @@ func _run() -> void:
 		var speed := main.world.pci_velocity(player.velocity).length()
 		_check(main.world.body.display_name == "Moon" and absf(alt - 100_000.0) < 500.0 and absf(speed - 1633.0) < 5.0,
 			"launched into lunar orbit: %s, %.1f km, %.0f m/s" % [main.world.body.display_name, alt / 1000.0, speed])
+		_check(player.propellant_kg >= player.config.propellant_capacity_kg - 1.0,
+			"topped up at the Lunar Shipyard on arrival: %.1f of %.1f t" % [player.propellant_kg / 1000.0, player.config.propellant_capacity_kg / 1000.0])
+		_check(main.hud.weapon_label.text.contains("FUEL") and main.hud.weapon_label.text.contains("Δv"), "the weapon strip shows the fuel left")
 		var earth_km: float = main.sky.sky_body_center.length() / 1000.0 if main.sky.sky_body != null else 0.0
 		_check(main.sky.sky_body != null and main.sky.sky_body.display_name == "Earth" and earth_km > 356_000.0 and earth_km < 407_000.0,
 			"Earth hangs in the lunar sky (%.0f km)" % earth_km)

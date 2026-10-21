@@ -401,8 +401,8 @@ collide.
 **Rounds never expire.** Misses coast on their own orbits — around the planet
 and, half an orbit later, possibly back through you. Far from the fight they
 are propagated exactly (two-body Kepler) and come back into the simulation
-when their orbit returns; the HUD counts rounds near and in far orbit and
-warns of any round on a collision course. Firing pushes your ship back
+when their orbit returns; the HUD counts rounds near and in far orbit.
+Firing pushes your ship back
 (recoil, including the spin from off-centre mounts), and every hit shoves and
 spins the ship it strikes. A round that punches through keeps going, slower.
 
@@ -590,7 +590,7 @@ Kept compact so the fight stays in view:
 - **On demand:** O orbit details, P details & combat log (local velocity
   axes, Δv spent, rounds up, last hit reports), H the full controls card.
 - **Alerts** (the banner, top centre): at most three, most urgent first.
-  Each is a few words, e.g. `◆ MSL 2.4km 002`, `◆ RND 0.4s 330 [R]`,
+  Each is a few words, e.g. `◆ MSL 2.4km 002`,
   `▲ FIRE r12 [Tab]` or `▲ SCRAM 1450K [Tab]`:
   - a shape (◆ danger, ▲ caution, ● advisory) and a short noun;
   - one value;
@@ -687,7 +687,9 @@ date (sources and uncertainty in `data/ATTRIBUTION.md`):
   traffic. Close to within 500 m, match its speed within 2 m/s and hold
   20 s with a working sensor mast. The target card shows each condition.
 - **The reward** is a survey fee (once per object) and its record in the
-  codex, shown on the MAP.
+  codex, shown on the MAP — with its orbit ("440 × 426 km · 51.8° incl ·
+  Earth orbit", "1.66 × 0.99 AU · 1.1° incl · solar orbit", "escaping");
+  before the survey it reads "??? × ??? km · ???° incl · Earth orbit".
 - **Deep space** flies about the Sun itself: its gravity, its light from
   the right direction, its disc shrinking to a point at 172 AU. The jump
   out and back is paid at launch and must fit in the Δv your full tanks and

@@ -164,6 +164,23 @@ static func _glow(c: Color, energy: float) -> StandardMaterial3D:
 	return mat
 
 
+const COM_SHADER := """
+shader_type spatial;
+render_mode unshaded, depth_test_disabled, cull_back;
+uniform vec4 gold : source_color = vec4(0.96, 0.78, 0.26, 0.95);
+varying vec3 view_normal;
+void vertex() {
+	view_normal = (MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+}
+void fragment() {
+	vec3 n = normalize(view_normal);
+	bool dark = n.x * n.y < 0.0;
+	ALBEDO = dark ? vec3(0.02, 0.02, 0.03) : gold.rgb;
+	ALPHA = gold.a;
+}
+"""
+
+
 ## Centre of mass as a gold sphere drawn over the hull (shipyard [C]).
 func set_show_com(on: bool) -> void:
 	_show_com = on
@@ -175,11 +192,13 @@ func _update_com() -> void:
 		var mesh := SphereMesh.new()
 		mesh.radius = 1.0
 		mesh.height = 2.0
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(CyberTheme.AMBER, 0.9)
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.no_depth_test = true
+		# The centre-of-mass symbol: gold with two black quarters, the
+		# quarters worked out in view space so it reads from any angle.
+		var shader := Shader.new()
+		shader.code = COM_SHADER
+		var mat := ShaderMaterial.new()
+		mat.shader = shader
+		mat.set_shader_parameter("gold", Color(CyberTheme.AMBER, 0.95))
 		mat.render_priority = 10
 		_com = MeshInstance3D.new()
 		_com.mesh = mesh
