@@ -81,9 +81,12 @@ data, and the tests check it against known values.
     ecliptic pole, as Cassini's laws say it should be.
   - **Rotation:** it turns once per 27.32-day sidereal month, so the same
     face always looks at Earth.
-  - **Surface and terrain:** the surface is NASA's LRO colour mosaic. With no
-    air, the "entry interface" is the terrain itself: 11 km above the mean
-    radius clears the highest summit.
+  - **Surface and terrain:** the surface is NASA's LRO colour mosaic, and
+    the ground is real: NASA's **LOLA** elevation map (8 pixels a degree,
+    ~3.8 km at the equator, −8.7 to +10.6 km), with a little seeded detail
+    finer than that. Below 11 km (where the highest summit tops out) the
+    ground is drawn out to the horizon, its heights growing in over the
+    first 2 km; farther off the flat map carries on.
 - **Where the Moon is:** from the Astronomical Almanac's lunar series
   (~0.3°). From the Moon, Earth sits exactly opposite. Both show the phase
   that the real Sun–Earth–Moon geometry gives at that moment.
@@ -444,11 +447,17 @@ courses: how near and in how long (and COLLISION COURSE inside 50 m).
 ≈92 min). Burn prograde (along the green ring) to raise the far side of your
 orbit, retrograde to lower it. The **entry interface is 100 km** (the Kármán
 line). If your periapsis drops below it, the HUD warns you and counts down.
-Crossing it ends the flight; Backspace restarts.
+Crossing it ends the flight in a **re-entry**: the plasma sheath builds and
+the ship breaks up (7 s), then the debrief; Backspace restarts.
 
 **Lunar orbit** (Lunar Shipyard): 100 km circular at 1.63 km/s (period
-≈118 min). The Moon has no air: the floor is the highest terrain, 11 km up
-(TERRAIN on the orbit panel); dipping below it is a crash.
+≈118 min). The Moon has no air and no line to cross: below 11 km (TERRAIN
+on the orbit panel: the band the summits reach into) you fly over the real
+ground. The own-ship card shows **GROUND**: height above it, vertical
+speed and speed over the turning surface. **Land** by touching down slower
+than 4 m/s — the ship rests there, moving with the Moon, until you thrust
+away; faster is a crash. A GROUND alert warns below 3 km when you are
+coming down too fast to land.
 
 HUD markers: white reticle = where the nose points; green ring = orbital
 prograde (where you're actually going), green ⊗ = retrograde; thin green line =

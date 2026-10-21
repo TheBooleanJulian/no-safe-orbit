@@ -383,6 +383,8 @@ static func mesh_from_flats(nodes: Array, flats: Dictionary) -> ArrayMesh:
 		norms[mat] = n
 	var mesh := ArrayMesh.new()
 	for mat: Material in verts:
+		if (verts[mat] as PackedVector3Array).is_empty():
+			continue  # every piece in it gone (a hull broken up)
 		var arrays := []
 		arrays.resize(Mesh.ARRAY_MAX)
 		arrays[Mesh.ARRAY_VERTEX] = verts[mat]

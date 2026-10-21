@@ -50,6 +50,20 @@ extends Resource
 @export var is_star: bool = false
 ## Surface colour map: equirectangular, left edge 180° W, top edge 90° N.
 @export var surface_map: Texture2D
+## A real surface to meet (play-test batch 10): an elevation map
+## (TerrainMap) — no instant loss at the entry interface; touching down
+## slower than `safe_landing_mps` lands, faster crashes. Empty: the entry
+## interface is the end, as before (Earth's atmosphere).
+@export_file var elevation_map: String = ""
+@export var safe_landing_mps: float = 4.0
+
+
+## The surface heights, or null for a body without an elevation map.
+func terrain() -> TerrainMap:
+	var map := TerrainMap.load_map(elevation_map)
+	if map != null:
+		map.radius_m = radius_m
+	return map
 
 
 func entry_radius_m() -> float:

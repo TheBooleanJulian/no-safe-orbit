@@ -600,6 +600,26 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 
 # --- Own ship ----------------------------------------------------------------------
 
+## Over real ground, the GROUND alert this low and faster than a landing (m).
+const GROUND_WARN_M := 3000.0
+
+## Over a body with a surface, below its terrain altitude: height above the
+## ground, vertical speed, speed over the ground against the safe landing
+## speed (play-test batch 10). "" otherwise.
+static func ground_text(world: WorldSimulation, player: ShipState) -> String:
+	if world.terrain == null or world.frame == null or world.altitude_of(player) > world.body.entry_interface_altitude_m * 2.0:
+		return ""
+	var safe := world.body.safe_landing_mps
+	if player.landed:
+		return "GROUND  %s LANDED · touched down at %.1f m/s · thrust up to lift off" % [CyberTheme.GLYPH_OK, player.touchdown_mps]
+	var v := world.velocity_over_ground(player)
+	var up := world.frame.pci_position(player.position).to_vector3().normalized()
+	var vs := v.dot(up)
+	var speed := v.length()
+	var glyph: String = CyberTheme.GLYPH_OK if speed <= safe else (CyberTheme.GLYPH_DEGRADED if speed <= safe * 3.0 else CyberTheme.GLYPH_CRITICAL)
+	return "GROUND  %s AGL %s · V/S %+.1f m/s · %.1f m/s over ground (land < %.0f)" % [glyph,
+		HudFormat.altitude(world.height_above_ground(player)), vs, speed, safe]
+
 func _update_own_card(world: WorldSimulation, player: ShipState, orbit: OrbitElements, input: PlayerInput,
 		has_target: bool, _alerts_shown: Array[AlertQueue.Alert]) -> void:
 	_own_heading.text = "OWN SHIP · %s" % player.config.display_name
@@ -611,6 +631,9 @@ func _update_own_card(world: WorldSimulation, player: ShipState, orbit: OrbitEle
 		"        P %+5.1f  Y %+5.1f  R %+5.1f °/s" % [rad_to_deg(w.x), rad_to_deg(w.y), rad_to_deg(w.z)],
 		"PROP    %s" % _propellant_text(player),
 	])
+	var ground := ground_text(world, player)
+	if ground != "":
+		lines.append(ground)
 	var sys := player.systems
 	if sys != null:
 		lines.append("HULL    %s" % _hull_text(sys))
@@ -832,7 +855,14 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 	if _incoming != null and world.sim_time - _incoming_time < HIT_ALERT_S:
 		var subject := _incoming.destroyed_ids[0] if not _incoming.destroyed_ids.is_empty() else (_incoming.damaged_ids[0] if not _incoming.damaged_ids.is_empty() else "")
 		out.append(AlertQueue.make(&"hit", &"damage", ADVISORY, "HIT", _incoming.headline().get_slice(" ", 0).left(10), "", "[P]", subject))
-	if orbit != null:
+	if world.terrain != null:
+		# Real ground (play-test batch 10): a warning low and coming down too fast to land.
+		var agl := world.height_above_ground(player)
+		var v := world.velocity_over_ground(player)
+		if not player.landed and agl < GROUND_WARN_M and v.length() > world.body.safe_landing_mps:
+			out.append(AlertQueue.make(&"entry", &"nav", DANGER if agl < GROUND_WARN_M * 0.3 else CAUTION, "GROUND",
+				"%.1fkm" % (agl / 1000.0), "", "[O]"))
+	elif orbit != null:
 		var t_entry := orbit.time_to_radius_descending(world.body.entry_radius_m())
 		if not is_nan(t_entry):
 			out.append(AlertQueue.make(&"entry", &"nav", CAUTION, "ENTRY" if world.body.has_atmosphere else "TERRAIN",
@@ -1435,7 +1465,11 @@ func _update_orbit_panel(world: WorldSimulation, player: ShipState, orbit: Orbit
 	var entry_alt_km := body.entry_interface_altitude_m / 1000.0
 	# Airless: the floor is the highest terrain, not an atmosphere.
 	var floor_name := "ENTRY IF" if body.has_atmosphere else "TERRAIN "
-	if is_nan(t_entry):
+	if world.terrain != null:
+		# The band the ground reaches up into — flown through, landed in.
+		lines.append("%s   peaks to %.0f km · %s" % [floor_name, entry_alt_km, "LANDED" if player.landed else
+			("IN %s" % HudFormat.duration(t_entry) if not is_nan(t_entry) else "CLEAR")])
+	elif is_nan(t_entry):
 		lines.append("%s   %.0f km · CLEAR" % [floor_name, entry_alt_km])
 	else:
 		lines.append("%s   %.0f km · IN %s" % [floor_name, entry_alt_km, HudFormat.duration(t_entry)])
