@@ -26,7 +26,7 @@ Legend: ✅ done · 🔧 in progress · ⬜ to do
 - ✅ Crew spread through the ship by role, so a damaged room has someone to start repairs.
 - ✅ C-key patching is automatic, with a notice of who is repairing what.
 
-## Part 2: crew manifest ✅
+## Part 2: crew manifest (PR #72) ✅
 
 - ✅ Rename "crew quarters" (the shipyard page) to "Crew manifest".
 - ✅ At most 2 crew per crew-quarters cell. The count adjusts live with the refit bay's design.
@@ -40,19 +40,19 @@ Legend: ✅ done · 🔧 in progress · ⬜ to do
 - ✅ New room type: cafeteria, boosting crew skills by 2 % per cell.
 - ✅ Refit bay: rename "Life support" to "Medbay".
 
-## Part 3: refit bay ⬜
+## Part 3: refit bay ✅
 
-- ⬜ Dense magazine text uses the same colour as magazine (reddish).
-- ⬜ Placed fighter cells use their text colour from the list. Use more colour variety: similar types (laser guns, laser drones, laser weapons) share a colour but have different shapes or icons.
-- ⬜ All text colours match the cell colours in the refit bay.
-- ⬜ Support 1×1 and 3×3 hull blocks, slopes and trusses.
-- ⬜ Rename "power distribution" to "power distro".
-- ⬜ Long equipment names in the palette display in full.
-- ⬜ The top-down view shows the rendered parts instead of circles and rectangles.
-- ⬜ Fix the 3×1 radiator panel's placement preview, which faces the wrong way (placing it works).
-- ⬜ Hangars have one face (wall, ceiling or floor) exposed to the outside, which opens for fighter deployment.
-- ⬜ Remove the opaque floor in the 3D view (or make the clamps taller), so the camera can look at the bottom of the ship.
-- ⬜ Colour RCS blocks white; they blend into the armour now.
+- ✅ Dense magazine text uses the same colour as magazine (reddish).
+- ✅ Placed fighter cells use their text colour from the list. Use more colour variety: similar types (laser guns, laser drones, laser weapons) share a colour but have different shapes or icons.
+- ✅ All text colours match the cell colours in the refit bay.
+- ✅ Support 1×1 and 3×3 hull blocks, slopes and trusses.
+- ✅ Rename "power distribution" to "power distro".
+- ✅ Long equipment names in the palette display in full.
+- ✅ The top-down view shows the rendered parts instead of circles and rectangles.
+- ✅ Fix the 3×1 radiator panel's placement preview, which faces the wrong way (placing it works).
+- ✅ Hangars have one face (wall, ceiling or floor) exposed to the outside, which opens for fighter deployment.
+- ✅ Remove the opaque floor in the 3D view (or make the clamps taller), so the camera can look at the bottom of the ship. The berth floor is now see-through.
+- ✅ Colour RCS blocks white; they blend into the armour now.
 
 ## Part 4: flight and shipyard ⬜
 

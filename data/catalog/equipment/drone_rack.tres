@@ -17,5 +17,5 @@ power_kw = -10.0
 heat_kw = 0.0
 heat_rejection_kw = 0.0
 thrust_n = 0.0
-color = Color(0.75, 0.6, 1.0, 1)
+color = Color(0.7, 0.6, 1.0, 1)
 craft = ExtResource("2_craft")

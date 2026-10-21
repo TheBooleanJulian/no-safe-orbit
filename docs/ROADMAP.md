@@ -518,6 +518,18 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 11 — part 3: the refit bay ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Text colours match cells; more colour variety; families share a colour, differ by shape; dense magazine red; RCS white | `test_batch11_refit`, render review | lasers 66f2ff, 5 parts 5 shapes, RCS ffffff |
+| 1×1 and 3×3 hull blocks, slopes, trusses | `test_batch11_refit` | 29 cells, joined, drawn |
+| "Power distro"; long names fit | `test_batch11_refit`, render review | palette 300 px, smaller text |
+| Top-down view shows the rendered parts | `test_batch11_refit`, render review | TOP-DOWN 3D, fore right, port up |
+| 3×1 radiator preview direction | `smoke_shipyard` | ghost 1 cell, 3 out |
+| Hangars open to the outside, doors open for deployment | `test_batch11_refit` | ventral door; walled in → error; open 2 s, shut by 12 s |
+| See the ship's underside in the berth | render review | glass deck plate |
+
 ### Play-test batch 11 — part 2: the crew manifest ✅ (2026-10-22)
 
 | Requirement | Test | Measured |

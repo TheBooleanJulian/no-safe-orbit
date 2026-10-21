@@ -68,12 +68,28 @@ static func validate(bp: ShipBlueprint, catalog: ConstructionCatalog,
 	_check_rooms(bp, grid, report)
 	_check_hatches(bp, grid, report)
 	_check_equipment(bp, grid, report)
+	_check_hangars(bp, grid, report)
 	_check_access(bp, grid, report)
 	if stats == null:
 		stats = ShipStats.compute(bp, grid)
 	_check_systems(bp, grid, stats, report)
 	_check_coolant(bp, grid, report)
 	return report
+
+
+## A craft bay inside the hull needs a way out (play-test batch 11): one of
+## its cells, or of its room's, with a wall, floor or roof on the outside
+## (not a slope) — the hangar door its craft leave and come back through.
+static func _check_hangars(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> void:
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def == null or def.is_external() or def.kind != EquipmentDefinition.Kind.CRAFT_MOUNT:
+			continue
+		if ShipGrid.door_face(bp, grid, i).is_empty():
+			var room: int = grid.room_at.get(bp.equipment[i].cell, -1)
+			_add(report, Severity.ERROR, &"hangar_enclosed",
+				"%s %s has no way out: %s needs a wall, floor or roof on the outside of the hull for its door." % [
+				def.display_name, bp.equipment[i].id, ("Room " + bp.rooms[room].id) if room >= 0 else "it"], bp.equipment[i].id)
 
 
 ## Routed coolant: radiators off a reactor's loop reject nothing.

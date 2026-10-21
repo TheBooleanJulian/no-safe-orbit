@@ -176,6 +176,23 @@ func wedge_contains(index: int, p: Vector3) -> bool:
 
 ## The two grid faces of a wedge cell that its slope replaces (its own fore
 ## face and its top — bottom when flipped). Systems cannot mount there.
+## Where internal craft bay `index` opens: [cell, face] of the first outside
+## wall, floor or roof (not a slope) among its cells and its room's — the
+## underside first; [] if it is shut in.
+static func door_face(bp: ShipBlueprint, grid: ShipGrid, index: int) -> Array:
+	var cells: Array = grid.equipment_cells(index)
+	var r: int = grid.room_at.get(bp.equipment[index].cell, -1)
+	if r >= 0:
+		for c in room_cells(bp.rooms[r]):
+			if not cells.has(c):
+				cells.append(c)
+	for face: StringName in [&"ventral", &"port", &"starboard", &"dorsal", &"aft", &"fore"]:
+		for c: Vector3i in cells:
+			if grid.is_exterior_face(c, face) and not grid.slope_faces(c).has(face):
+				return [c, face]
+	return []
+
+
 func slope_faces(cell: Vector3i) -> Array[StringName]:
 	var out: Array[StringName] = []
 	if not is_wedge_cell(cell):

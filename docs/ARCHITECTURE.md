@@ -265,6 +265,15 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Refit bay (play-test batch 11, part 3)**: `EquipmentIcons` (a shape per
+  kind; drones by `CrewRoster.needs_pilot`; a palette icon in the rarity
+  colour; `draw` on the deck). Palette text is `Shipyard.palette_color(def.color)`.
+  New hull `hull_block_1x1/3x3`, `truss_1x1/3x3`, `wedge_3x3`. Fins: the deck
+  editor's `_draw_face_marker(..., out, def)` and `ghost_out`.
+  `ShipGrid.door_face` (used by `ShipSystems.launch_door`, the model's
+  `_hangar_door` and the validator's `hangar_enclosed`); `Model.hangar_doors`
+  and `ShipView._move_hangar_doors`. `ShipPreview3D.plan` (straight down) for
+  the "plan" main view; the berth's glass deck plate.
 - **Crew manifest (play-test batch 11, part 2)**: `PlayerProfile.resting`
   (schema 14), `rest_crew` / `board_resting` / `dismiss_resting` /
   `fit_crew` / `fill_berths` / `fill_from_resting`; `_move_crew_to` carries

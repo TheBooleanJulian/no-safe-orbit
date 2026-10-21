@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="HullModuleDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/hull_module_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"hull_block_1x1"
+display_name = "Pressurised hull block 1×1"
+size_cells = Vector3i(1, 1, 1)
+structure_mass_kg = 1100.0
+interior = true
+armor_mm = 20.0
+shape = &"box"
+color = Color(0.56, 0.6, 0.66, 1)

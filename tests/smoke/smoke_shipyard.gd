@@ -105,6 +105,16 @@ func _run() -> void:
 	_check(names.size() == 4 and " ".join(names).contains("Radiator panel (3 cells) 1×3 — along")
 		and " ".join(names).contains("Radiator panel (3 cells) 3×1 — fin, 3 out") and " ".join(names).contains("Heat-pipe radiator 3×1"),
 		"search 'radiator' lists both long radiators, each both ways round: %s" % ", ".join(names))
+	# A fin's ghost stands out from the face (play-test batch 11), not along it.
+	yard.select_palette("equipment", &"radiator_long")
+	yard.place_rotation = ShipGrid.FIN_ROTATION
+	yard._hover_cell = Vector3i(2, 1, 6)
+	yard._hover_face = &"port"
+	yard._update_ghost()
+	_check(yard.deck_editor.ghost_out == 3 and yard.deck_editor.ghost_cells.size() == 1, "the fin's ghost: one cell, standing 3 out (%d)" % yard.deck_editor.ghost_out)
+	yard.place_rotation = 0
+	yard._update_ghost()
+	_check(yard.deck_editor.ghost_out == 0 and yard.deck_editor.ghost_cells.size() == 3, "laid along the hull: three cells")
 	yard.palette_search.text = ""
 	yard.palette_category.select(Shipyard.CATEGORIES.find("Weapons"))
 	yard.palette_category.item_selected.emit(yard.palette_category.selected)

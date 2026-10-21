@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="HullModuleDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/hull_module_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"truss_1x1"
+display_name = "Truss 1×1 (unpressurised)"
+size_cells = Vector3i(1, 1, 1)
+structure_mass_kg = 300.0
+interior = false
+armor_mm = 5.0
+shape = &"box"
+color = Color(0.42, 0.44, 0.48, 1)

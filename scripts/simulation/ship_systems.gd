@@ -362,18 +362,10 @@ func launch_door(e: EquipmentState) -> Array:
 	var pe := blueprint.equipment[e.index]
 	if e.def.is_external():
 		return [e.body_position, Vector3(ShipGrid.FACE_NORMALS[pe.face])]
-	var cells: Array = grid.equipment_cells(e.index)
-	var r: int = grid.room_at.get(pe.cell, -1)
-	if r >= 0:
-		for c in ShipGrid.room_cells(blueprint.rooms[r]):
-			if not cells.has(c):
-				cells.append(c)
-	var com := stats.center_of_mass_m
-	for face: StringName in [&"ventral", &"port", &"starboard", &"dorsal", &"aft", &"fore"]:
-		for c: Vector3i in cells:
-			if grid.is_exterior_face(c, face) and not grid.slope_faces(c).has(face):
-				var n := Vector3(ShipGrid.FACE_NORMALS[face])
-				return [ShipGrid.cell_center_m(c) + n * ShipGrid.CELL_SIZE_M * 0.5 - com, n]
+	var door := ShipGrid.door_face(blueprint, grid, e.index)
+	if not door.is_empty():
+		var n := Vector3(ShipGrid.FACE_NORMALS[door[1]])
+		return [ShipGrid.cell_center_m(door[0]) + n * ShipGrid.CELL_SIZE_M * 0.5 - stats.center_of_mass_m, n]
 	return [e.body_position, Vector3.DOWN]
 
 

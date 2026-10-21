@@ -16,5 +16,5 @@ power_kw = -40.0
 heat_kw = 10.0
 heat_rejection_kw = 0.0
 thrust_n = 0.0
-color = Color(0.4, 0.95, 1.0, 1)
+color = Color(0.35, 0.9, 0.65, 1)
 sensor_range_m = 25000.0
