@@ -110,6 +110,8 @@ var turret_status: PackedInt32Array = PackedInt32Array()
 var _block_checked: PackedVector3Array = PackedVector3Array()
 var turret_blocked: PackedByteArray = PackedByteArray()
 var rounds_fired: int = 0
+## Beam pulses fired (beams spend no rounds; ShipSystems turns these into heat).
+var beam_pulses: int = 0
 ## Total recoil impulse from firing (N·s), for the HUD.
 var recoil_impulse: float = 0.0
 var hits_taken: int = 0
@@ -140,8 +142,16 @@ static func create(
 		var n := p_config.cannon_muzzles_body.size()
 		var weights := {}
 		var sum := 0.0
+		# Beams take no magazine space beside other guns (they fire on
+		# power); a craft that has only a beam keeps its charges there.
+		var all_beams := true
+		for k in maxi(n, 1):
+			if not p_config.mount_cannon(k).is_beam():
+				all_beams = false
 		for k in maxi(n, 1):
 			var gun := p_config.mount_cannon(k)
+			if gun.is_beam() and not all_beams:
+				continue
 			var w := 1.0 / maxf(gun.round_mass_kg, 1e-3)
 			weights[gun.display_name] = float(weights.get(gun.display_name, 0.0)) + w
 			sum += w

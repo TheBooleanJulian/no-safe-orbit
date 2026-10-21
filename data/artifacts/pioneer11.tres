@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "pioneer11"
+display_name = "Pioneer 11"
+kind = &"probe"
+center = &"sun"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(4357808039.64463, -16899523202.1684, -2719756274.301942)
+v_km_s = PackedFloat64Array(4.037387976758719, -10.22955429947802, -1.785178797530131)
+horizons_id = "-24"
+horizons_source = "pioneer_11_merged"
+uncertainty = "Horizons pioneer_11_merged: no tracking since 1995 — the position is extrapolated, uncertain by tens of thousands of kilometres or more."
+size_m = 3.0
+mass_kg = 259.0
+survey_credits = 2000
+launched = "1973-04-06"
+lore = "Flew past Jupiter in 1974 and made the first flyby of Saturn on 1 September 1979. Its last signal reached Earth on 30 September 1995. It carries the same plaque as Pioneer 10: two people, and a map of where the Sun is."

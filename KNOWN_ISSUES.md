@@ -17,6 +17,19 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   `docs/STEAM.md` §3.
 - **No application icon yet** (the Godot default is used); see
   `docs/STEAM.md` §6.
+- **Derelicts are new** (Milestone 14): the yields, decay and how many are
+  found are first guesses; a derelict is rebuilt from its design and worn
+  to one overall figure, so it doesn't keep the exact damage it was left with.
+- **Artifacts are new** (Milestone 14): survey fees, range and time are
+  first guesses; the models are simple shapes at the real size. Depending
+  on where the Sun is at the start, you may first see an object's dark
+  side (the ISS starts in Earth's shadow at the scenario time).
+- **Lasers are new** (play-test batch 6): reach, falloff, power, heat and
+  charges are first guesses, and enemies don't carry them yet (only loot
+  and the quartermaster). Covered by `test_beams`, not yet by play.
+- **Very large fights are still heavy**: four carriers with 46 craft out run
+  at ~20 fps (slightly slower than real time), down from 7; the simulation
+  is GDScript and each round, craft and missile costs microseconds.
 - **Craft roles are new** (play-test batch 5): the interceptor, bomber,
   gun runs and avoidance distances are first guesses covered by seeded
   tests, not yet by play. Avoidance is a local nudge, so a craft can be
@@ -24,11 +37,12 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **Countermeasures are new** (Milestone 11): flare signature and burn
   time, seeker discrimination, jamming strength and the burn-through range
   are first guesses, covered by seeded tests, not yet by play.
-- **Encounters of two and three ships are hard** (Milestone 10): focus fire
-  and salvos from three ships wrecked the player's frigate within ~30 s of
-  game time in a test render at mission 7. Since 2026-10-20 the player picks
-  1, 2 or 3 ships on the shipyard map; enemy loadouts still grow with the
-  mission number. Salvo counts and intervals are first guesses.
+- **Encounter balance is still being tuned** (play-test batch 6):
+  `tools/balance_sim.gd` (a scripted player in a stock Frigate, no repairs)
+  wins 1v1 in 3–10 s, survives 1v2 to the 480 s limit at missions 3 and 7
+  (lost at 327 s at mission 5) and loses 1v3 at 188–273 s; a single gun
+  knocked out early is still what decides most fights. Enemy armour grows
+  with the mission number; salvo counts and intervals are first guesses.
 - **Surface maps are 4–5 km per texel** (Moon and Mars 4096 px, Earth
   5400 px): from low orbit the ground looks soft, and crater rims blocky.
   Bigger maps would cost ~180 MB of video memory each, uncompressed.

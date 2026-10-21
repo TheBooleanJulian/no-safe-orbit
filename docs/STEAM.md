@@ -141,6 +141,9 @@ build are reviewed by Valve, a few working days each).
 >   nuclear warheads; decoys and electronic warfare to answer them.
 > - **Fighters, interceptors, bombers and drones** that fly the same
 >   physics, with orders you give.
+> - **Real spacecraft to find.** Survey the ISS, Hubble, the Mars orbiters,
+>   the Tesla Roadster, New Horizons, and the Voyagers and Pioneers where
+>   NASA/JPL says they are — 172 AU out for Voyager 1.
 > - **Salvage and refit.** Disable, board and strip enemies; keep your
 >   damage between sorties; buy destroyers, cruisers and carriers.
 

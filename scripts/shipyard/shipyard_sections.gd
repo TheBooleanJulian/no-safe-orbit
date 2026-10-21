@@ -1,12 +1,15 @@
 class_name ShipyardSections
 extends RefCounted
-## The shipyard as a station (Milestone 12): a rail of sections across the
-## top — STATION (the landing page: your ship in 3D, what it needs, the next
-## sortie), MISSIONS (people with work: contracts), DEALER (ships for
-## credits), HANGAR (your vessels, the hold and the bank, history), REFIT
-## (the builder), CREW, ARMOURY (rearm, refuel, the quartermaster),
-## REPAIRS, UPGRADES, MAP and LOOT. Each non-builder section is a
-## full-width page of cards; the builder is one section among them.
+## The shipyard as a station (Milestone 12; play-test batch 6: "more
+## gameplay and immersive, less spreadsheet tabs"). A station directory
+## down the left lists its places by district — DRYDOCK (the berth, the
+## refit bay, repair crews, the armoury), CONCOURSE (the mission board, crew
+## quarters, the ship dealer), OPERATIONS (hangar and bank, station tech,
+## the nav chart, salvage odds) — each with a live line saying what it
+## needs from you (amber) or that it is fine. STATION is your berth: the
+## ship in a docking bay, its service tags over the view and the
+## dockmaster's log. Each place is a page; the builder (REFIT) is one of
+## them, with the directory narrowed beside it.
 
 const SECTIONS := ["STATION", "MISSIONS", "DEALER", "HANGAR", "REFIT", "CREW", "ARMOURY", "REPAIRS", "UPGRADES", "MAP", "LOOT"]
 const START := "STATION"
@@ -24,9 +27,22 @@ const HINTS := {
 	"LOOT": "Every crate drop and its odds",
 }
 
+## The directory: [district, [[section, place name], ...]].
+const DIRECTORY := [
+	["DRYDOCK", [["STATION", "Berth"], ["REFIT", "Refit bay"], ["REPAIRS", "Repair crews"], ["ARMOURY", "Armoury"]]],
+	["CONCOURSE", [["MISSIONS", "Mission board"], ["CREW", "Crew quarters"], ["DEALER", "Ship dealer"]]],
+	["OPERATIONS", [["HANGAR", "Hangar & bank"], ["UPGRADES", "Station tech"], ["MAP", "Nav chart"], ["LOOT", "Salvage odds"]]],
+]
+const DIRECTORY_WIDTH := 232.0
+const DIRECTORY_WIDTH_REFIT := 150.0
+
 var yard: Shipyard
 var current := ""
-var buttons: Dictionary = {}  # section -> Button
+var buttons: Dictionary = {}  # section -> Button (its directory entry)
+var status_labels: Dictionary = {}  # section -> Label (its live line)
+var _dots: Dictionary = {}  # section -> Label (● needs you / fine)
+var directory: PanelContainer
+var wallet_label: RichTextLabel
 var pages: Dictionary = {}  # section -> Control (REFIT: the builder body)
 ## STATION.
 var station_label: RichTextLabel
@@ -54,29 +70,28 @@ func _init(p_yard: Shipyard) -> void:
 	yard = p_yard
 
 
-## Build the rail and the pages; move the old right-hand tabs' pages into
-## full-width sections.
+## Build the directory and the pages; move the old right-hand tabs' pages
+## into full-width sections.
 func build() -> void:
 	var vbox := yard.get_node("Margin/VBox") as VBoxContainer
 	var body := yard.get_node("Margin/VBox/Body") as Control
 	var bar := yard.get_node("Margin/VBox/TopBar")
 	for n in ["NameEdit", "TemplateList", "LoadTemplate", "DesignList", "LoadDesign", "Undo", "Redo", "Save"]:
 		_builder_bar.append(bar.get_node(n))
-	var rail := HBoxContainer.new()
-	rail.name = "SectionRail"
-	rail.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
-	for s in SECTIONS:
-		var b := Button.new()
-		b.text = s
-		b.toggle_mode = true
-		b.tooltip_text = HINTS.get(s, "")
-		b.focus_mode = Control.FOCUS_NONE
-		CyberTheme.style_button(b, CyberTheme.AMBER if s in ["REFIT", "MISSIONS"] else CyberTheme.CYAN)
-		b.pressed.connect(func() -> void: yard.show_section(s))
-		rail.add_child(b)
-		buttons[s] = b
-	vbox.add_child(rail)
-	vbox.move_child(rail, body.get_index())
+	var concourse := HBoxContainer.new()
+	concourse.name = "Concourse"
+	concourse.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	concourse.add_theme_constant_override("separation", CyberTheme.SPACE_M)
+	vbox.add_child(concourse)
+	vbox.move_child(concourse, body.get_index())
+	directory = _build_directory()
+	concourse.add_child(directory)
+	var stage := VBoxContainer.new()
+	stage.name = "Stage"
+	stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	concourse.add_child(stage)
+	body.reparent(stage, false)
 	pages["REFIT"] = body
 	for s in SECTIONS:
 		if s == "REFIT":
@@ -87,13 +102,143 @@ func build() -> void:
 		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		page.visible = false
-		vbox.add_child(page)
+		stage.add_child(page)
 		pages[s] = page
 	_build_station()
 	_build_missions()
 	_build_dealer()
 	_build_armoury()
 	_adopt_hangar_tabs()
+
+
+# --- The directory ----------------------------------------------------------------
+
+func _build_directory() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.name = "Directory"
+	panel.custom_minimum_size = Vector2(DIRECTORY_WIDTH, 0)
+	panel.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.CYAN, CyberTheme.SPACE_S, 0.5))
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(scroll)
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	scroll.add_child(box)
+	wallet_label = _rich()
+	wallet_label.add_theme_font_override("normal_font", CyberTheme.mono())
+	wallet_label.add_theme_font_size_override("normal_font_size", CyberTheme.SIZE_SMALL)
+	box.add_child(wallet_label)
+	for district: Array in DIRECTORY:
+		var head := Label.new()
+		head.text = district[0]
+		head.add_theme_font_override("font", CyberTheme.mono())
+		head.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
+		head.add_theme_color_override("font_color", CyberTheme.TEXT_FAINT)
+		box.add_child(head)
+		for entry: Array in district[1]:
+			box.add_child(_directory_entry(entry[0], entry[1]))
+	return panel
+
+
+## One place: a button with its name and its live line.
+func _directory_entry(section: String, title: String) -> Button:
+	var b := Button.new()
+	b.name = "Go" + section.capitalize().replace(" ", "")
+	b.toggle_mode = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.tooltip_text = HINTS.get(section, "")
+	b.custom_minimum_size = Vector2(0, 46)
+	CyberTheme.style_button(b, CyberTheme.AMBER if section in ["REFIT", "MISSIONS"] else CyberTheme.CYAN)
+	var row := HBoxContainer.new()
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.offset_left = CyberTheme.SPACE_S
+	row.offset_right = -CyberTheme.SPACE_XS
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	b.add_child(row)
+	var dot := Label.new()
+	dot.text = "●"
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.add_theme_color_override("font_color", CyberTheme.TEXT_FAINT)
+	row.add_child(dot)
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 0)
+	row.add_child(col)
+	var place := Label.new()
+	place.text = title
+	place.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	place.add_theme_font_size_override("font_size", CyberTheme.SIZE_BODY + 1)
+	place.add_theme_color_override("font_color", CyberTheme.TEXT)
+	col.add_child(place)
+	var status := Label.new()
+	status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status.clip_text = true
+	status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	status.add_theme_font_override("font", CyberTheme.mono())
+	status.add_theme_font_size_override("font_size", CyberTheme.SIZE_SMALL)
+	status.add_theme_color_override("font_color", CyberTheme.TEXT_DIM)
+	col.add_child(status)
+	b.pressed.connect(func() -> void: yard.show_section(section))
+	buttons[section] = b
+	status_labels[section] = status
+	_dots[section] = dot
+	return b
+
+
+## Each place's live line, and whether it needs you: {section: [text, bool]}.
+func directory_status() -> Dictionary:
+	var p := yard.profile
+	var v := p.vessel
+	var cat := yard.editor.catalog
+	ContractBoard.refresh(p)
+	if p.hire_pool.is_empty() and p.vendor_stock.is_empty():
+		p.refresh_station(cat)
+	var jobs := ServiceYard.repair_jobs(v, cat)
+	var need := ServiceYard.resupply_needs(v, cat)
+	var berths := p.berths(cat)
+	var held := v.cargo_volume_m3(cat)
+	var affordable := 0
+	for n in TechTree.NODES:
+		var cost := TechTree.next_cost(p.tech_level(n.id))
+		if cost > 0 and cost <= p.credits:
+			affordable += 1
+	var here := Location.by_id(p.location)
+	return {
+		"STATION": [v.name, false],
+		"REFIT": [v.blueprint.name, false],
+		"REPAIRS": ["%d job%s · %d parts" % [jobs.size(), "" if jobs.size() == 1 else "s", ServiceYard.total_cost(jobs)], true] if not jobs.is_empty() else ["in full repair", false],
+		"ARMOURY": ["restock %d cr" % need.credits, true] if int(need.credits) > 0 else ["stocked · %d on the shelf" % p.vendor_stock.size(), false],
+		"MISSIONS": ["on contract · %s" % p.active_contract.title, false] if not p.active_contract.is_empty() else ["%d offers posted" % p.board.size(), not p.board.is_empty()],
+		"CREW": ["%d / %d aboard · %d for hire" % [v.crew.size(), berths, p.hire_pool.size()], v.crew.size() < berths],
+		"DEALER": ["%d hulls for sale" % BlueprintIO.list_templates().size(), false],
+		"HANGAR": ["%d vessel%s · hold %.0f m³" % [p.vessels.size(), "" if p.vessels.size() == 1 else "s", held], held > 0.0],
+		"UPGRADES": ["%d upgrade%s within reach" % [affordable, "" if affordable == 1 else "s"], affordable > 0],
+		"MAP": [("→ %s · %s" % [Location.by_id(p.launch_point()).display_name, JumpDrive.dv_text(p.jump_dv(p.launch_point()))])
+			if p.launch_point() != p.location else "%s · %d ship%s" % [here.display_name, p.encounter_size, "" if p.encounter_size == 1 else "s"], false],
+		"LOOT": ["every crate's odds", false],
+	}
+
+
+func _refresh_directory() -> void:
+	var refit := current == "REFIT"
+	directory.custom_minimum_size.x = DIRECTORY_WIDTH_REFIT if refit else DIRECTORY_WIDTH
+	var p := yard.profile
+	wallet_label.text = "[color=#%s]%s[/color]\nCREDITS [color=#%s]%d[/color] · PARTS %d" % [CyberTheme.TEXT_DIM.to_html(false),
+		Location.by_id(p.location).station_name.to_upper(), CyberTheme.AMBER.to_html(false), p.credits, p.spare_parts]
+	for s in status_labels:
+		(status_labels[s] as Label).visible = not refit
+	if refit:
+		return  # the builder refreshes on every edit: no need to work these out
+	var status := directory_status()
+	for s in status:
+		var line: Array = status[s]
+		(status_labels[s] as Label).text = line[0]
+		(status_labels[s] as Label).add_theme_color_override("font_color", CyberTheme.AMBER if line[1] else CyberTheme.TEXT_DIM)
+		(_dots[s] as Label).add_theme_color_override("font_color", CyberTheme.AMBER if line[1] else CyberTheme.CYAN)
 
 
 ## A titled card (a framed panel); returns its content box.
@@ -190,10 +335,26 @@ func _content(section: String) -> VBoxContainer:
 	box.add_theme_constant_override("separation", CyberTheme.SPACE_S)
 	var heading := Label.new()
 	heading.theme_type_variation = &"Heading"
-	heading.text = "%s  ·  %s" % [section, HINTS.get(section, "")]
+	heading.text = "%s  ›  %s  ·  %s" % [district_of(section), place_name(section).to_upper(), HINTS.get(section, "")]
 	box.add_child(heading)
 	page.add_child(box)
 	return box
+
+
+static func district_of(section: String) -> String:
+	for d: Array in DIRECTORY:
+		for e: Array in d[1]:
+			if e[0] == section:
+				return d[0]
+	return ""
+
+
+static func place_name(section: String) -> String:
+	for d: Array in DIRECTORY:
+		for e: Array in d[1]:
+			if e[0] == section:
+				return e[1]
+	return section
 
 
 func show(section: String) -> void:
@@ -210,30 +371,44 @@ func show(section: String) -> void:
 
 # --- STATION ----------------------------------------------------------------------
 
+## The berth: the ship in its docking bay filling the page; over it, its
+## plate (top left), the services and the next sortie (right), and the
+## dockmaster's log (bottom left).
 func _build_station() -> void:
 	var box := _content("STATION")
 	station_label = _rich()
 	station_label.add_theme_font_size_override("normal_font_size", CyberTheme.SIZE_BODY + 1)
 	box.add_child(station_label)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", CyberTheme.SPACE_M)
-	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(row)
-	var ship := card(row, "Your ship", CyberTheme.CYAN)
-	ship.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ship.get_parent().size_flags_stretch_ratio = 1.4
+	var bay := Control.new()
+	bay.name = "Berth"
+	bay.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	bay.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bay.custom_minimum_size = Vector2(0, 360)
+	bay.clip_contents = true
+	box.add_child(bay)
 	station_preview = ShipPreview3D.new()
-	station_preview.custom_minimum_size = Vector2(420, 300)
-	station_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	ship.add_child(station_preview)
+	station_preview.berth = true
+	station_preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bay.add_child(station_preview)
+	var plate := VBoxContainer.new()
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	plate.position = Vector2(CyberTheme.SPACE_L, CyberTheme.SPACE_M)
+	plate.custom_minimum_size = Vector2(460, 0)
+	bay.add_child(plate)
 	station_cards["ship"] = _rich()
-	ship.add_child(station_cards["ship"])
+	station_cards["ship"].mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_child(station_cards["ship"])
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", CyberTheme.SPACE_S)
-	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(side)
-	for spec in [["repairs", "Repairs", "REPAIRS", CyberTheme.AMBER], ["rearm", "Rearm & refuel", "ARMOURY", CyberTheme.AMBER],
-			["crew", "Crew", "CREW", CyberTheme.CYAN], ["sortie", "Next sortie", "MISSIONS", CyberTheme.AMBER]]:
+	side.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
+	side.offset_left = -SERVICE_WIDTH - CyberTheme.SPACE_M
+	side.offset_right = -CyberTheme.SPACE_M
+	side.offset_top = CyberTheme.SPACE_M
+	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bay.add_child(side)
+	for spec in [["repairs", "Repair crews", "REPAIRS", CyberTheme.AMBER], ["rearm", "Armoury", "ARMOURY", CyberTheme.AMBER],
+			["crew", "Crew quarters", "CREW", CyberTheme.CYAN], ["sortie", "Next sortie", "MISSIONS", CyberTheme.AMBER]]:
 		var c := card(side, spec[1], spec[3])
 		var label := _rich()
 		c.add_child(label)
@@ -244,6 +419,53 @@ func _build_station() -> void:
 		b.pressed.connect(func() -> void: yard.show_section(target))
 		c.add_child(b)
 		station_buttons[spec[0]] = b
+	var log_box := card(bay, "Dockmaster's log", CyberTheme.CYAN)
+	var log_panel := log_box.get_parent() as Control
+	# Pinned to the bottom left, as tall as its lines.
+	log_panel.anchor_left = 0.0
+	log_panel.anchor_right = 0.0
+	log_panel.anchor_top = 1.0
+	log_panel.anchor_bottom = 1.0
+	log_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	log_panel.offset_left = CyberTheme.SPACE_L
+	log_panel.offset_right = CyberTheme.SPACE_L + 560.0
+	log_panel.offset_top = -CyberTheme.SPACE_M
+	log_panel.offset_bottom = -CyberTheme.SPACE_M
+	station_cards["log"] = _rich()
+	station_cards["log"].add_theme_font_override("normal_font", CyberTheme.mono())
+	station_cards["log"].add_theme_font_size_override("normal_font_size", CyberTheme.SIZE_SMALL)
+	log_box.add_child(station_cards["log"])
+
+
+const SERVICE_WIDTH := 330.0
+
+
+## What the station's people have to say about your ship this visit.
+func _dock_log() -> String:
+	var p := yard.profile
+	var v := p.vessel
+	var cat := yard.editor.catalog
+	var dim := CyberTheme.TEXT_DIM.to_html(false)
+	var lines := PackedStringArray()
+	var say := func(who: String, what: String) -> void:
+		lines.append("[color=#%s]%-14s[/color] %s" % [dim, who, what])
+	say.call("DOCKMASTER", "%s in berth %d, clamps locked%s." % [v.name, 4 + p.active_vessel, ", welcome back" if v.sorties > 0 else ""])
+	var jobs := ServiceYard.repair_jobs(v, cat)
+	say.call("REPAIR CREWS", "hull signed off, nothing to fix." if jobs.is_empty() else "%d job%s waiting — %d spare parts for the lot." % [
+		jobs.size(), "" if jobs.size() == 1 else "s", ServiceYard.total_cost(jobs)])
+	var best: EquipmentDefinition = null
+	for item: Dictionary in p.vendor_stock:
+		var def: EquipmentDefinition = cat.equipment.get(StringName(item.id))
+		if def != null and (best == null or def.rarity > best.rarity):
+			best = def
+	say.call("QUARTERMASTER", "a %s just came in (%s)." % [best.display_name, Rarity.name_of(best.rarity).to_lower()] if best != null else "shelves bare until the next freighter.")
+	if not p.active_contract.is_empty():
+		say.call("BROKERS", "your contract stands: %s." % p.active_contract.title)
+	elif not p.board.is_empty():
+		say.call("BROKERS", "%d contract%s posted; \"%s\" pays %s." % [p.board.size(), "" if p.board.size() == 1 else "s", p.board[0].title, MissionChain.reward_text(p.board[0])])
+	if not p.hire_pool.is_empty():
+		say.call("CREW QUARTERS", "%d spacer%s looking for a berth." % [p.hire_pool.size(), "" if p.hire_pool.size() == 1 else "s"])
+	return "\n".join(lines)
 
 
 func _refresh_station() -> void:
@@ -251,26 +473,29 @@ func _refresh_station() -> void:
 	var v := p.vessel
 	var cat := yard.editor.catalog
 	var here := Location.by_id(p.location)
-	station_label.text = "[b]%s[/b] · %s     CREDITS [color=#%s]%d[/color] · SPARE PARTS %d" % [
+	station_label.text = "[b]%s[/b] · %s · docked     CREDITS [color=#%s]%d[/color] · SPARE PARTS %d" % [
 		here.station_name.to_upper(), here.display_name, CyberTheme.AMBER.to_html(false), p.credits, p.spare_parts]
 	var grid := ShipGrid.build(v.blueprint, cat)
 	var stats := ShipStats.compute(v.blueprint, grid)
 	station_preview.show_design(ShipEditor.new(v.blueprint.duplicate_blueprint(), cat))
-	(station_cards.ship as RichTextLabel).text = "[b]%s[/b] · %s\n%.0f t · %.2f g · Δv %.0f m/s · cargo %.0f m³ · %d sorties" % [
-		v.name, v.blueprint.name, stats.mass_kg / 1000.0, stats.thrust_forward_n / maxf(stats.mass_kg, 1.0) / ShipDynamics.G0,
-		stats.delta_v_m_s(), stats.cargo_m3, v.sorties]
+	(station_cards.ship as RichTextLabel).text = "[font_size=%d][b]%s[/b][/font_size]\n[color=#%s]%s · %d sortie%s[/color]\n%.0f t · %.2f g · Δv %.0f m/s · cargo %.0f m³" % [
+		CyberTheme.SIZE_TITLE + 9, v.name.to_upper(), CyberTheme.TEXT_DIM.to_html(false), v.blueprint.name, v.sorties, "" if v.sorties == 1 else "s",
+		stats.mass_kg / 1000.0, stats.thrust_forward_n / maxf(stats.mass_kg, 1.0) / ShipDynamics.G0, stats.delta_v_m_s(), stats.cargo_m3]
+	(station_cards.log as RichTextLabel).text = _dock_log()
 	var jobs := ServiceYard.repair_jobs(v, cat)
 	(station_cards.repairs as RichTextLabel).text = CyberTheme.tint("✔ in full repair", CyberTheme.CYAN) if jobs.is_empty() \
 		else "%d jobs · %d spare parts for everything" % [jobs.size(), ServiceYard.total_cost(jobs)]
-	(station_buttons.repairs as Button).text = "Repairs ›"
+	(station_buttons.repairs as Button).text = "Repair crews ›"
 	var need := ServiceYard.resupply_needs(v, cat)
 	(station_cards.rearm as RichTextLabel).text = CyberTheme.tint("✔ full", CyberTheme.CYAN) if int(need.credits) == 0 \
 		else "%d credits to fill propellant, rounds, missiles and flares (or at launch)" % need.credits
 	(station_buttons.rearm as Button).text = "Armoury ›"
 	(station_cards.crew as RichTextLabel).text = "%d / %d aboard · %d for hire" % [v.crew.size(), stats.crew_capacity, p.hire_pool.size()]
-	(station_buttons.crew as Button).text = "Crew ›"
+	(station_buttons.crew as Button).text = "Crew quarters ›"
 	var contract := p.active_contract
-	(station_cards.sortie as RichTextLabel).text = "%s · %d ship%s\n%s" % [here.display_name, p.encounter_size, "" if p.encounter_size == 1 else "s",
+	var course := Location.by_id(p.launch_point())
+	var where := here.display_name if course == here else "jump to %s (%s) at launch" % [course.display_name, JumpDrive.dv_text(p.jump_dv(course.id))]
+	(station_cards.sortie as RichTextLabel).text = "%s · %d ship%s\n%s" % [where, p.encounter_size, "" if p.encounter_size == 1 else "s",
 		("CONTRACT  %s — %s" % [contract.title, MissionChain.reward_text(contract)]) if not contract.is_empty()
 		else CyberTheme.tint(MissionChain.from_dict(p.campaign).hud_line(), CyberTheme.TEXT_DIM)]
 	(station_buttons.sortie as Button).text = "Mission board ›"
@@ -414,7 +639,8 @@ func _offer_text(bp: ShipBlueprint) -> String:
 		CyberTheme.tint("CAPITAL SHIP · ", CyberTheme.AMBER) if _is_capital(bp) else "",
 		stats.mass_kg / 1000.0, stats.thrust_forward_n / maxf(stats.mass_kg, 1.0) / ShipDynamics.G0, stats.delta_v_m_s(),
 		int(price.crew_count), stats.cargo_m3, " · ".join(arms),
-		CyberTheme.tint("hull and parts %d cr · crew %d × %d cr" % [price.ship, price.crew_count, PlayerProfile.HIRE_FEE], CyberTheme.TEXT_DIM)]
+		CyberTheme.tint("hull and parts %d cr%s · crew %d × %d cr" % [price.ship,
+			" · rarer parts %d cr (yours with it)" % price.units if int(price.units) > 0 else "", price.crew_count, PlayerProfile.HIRE_FEE], CyberTheme.TEXT_DIM)]
 
 
 # --- ARMOURY ----------------------------------------------------------------------
@@ -440,6 +666,8 @@ func _armoury_text() -> String:
 	var tanks := yard.profile.vessel_tanks(cat)
 	lines.append("JUMP RESERVE  %s of %s%s — the jump drive's own; engines can't burn it" % [JumpDrive.tonnes(tanks.reserve_kg),
 		JumpDrive.tonnes(tanks.reserve_capacity_kg), "" if float(need.reserve_kg) <= 0.0 else " · %.1f t to fill" % (float(need.reserve_kg) / 1000.0)])
+	lines.append("JUMP Δv      %s aboard · %s with full tanks and reserve — jumps cost Δv, the same for every ship (NAV CHART)" % [
+		JumpDrive.dv_text(tanks.dv_mps), JumpDrive.dv_text(tanks.dv_full_mps)])
 	lines.append("ROUNDS      %s" % ("full" if int(need.rounds) <= 0 else "%d to fill" % need.rounds))
 	var msl :=ServiceYard.missile_needs(v, cat)
 	lines.append("MISSILES & FLARES  %s" % ("full" if int(msl.count) == 0 else "%d to restock (%d cr)" % [msl.count, msl.credits]))
@@ -474,6 +702,7 @@ func _refresh_fleet() -> void:
 func refresh() -> void:
 	if station_label == null:
 		return
+	_refresh_directory()
 	match current:
 		"STATION":
 			_refresh_station()

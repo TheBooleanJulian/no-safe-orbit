@@ -11,7 +11,19 @@ const FLIGHT_SCENE := "res://scenes/main/main.tscn"
 const COLOR_ERROR := CyberTheme.RED
 const COLOR_WARNING := CyberTheme.AMBER
 ## Palette categories (the part kinds the catalog supports).
-const CATEGORIES := ["All", "Hull", "Armour", "Interior", "Propulsion", "Power & thermal", "Weapons", "Sensors", "Utility", "Logistics"]
+const CATEGORIES := ["All", "Hull", "Armour", "Rooms", "Propulsion", "Power & thermal", "Weapons", "Hangars & craft", "Sensors & utility"]
+## Sections within each category, in palette order (play-test batch 6:
+## "reorganise and properly categorise the builder equipment list").
+const SECTIONS := {
+	"Hull": ["Blocks", "Slopes & noses", "Frames", "Armoured sections"],
+	"Armour": ["Plates"],
+	"Rooms": ["Crew & command", "Engineering", "Stores & hangars"],
+	"Propulsion": ["Main engines", "Thrusters (RCS)", "Propellant tanks"],
+	"Power & thermal": ["Reactors", "Radiators", "Power distribution", "Power bus"],
+	"Weapons": ["Guns", "Point defence", "Missile launchers", "Countermeasures & EW"],
+	"Hangars & craft": ["Fighters", "Drones"],
+	"Sensors & utility": ["Sensors", "Docking & salvage"],
+}
 ## Armour palette entries: id -> [mm (0 = remove), name, description].
 const ARMOR_ENTRIES := {
 	&"plate_40": [ShipBlueprint.PLATE_THIN_MM, "Thin armour plate (40 mm)",
@@ -105,6 +117,7 @@ var route_button: Button
 var size_buttons: Array[Button] = []
 var _map_info: RichTextLabel
 var _broker_box: VBoxContainer
+var _artifact_box: VBoxContainer
 var _hangar_tabs: TabContainer
 ## The station's sections (Milestone 12): the builder is REFIT, one of them.
 var sections: ShipyardSections
@@ -604,6 +617,28 @@ func launch() -> bool:
 	var supplied := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
 	if supplied != "":
 		GameLog.info("shipyard", supplied)
+	# The course (nav chart, or the contract's): the jump happens now, paid
+	# from the tanks just topped up (play-test batch 7).
+	var point := profile.launch_point()
+	if point != profile.location:
+		var jumped := Location.by_id(point)
+		var dv := profile.jump_dv(point)
+		var why_jump := profile.relocate(point, editor.catalog)
+		if why_jump != "":
+			_save_profile()
+			_set_status(why_jump + " — or change course on the nav chart", true)
+			return false
+		GameLog.info("shipyard", "Jumped to %s at launch: %s" % [jumped.station_name, JumpDrive.dv_text(dv)])
+	# A deep-space survey's round trip is paid from what is aboard now.
+	var survey := Artifact.by_id(profile.survey_target)
+	if survey != null and survey.is_deep_space():
+		var t := profile.vessel_tanks(editor.catalog)
+		var need := profile.survey_dv(survey)
+		if need > float(t.dv_mps):
+			_save_profile()
+			_set_status("The round trip to %s needs %s; the tanks aboard give %s (credits short for the refuel?) — or cancel the survey on the nav chart" % [
+				survey.display_name, JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_mps)], true)
+			return false
 	if not profile.vessel.cargo_is_empty():
 		GameLog.info("shipyard", "Launching with cargo still in the hold: %s" % profile.vessel.cargo_summary())
 	_save_profile()
@@ -800,17 +835,46 @@ func _refresh_stats() -> void:
 		"TURN RATE  P %.0f  Y %.0f  R %.0f °/s" % [rad_to_deg(cfg.assist_max_rate_rad_s.x), rad_to_deg(cfg.assist_max_rate_rad_s.y), rad_to_deg(cfg.assist_max_rate_rad_s.z)],
 		"POWER      %.0f / %.0f kW" % [s.power_draw_kw, s.power_generation_kw],
 		"HEAT       %.0f / %.0f kW rejected" % [s.heat_generation_kw, s.heat_rejection_kw],
-		"CREW       %d berths" % s.crew_capacity,
+		"CREW       %d berths · standard %s" % [s.crew_capacity, _complement_text(CrewRoster.complement_for(editor.blueprint, editor.grid, s))],
+		_defence_text(PdCoverage.of(editor.grid)),
+		_craft_text(),
 		"MAGAZINE   %.1f t · %d rounds" % [s.magazine_kg / 1000.0, s.rounds_capacity],
 		"CARGO      %.0f m³" % s.cargo_m3,
 		"HULL       %.0f × %.0f × %.0f m" % [s.hull_bounds_m.size.x, s.hull_bounds_m.size.y, s.hull_bounds_m.size.z],
 	])
 
 
+## "CMD 2 · ENG 2 · …" (the specialists; the rest are general hands).
+static func _complement_text(want: Array[int]) -> String:
+	var parts := PackedStringArray()
+	for r in CrewRoster.Role.GENERAL:
+		parts.append("%s %d" % [CrewRoster.ROLE_SHORT[r], want[r]])
+	return " ".join(parts)
+
+
+## Point defence against what the hull wants (Milestone 15).
+static func _defence_text(pd: Dictionary) -> String:
+	return "DEFENCE    PD %d / %d for this hull · covers %d %% of approaches" % [pd.mounts, pd.recommended, roundi(float(pd.coverage) * 100.0)]
+
+
+## Craft aboard: hangar bays inside, racks outside.
+func _craft_text() -> String:
+	var bays := 0
+	var racks := 0
+	for i in editor.blueprint.equipment.size():
+		var def := editor.grid.equipment_def(i)
+		if def != null and def.kind == EquipmentDefinition.Kind.CRAFT_MOUNT:
+			if def.is_external():
+				racks += 1
+			else:
+				bays += 1
+	return "CRAFT      %d (%d in hangar bays, %d on racks)" % [bays + racks, bays, racks]
+
+
 func _refresh_issues() -> void:
 	var report := editor.report
 	var lines := PackedStringArray()
-	var title := get_node_or_null("Margin/VBox/Body/Right/IssuesTitle") as Label
+	var title := find_child("IssuesTitle", true, false) as Label
 	if title != null:
 		title.text = "VALIDATION   ✖ %d errors   ▲ %d warnings" % [report.errors().size(), report.warnings().size()]
 		title.add_theme_color_override("font_color", COLOR_ERROR if report.has_errors() else (COLOR_WARNING if not report.issues.is_empty() else CyberTheme.CYAN))
@@ -851,8 +915,14 @@ func _build_palette() -> void:
 	palette_list = ItemList.new()
 	palette_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	palette_list.item_selected.connect(func(i: int) -> void:
-		var m: Array = palette_list.get_item_metadata(i)
-		select_palette(m[0], m[1]))
+		var m: Variant = palette_list.get_item_metadata(i)
+		if not m is Array:
+			return  # a section header
+		select_palette(m[0], m[1])
+		if (m as Array).size() > 2:
+			# A preset way round (the radiators' along / across entries).
+			place_rotation = int(m[2])
+			_update_ghost())
 	box.add_child(palette_list)
 	armor_faces = OptionButton.new()
 	for n in ["Plate every exposed face", "Sides only", "Top only", "Underside only"]:
@@ -909,74 +979,148 @@ func _build_palette() -> void:
 	_fill_palette_list()
 
 
-## Category of a part, adapted to the kinds the catalog has.
-static func category_of(kind: String, def: Resource) -> String:
+## Where a part sits in the palette: [category, section] (SECTIONS).
+static func palette_place(kind: String, def: Resource) -> Array:
 	match kind:
 		"hull":
-			return "Hull"
+			var id := String(def.id)
+			if id.contains("armored"):
+				return ["Hull", "Armoured sections"]
+			if id.contains("wedge") or id.contains("nose"):
+				return ["Hull", "Slopes & noses"]
+			if id.contains("truss"):
+				return ["Hull", "Frames"]
+			return ["Hull", "Blocks"]
 		"room":
-			return "Logistics" if def.role in [&"cargo", &"magazine"] else "Interior"
-	match (def as EquipmentDefinition).kind:
-		EquipmentDefinition.Kind.MAIN_ENGINE, EquipmentDefinition.Kind.RCS:
-			return "Propulsion"
-		EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.RADIATOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION:
-			return "Power & thermal"
-		EquipmentDefinition.Kind.CANNON, EquipmentDefinition.Kind.POINT_DEFENCE, EquipmentDefinition.Kind.MISSILE_LAUNCHER, \
-				EquipmentDefinition.Kind.DECOY_LAUNCHER, EquipmentDefinition.Kind.JAMMER:
-			return "Weapons"
-		EquipmentDefinition.Kind.SENSOR, EquipmentDefinition.Kind.GRAPPLE:
-			return "Sensors"
+			match StringName(def.role):
+				&"command", &"quarters", &"life_support", &"access":
+					return ["Rooms", "Crew & command"]
+				&"engineering", &"workshop":
+					return ["Rooms", "Engineering"]
+			return ["Rooms", "Stores & hangars"]
+	var e := def as EquipmentDefinition
+	match e.kind:
+		EquipmentDefinition.Kind.MAIN_ENGINE:
+			return ["Propulsion", "Main engines"]
+		EquipmentDefinition.Kind.RCS:
+			return ["Propulsion", "Thrusters (RCS)"]
 		EquipmentDefinition.Kind.PROPELLANT_TANK:
-			return "Logistics"
-	return "Utility"
+			return ["Propulsion", "Propellant tanks"]
+		EquipmentDefinition.Kind.REACTOR:
+			return ["Power & thermal", "Reactors"]
+		EquipmentDefinition.Kind.RADIATOR:
+			return ["Power & thermal", "Radiators"]
+		EquipmentDefinition.Kind.POWER_DISTRIBUTION:
+			return ["Power & thermal", "Power distribution"]
+		EquipmentDefinition.Kind.CANNON:
+			return ["Weapons", "Guns"]
+		EquipmentDefinition.Kind.POINT_DEFENCE:
+			return ["Weapons", "Point defence"]
+		EquipmentDefinition.Kind.MISSILE_LAUNCHER:
+			return ["Weapons", "Missile launchers"]
+		EquipmentDefinition.Kind.DECOY_LAUNCHER, EquipmentDefinition.Kind.JAMMER:
+			return ["Weapons", "Countermeasures & EW"]
+		EquipmentDefinition.Kind.CRAFT_MOUNT:
+			return ["Hangars & craft", "Drones" if String(e.id).contains("drone") else "Fighters"]
+		EquipmentDefinition.Kind.SENSOR:
+			return ["Sensors & utility", "Sensors"]
+	return ["Sensors & utility", "Docking & salvage"]
 
 
+## The category alone (older callers).
+static func category_of(kind: String, def: Resource) -> String:
+	return palette_place(kind, def)[0]
+
+
+## The pickable rows' text (section headers left out).
+func palette_items() -> PackedStringArray:
+	var out := PackedStringArray()
+	for i in palette_list.item_count:
+		if palette_list.is_item_selectable(i):
+			out.append(palette_list.get_item_text(i))
+	return out
+
+
+## The palette: grouped by category and section, a header for each (in
+## "All", the categories too), parts within a section by rarity, then size.
 func _fill_palette_list() -> void:
 	if palette_list == null:
 		return
 	palette_list.clear()
 	var want: String = CATEGORIES[maxi(palette_category.selected, 0)]
 	var query := palette_search.text.strip_edges().to_lower()
+	# Every row: [category, section, sort key, text, metadata, colour, tooltip].
+	var rows: Array = []
 	for id: StringName in BUS_ENTRIES:
 		var b_name: String = BUS_ENTRIES[id][1]
-		if (want != "All" and want != "Power & thermal") or (query != "" and not (b_name.to_lower().contains(query) or "bus".contains(query) or "power".contains(query))):
-			continue
-		var bi := palette_list.add_item(b_name if want != "All" else "%s · Power & thermal" % b_name)
-		palette_list.set_item_metadata(bi, ["bus", id])
-		palette_list.set_item_custom_fg_color(bi, CyberTheme.AMBER if BUS_ENTRIES[id][0] else CyberTheme.TEXT_DIM)
+		rows.append(["Power & thermal", "Power bus", "%s" % b_name, b_name, ["bus", id],
+			CyberTheme.AMBER if BUS_ENTRIES[id][0] else CyberTheme.TEXT_DIM, "Power conduit: " + b_name])
 	for id: StringName in ARMOR_ENTRIES:
 		var a_name: String = ARMOR_ENTRIES[id][1]
-		if (want != "All" and want != "Armour") or (query != "" and not (a_name.to_lower().contains(query) or "armour".contains(query))):
-			continue
-		var ai := palette_list.add_item(a_name if want == "Armour" else "%s · Armour" % a_name)
-		palette_list.set_item_metadata(ai, ["armor", id])
 		var mm: int = ARMOR_ENTRIES[id][0]
-		palette_list.set_item_custom_fg_color(ai, DeckEditor.COLOR_PLATE_THIN.lightened(0.3) if mm > 0 else CyberTheme.TEXT_DIM)
+		rows.append(["Armour", "Plates", "%04d" % (9999 - mm if mm > 0 else 9999), a_name, ["armor", id],
+			DeckEditor.COLOR_PLATE_THIN.lightened(0.3) if mm > 0 else CyberTheme.TEXT_DIM, a_name])
 	for entry in [["hull", editor.catalog.hull], ["room", editor.catalog.rooms], ["equipment", editor.catalog.equipment]]:
 		for id in ConstructionCatalog.sorted_ids(entry[1]):
 			var def: Resource = entry[1][id]
 			if (def is HullModuleDefinition or def is EquipmentDefinition) and def.legacy:
 				continue
-			var cat := category_of(entry[0], def)
-			if want != "All" and cat != want:
-				continue
-			if query != "" and not (def.display_name.to_lower().contains(query) or String(id).contains(query) or cat.to_lower().contains(query)):
-				continue
+			var place := palette_place(entry[0], def)
 			var text: String = def.display_name
+			var suffix := ""
 			var color := (def.color as Color).lightened(0.2)
 			if def.rarity != Rarity.Tier.COMMON:
 				color = Rarity.color_of(def.rarity)
 				if def is EquipmentDefinition:
-					text += "  ×%d" % profile.owned(id)
+					suffix = "  ×%d" % profile.owned(id)
 				elif not profile.is_unlocked(def):
-					text += "  (locked)"
+					suffix = "  (locked)"
 					color = color.darkened(0.45)
-			if want == "All":
-				text = "%s · %s" % [text, cat]
-			var i := palette_list.add_item(text)
-			palette_list.set_item_metadata(i, [entry[0], id])
-			palette_list.set_item_custom_fg_color(i, color)
-			palette_list.set_item_tooltip(i, "%s — %s · %s" % [def.display_name, cat, Rarity.name_of(def.rarity)])
+			var mass := float(def.get("mass_kg")) if def.get("mass_kg") != null else 0.0
+			var key := "%d|%09.0f|%s" % [def.rarity, mass, def.display_name]
+			var tip := "%s — %s › %s · %s" % [def.display_name, place[0], place[1], Rarity.name_of(def.rarity)]
+			if def is EquipmentDefinition and (def as EquipmentDefinition).kind == EquipmentDefinition.Kind.RADIATOR \
+					and (def as EquipmentDefinition).length_cells > 1:
+				# Long radiators: both ways round, as their own entries.
+				var n: int = (def as EquipmentDefinition).length_cells
+				rows.append([place[0], place[1], key + "|a", "%s 1×%d — along the hull%s" % [text, n, suffix], [entry[0], id, 0], color, tip])
+				rows.append([place[0], place[1], key + "|b", "%s %d×1 — across the hull%s" % [text, n, suffix], [entry[0], id, 1], color, tip])
+				continue
+			rows.append([place[0], place[1], key, text + suffix, [entry[0], id], color, tip])
+	var cat_order: Array = CATEGORIES.slice(1)
+	rows.sort_custom(func(a: Array, b: Array) -> bool:
+		var ca := cat_order.find(a[0])
+		var cb := cat_order.find(b[0])
+		if ca != cb:
+			return ca < cb
+		var sa: int = (SECTIONS[a[0]] as Array).find(a[1])
+		var sb: int = (SECTIONS[b[0]] as Array).find(b[1])
+		if sa != sb:
+			return sa < sb
+		return str(a[2]) < str(b[2]))
+	var last_cat := ""
+	var last_section := ""
+	for r: Array in rows:
+		if want != "All" and r[0] != want:
+			continue
+		if query != "" and not (str(r[3]).to_lower().contains(query) or str(r[0]).to_lower().contains(query)
+				or str(r[1]).to_lower().contains(query) or String(r[4][1]).contains(query)):
+			continue
+		if want == "All" and r[0] != last_cat:
+			var ch := palette_list.add_item(str(r[0]).to_upper())
+			palette_list.set_item_selectable(ch, false)
+			palette_list.set_item_custom_fg_color(ch, CyberTheme.AMBER)
+			last_cat = r[0]
+			last_section = ""
+		if r[1] != last_section:
+			var sh := palette_list.add_item("  " + str(r[1]))
+			palette_list.set_item_selectable(sh, false)
+			palette_list.set_item_custom_fg_color(sh, CyberTheme.TEXT_DIM)
+			last_section = r[1]
+		var i := palette_list.add_item("    " + str(r[3]))
+		palette_list.set_item_metadata(i, r[4])
+		palette_list.set_item_custom_fg_color(i, r[5])
+		palette_list.set_item_tooltip(i, r[6])
 
 
 ## Key figures above the detailed stats.
@@ -1180,10 +1324,23 @@ func _build_map_tab(tabs: TabContainer) -> void:
 	system_map.picked.connect(func(id: String) -> void: pick_location(id))
 	map_tab.add_child(system_map)
 	_map_info = _rich_label()
+	_map_info.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	map_tab.add_child(_map_info)
+	# Brokers and artifacts scroll; the map and the encounter row stay put.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var lists := VBoxContainer.new()
+	lists.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lists.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	scroll.add_child(lists)
+	map_tab.add_child(scroll)
 	_broker_box = VBoxContainer.new()
 	_broker_box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
-	map_tab.add_child(_broker_box)
+	lists.add_child(_broker_box)
+	_artifact_box = VBoxContainer.new()
+	_artifact_box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+	lists.add_child(_artifact_box)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
 	var heading := Label.new()
@@ -1213,17 +1370,28 @@ func _build_map_tab(tabs: TabContainer) -> void:
 
 ## Jump the vessel to a known location's station (the next launch starts in
 ## its orbit), paying the propellant (PlayerProfile.relocate).
+## The nav chart: lay in a course for the next sortie (play-test batch 7).
+## Nothing is paid or moved until LAUNCH, which jumps there first; picking
+## where the vessel is docked stays put. False (with why) for a jump beyond
+## what the ship can carry even with full tanks.
 func pick_location(location_id: String) -> bool:
-	var cost := profile.jump_cost_kg(location_id, editor.catalog)
-	var why := profile.relocate(location_id, editor.catalog)
-	if why != "":
-		_set_status(why, true)
+	if location_id not in profile.known_locations:
+		_set_status("That location is not on your map", true)
 		return false
-	_save_profile()
+	var there := Location.by_id(location_id)
+	var need := profile.jump_dv(location_id)
+	var t := profile.vessel_tanks(editor.catalog)
+	if need > float(t.dv_full_mps):
+		_set_status("The jump to %s needs %s; full tanks and the reserve give this ship %s" % [there.station_name,
+			JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_full_mps)], true)
+		return false
+	profile.jump_target = location_id
 	_refresh_map()
-	_refresh_station_tabs()
-	_set_status("Docked at %s — the jump burned %s; the next launch starts in %s" % [Location.by_id(location_id).station_name,
-		JumpDrive.tonnes(cost), Location.by_id(location_id).display_name.to_lower()])
+	if location_id == profile.location:
+		_set_status("Course: stay at %s — the next launch starts in %s" % [there.station_name, there.display_name.to_lower()])
+	else:
+		_set_status("Course laid in for %s: %s of this ship's %s (%s aboard) — the jump happens when you LAUNCH" % [there.station_name,
+			JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_full_mps), JumpDrive.dv_text(t.dv_mps)])
 	return true
 
 
@@ -1235,8 +1403,8 @@ func buy_charts(location_id: String) -> bool:
 		return false
 	_save_profile()
 	_refresh_map()
-	_set_status("%s is on your map — jump there from it (%s of propellant)" % [Location.by_id(location_id).display_name,
-		JumpDrive.tonnes(profile.jump_cost_kg(location_id, editor.catalog))])
+	_set_status("%s is on your map — set a course there on the nav chart (%s)" % [Location.by_id(location_id).display_name,
+		JumpDrive.dv_text(profile.jump_dv(location_id))])
 	return true
 
 
@@ -1250,11 +1418,12 @@ func _refresh_map() -> void:
 	if system_map == null:
 		return
 	var here := Location.by_id(profile.location)
+	var course := Location.by_id(profile.launch_point())
 	var costs := {}
 	for id: String in profile.known_locations:
 		if id != here.id:
-			costs[id] = "jump %s" % JumpDrive.tonnes(profile.jump_cost_kg(id, editor.catalog))
-	system_map.set_state(profile.known_locations, here.id, costs)
+			costs[id] = "jump %s" % JumpDrive.dv_text(profile.jump_dv(id))
+	system_map.set_state(profile.known_locations, here.id, costs, course.id)
 	var title := get_node_or_null("Margin/VBox/TopBar/Title") as Label
 	if title != null:
 		title.text = here.station_name.to_upper()
@@ -1262,15 +1431,79 @@ func _refresh_map() -> void:
 		size_buttons[i].set_pressed_no_signal(i + 1 == profile.encounter_size)
 	var n := profile.encounter_size
 	route_button.text = "◎ %s · %d SHIP%s" % [here.display_name.to_upper(), n, "" if n == 1 else "S"]
+	if course != here:
+		route_button.text = "◎ → %s · %s · %d SHIP%s" % [course.display_name.to_upper(), JumpDrive.dv_text(profile.jump_dv(course.id)),
+			n, "" if n == 1 else "S"]
+	var surveying := Artifact.by_id(profile.survey_target)
+	if surveying != null:
+		route_button.text = "◎ SURVEY %s" % surveying.display_name.to_upper()
 	_refresh_brokers()
+	_refresh_artifacts()
 	var b := here.body
-	_map_info.text = "[b]%s[/b] · docked
+	_map_info.text = "[b]%s[/b] · docked%s
 %s
 %s μ %.1f km³/s² · radius %.0f km · %s %.0f km
 %s" % [
-		here.station_name, here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
+		here.station_name, CyberTheme.tint("  ·  COURSE → %s, %s at launch" % [course.station_name.to_upper(), JumpDrive.dv_text(profile.jump_dv(course.id))],
+			CyberTheme.CYAN) if course != here else "", here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
 		"entry interface" if b.has_atmosphere else "terrain floor", b.entry_interface_altitude_m / 1000.0,
 		CyberTheme.tint(_jump_note(), CyberTheme.TEXT_DIM)]
+
+
+## Pick (or cancel, "") the next sortie's survey (PlayerProfile.choose_survey).
+func pick_survey(artifact_id: String) -> bool:
+	var why := profile.choose_survey(artifact_id, editor.catalog)
+	if why != "":
+		_set_status(why, true)
+		return false
+	_save_profile()
+	_refresh_map()
+	var a := Artifact.by_id(artifact_id)
+	_set_status("Next sortie: survey %s" % a.display_name if a != null else "Survey cancelled — the next sortie is an ordinary one")
+	return true
+
+
+## Real objects to survey (Milestone 14): where each is, what the trip
+## takes, and the record of those already surveyed.
+func _refresh_artifacts() -> void:
+	if _artifact_box == null:
+		return
+	for c in _artifact_box.get_children():
+		c.queue_free()
+	var head := _rich_label()
+	head.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.text = "[b]ARTIFACTS[/b] — real objects where NASA/JPL Horizons puts them on the scenario date. Survey: close in, match speed, hold with a working sensor. Look, don't touch."
+	_artifact_box.add_child(head)
+	var here := Location.by_id(profile.location)
+	for a in Artifact.all():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+		var text := _rich_label()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var where := a.location().display_name if a.location() != null else "deep space, %s" % SystemMap.distance_text(a.distance_from(here))
+		var cost := ""
+		if a.is_deep_space():
+			var t := profile.vessel_tanks(editor.catalog)
+			var need := profile.survey_dv(a)
+			cost = " · round trip %s of this ship's %s" % [JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_full_mps)]
+			if need > float(t.dv_full_mps):
+				cost = CyberTheme.tint(cost + " — out of reach", CyberTheme.AMBER)
+		var done := profile.codex.has(a.id)
+		var status := CyberTheme.tint("✔ surveyed", CyberTheme.CYAN) if done else "%d cr" % a.survey_credits
+		var line := "%s — %s · %s%s" % [a.display_name, where, status, cost]
+		if done:
+			line += "\n" + CyberTheme.tint("%s Launched %s. %s" % [a.lore, a.launched, a.uncertainty], CyberTheme.TEXT_DIM)
+		text.text = line
+		row.add_child(text)
+		var pick := Button.new()
+		var chosen := profile.survey_target == a.id
+		pick.text = "Cancel survey" if chosen else "Survey next sortie"
+		pick.custom_minimum_size = Vector2(200, 30)
+		CyberTheme.style_button(pick, CyberTheme.AMBER if chosen else CyberTheme.CYAN)
+		pick.pressed.connect(pick_survey.bind("" if chosen else a.id))
+		row.add_child(pick)
+		_artifact_box.add_child(row)
 
 
 ## Information brokers: charts for the places not on the map yet.
@@ -1302,9 +1535,9 @@ func _refresh_brokers() -> void:
 func _jump_note() -> String:
 	var t := profile.vessel_tanks(editor.catalog)
 	var here := Location.by_id(profile.location)
-	return "Click a body to jump to its station: propellant from the tanks (%s) first, then the jump reserve (%s)
+	return "Click a body to set the next sortie's course; LAUNCH jumps there. Jumps cost Δv — the same for every ship; this one carries %s (%s with full tanks and the reserve), paid from the tanks first, then the jump reserve
 %s: shelves ×%.2f, %d items up to %s · local traffic %s" % [
-		JumpDrive.tonnes(t.main_kg), JumpDrive.tonnes(t.reserve_kg), here.station_name, here.price_factor, here.vendor_stock_size,
+		JumpDrive.dv_text(t.dv_mps), JumpDrive.dv_text(t.dv_full_mps), here.station_name, here.price_factor, here.vendor_stock_size,
 		Rarity.NAMES[here.vendor_max_rarity].to_lower(), ", ".join(Array(here.enemy_templates).map(func(f: String) -> String: return f.get_basename().split("_")[0]))]
 
 
@@ -1328,58 +1561,70 @@ func _refresh_station_tabs() -> void:
 	var by_role := {}
 	for i in v.crew.size():
 		(by_role.get_or_add(clampi(int(v.crew[i].role), 0, CrewRoster.ROLE_NAMES.size() - 1), []) as Array).append(i)
-	var guns := 0
-	for e in v.blueprint.equipment:
-		var gdef: EquipmentDefinition = catalog.equipment.get(e.def_id)
-		if gdef != null and gdef.kind == EquipmentDefinition.Kind.CANNON:
-			guns += 1
-	var want := CrewRoster.suggested(guns)
-	var tally := PackedStringArray()
+	var vgrid := ShipGrid.build(v.blueprint, catalog)
+	var want := CrewRoster.complement_for(v.blueprint, vgrid, ShipStats.compute(v.blueprint, vgrid))
+	# The roster board (play-test batch 6): a card per department — who
+	# serves there, against the standard complement (amber when short).
+	var board := HFlowContainer.new()
+	board.add_theme_constant_override("h_separation", CyberTheme.SPACE_M)
+	board.add_theme_constant_override("v_separation", CyberTheme.SPACE_M)
+	_crew_tab.add_child(board)
 	for r in CrewRoster.ROLE_NAMES.size():
-		var have := (by_role.get(r, []) as Array).size()
-		var col: Color = CyberTheme.AMBER if have < want[r] else CrewRoster.ROLE_COLORS[r]
-		tally.append("[color=#%s]● %s %d%s[/color]" % [col.to_html(false), CrewRoster.ROLE_SHORT[r], have, "/%d" % want[r] if want[r] > 0 else ""])
-	_crew_tab.add_child(_station_label("  ".join(tally) + "   [color=#%s](amber: short of the standard complement)[/color]" % CyberTheme.TEXT_DIM.to_html(false)))
-	var listed: Array[int] = []
-	for r in CrewRoster.ROLE_NAMES.size():
-		for i in by_role.get(r, []):
-			listed.append(i)
-	var last_role := -1
-	for i in listed:
-		var c: Dictionary = v.crew[i]
-		var post := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
-		if post != last_role:
-			last_role = post
-			_crew_tab.add_child(_station_label("[color=#%s][b]%s[/b][/color]" % [(CrewRoster.ROLE_COLORS[post] as Color).to_html(false),
-				str(CrewRoster.ROLE_NAMES[post]).to_upper()]))
-		var row := HBoxContainer.new()
-		var who := Label.new()
-		who.text = "   %s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
-		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		who.clip_text = true
-		row.add_child(who)
-		var role := OptionButton.new()
-		for n in CrewRoster.ROLE_NAMES:
-			role.add_item(n)
-		role.select(int(c.role))
-		role.item_selected.connect(func(r: int) -> void:
-			profile.set_crew_role(i, r)
-			_save_profile())
-		row.add_child(role)
-		var out := Button.new()
-		out.text = "Dismiss"
-		out.pressed.connect(func() -> void:
-			profile.dismiss(i)
-			_save_profile()
-			_refresh_hangar())
-		row.add_child(out)
-		_crew_tab.add_child(row)
-	_crew_tab.add_child(_station_label("[b]FOR HIRE[/b] · credits %d · ★ = skill (faster repairs and treatment)" % profile.credits))
+		var members: Array = by_role.get(r, [])
+		if members.is_empty() and want[r] == 0:
+			continue
+		var short := members.size() < want[r]
+		var dept := ShipyardSections.card(board, "%s   %d%s" % [str(CrewRoster.ROLE_NAMES[r]).to_upper(), members.size(), " / %d" % want[r] if want[r] > 0 else ""],
+			CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r], Vector2(CREW_CARD_WIDTH, 0))
+		if members.is_empty():
+			dept.add_child(_station_label("[color=#%s]no one posted — short of the standard complement[/color]" % CyberTheme.AMBER.to_html(false)))
+		for i: int in members:
+			var c: Dictionary = v.crew[i]
+			var row := HBoxContainer.new()
+			var who := Label.new()
+			who.text = "%s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
+			who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			who.clip_text = true
+			row.add_child(who)
+			var role := OptionButton.new()
+			for n in CrewRoster.ROLE_NAMES:
+				role.add_item(n)
+			role.select(int(c.role))
+			role.tooltip_text = "Post %s elsewhere" % c.name
+			role.item_selected.connect(func(post: int) -> void:
+				profile.set_crew_role(i, post)
+				_save_profile())
+			row.add_child(role)
+			var out := Button.new()
+			out.text = "✕"
+			out.tooltip_text = "Dismiss %s" % c.name
+			CyberTheme.style_button(out, CyberTheme.RED)
+			out.pressed.connect(func() -> void:
+				profile.dismiss(i)
+				_save_profile()
+				_refresh_hangar())
+			row.add_child(out)
+			dept.add_child(row)
+	_crew_tab.add_child(_station_label("[b]HIRING HALL[/b] · credits %d · %d / %d berths filled · ★ = skill (faster repairs and treatment)" % [
+		profile.credits, v.crew.size(), berths]))
+	var hall := HFlowContainer.new()
+	hall.add_theme_constant_override("h_separation", CyberTheme.SPACE_S)
+	hall.add_theme_constant_override("v_separation", CyberTheme.SPACE_S)
+	_crew_tab.add_child(hall)
 	for i in profile.hire_pool.size():
 		var c: Dictionary = profile.hire_pool[i]
-		_crew_tab.add_child(_station_row("[color=#%s]●[/color] %s — %s %s" % [(CrewRoster.ROLE_COLORS[clampi(int(c.role), 0, 6)] as Color).to_html(false),
-			c.name, CrewRoster.ROLE_NAMES[int(c.role)], "★".repeat(int(c.skill))],
-			"Hire (%d cr)" % int(c.fee), func() -> void: _station_result(profile.hire(i, catalog)), v.crew.size() < berths and profile.credits >= int(c.fee)))
+		var role_index := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
+		var who := ShipyardSections.card(hall, "", CrewRoster.ROLE_COLORS[role_index], Vector2(250, 0))
+		who.add_child(_station_label("[b]%s[/b]\n[color=#%s]%s[/color] %s" % [c.name, (CrewRoster.ROLE_COLORS[role_index] as Color).to_html(false),
+			CrewRoster.ROLE_NAMES[role_index], "★".repeat(int(c.skill))]))
+		var hire := Button.new()
+		hire.text = "Hire · %d cr" % int(c.fee)
+		hire.disabled = not (v.crew.size() < berths and profile.credits >= int(c.fee))
+		hire.tooltip_text = "No free berth" if v.crew.size() >= berths else ("Short of credits" if hire.disabled else "Sign %s on" % c.name)
+		CyberTheme.style_button(hire, CyberTheme.AMBER)
+		var index := i
+		hire.pressed.connect(func() -> void: _station_result(profile.hire(index, catalog)))
+		who.add_child(hire)
 	_vendor_tab.add_child(_station_label("[b]QUARTERMASTER OKAFOR[/b] — \"Fresh off the freighters. Cash only, no questions.\" · credits %d · new stock after every sortie" % profile.credits))
 	for i in profile.vendor_stock.size():
 		var item: Dictionary = profile.vendor_stock[i]
@@ -1402,6 +1647,9 @@ func _refresh_station_tabs() -> void:
 			var id: String = n.id
 			_tech_tab.add_child(_station_row("%s %s — %s per level" % [n.name, "■".repeat(level) + "□".repeat(TechTree.MAX_LEVEL - level), n.text],
 				"Upgrade (%d cr)" % cost if cost > 0 else "Max", func() -> void: _station_result(profile.buy_tech(id)), cost > 0 and profile.credits >= cost))
+
+
+const CREW_CARD_WIDTH := 400.0
 
 
 func _station_label(text: String) -> RichTextLabel:
@@ -1708,6 +1956,11 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 		"COST %d spare parts%s" % [ServiceYard.equipment_cost(e), " (fitting an owned unit)" if e.rarity != Rarity.Tier.COMMON else ""],
 	])
 	match e.kind:
+		EquipmentDefinition.Kind.CANNON when e.cannon != null and e.cannon.is_beam():
+			var b := e.cannon
+			lines.append("BEAM %.0f pulses a minute · reaches %.1f km at once (no travel time, no recoil) · %.0f mm penetration close in, %.0f mm at full reach" % [
+				b.rate_of_fire_rpm, b.beam_range_m / 1000.0, b.penetration_mm, b.penetration_mm * KineticCannonConfig.BEAM_FALLOFF])
+			lines.append("TURRET trains %.0f°/s · no magazine: draws %.0f kW and makes %.0f kW of heat while firing" % [b.traverse_deg_s, -e.power_kw, e.heat_kw])
 		EquipmentDefinition.Kind.CANNON:
 			var g := e.cannon
 			lines.append("GUN %.0f rpm · %.0f m/s · %.1f kg rounds · %.0f mm penetration at any range (up to %.0f mm head-on)" % [

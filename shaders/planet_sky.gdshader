@@ -32,6 +32,8 @@ uniform mat3 far_to_body = mat3(1.0);
 uniform float far_has_air = 0.0;
 // 1 where the air carries Earth-like clouds and the map has seas (glint).
 uniform float has_clouds = 1.0;
+// The Sun's angular radius (rad); never drawn smaller than a pixel.
+uniform float sun_angular_radius = 0.00506;
 uniform float far_has_clouds = 1.0;
 // Light reflected between the two bodies (PlanetSky): the far body lighting
 // the central body's night side (near_fill: moonlight on Earth, earthlight
@@ -197,7 +199,10 @@ void sky() {
 			}
 			float d = dot(dir, sun);
 			if (!far_hit) {
-				col += vec3(1.0, 0.97, 0.9) * (smoothstep(0.999984, 0.999990, d) * 30.0 + pow(max(d, 0.0), 900.0) * 0.8);
+				float sr = max(sun_angular_radius, pixel_angle);
+				float k = 0.5 * sr * sr;  // 1 − cos(radius)
+				float glow = clamp(sun_angular_radius / 0.00506, 0.15, 1.0);
+				col += vec3(1.0, 0.97, 0.9) * (smoothstep(1.0 - 1.25 * k, 1.0 - 0.78 * k, d) * 30.0 + pow(max(d, 0.0), 900.0) * 0.8 * glow);
 			}
 			COLOR = col;
 		}

@@ -236,7 +236,15 @@ armour you face (the hull skin is 20 mm; plates add 40 or 80 mm):
 | Railgun | rare | 220 mm | 24 rpm | everything, unless it glances off at a steep angle |
 
 Penetration doesn't fall off with range (vacuum); a head-on closing speed
-adds up to 30 %. **Magazines hold mass** (300 kg a cell, 540 kg dense),
+adds up to 30 %.
+
+**Lasers** (beam weapons): the **pulse laser turret** (epic; 30 pulses a
+minute, 5 km reach, 80 mm close in falling to 40 mm at full reach) hits the
+moment it fires — nothing to lead, dodge or shoot down — but it draws
+1,500 kW from your reactors and makes 1,500 kW of heat while it fires, so it
+needs power and radiators, not magazines. Fire control holds it until the
+locked target is within reach. Fighters and drones can carry lasers too
+(below); their charges are recharged aboard. **Magazines hold mass** (300 kg a cell, 540 kg dense),
 shared between the gun types aboard by mount count: heavier rounds, fewer of
 them.
 
@@ -258,9 +266,15 @@ craft › rounds), the engagement range (2 km) and an ammunition reserve
 (below 15 % of its magazine a mount keeps the rest for its first priority).
 Flak can only track heavy slugs (≥ 2 kg, closing under 1.5 km/s — the heavy
 cannon's rounds); autocannon rounds are too small and railgun slugs too fast.
+Each PD gun fires 300 heavy flak rounds a minute (0.3 kg, 18 mm; a slug
+within 2.6 m of one is destroyed), 200 to a magazine.
 
-**Encounters:** from mission 4 two ships come at once, from mission 7
-three, each with its own role — a *closer* works in to gun range, a
+**Encounters:** pick 1, 2 or 3 ships on the shipyard map. Only the lead
+starts close; the others come in from about 30 km and must be found
+first, so you can deal with one before the next arrives. They are fitted
+as for earlier missions (the second two back, the third three) and their
+guns fire at 45 % of the rated rate (the lead's at 70 %): enemy guns are
+automation, as yours are. Each has its own role — a *closer* works in to gun range, a
 *standoff* ship holds 5–9 km off and fires missile salvos, a *flanker*
 works round to your stern — and they focus fire (an escorted courier first)
 and never waste fire on a wreck. The target card shows the selected
@@ -467,6 +481,12 @@ moves on when you have done it. F2 again skips it; F2 later restarts it.
      value and double bounty; its stores (`10 + 50 × intact` spare parts) and
      crates (+2, **90 %** loot each) go into your **cargo hold**.
    Loot in the hold is at risk until you bank it, and limited by its size.
+3. **Come back for the wrecks.** Beaten ships stay where they were left
+   (six per location). Later sorties there find the newest two a few
+   kilometres out, marked DERELICT. **G** within 2 km salvages one again,
+   once per sortie: half the scrap and crates of the time before, no
+   bounty. Each sortie a derelict loses 15 % of what is left, and it breaks
+   up below 10 % or after 8 sorties.
    Either way the wreck's best intact rare part comes too, the crates open
    on a spinning carousel, and the next contact arrives — each one tougher
    (rarer guns, armour plates, RCS and reactors). The beaten ship doesn't
@@ -644,6 +664,36 @@ exit holes on the hull.
   it so its collar faces yours and reels it in for V. It siphons a
   disabled or captured hulk's propellant and rounds while it holds.
 
+## Artifacts: real spacecraft to survey
+
+Eleven real objects are where NASA/JPL Horizons puts them on the scenario
+date (sources and uncertainty in `data/ATTRIBUTION.md`):
+
+| Where | Objects |
+|---|---|
+| Earth orbit | International Space Station, Hubble Space Telescope |
+| Lunar orbit | Lunar Reconnaissance Orbiter (it made the Moon map you fly over) |
+| Mars orbit | Mars Reconnaissance Orbiter, 2001 Mars Odyssey |
+| Deep space, about the Sun | Tesla Roadster (Starman), New Horizons, Voyager 1 and 2, Pioneer 10 and 11 |
+
+- **Pick one** on HANGAR › MAP › ARTIFACTS ("Survey next sortie"). Objects
+  in a body's orbit are surveyed from that body's station; deep-space ones
+  from anywhere.
+- **The sortie** starts 3 km behind it in its real orbit, with no hostile
+  traffic. Close to within 500 m, match its speed within 2 m/s and hold
+  20 s with a working sensor mast. The target card shows each condition.
+- **The reward** is a survey fee (once per object) and its record in the
+  codex, shown on the MAP.
+- **Deep space** flies about the Sun itself: its gravity, its light from
+  the right direction, its disc shrinking to a point at 172 AU. The jump
+  out and back is paid at launch and must fit in the Δv your full tanks and
+  jump reserve give: the Roadster needs Δv 1,741 m/s round trip, Voyager 1
+  2,512 m/s. The Frigate Mk I carries 1,557 m/s; the Corvette, Destroyer and
+  Cruiser can reach every object — or design a long-range ship.
+- **Look, don't touch:** real objects can't be damaged, grappled or
+  salvaged. JWST is left out: it sits at the Sun–Earth L2 point, which
+  needs a rotating frame the game doesn't have.
+
 ## Air wing: fighters and drones
 
 The Frigate Mk I carries a **Wasp fighter** in an internal **fighter bay**
@@ -659,6 +709,17 @@ rack. They fly with the same physics as every ship and can be shot down.
   **Escort** (fly beside you), **Return**. **Risk tolerance**
   (conservative / balanced / aggressive) decides when a craft breaks off on
   its own for damage, propellant or ammunition.
+- **Strikes move on**: once the target is beaten (disabled, captured or a
+  wreck) the fighters take the nearest combat-ready enemy; with none left
+  they come home.
+- **Rearming**: an empty gun always brings a craft home, whatever its risk
+  setting. A craft that came home on its own (empty, low on fuel, hurt, or
+  nothing left to strike) goes back out once refuelled and rearmed while
+  there is a fight — "Back out after rearming" on the WING tab turns that
+  off. A craft you recall stays home.
+- **The WING tab** is a table: a row per craft (state, hull · fuel · ammo,
+  order, risk, aim, ▲ out / ▼ in; hover for its role), wing-wide launch,
+  recall, order and risk on top, and how they fly folded away.
 - Out of contact (beyond 30 km, or jammed) for 10 s, a craft falls back to
   returning home.
 - **Recon** gives the close look that shows the target's systems: without a
@@ -673,6 +734,10 @@ rack. They fly with the same physics as every ship and can be shot down.
   | Mantis bomber | bomber bay | heavy 45 mm cannon from long range; keeps its distance |
   | Recon drone | drone rack | the close look at the target's systems; never fires |
   | EW drone | EW drone rack | holds 1.2 km out towards the threat and jams for ships within 3 km |
+  | Lancer laser fighter | fighter bay (Lancer laser) | gun runs like the Wasp with a laser: 1.5 km reach, 40 charges, no lead needed |
+  | Laser drone | drone rack (laser) | an interceptor drone: lasers inbound missiles (one pulse each, 2 km) and craft; 30 charges |
+  | Repair drone | drone rack (repair) | patches damaged systems outside your hulls — guns, radiators, engines, sensors, racks — to 75 % (the field-repair limit) at 1.5 hp/s, your own ship first, then your side's; no walk or airlock, so it frees the crew for the inside. Destroyed parts still need the yard |
+  | Salvage drone | drone rack (salvage) | strips disabled hostiles and derelicts (your target first, else the nearest within 8 km): it cuts the most valuable system free every 4 s into half its worth in spare parts, and brings 30 home at a time — into the hold, at risk until banked. A stripped wreck is worth less to a beacon later |
 
 - **How they fly:** a craft never fires with a friend within 25 m of its
   line of fire, its rounds carry an IFF interlock that passes through your
@@ -686,11 +751,19 @@ rack. They fly with the same physics as every ship and can be shot down.
 
 ## Crew and boarding
 
+**Crew size follows the ship**: the standard complement grows with the hull
+— a bridge watch per 200 modules beyond two, an engineer per reactor and
+per four engines, a gun crew per two guns or launchers, damage control per
+40 modules, a medic per 40 berths, security per 12 berths (a frigate's is
+2 / 2 / 2 / 1 / 4 / 1, a destroyer's 46 specialists). Two damage-control crew
+make a **team**, and every team patches a system at the same time ([C] sends
+the next free one); every medic treats a patient of their own.
+
 Every berth (3 per crew-quarters cell) holds one named crew member with a
 role: command (bridge), engineering, damage control, weapons (magazine),
 security, medical and general crew. They are not drawn; moving between
 rooms takes 5 s per room. While a hostile is about the crew are at **general
-quarters in spacesuits**: they cross vented rooms and survive a room venting
+quarters in spacesuits**: they keep command of a vented bridge, cross vented rooms and survive a room venting
 around them (otherwise venting wounds or kills whoever is in it). No command
 crew on a pressurised bridge hands the ship to the ship AI (half thrust and
 turn rate); no weapons crew able to reach the magazine halves the guns' rate
@@ -754,40 +827,64 @@ no usable backup. Loading an older save version first keeps a copy
 ## Shipyard
 
 **Earth Shipyard** (or the **Lunar Shipyard**) opens after a jump (hold B in
-flight). It is a station with sections along the top; the builder is one of
-them:
+flight). It is a station: the **station directory** down the left lists its
+places by district — DRYDOCK (Berth, Refit bay, Repair crews, Armoury),
+CONCOURSE (Mission board, Crew quarters, Ship dealer), OPERATIONS (Hangar &
+bank, Station tech, Nav chart, Salvage odds) — with your credits and spare
+parts on top. Each place has a live line under its name: amber when it
+needs you (repair jobs waiting, a restock due, offers posted, an empty
+berth, cargo not banked, an upgrade you can afford), teal when it is fine.
+Beside the builder the directory narrows to the names.
 
-| Section | What's there |
+| Place (section) | What's there |
 |---|---|
-| **STATION** (opens here) | Your ship in 3D; cards for repairs, rearm, crew and the next sortie, each with a button to its section |
+| **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights), turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
 | **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage. Accepting one sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
-| **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, plus the crew at the hiring fee |
+| **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the hold and the bank, the service record |
 | **REFIT** | The builder below |
-| **CREW** | The roster by post, who is for hire |
+| **CREW** (Crew quarters) | The roster board: a card per department with who serves there against the standard complement (amber when short), each with their post and a ✕ to dismiss; the **hiring hall** below, a card per spacer for hire |
 | **ARMOURY** | Rearm and refuel now (or leave it to the launch), the quartermaster's parts |
 | **REPAIRS** | Damage and what fixing it costs |
 | **UPGRADES** | Station technology |
 | **MAP** | Where you launch from, how many you meet |
 | **LOOT** | Every crate drop and its odds |
 
+**Capital ships** (at the dealer) are built like battleships: a long
+armoured hull (80 mm down the flanks, 40 mm on top and the bow) that
+narrows to a stepped prow, a two-deck superstructure amidships with the
+bridge on top, a main battery on the centreline — heavy kinetic cannons
+ahead of the superstructure and superfiring on its roof (the Cruiser adds
+railguns) — autocannon secondaries down the flanks, point defence, missile
+racks. Destroyer 3,002 t (3 heavy guns), Cruiser 4,987 t (4 heavy guns, 2
+railguns), Carrier 6,512 t (16 craft). The camera sits back further the
+bigger the ship.
+
 In REFIT you start from the ship you were flying (the Frigate Mk I template
 by default).
 
-**Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click a body to
-jump the vessel to its station; the next launch starts in its orbit. Pick
+**Nav chart** (OPERATIONS › Nav chart, or the ◎ route button beside
+LAUNCH): click a body to **set the next sortie's course** — nothing moves
+until you press **LAUNCH**, which jumps there first and starts the sortie in
+its orbit. The course is ringed in cyan with a line from your berth; the
+route button reads "◎ → LUNAR ORBIT · Δv 487 m/s"; click your own berth to
+stay. Accepting a contract elsewhere sets its location as the course. Pick
 the encounter: **1, 2 or 3 ships**. Earth and the Moon are charted from the
 start; an **information broker** on the same page sells the charts for Mars
 (1,500 cr).
 
-- **Jumps cost propellant**: ship mass × (8 kg/t + 18 kg/t for every
-  tenfold of distance in 1,000 km). Frigate Mk I: 4.9 t home within a
-  location, 33.9 t Earth ↔ Moon, 64.6 t Earth → Mars (the real distances
-  on the scenario date). The map shows each jump's cost.
+- **Jumps cost Δv — the same for every ship**: 70 m/s plus 160 m/s for
+  every tenfold of distance in 1,000 km — 70 m/s home within a location,
+  487 m/s Earth ↔ Moon, 928 m/s Earth → Mars (the real distances on the
+  scenario date). Each ship pays it in propellant by the rocket equation at
+  its own main-engine Isp: the Frigate Mk I burns 33 t for the Moon, the
+  Cutter 8.5 t. The chart, the artifacts list and the ARMOURY show the Δv
+  your tanks give (Frigate: 1,557 m/s with full tanks and the reserve).
 - **Jump reserve**: a quarter of your tankage that only the jump drive can
   burn, used after the main tank. The ARMOURY shows and refills it.
-- **Not enough?** The map refuses with what's missing and the refuel price;
-  a contract elsewhere can't be accepted until you can make the jump.
+- **Not enough?** A course beyond what the ship can carry even full is
+  refused; LAUNCH tops the tanks up first (credits allowing) and refuses a
+  jump the tanks still can't pay, with the Δv missing and the refuel price.
 - **Each station is different**: the Lunar Shipyard stocks four parts up to
   rare at 1.2× prices (crew fees too), and its traffic mixes corvettes with
   frigates and is one threat level tougher. The Martian Shipyard stocks five
@@ -804,8 +901,18 @@ longer offered.)
 **Templates**: Cutter Mk I (light, ~150 t), Corvette Mk I (medium, ~365 t)
 and Frigate Mk I (heavy) — common parts only, so any profile can fly them.
 
-**Armour** (palette → Armour): drag across cells to fit 40 mm (thin, grey)
-or 80 mm (thick, dark grey) plates on their exposed faces — all, sides only, top
+**The parts list** is grouped by category and section — Hull (blocks,
+slopes & noses, frames, armoured sections), Armour, Rooms (crew & command,
+engineering, stores & hangars), Propulsion (main engines, RCS, tanks),
+Power & thermal (reactors, radiators, distribution, power bus), Weapons
+(guns, point defence, missile launchers, countermeasures & EW), Hangars &
+craft (fighters, drones), Sensors & utility — rarest first within a
+section; search narrows it. The 3-cell radiator is listed both ways round:
+**1×3 along the hull** and **3×1 across it** (R turns any long part too).
+
+**Armour** (palette → Armour): drag across cells to fit 40 mm (thin, gunmetal)
+or 80 mm (thick, darker) slabs on their exposed faces — glossier and less
+blue than bare hull, one panel per cell, so plated faces stand out — all, sides only, top
 only or underside only — or strip them; **Clear all armour** strips the
 lot (Ctrl+Z puts it back). A plate on a face you later build over (a new
 deck or module) goes with that edit, mass and all. Plates add mass
@@ -878,7 +985,8 @@ actions: tutorial, missile salvo, crew and weapons tabs), the shipyard
 repair and refit → relaunch), boarding (`smoke_boarding.gd`) and the air
 wing (`smoke_wing.gd`), a three-ship encounter (`smoke_encounter.gd`:
 selection, roles, salvos, salvaging a non-lead contact, policy, manual
-override), a 600-frame boot of the main scene, a `.pck`
+override), artifact surveys (`smoke_survey.gd`: the ISS, Voyager 1 about
+the Sun), a 600-frame boot of the main scene, a `.pck`
 export and a boot from it. Smoke tests use a throwaway profile, never your
 save. The script fails on any test failure **and** on any Godot `ERROR:` /
 `SCRIPT ERROR` in the logs. Logs: `build/check-logs/`.

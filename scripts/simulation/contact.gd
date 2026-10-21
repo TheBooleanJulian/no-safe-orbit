@@ -27,6 +27,11 @@ var salvo: MissileSalvo
 var salvo_at: float = 0.0
 ## After we cut its gangway it waits until then before boarding again.
 var reboard_at: float = -INF
+## How its hull was made (to rebuild it as a derelict, DerelictField): the
+## template file, the mission number and the variant EnemyFactory used.
+var template_file: String = "frigate_mk1.json"
+var mission_no: int = 1
+var variant: int = 0
 
 
 static func create(p_id: StringName, p_index: int, p_policy: ShipPolicy) -> Contact:

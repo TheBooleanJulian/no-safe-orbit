@@ -31,12 +31,14 @@ const SUN_ENERGY := 1.4
 var sky_light: DirectionalLight3D
 ## Flares in flight (Milestone 11).
 var decoy_view: DecoyView
+var beam_view: BeamView
 @onready var stars: Starfield = $Starfield
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 var gangways := GangwayView.new()
 var audio := ShipAudio.new()
 var _rounds_heard := 0
+var _pulses_heard := 0
 
 ## Design the player flies; set by the shipyard before it switches to this
 ## scene. Null = the default template. Only used to commission the first
@@ -118,6 +120,17 @@ const ENEMY_REBOARD_DELAY_S := 20.0
 ## How our crew defends against boarders (chosen in Tab → CREW).
 var player_defence: int = BoardingAction.Defence.HOLD_BRIDGE
 var _jump_hold := 0.0
+## Milestone 14: the artifact this sortie surveys (null for an ordinary
+## sortie), how long the survey has held (sim s), whether it is done, and
+## whether a deep-space round trip was paid at launch.
+const ARTIFACT_ID := &"artifact"
+var artifact: Artifact
+var survey_progress := 0.0
+var survey_done := false
+var _survey_clock := 0.0
+var _jump_prepaid := false
+var _prepaid_line := ""
+var _artifact_view: ArtifactView
 ## The jump drive's reserve (kg): only jumps burn it (JumpDrive).
 var jump_reserve_kg := 0.0
 ## SEQUENCE missile mode: which warhead the next press of M fires.
@@ -131,6 +144,12 @@ var salvo: MissileSalvo
 const MAX_WRECKS := 4
 const WRECK_DRIFT_MPS := 4.0
 var _wrecks: Array[StringName] = []
+## Milestone 14 part 2: how each wreck of this sortie was made (to leave it
+## in the derelict field), and the field's derelicts flying now (ship id ->
+## record id) with those already salvaged this sortie.
+var _wreck_meta: Dictionary = {}
+var _field: Dictionary = {}
+var _field_salvaged: Dictionary = {}
 var _derelict_wings: Array[AirWing] = []
 var _wreck_count := 0
 ## An enemy boarding party is at most this big (ours: BoardingAction.MAX_TEAM).
@@ -168,6 +187,13 @@ func _ready() -> void:
 	audio.name = "Audio"
 	add_child(audio)
 	location = Location.by_id(get_profile().location)
+	# A survey sortie (Milestone 14): deep space centres on the Sun; one in a
+	# location's orbit flies from that location as usual.
+	artifact = Artifact.by_id(get_profile().survey_target)
+	if artifact != null and artifact.is_deep_space():
+		location = Location.deep_space(location)
+	elif artifact != null and (artifact.location() == null or artifact.location().id != location.id):
+		artifact = null
 	celestial = CelestialFrame.for_scenario(CelestialFrame.julian_date_from_iso(SCENARIO_EPOCH_UTC), SUN_ANGLE_FROM_UP_DEG, location.body)
 	stars.build(celestial)
 	hud.celestial = celestial
@@ -176,6 +202,9 @@ func _ready() -> void:
 	decoy_view = DecoyView.new()
 	decoy_view.name = "DecoyView"
 	add_child(decoy_view)
+	beam_view = BeamView.new()
+	beam_view.name = "BeamView"
+	add_child(beam_view)
 	sky_light = DirectionalLight3D.new()
 	sky_light.name = "SkyBodyLight"
 	sky_light.light_color = PlanetSky.NIGHT_LIGHT_COLOR
@@ -197,6 +226,9 @@ func _start_scenario() -> void:
 		(view as Node).queue_free()
 	_missile_views.clear()
 	_wrecks.clear()
+	_wreck_meta.clear()
+	_field.clear()
+	_field_salvaged.clear()
 	_derelict_wings.clear()
 	encounter = Encounter.new()
 	salvo = null
@@ -214,7 +246,22 @@ func _start_scenario() -> void:
 	world = WorldSimulation.new()
 	var body := location.body
 	var r0 := location.start_radius_m()
-	world.set_central_body(body, Vec3d.new(0, r0, 0), Vec3d.new(0, 0, -body.circular_speed(r0)))
+	var anchor_r := Vec3d.new(0, r0, 0)
+	var anchor_v := Vec3d.new(0, 0, -body.circular_speed(r0))
+	var artifact_offset := Vector3.ZERO
+	if artifact != null:
+		# Its real state (Horizons, at the scenario epoch) in this frame; we
+		# start START_BEHIND_M back along its track at its speed.
+		var st := artifact.state_icrs()
+		var r := celestial.icrs_to_pci_d(st[0])
+		var v := celestial.icrs_to_pci_d(st[1])
+		var back := v.normalized().times(-Artifact.START_BEHIND_M)
+		anchor_r = r.plus(back)
+		anchor_v = v
+		artifact_offset = back.times(-1.0).to_vector3()
+		if body.is_star:
+			celestial.set_star_sun(anchor_r)
+	world.set_central_body(body, anchor_r, anchor_v)
 	world.anchor_id = PLAYER_ID
 	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
 	player.side = &"player"
@@ -244,9 +291,20 @@ func _start_scenario() -> void:
 	hud.player_wing = player_wing
 	hud.encounter = encounter
 	_spawn_view(PLAYER_ID, Color.WHITE)
-	_spawn_encounter()
+	camera.fit_to(_designs[PLAYER_ID].stats.hull_bounds_m)
+	survey_progress = 0.0
+	survey_done = false
+	_survey_clock = 0.0
+	_jump_prepaid = false
+	if artifact != null:
+		_spawn_artifact(player, artifact_offset)
+	else:
+		_spawn_encounter()
+		_spawn_derelicts(player)
 	_sortie_closed = false
 	combat_log = CombatLog.begin(player, world.sim_time)
+	if _jump_prepaid:
+		combat_log.record(world.sim_time, "jump", _prepaid_line)
 	if hud.debrief != null:
 		hud.debrief.visible = false
 
@@ -254,9 +312,14 @@ func _start_scenario() -> void:
 	mission.contract = p.active_contract.duplicate()
 	tutorial = Tutorial.from_dict(p.tutorial)
 	_salvaged = false
-	if mission.goal() == MissionChain.Goal.ESCORT:
+	if mission.goal() == MissionChain.Goal.ESCORT and artifact == null:
 		_spawn_courier(player)
-	hud.notice("%s — %s" % [mission.number_text(), mission.current().brief], world.sim_time)
+	if artifact != null:
+		hud.notice("SURVEY — %s, %s ahead: close to %s, match its speed within %.0f m/s, hold %.0f s" % [
+			artifact.display_name, HudFormat.distance(Artifact.START_BEHIND_M), HudFormat.distance(artifact.survey_range_m()),
+			Artifact.SURVEY_SPEED_MPS, Artifact.SURVEY_S], world.sim_time)
+	else:
+		hud.notice("%s — %s" % [mission.number_text(), mission.current().brief], world.sim_time)
 	if PlayerProfile.load_notice != "":
 		hud.notice(PlayerProfile.load_notice, world.sim_time)
 		combat_log.record(world.sim_time, "profile", PlayerProfile.load_notice)
@@ -264,6 +327,170 @@ func _start_scenario() -> void:
 	GameLog.info("main", "Orbital sandbox ready: player flies '%s' (%.0f t), %s orbit at %.0f km, fixed dt %.4f s" % [
 		_designs[PLAYER_ID].config.display_name, _designs[PLAYER_ID].config.mass_kg / 1000.0,
 		location.body.display_name, location.start_altitude_m / 1000.0, world.fixed_dt])
+
+
+## The location's derelict field (DerelictField): the newest wrecks left
+## here on earlier sorties, rebuilt and wrecked to what is left of them,
+## silent and drifting a few kilometres out.
+func _spawn_derelicts(player: ShipState) -> void:
+	var catalog := ConstructionCatalog.default_catalog()
+	for rec: Dictionary in DerelictField.at(get_profile().derelicts, location.id):
+		var errors := PackedStringArray()
+		var template := BlueprintIO.load_file("res://data/blueprints/" + str(rec.template), errors)
+		if template == null:
+			continue
+		var id := StringName("derelict_%s" % rec.id)
+		_designs[id] = _compile(EnemyFactory.design(int(rec.mission), template, catalog, int(rec.variant)), template)
+		var ship := ShipState.create(id, "DERELICT %s" % rec.name, _designs[id].config, player.position + DerelictField.spawn_offset(rec),
+			player.velocity + Vector3(0.6, -0.2, 0.4), Quaternion(Vector3(0.3, 1, 0.1).normalized(), float(hash(rec.id) % 628) / 100.0))
+		ship.angular_velocity = Vector3(0.004, 0.01, -0.006)
+		ship.side = &"neutral"
+		ship.derelict = true
+		ship.attach_systems(_new_systems(id))
+		DerelictField.wreck_to(ship.systems, float(rec.intact), hash(rec.id))
+		ship.config = ship.systems.effective_config()
+		world.add_ship(ship)
+		world.set_input(id, ShipControlInput.neutral())
+		_spawn_view(id, Color(0.62, 0.6, 0.58))
+		_field[id] = str(rec.id)
+	hud.derelict_ids.assign(_field.keys())
+
+
+## The nearest field derelict within beacon range not yet salvaged this
+## sortie (&"" if none).
+func derelict_in_reach(player: ShipState) -> StringName:
+	var best := &""
+	var best_d := Salvage.BEACON_RANGE_M
+	for id: StringName in _field:
+		if _field_salvaged.has(id) or not world.has_ship(id):
+			continue
+		var d := world.get_ship(id).position.distance_to(player.position)
+		if d <= best_d:
+			best_d = d
+			best = id
+	return best
+
+
+## G by a derelict: the tug takes what is left worth taking — the scrap
+## value and crates, halved for each earlier salvage, no bounty — and it is
+## stripped of half of what remains. Once per sortie each.
+func salvage_derelict(id: StringName) -> Array:
+	var p := get_profile()
+	var catalog := ConstructionCatalog.default_catalog()
+	var ship := world.get_ship(id)
+	var rec := DerelictField.by_id(p.derelicts, str(_field[id]))
+	var times := int(rec.get("salvaged", 0))
+	var y := DerelictField.resalvage_yield(Salvage.scrap_value(ship.systems), Salvage.pulls_for(ship.systems), times)
+	var scrap := roundi(float(y.scrap) * TechTree.factor("salvage", p.tech_level("salvage")))
+	var crates := p.open_crates(int(y.pulls), Salvage.BEACON_LOOT_CHANCE, catalog)
+	for d in crates:
+		if d != null:
+			p.stow(d)
+	p.credits += scrap
+	for e in ship.systems.equipment:
+		if not e.destroyed():
+			ship.systems.damage_equipment(e, e.hp * DerelictField.STRIP_FACTOR)
+	if not rec.is_empty():
+		rec.salvaged = times + 1
+		rec.intact = ship.systems.intact_fraction()
+	_field_salvaged[id] = true
+	var summary := "Salvage beacon on %s (salvaged %d× before): %d cr scrap, %d crate%s into the hold" % [
+		ship.display_name, times, scrap, crates.size(), "" if crates.size() == 1 else "s"]
+	p.vessel.record(summary)
+	if combat_log != null:
+		combat_log.record(world.sim_time, "salvage", summary)
+	hud.loot.show_rewards("SALVAGE — %s" % ship.display_name, PackedStringArray([
+		"An old wreck, salvaged %d× before: the tug takes what is left" % times,
+		"+%d cr scrap (%d%% of the first salvage's rate) · no bounty" % [scrap, roundi(100.0 * pow(DerelictField.RESALVAGE_FACTOR, times))],
+		"%d crate%s into the cargo hold" % [crates.size(), "" if crates.size() == 1 else "s"],
+	]), crates, p)
+	_save_profile()
+	return crates
+
+
+## Leave this sortie's wrecks in the field, and age it (DerelictField).
+func _update_derelict_field() -> PackedStringArray:
+	var p := get_profile()
+	for id: StringName in _field:
+		var rec := DerelictField.by_id(p.derelicts, str(_field[id]))
+		if not rec.is_empty() and world.has_ship(id) and world.get_ship(id).systems != null:
+			rec.intact = world.get_ship(id).systems.intact_fraction()
+	var lines := DerelictField.age_all(p.derelicts)
+	if artifact == null:
+		for id: StringName in _wrecks:
+			var meta: Dictionary = _wreck_meta.get(id, {})
+			var w := world.get_ship(id)
+			if meta.is_empty() or w == null or w.systems == null:
+				continue
+			DerelictField.record(p.derelicts, location.id, str(meta.name), str(meta.template), int(meta.mission), int(meta.variant),
+				w.systems.intact_fraction(), 1)
+		for c in encounter.contacts:
+			var s := world.get_ship(c.id)
+			if s != null and s.is_active() and s.systems != null and s.systems.is_disabled() and not s.systems.captured:
+				DerelictField.record(p.derelicts, location.id, s.display_name.trim_prefix("TGT-"), c.template_file, c.mission_no, c.variant,
+					s.systems.intact_fraction(), 0)
+	return lines
+
+
+## A survey's object: craft-like, no hull points (it can't be harmed),
+## neutral, drifting with us `offset` ahead; a deep-space survey pays its
+## round trip from the tanks now (checked at launch).
+func _spawn_artifact(player: ShipState, offset: Vector3) -> void:
+	var a := ShipState.create(ARTIFACT_ID, artifact.display_name, artifact.ship_config(), player.position + offset)
+	a.velocity = player.velocity
+	a.side = &"neutral"
+	a.derelict = true
+	world.add_ship(a)
+	hud.artifact_id = ARTIFACT_ID
+	if _artifact_view != null:
+		_artifact_view.queue_free()
+	_artifact_view = ArtifactView.new()
+	_artifact_view.artifact = artifact
+	add_child(_artifact_view)
+	if artifact.is_deep_space():
+		var home := Location.by_id(get_profile().location)
+		var dv := 2.0 * JumpDrive.standard().delta_v(artifact.distance_from(home))
+		var need := JumpDrive.propellant_for(player.mass_kg() + jump_reserve_kg, dv, player.config.main_isp_s)
+		var paid := JumpDrive.pay(player.propellant_kg, jump_reserve_kg, need)
+		player.propellant_kg = paid.main_kg if paid.ok else 0.0
+		jump_reserve_kg = paid.reserve_kg if paid.ok else 0.0
+		_jump_prepaid = true
+		var line := "Jumped %s to %s; the round trip took %s (the jump home is paid)" % [
+			SystemMap.distance_text(artifact.distance_from(home)), artifact.display_name, JumpDrive.dv_text(dv)]
+		_prepaid_line = line
+		GameLog.info("main", line)
+
+
+## The survey, each frame: within range, slow relative to it and with a
+## working sensor mast, the clock runs (it keeps what it has when you drift
+## off); at Artifact.SURVEY_S the record and the fee are ours.
+func _update_survey(player: ShipState) -> void:
+	if artifact == null or not world.has_ship(ARTIFACT_ID):
+		hud.survey = {}
+		return
+	var a := world.get_ship(ARTIFACT_ID)
+	var d := a.position.distance_to(player.position)
+	var rel := (a.velocity - player.velocity).length()
+	var sensor := player.systems == null or player.systems.sensor_range_m() > ShipSystems.VISUAL_RANGE_M + 1.0
+	var close := d <= artifact.survey_range_m()
+	var slow := rel <= Artifact.SURVEY_SPEED_MPS
+	var dt := world.sim_time - _survey_clock
+	_survey_clock = world.sim_time
+	if not survey_done and close and slow and sensor and player.is_active():
+		survey_progress = minf(survey_progress + dt, Artifact.SURVEY_S)
+		if survey_progress >= Artifact.SURVEY_S:
+			survey_done = true
+			var paid := get_profile().complete_survey(artifact.id)
+			var line := "Survey of %s complete — %s" % [artifact.display_name,
+				"+%d credits, its record is in the codex (shipyard › MAP)" % paid if paid > 0 else "surveyed before: no fee this time"]
+			hud.notice(line, world.sim_time)
+			if combat_log != null:
+				combat_log.record(world.sim_time, "survey", line)
+			_save_profile()
+	hud.survey = {"name": artifact.display_name, "range_m": d, "rel_mps": rel, "need_m": artifact.survey_range_m(),
+		"need_mps": Artifact.SURVEY_SPEED_MPS, "progress": survey_progress / Artifact.SURVEY_S, "done": survey_done,
+		"close": close, "slow": slow, "sensor": sensor, "launched": artifact.launched,
+		"sun_au": world.pci_position(player.position).length() / CelestialFrame.AU_M if location.body.is_star else -1.0}
 
 
 ## The next encounter: the size picked on the shipyard map, in slots
@@ -279,7 +506,9 @@ func _spawn_encounter(arriving: bool = false) -> void:
 	# Local traffic is tougher away from home (Location.threat_bonus).
 	mission_no += location.threat_bonus
 	for i in EnemyFactory.encounter_size(get_profile().encounter_size):
-		_spawn_contact(i, mission_no, arriving)
+		# Only the lead starts close: the others come in from range and must
+		# be found (play-test batch 6: three ships at once overwhelmed).
+		_spawn_contact(i, mission_no, arriving or i > 0)
 	encounter.ensure_selection(world)
 	player_wing.target_id = encounter.selected
 
@@ -290,10 +519,12 @@ func _spawn_contact(index: int, mission_no: int, arriving: bool) -> Contact:
 	var player := world.get_ship(PLAYER_ID)
 	# The location's encounter table picks the hull (Location.enemy_template).
 	var errors := PackedStringArray()
-	var template := BlueprintIO.load_file("res://data/blueprints/" + location.enemy_template(mission_no, index), errors)
+	var template_file := location.enemy_template(mission_no, index)
+	var template := BlueprintIO.load_file("res://data/blueprints/" + template_file, errors)
 	if template == null:
 		GameLog.error("main", "Enemy template failed to load (%s); using the default" % ", ".join(errors))
 		template = _load_template()
+		template_file = BlueprintIO.DEFAULT_TEMPLATE.get_file()
 	_designs[id] = _compile(EnemyFactory.design(mission_no, template, ConstructionCatalog.default_catalog(), index), template)
 	var class_name_word: String = (_designs[id].blueprint as ShipBlueprint).name.split("-")[0].to_upper()
 	var offset: Vector3 = CONTACT_OFFSETS[index % CONTACT_OFFSETS.size()] * (1.0 + float(index / CONTACT_OFFSETS.size()))
@@ -313,6 +544,9 @@ func _spawn_contact(index: int, mission_no: int, arriving: bool) -> Contact:
 	ship.policy = c.policy
 	c.arriving = arriving
 	c.salvo_at = world.sim_time + c.policy.salvo_interval_s * 0.5
+	c.template_file = template_file
+	c.mission_no = mission_no
+	c.variant = index
 	ship.attach_systems(_new_systems(id))
 	world.add_ship(ship)
 	world.set_input(id, ShipControlInput.neutral())
@@ -412,6 +646,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if me != null and me.is_active() and not player_captured() and not _sortie_closed:
 			pay_jump_home(me)
 		close_sortie()
+		if artifact != null:
+			# A survey is one sortie: start over from the station's own orbit.
+			get_tree().reload_current_scene()
+			return
 		_start_scenario()
 		return
 	elif event.is_action_pressed("open_shipyard"):
@@ -571,7 +809,9 @@ func _apply_automation(input: ShipControlInput, player: ShipState, target: ShipS
 	if policy == null or c == null or hud.selected_id != &"":
 		return
 	var fightable := is_fightable(target)
-	input.fire = policy.trigger(input.fire, c.track.locked, c.hostile, aim_error_deg(player, target, input), fightable)
+	var manual := input.fire
+	input.fire = policy.trigger(manual, c.track.locked, c.hostile, aim_error_deg(player, target, input), fightable)
+	input.fire_rate = policy.trigger_rate(manual)
 	# Auto-salvo at the selected contact (manual M, or a salvo in flight, comes first).
 	if salvo == null and target != null and target.is_active() and player.systems != null:
 		var range_m := player.position.distance_to(target.position)
@@ -729,6 +969,9 @@ func close_sortie() -> void:
 		return
 	_sortie_closed = true
 	var p := get_profile()
+	# A survey is one sortie; the next is an ordinary one unless picked again.
+	if artifact != null:
+		p.survey_target = ""
 	var player := world.get_ship(PLAYER_ID)
 	var catalog := ConstructionCatalog.default_catalog()
 	var lines := PackedStringArray()
@@ -753,13 +996,17 @@ func close_sortie() -> void:
 			"missiles": player.systems.missile_count(), "jump_reserve_kg": jump_reserve_kg}
 		lines.append_array(p.dock(after, catalog))
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
+	lines.append_array(_update_derelict_field())
 	for line in lines:
 		GameLog.info("main", line)
 	tutorial.decline_offer()
 	p.tutorial = tutorial.to_dict()
 	p.campaign = mission.to_dict()
 	if combat_log != null:
-		if mission.failed != "":
+		if artifact != null:
+			combat_log.objectives.append("%s SURVEY %s — %s" % ["✔" if survey_done else "▲", artifact.display_name,
+				"complete" if survey_done else "not finished (%d%%)" % roundi(100.0 * survey_progress / Artifact.SURVEY_S)])
+		elif mission.failed != "":
 			combat_log.objectives.append("✕ %s %s — failed: %s" % [mission.number_text(), mission.current().title, mission.failed])
 		elif combat_log.objectives.is_empty():
 			combat_log.objectives.append("▲ %s %s — not met yet: %s" % [mission.number_text(), mission.current().title, mission.current().brief])
@@ -785,6 +1032,11 @@ func _on_salvage_pressed() -> void:
 		return
 	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), target_ship())
 	if why != "":
+		# Nothing to beacon in the fight: an old derelict close by, then.
+		var old := derelict_in_reach(world.get_ship(PLAYER_ID))
+		if old != &"":
+			salvage_derelict(old)
+			return
 		hud.notice("SALVAGE BEACON: " + why, world.sim_time)
 		return
 	drop_beacon()
@@ -945,6 +1197,8 @@ func _retire_contact(c: Contact) -> void:
 	_views[new_id] = view
 	if c.wing != null:
 		_derelict_wings.append(c.wing)
+	_wreck_meta[new_id] = {"name": wreck.display_name.trim_prefix("WRECK "), "template": c.template_file,
+		"mission": c.mission_no, "variant": c.variant}
 	_wrecks.append(new_id)
 	hud.wreck_ids = _wrecks
 	while _wrecks.size() > MAX_WRECKS:
@@ -993,7 +1247,7 @@ func _note_enemy_fire() -> void:
 		for id in shooters:
 			if not world.has_ship(id):
 				continue
-			var fired := world.get_ship(id).rounds_fired
+			var fired := world.get_ship(id).rounds_fired + world.get_ship(id).beam_pulses
 			if fired > int(_enemy_rounds_seen.get(id, 0)) and c.hostile:
 				_last_enemy_fire = world.sim_time
 			_enemy_rounds_seen[id] = fired
@@ -1015,13 +1269,23 @@ func jump_waiting() -> PackedStringArray:
 ## Propellant (kg) the jump home to the location's station costs now (the
 ## base cost: no distance within a location).
 func jump_home_cost_kg(player: ShipState) -> float:
-	return JumpDrive.standard().cost_kg(player.mass_kg() + jump_reserve_kg, 0.0)
+	return JumpDrive.standard().cost_kg(player.mass_kg() + jump_reserve_kg, 0.0, player.config.main_isp_s)
+
+
+## Δv (m/s) of the jump home (the base: no distance within a location).
+func jump_home_dv() -> float:
+	return JumpDrive.standard().delta_v(0.0)
 
 
 ## Pay for the jump home: the main tank, then the reserve; if they can't
 ## cover it, a rescue tow brings the ship in for credits (all there are, if
 ## fewer) — the ship is never stranded. Returns the log line.
 func pay_jump_home(player: ShipState) -> String:
+	if _jump_prepaid:
+		var prepaid := "Jump home to %s (paid with the survey's round trip)" % location.station_name
+		if combat_log != null:
+			combat_log.record(world.sim_time, "jump", prepaid)
+		return prepaid
 	var drive := JumpDrive.standard()
 	var cost := jump_home_cost_kg(player)
 	var paid := JumpDrive.pay(player.propellant_kg, jump_reserve_kg, cost)
@@ -1029,14 +1293,15 @@ func pay_jump_home(player: ShipState) -> String:
 	if paid.ok:
 		player.propellant_kg = paid.main_kg
 		jump_reserve_kg = paid.reserve_kg
-		line = "Jump drive burned %s of propellant" % JumpDrive.tonnes(cost)
+		line = "Jump drive: %s" % JumpDrive.dv_text(jump_home_dv())
 	else:
 		var p := get_profile()
 		var fee := drive.tow_credits(player.mass_kg() + jump_reserve_kg)
 		var charged := mini(fee, p.credits)
 		p.credits -= charged
-		line = "Not enough propellant to jump (%s needed) — a rescue tow brought the ship in for %d credits%s" % [
-			JumpDrive.tonnes(cost), charged, " (all you had)" if charged < fee else ""]
+		line = "Not enough propellant to jump (%s needed, %s aboard) — a rescue tow brought the ship in for %d credits%s" % [
+			JumpDrive.dv_text(jump_home_dv()), JumpDrive.dv_text(JumpDrive.delta_v_of(player.mass_kg() + jump_reserve_kg,
+			player.propellant_kg + jump_reserve_kg, player.config.main_isp_s)), charged, " (all you had)" if charged < fee else ""]
 	if combat_log != null:
 		combat_log.record(world.sim_time, "jump", line)
 	GameLog.info("main", line)
@@ -1059,7 +1324,7 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 			var waiting := jump_waiting()
 			var cost := jump_home_cost_kg(player)
 			state = {"progress": _jump_hold / JUMP_HOLD_S, "left_s": JUMP_HOLD_S - _jump_hold, "waiting": waiting,
-				"cost_kg": cost}
+				"cost_kg": cost, "dv_mps": jump_home_dv()}
 			if not JumpDrive.pay(player.propellant_kg, jump_reserve_kg, cost).ok:
 				state["tow"] = JumpDrive.standard().tow_credits(player.mass_kg() + jump_reserve_kg)
 			if _jump_hold >= JUMP_HOLD_S:
@@ -1113,7 +1378,21 @@ func _on_overview_command(name: StringName, arg: Variant) -> void:
 			if why != "":
 				hud.notice("LAUNCH: " + why, world.sim_time)
 		&"craft_recall":
-			player_wing.by_id(arg).directive = CraftAI.Directive.RETURN
+			player_wing.recall(player_wing.by_id(arg))
+		&"wing_directive":
+			for c in player_wing.crafts:
+				if not c.is_drone() or int(arg) in [CraftAI.Directive.RECON, CraftAI.Directive.ESCORT, CraftAI.Directive.RETURN]:
+					c.directive = int(arg)
+		&"wing_risk":
+			for c in player_wing.crafts:
+				c.risk = int(arg)
+		&"wing_launch":
+			var n := player_wing.launch_all(world)
+			hud.notice("LAUNCH: %d craft out" % n, world.sim_time)
+		&"wing_recall":
+			player_wing.recall_all()
+		&"wing_auto":
+			player_wing.auto_relaunch = bool(arg)
 		&"craft_directive":
 			player_wing.by_id(arg[0]).directive = arg[1]
 		&"craft_risk":
@@ -1210,8 +1489,10 @@ func _link_wings() -> void:
 		for craft in c.wing.flying():
 			theirs.append(craft.id)
 	player_wing.hostile_ids = theirs
+	player_wing.candidate_ids.clear()
 	for c in encounter.contacts:
 		c.wing.hostile_ids = ours
+		player_wing.candidate_ids.append(c.id)
 
 
 func _sync_craft_views(alpha: float, render_origin: Vector3) -> void:
@@ -1494,6 +1775,10 @@ func _update_goals(player: ShipState) -> void:
 		get_profile().tutorial = tutorial.to_dict()
 		audio.play("tick")
 	var guide := PackedStringArray([mission.hud_line()])
+	if artifact != null:
+		guide = PackedStringArray(["SURVEY ▸ %s — close in, match its speed and hold %.0f s · fee %s · B jumps home" % [
+			artifact.display_name.to_upper(), Artifact.SURVEY_S,
+			"%d cr" % artifact.survey_credits if not get_profile().codex.has(artifact.id) or survey_done else "none (surveyed before)"]])
 	if tutorial.prompt() != "":
 		guide.append(tutorial.prompt())
 	hud.guide_lines = guide
@@ -1601,6 +1886,7 @@ func _process(delta: float) -> void:
 	_note_enemy_fire()
 	if _update_jump(player, delta):
 		return
+	_update_survey(player)
 	_update_tracks(player, delta)
 	for c in encounter.live(world):
 		var s := world.get_ship(c.id)
@@ -1711,7 +1997,16 @@ func _process(delta: float) -> void:
 			GameLog.info("main", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
 	for burst in world.take_bursts():
 		_show_burst(burst, player)
+	beam_view.add(world.take_beams())
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
+	# Salvage drones' loads: into the hold (at risk until banked), like a beacon's crates.
+	if player_wing.delivered_parts > 0:
+		var parts := player_wing.delivered_parts
+		player_wing.delivered_parts = 0
+		var vessel := get_profile().vessel
+		vessel.cargo["spare_parts"] = int(vessel.cargo.get("spare_parts", 0)) + parts
+		hud.notice("Salvage drones: +%d spare parts into the hold" % parts, world.sim_time)
+		combat_log.record(world.sim_time, "salvage", "Salvage drones brought %d spare parts aboard" % parts)
 	var log_wings: Array[AirWing] = [player_wing]
 	for c in encounter.contacts:
 		log_wings.append(c.wing)
@@ -1740,6 +2035,8 @@ func _process(delta: float) -> void:
 	_sync_craft_views(alpha, render_origin)
 	_sync_missile_views(alpha, render_origin)
 	_sync_courier_view(alpha, render_origin)
+	if _artifact_view != null and world.has_ship(ARTIFACT_ID):
+		_artifact_view.sync_from(world.get_ship(ARTIFACT_ID), alpha, render_origin)
 	for id: StringName in _views:
 		var ship := world.get_ship(id)
 		var view: ShipView = _views[id]
@@ -1772,6 +2069,7 @@ func _process(delta: float) -> void:
 		location.sky_body.radius_m if location.sky_body != null else 0.0)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera.global_position, _own_shooters())
 	decoy_view.sync(world.decoys, render_origin, camera.global_position, world.sim_time)
+	beam_view.sync(world, alpha, render_origin, camera.global_position, delta)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track
@@ -1836,6 +2134,9 @@ func _update_audio(player: ShipState) -> void:
 	if player.rounds_fired > _rounds_heard:
 		audio.play("gun")
 	_rounds_heard = player.rounds_fired
+	if player.beam_pulses > _pulses_heard:
+		audio.play("laser")
+	_pulses_heard = player.beam_pulses
 	var burn := ShipDynamics.thrust_fractions(player.config, player.last_thrust_body, player.last_torque_body) \
 		if player.is_active() else Vector2.ZERO
 	audio.set_engine(burn.x)
@@ -1862,4 +2163,4 @@ func _update_sky_light() -> void:
 func _update_sun(player: ShipState) -> void:
 	var dir := celestial.sun_direction_pci(world.sim_time)
 	sun.look_at(-dir, Vector3.RIGHT if absf(dir.y) > 0.99 else Vector3.UP)
-	sun.light_energy = SUN_ENERGY * CelestialFrame.sunlight_fraction(world.pci_position(player.position), dir, world.body.radius_m)
+	sun.light_energy = SUN_ENERGY * CelestialFrame.sunlight_fraction(world.pci_position(player.position), dir, world.body.shadow_radius_m())

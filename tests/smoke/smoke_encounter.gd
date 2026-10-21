@@ -7,8 +7,10 @@ extends SceneTree
 ## policy is switched in the drawer and saved; manual fire wins over HOLD.
 ##   godot --headless --path . -s res://tests/smoke/smoke_encounter.gd
 ##
-## Scaffolding, stated plainly: the profile starts at mission 7, and the
-## salvaged contact's guns are destroyed and it is placed alongside directly.
+## Scaffolding, stated plainly: the profile starts at mission 7; the
+## wingmen, who arrive from range since play-test batch 6 (checked first),
+## are brought alongside at once; and the salvaged contact's guns are
+## destroyed and it is placed alongside directly.
 
 const WATCHDOG_S := 240.0
 const TIME_SCALE := 20.0
@@ -64,6 +66,18 @@ func _run() -> void:
 	var ids := main.encounter.contacts.map(func(c: Contact) -> StringName: return c.id)
 	_check(ids == [&"target_01", &"target_02", &"target_03"] and main.encounter.selected == &"target_01",
 		"three picked on the map: contacts in slots target_01..03, the lead selected (%s)" % [ids])
+	var far := true
+	for i in range(1, main.encounter.contacts.size()):
+		var w := world.get_ship(main.encounter.contacts[i].id)
+		far = far and main.encounter.contacts[i].arriving and w.position.distance_to(player.position) > 20000.0
+	_check(far, "only the lead starts close: the wingmen arrive from range")
+	# Bring them alongside, as they used to start, to test the rest.
+	for i in range(1, main.encounter.contacts.size()):
+		var c: Contact = main.encounter.contacts[i]
+		var w := world.get_ship(c.id)
+		c.arriving = false
+		w.position = player.position + Main.CONTACT_OFFSETS[i % Main.CONTACT_OFFSETS.size()]
+		w.velocity = player.velocity + Vector3(-25, 1.5, 6.0)
 	var roles := main.encounter.contacts.map(func(c: Contact) -> String: return ShipPolicy.ROLE_NAMES[c.policy.role])
 	_check(roles == ["closer", "standoff", "flanker"], "roles by place: %s" % [roles])
 	await process_frame

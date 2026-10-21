@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "new_horizons"
+display_name = "New Horizons"
+kind = &"probe"
+center = &"sun"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(3127176274.155581, -8702498590.280079, -3398663334.435172)
+v_km_s = PackedFloat64Array(5.307174320602773, -11.65259622728626, -4.516379228395288)
+horizons_id = "-98"
+horizons_source = "NH_merged"
+uncertainty = "Horizons NH_merged, from Deep Space Network tracking: a few kilometres."
+size_m = 2.7
+mass_kg = 478.0
+survey_credits = 1500
+launched = "2006-01-19"
+lore = "The fastest spacecraft ever launched from Earth at the time. It flew past Pluto on 14 July 2015 and Arrokoth, a small Kuiper-belt world, on 1 January 2019. It carries some of the ashes of Clyde Tombaugh, who discovered Pluto."

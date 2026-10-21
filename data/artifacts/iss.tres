@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "iss"
+display_name = "International Space Station"
+kind = &"station"
+center = &"earth"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(4692.218320237223, 4912.113242691647, 247.7144029485201)
+v_km_s = PackedFloat64Array(-3.584173646192014, 3.118217208699891, 6.010653527784237)
+horizons_id = "-125544"
+horizons_source = "iss"
+uncertainty = "Horizons 'iss' trajectory, from tracking elements (TLEs): good to a few kilometres; the station reboosts every few weeks."
+size_m = 109.0
+mass_kg = 420000.0
+survey_credits = 200
+launched = "1998-11-20 (Zarya, the first module)"
+lore = "Built in orbit from 1998 by the space agencies of the United States, Russia, Europe, Japan and Canada, and crewed without a break since 2 November 2000. Its truss spans 109 m and it weighs about 420 t. Retirement and a controlled deorbit are planned for around 2030."

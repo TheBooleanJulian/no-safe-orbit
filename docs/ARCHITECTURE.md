@@ -185,14 +185,24 @@ and the location's central body:
 - Shipyard HANGAR › MAP (`SystemMap`): click a body → `relocate`, save; three
   toggle buttons set the encounter size. The route button beside LAUNCH
   shows both and opens the tab.
-- **Jumps (Milestone 13)**: `JumpDrive` (data `data/jump/jump_drive.tres`):
-  `cost_kg(mass, distance)` = t × (base + per-decade × log10(1 + d / 1000 km));
+- **Jumps (Milestone 13; Δv in play-test batch 7)**: `JumpDrive` (data
+  `data/jump/jump_drive.tres`): `delta_v(distance)` = base + per-decade ×
+  log10(1 + d / 1000 km), the same for every ship; `propellant_for(mass, Δv,
+  Isp)` / `delta_v_of(mass, propellant, Isp)` are the rocket equation (the
+  ship's main-engine Isp, `FALLBACK_ISP_S` without engines);
+  `cost_kg(mass, distance, Isp)`; `dv_text`. `PlayerProfile.vessel_tanks`
+  adds `isp_s`, `dv_mps` (aboard) and `dv_full_mps`; `jump_dv(id)`.
+  The nav chart sets `PlayerProfile.jump_target` (not saved);
+  `launch_point()` = that, else an accepted contract's location, else the
+  berth. `Shipyard.launch` tops up (`ServiceYard.resupply`), then
+  `relocate(launch_point())`, then checks a deep-space survey;
+  `ContractBoard.accept` only refuses a jump beyond `dv_full_mps`.
   `pay(main, reserve, cost)` takes the main tank first; `tow_credits(mass)`.
   The reserve is `reserve_fraction` of the tankage, kept in the vessel's
   `condition.stores.jump_reserve_kg` (schema 9) and in `Main.jump_reserve_kg`
   during a sortie. `PlayerProfile.relocate(id, catalog)` charges the docked
-  vessel (`vessel_tanks`) or refuses with the refuel price;
-  `ContractBoard.accept` refuses when it does. `Main.pay_jump_home` charges
+  vessel (`vessel_tanks`) or refuses with the refuel price.
+  `Main.pay_jump_home` charges
   the B jump and an alive-ship restart, or tows (credits, floored at 0).
   `ServiceYard.resupply_needs` includes `reserve_kg`.
 - **Sun-centred positions (Milestone 13 part 2)**: `CelestialFrame.KEPLER_ELEMENTS`
@@ -203,6 +213,94 @@ and the location's central body:
   (the Almanac's Sun for Earth and the Moon, unchanged; the elements
   otherwise), used by `for_scenario` and `sun_direction_pci`.
   `geocentric_icrs` covers Mars for completeness.
+- **Artifacts (Milestone 14)**: `Artifact` (`data/artifacts/*.tres`,
+  listed in `Artifact.FILES`): Horizons state (km, km/s, ICRF) about
+  `center` at `epoch_utc` (the scenario epoch), source, uncertainty, size,
+  mass, fee, record. `PlayerProfile.survey_target` / `codex` (schema 10),
+  `choose_survey` (location rule; deep-space round trip ≤ full tanks +
+  reserve in Δv: `survey_dv` = 2 × `JumpDrive.delta_v` from the launch
+  point, `survey_cost_kg` its propellant at full tanks), `complete_survey`.
+  `Main` reads the target in `_ready`: a deep-space one swaps the location
+  for `Location.deep_space(home)` (the Sun, `is_star`; station name from
+  home). `_start_scenario` spawns the anchor `START_BEHIND_M` back along
+  the object's velocity (`icrs_to_pci_d`, doubles), sets the star frame's
+  Sun from that point (`set_star_sun`), spawns the object (`ARTIFACT_ID`,
+  `ship_config()`: hull_hp 0 → undamageable, neutral, derelict) instead of
+  the encounter, and pays the deep-space round trip (`_jump_prepaid`, so
+  `pay_jump_home` is free). `_update_survey` accumulates sim time while in
+  range, slow and with a mast; HUD `survey` / `artifact_id` drive the
+  survey card, marker and SURVEY alert. Restart after a survey reloads the
+  scene (back to the home location). `ArtifactView` draws a procedural
+  model by kind. Star centre: `OrbitalBody.shadow_radius_m()` /
+  `disc_radius_m()` are 0 (no shadow, no planet disc); the sky's Sun disc
+  scales with `CelestialFrame.sun_distance_m`, never below a pixel.
+- **Derelicts (Milestone 14 part 2)**: `DerelictField` records in
+  `PlayerProfile.derelicts` (schema 11): {id, location, name, template,
+  mission, variant, intact, salvaged, age}. `Main._update_derelict_field`
+  (from `close_sortie`, after docking or loss) updates the flying ones'
+  `intact`, ages everything (`age_all`: ×0.85, break-up < 0.1 or age 8),
+  then records this sortie's retired wrecks (`_wreck_meta`, salvaged 1) and
+  disabled contacts (salvaged 0). `_spawn_derelicts` rebuilds the newest
+  two with `EnemyFactory.design(mission, template, variant)` and
+  `wreck_to` (hit points set directly: no reactor blast; seeded), neutral
+  and derelict, at `spawn_offset`. G with nothing to beacon salvages the
+  nearest in reach (`salvage_derelict`: `resalvage_yield`, strip, once per
+  sortie). HUD `derelict_ids` marks them.
+- **Builder palette (play-test batch 6)**: `Shipyard.palette_place(kind, def)`
+  → [category, section] (`CATEGORIES`, `SECTIONS`); `_fill_palette_list`
+  sorts rows by category, section, rarity, mass and adds non-selectable
+  header rows; long radiators get two rows whose metadata carries a preset
+  `place_rotation` (0 along, 1 across). `palette_items()` lists pickable rows.
+- **Hull visuals (play-test batch 6)**: armour plates use
+  `ShipModelBuilder._armour_mat` (gunmetal, metallic 0.75, one panel per
+  cell); a wrecked module's mesh becomes `ShipModelBuilder.dented()`
+  (subdivided, inner face points pushed in, edge and corner points fixed)
+  at full scale.
+- **Scaling with the hull (Milestone 15)**: `CrewRoster.complement(guns,
+  launchers, engines, reactors, modules, berths)` / `complement_for(bp,
+  grid, stats)` feed `default_for` and the yard's crew page (replacing
+  `suggested`). `ShipSystems.repair_tasks` (one per `repair_teams()` = ⌈fit
+  DC / 2⌉; `repair_task` is the first, read-only), `is_under_repair`;
+  `_advance_medical` keeps `_treating` (medic → patient, seconds).
+  `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
+  (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
+  grid ray clear of hull), area_m2} for the stats panel.
+- **Work drones (Milestone 15)**: `ShipConfig.craft_role` `repair` /
+  `salvage` (`AirWing.WORK_ROLES`, `Craft.is_worker`). In `AirWing._fly`, on
+  any directive but RETURN, `_work_job` picks the job (repair: external,
+  damaged, not destroyed, not the crew's `repair_task`, on `_friends`, the
+  carrier first; salvage: `_salvageable` — disabled or derelict, not
+  captured, not a friend — the target first, else the nearest within
+  `SALVAGE_RANGE_M`, its most valuable live system); `_claims` keeps two
+  drones off one part per tick. `_site` = off the mount's face
+  (`ShipGrid.FACE_NORMALS`) or off the hull; `_work_input` steers there
+  without avoidance; `_work` patches (`REPAIR_HP_PER_S` to
+  `ShipSystems.FIELD_REPAIR_LIMIT`) or cuts (hp to 0 directly, no
+  `_explode`). A salvage load (`Craft.cargo_parts`) becomes
+  `AirWing.delivered_parts` on recovery; `Main` banks it into
+  `vessel.cargo.spare_parts`.
+- **Beam weapons (play-test batch 6)**: a `KineticCannonConfig` with
+  `beam_range_m > 0` (`is_beam`, `beam_penetration_at`, `beam_color`;
+  muzzle speed = c so fire control leads by nothing). `_update_cannon`
+  queues a pulse instead of spawning a round (a ship's beam needs no rounds;
+  a craft's spends a charge) and holds it while the lead target is beyond
+  reach; `_fire_beam` resolves the queue after every ship has moved,
+  against their start-of-tick poses (`prev_position/prev_orientation`):
+  bounding sphere → hit box → `Penetration.first_hull_entry` from the box
+  entry (the grid walk is 512 cells) → `Penetration.apply` (no ricochet, no
+  impulse). Within `BEAM_STEER_DEG` of the barrel a beam is laid on a
+  craft or missile target. `ShipState.beam_pulses` → `ShipSystems.tick`
+  heat (mount `heat_kw` × interval per pulse); beams take no magazine share
+  beside other guns. `take_beams()` → `BeamView` (pooled cylinders, body-frame
+  ends, 0.18 s fade). `AirWing._resupply_from` recharges beam craft without
+  drawing the carrier's magazine.
+- **Capital templates (play-test batch 6)**: generated by
+  `tools/make_capital_templates.gd` (prow taper `_row_blocks`, wedges ahead
+  of each step, a two-deck superstructure, flank/top/bow armour `_armour`,
+  long parts claim their whole span). `ServiceYard.dealer_price` adds
+  `units` (`rare_units` at `PlayerProfile.VENDOR_PRICES` × margin);
+  `PlayerProfile.buy_ship` banks them. `ChaseCamera.fit_to(hull bounds)`
+  scales its offsets above a frigate's size.
 - **Brokers**: `Location.broker_price/name/pitch`;
   `PlayerProfile.brokers()` and `buy_location()` add to `known_locations`
   (already saved, so no schema change). Shipyard MAP lists them.
@@ -221,8 +319,15 @@ and the location's central body:
 
 ## The station (Milestone 12, 2026-10-20)
 
-- `ShipyardSections` turns the shipyard into a station: a rail of sections
-  over full-width pages. The builder's body is the REFIT page, and the
+- `ShipyardSections` turns the shipyard into a station: a station directory
+  (play-test batch 6; it replaced a rail of section tabs) beside full-width
+  pages. `DIRECTORY` groups the sections into districts with place names;
+  `directory_status()` gives each its live line and whether it needs the
+  player (skipped in REFIT, where the directory narrows — the builder
+  refreshes on every edit). The berth (STATION) is a `ShipPreview3D` with
+  `berth = true` (docking-bay set dressing) filling the page, with overlaid
+  cards and the dockmaster's log (`_dock_log`); the CREW page is a roster
+  board of department cards and a hiring hall. The builder's body is the REFIT page, and the
   builder's top-bar controls and keys work only there. The old right-hand
   tabs' pages were moved into their sections (SERVICE → REPAIRS, CARGO &
   HISTORY → HANGAR, QUARTERMASTER → ARMOURY, …). New pages: STATION (3D
@@ -319,6 +424,34 @@ renderer CPU/GPU time, spike frames, a mesh census):
   (`_merge_static`); pivots, turntables and beacons stay separate.
   `MissileView` shares one body mesh per side.
 - **Logging:** `GameLog.hold(true)` during flight; Main flushes once a frame.
+
+Play-test batch 6 (2026-10-21), "lag when thousands of rounds are fired by
+many fighters" — `profile_frames.gd -- --carrier` (own Carrier against three
+frigates) and `-- --carriers` (four carriers, 46 craft):
+
+- **Sleeping rounds** (`WorldSimulation._safe_ticks`): a round that can't
+  reach any ship's hit sphere (less a 150 m margin) within up to 60 ticks
+  only coasts — no hit test, no tidal term — and settles the tidal pull on
+  waking (trapezoid over the sleep). A round in a broadphase cell with ships
+  stays awake without being measured for 4 ticks. 53–83 % of round-ticks
+  sleep. Awake rounds reuse the tidal pull from the end of their last tick
+  (invalidated by a frame rebase), and test each ship's bounding sphere
+  before its box.
+- **Point defence** gathers trackable rounds and air targets once per tick
+  and filters by distance before hostility. Its gun fires a third as many
+  rounds (300 rpm, 0.3 kg, 18 mm; flak radius 2.6 m): PD rounds had been
+  69 % of everything in flight.
+- **Craft** think every 2 ticks (staggered; every tick within 300 m of their
+  rack on the way home) and work out avoidance every 4.
+- **Collisions** pair only ships with hulls with everything else, distance
+  before the string checks.
+- **Tracers** are built on the GPU: each instance carries its position and
+  relative velocity; the vertex shader turns and sizes the streak.
+- **The HUD ship schematic** redraws at 10 Hz (a Carrier's was ~9 ms a frame).
+- **Catch-up** is capped at 3 ticks a frame (was 8; still 8 under a
+  deliberate fast-forward, `Engine.time_scale` > 1, as in the smoke tests):
+  overloaded, the fight runs slower than real time instead of the frame
+  rate collapsing.
 
 ## Rendering at planetary scale
 
@@ -674,6 +807,23 @@ bounding-box hit test.
   spawned 8 m off the rack at +3 m/s), recovery (< 10 m, < 2 m/s), 40 s
   servicing, comms (30 km; jammed → fallback RETURN after 10 s), loss, and
   persistence (`ShipInstance.wing`).
+- **Fire rate (play-test batch 6)**: `ShipControlInput.fire_rate` (0.1–1)
+  stretches each gun's cooldown. `ShipPolicy.autofire_rate` with
+  `trigger_rate(manual)`: 1 for the player's hand, the policy's rate for
+  automation (Main `_apply_automation`; enemies through `GunneryAI.combat`,
+  `EnemyFactory` leads 0.7, wingmen 0.45). `EnemyFactory.kit_mission`
+  fits wingmen as for earlier missions; `Main._spawn_encounter` spawns them
+  arriving. `ShipSystems.reachable_rooms` starts from a vented bridge when
+  the crew are suited.
+- **Targets and rearming (play-test batch 6)**: `AirWing.strike_target`
+  is `target_id` while `combat_ready` (active, not a derelict, not
+  disabled), else the nearest combat-ready of `candidate_ids` (Main: the
+  encounter's contacts), else null (STRIKE then returns home).
+  `CraftAI.disengage_reason` adds "out of ammunition" at every risk. A craft
+  that returns on its own sets `came_back_itself`; docked, serviced and with
+  a strike target it relaunches (`auto_relaunch`, the WING tab's toggle);
+  `recall` / `recall_all` clear it. Overview commands `wing_launch`,
+  `wing_recall`, `wing_directive`, `wing_risk`, `wing_auto`.
 - **`CraftAI`**: directive → `ShipControlInput`. Position control: desired
   velocity = target velocity + 0.12 × error (≤ 80 m/s), reached in ~1.5 s
   with the per-axis thrust available; attitude by proportional rate
@@ -783,6 +933,11 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Spherical central body for gravity; no J2, no third bodies (no Earth pull in lunar orbit) | Orbits never precess | If missions need ground tracks or long-duration accuracy |
 | Airless bodies: the floor is a sphere at the highest terrain (11 km on the Moon), no terrain model | Flying low over a lunar plain is as fatal as hitting a summit | If low passes or landings are wanted |
 | Jump distances are the real separations on the fixed scenario date; travel is instant | Each jump always costs the same | If the calendar advances between sorties |
+| Artifacts sit at their real state at the fixed scenario epoch; an artifact never manoeuvres or reboosts; JWST and other Lagrange-point objects are left out (no rotating frame) | Each object is always found in the same place | If the calendar advances |
+| About the Sun, the Sun's direction is fixed for the sortie (from the start point) and nothing near is drawn (the planets are points of light) | Off by 2e-6 rad an hour at Voyager 1, 0.02° at the Roadster | Not needed |
+| A deep-space survey pays its round trip at launch, from the home location's body | No stranding far out; the trip home is free once paid | If deep-space stations arrive |
+| Real objects take no damage and can't be grappled (heritage) | Surveys are about flying, not salvage | Not planned |
+| A derelict is rebuilt from its design and worn to a single "intact" figure (not its exact damage); it decays per sortie, not with time | Wrecks look plausibly wrecked, not as they were left | If wrecks should keep their exact damage |
 | Mars has no moons in its sky and no far body; sunlight is not dimmed with distance from the Sun (43 % at Mars) | Mars looks as bright as Earth; Phobos is never seen | If outer locations arrive |
 | Planet positions from Keplerian elements (arcminutes), precession ignored between the Almanac Sun (of date) and the J2000 stars and elements (0.37° by 2026) | Mars's Sun is placed to ~0.1°; Earth's Sun to ~0.4° against the stars | If an eclipse or occultation must be exact |
 | The jump reserve has no mass and no part of its own (a quarter of the tankage, beside it) | Bigger tanks mean a bigger reserve; the reserve never slows the ship | If tank design should trade reserve for range |
@@ -818,8 +973,12 @@ burns; nothing fires with empty tanks. Δv left = Isp_main · g₀ · ln(m / m_d
 | Missions are a fixed chain of four goals, then patrols | Little variety after the chain | Campaign content (M13) |
 | An encounter turns hostile together, and a contact engages only after the player has detected it | Ships can't be picked off one by one while the rest stay passive | If stealth or diplomacy arrive |
 | Enemy roles are fixed by place in the encounter (closer, standoff, flanker); no coordinated manoeuvres | Encounters feel the same shape each time | Later AI work |
-| Point-defence flak: a round within 1.5 m of a heavy slug (≥ 2 kg, < 1.5 km/s closing) destroys it; small and fast rounds can't be tracked | Heavy-cannon fire can be thinned by PD; autocannon and railgun fire can't | If PD lasers or interceptors arrive |
+| Point-defence flak: a round within 2.6 m of a heavy slug (≥ 2 kg, < 1.5 km/s closing) destroys it; small and fast rounds can't be tracked | Heavy-cannon fire can be thinned by PD; autocannon and railgun fire can't | If PD lasers or interceptors arrive |
+| A round far from every ship coasts in a straight line between checks (up to 1 s), its tidal pull applied on waking | Paths agree with step-by-step integration to well under a metre over a sleep | Not needed |
+| Craft controls are updated at 30 Hz (avoidance at 15 Hz), held in between | Craft react a tick later | If dogfights need finer control |
+| At most 3 ticks per frame | Below 20 fps the fight runs slower than real time | If a faster simulation arrives |
 | Auto-fire judges the aim against the primary gun's lead only | Mixed batteries auto-fire on the primary gun's solution | Per-mount fire control |
+| A beam is a single instant ray to the first hull (no dwell, no spot size, no blooming); its falloff is linear with range; a steering mirror lays it within 2° on small targets | Lasers are a clean trade: certain hits for power and heat | If lasers need dwell time or thermal blooming |
 | Craft IFF is perfect: a craft's round never hits a ship of its own side, hulls included (the clear-shot check still holds fire so rounds aren't wasted on friends) | Craft can't hurt you or each other | If IFF failure is wanted as a mechanic |
 | Craft avoidance is a local velocity nudge (no path planning around hulls) | Craft can get pinned against a large hull for a moment | If carriers get very large |
 | The escort's courier is a craft-like hull (hull points, no systems) on a fixed drift | It can't evade or be repaired | If escorts become a mainstay |

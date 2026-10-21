@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "lro"
+display_name = "Lunar Reconnaissance Orbiter"
+kind = &"orbiter"
+center = &"moon"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(-296.400420287233, -565.2315617825827, 1689.449196231194)
+v_km_s = PackedFloat64Array(-1.527773636458287, -0.4823253041624381, -0.4238949172435392)
+horizons_id = "-85"
+horizons_source = "LRO_merged"
+uncertainty = "Horizons LRO_merged (reconstructed and predicted orbit): tens of metres."
+size_m = 4.0
+mass_kg = 1916.0
+survey_credits = 300
+launched = "2009-06-18"
+lore = "Mapping the Moon since 2009. Its wide-angle camera's colour mosaic is the Moon you fly over in this game, and its laser altimeter measured the terrain under the 11 km floor. Its narrow-angle camera has photographed the Apollo landing sites, down to the astronauts' tracks."

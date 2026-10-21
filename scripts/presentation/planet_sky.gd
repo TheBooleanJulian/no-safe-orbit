@@ -55,6 +55,11 @@ func _ready() -> void:
 
 
 ## `other`: the far body drawn in the sky (null for none).
+## The Sun's drawn angular radius at 1 AU (rad): a little over its real
+## 0.00465, as it always was here.
+const SUN_DISC_RADIUS_1AU := 0.00506
+
+
 func configure(body: OrbitalBody, other: OrbitalBody = null) -> void:
 	sky_body = other
 	_central = body
@@ -64,8 +69,8 @@ func configure(body: OrbitalBody, other: OrbitalBody = null) -> void:
 		_material.set_shader_parameter("far_map", other.surface_map)
 		_material.set_shader_parameter("far_has_air", 1.0 if other.has_atmosphere else 0.0)
 		_material.set_shader_parameter("far_has_clouds", 1.0 if other.clouds_and_seas else 0.0)
-	_material.set_shader_parameter("planet_radius", body.radius_m)
-	_material.set_shader_parameter("entry_radius", body.entry_radius_m())
+	_material.set_shader_parameter("planet_radius", body.disc_radius_m())
+	_material.set_shader_parameter("entry_radius", body.entry_radius_m() if not body.is_star else 0.0)
 	_material.set_shader_parameter("has_air", 1.0 if body.has_atmosphere else 0.0)
 	_material.set_shader_parameter("has_clouds", 1.0 if body.clouds_and_seas else 0.0)
 	_material.set_shader_parameter("air_color", body.air_color)
@@ -80,6 +85,8 @@ func update_view(planet_center_render: Vector3, camera: Camera3D, frame: Celesti
 	_material.set_shader_parameter("pixel_angle", deg_to_rad(camera.fov) / height)
 	_material.set_shader_parameter("pci_to_body", frame.pci_to_body_fixed(sim_time))
 	_material.set_shader_parameter("cloud_time", sim_time)
+	# The Sun's disc shrinks with distance (Mars 0.6×, Voyager 1 a point).
+	_material.set_shader_parameter("sun_angular_radius", SUN_DISC_RADIUS_1AU * CelestialFrame.AU_M / maxf(frame.sun_distance_m, 1.0))
 	if sky_body != null:
 		var rel := frame.position_of(sky_body, sim_time)  # central body → far body
 		sky_body_center = planet_center_render + rel

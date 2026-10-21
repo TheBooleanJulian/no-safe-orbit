@@ -60,6 +60,18 @@ static var _all: Array[Location] = []
 @export var threat_bonus: int = 0
 
 
+## A deep-space survey's place: the Sun at the centre, no station of its
+## own (the jump home goes back to `home`'s station), no local traffic.
+static func deep_space(home: Location) -> Location:
+	var loc := Location.new()
+	loc.id = "deep_space"
+	loc.display_name = "Deep space"
+	loc.station_name = home.station_name
+	loc.body = load("res://data/bodies/sun.tres") as OrbitalBody
+	loc.enemy_templates = PackedStringArray()
+	return loc
+
+
 ## Every location, in map order.
 static func all() -> Array[Location]:
 	if _all.is_empty():

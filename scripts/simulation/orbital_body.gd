@@ -45,6 +45,9 @@ extends Resource
 ## clouds over seas (sea glint); Mars has thin, dusty air and neither.
 @export var air_color := Color(0.32, 0.56, 1.0)
 @export var clouds_and_seas: bool = true
+## The Sun as a central body (deep-space surveys): it casts no shadow on
+## what orbits it and is drawn as the sky's Sun, not as a planet.
+@export var is_star: bool = false
 ## Surface colour map: equirectangular, left edge 180° W, top edge 90° N.
 @export var surface_map: Texture2D
 
@@ -53,8 +56,21 @@ func entry_radius_m() -> float:
 	return radius_m + entry_interface_altitude_m
 
 
+## The radius that shades what orbits it (0 for a star).
+func shadow_radius_m() -> float:
+	return 0.0 if is_star else radius_m
+
+
+## The radius drawn as a planet's disc in the sky (0 for a star, which the
+## sky draws as its Sun).
+func disc_radius_m() -> float:
+	return 0.0 if is_star else radius_m
+
+
 ## What crossing the entry interface is called ("atmospheric entry" / "terrain impact").
 func entry_word() -> String:
+	if is_star:
+		return "fall into the Sun"
 	return "atmospheric entry" if has_atmosphere else "terrain impact"
 
 

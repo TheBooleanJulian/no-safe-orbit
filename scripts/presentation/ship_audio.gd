@@ -88,7 +88,7 @@ func _ready() -> void:
 		"gun": _make(0.4, _gun), "hit": _make(0.5, _clang), "ricochet": _make(0.35, _ping),
 		"explosion": _make(2.6, _boom), "alert": _make(0.3, _beep), "dock": _make(0.6, _thunk),
 		"tick": _make(0.04, _tick), "launch": _make(1.2, _whoosh), "detonation": _make(3.0, _deep_boom),
-		"ack": _make(0.04, _tick),
+		"ack": _make(0.04, _tick), "laser": _make(0.3, _zap),
 	}
 	for n: String in synth:
 		var variants: Array[AudioStream] = []
@@ -324,6 +324,13 @@ func _lp_noise(state: Dictionary, k: float) -> float:
 
 func _gun(t: float, _len: float, state: Dictionary) -> float:
 	return 0.9 * sin(TAU * 52.0 * t) * exp(-t * 9.0) + 0.6 * _lp_noise(state, 0.25) * exp(-t * 28.0)
+
+
+## A beam pulse heard through the hull: the capacitor bank letting go — a
+## falling whine over a soft thump.
+func _zap(t: float, len: float, state: Dictionary) -> float:
+	var f := lerpf(1800.0, 300.0, sqrt(t / len))
+	return 0.35 * sin(TAU * f * t) * exp(-t * 10.0) + 0.5 * sin(TAU * 70.0 * t) * exp(-t * 14.0) 		+ 0.15 * _lp_noise(state, 0.3) * exp(-t * 30.0)
 
 
 func _clang(t: float, _len: float, state: Dictionary) -> float:

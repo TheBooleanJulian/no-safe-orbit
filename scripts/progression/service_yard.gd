@@ -86,14 +86,31 @@ static func part_credits() -> float:
 	return float(PlayerProfile.PARTS_LOT_PRICE) / float(PlayerProfile.PARTS_LOT)
 
 
-## The dealer's price for a ship to `bp`, its standard crew hired: {ship,
-## crew, total, crew_count} credits.
+## The dealer's price for a ship to `bp`, its standard crew hired and the
+## rarer parts it carries included (at the quartermaster's prices — they
+## come with the ship, PlayerProfile.buy_ship): {ship, units (credits),
+## unit_ids (id -> count), crew, total, crew_count}.
 static func dealer_price(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Dictionary:
 	var ship := ceili((parts_value(bp, catalog) * part_credits() + PlayerProfile.NEW_HULL_FEE) * DEALER_MARKUP)
+	var unit_ids := rare_units(bp, catalog)
+	var units := 0
+	for id: StringName in unit_ids:
+		units += int(unit_ids[id]) * PlayerProfile.VENDOR_PRICES[(catalog.equipment[id] as EquipmentDefinition).rarity]
+	units = ceili(units * DEALER_MARKUP)
 	var grid := ShipGrid.build(bp, catalog)
 	var crew_count := CrewRoster.default_for(bp, grid, ShipStats.compute(bp, grid)).members.size()
 	var crew := crew_count * PlayerProfile.HIRE_FEE
-	return {"ship": ship, "crew": crew, "total": ship + crew, "crew_count": crew_count}
+	return {"ship": ship, "units": units, "unit_ids": unit_ids, "crew": crew, "total": ship + units + crew, "crew_count": crew_count}
+
+
+## The rarer (non-common) equipment `bp` carries: id -> count.
+static func rare_units(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Dictionary:
+	var out := {}
+	for e in bp.equipment:
+		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
+		if def != null and def.rarity != Rarity.Tier.COMMON:
+			out[e.def_id] = int(out.get(e.def_id, 0)) + 1
+	return out
 
 
 ## Spare parts scrapping `vessel` returns (its parts, less any damage).

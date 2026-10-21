@@ -45,6 +45,9 @@ const DISENGAGE := [[0.6, 0.4, 0.3], [0.35, 0.25, 0.1], [0.15, 0.1, 0.0]]
 const STRIKE_RANGE_M := 600.0
 const INTERCEPT_RANGE_M := 300.0
 const RECON_RANGE_M := 1500.0
+## A beam holds fire until its line passes this close to the target's
+## centre at the least (m) — or within its hit box's narrower half-width.
+const BEAM_AIM_MIN_M := 0.3
 const ESCORT_OFFSET := Vector3(60, 25, 0)
 ## Formations: wingmen fan out by this angle around a target (radians) and
 ## escorts step out and back by this spacing (m) per rank.
@@ -82,6 +85,8 @@ const ROLE_HELP := {
 	&"bomber": "Bomber: long steady runs on ships with a heavy cannon from 1.1 km, then breaks away",
 	&"recon": "Recon drone: never fires; holds 1.5 km from the target and watches",
 	&"ew": "EW drone: never fires; holds 1.2 km out towards the threat so its jamming covers your ship",
+	&"repair": "Repair drone: patches damaged systems outside your hulls (guns, radiators, engines, sensors) to 75 %, your ship's first; no work → escorts",
+	&"salvage": "Salvage drone: strips disabled hostiles and derelicts, a system every 4 s, into spare parts; brings 30 home at a time; no work → escorts",
 }
 const DIRECTIVE_HELP := [
 	"Intercept: engage the nearest hostile craft (interceptors: missiles first); none → screen the ship",
@@ -107,6 +112,9 @@ static func disengage_reason(craft: ShipState, risk: Risk) -> String:
 	if craft.config.cannon != null and craft.config.cannon.magazine_rounds > 0 \
 			and float(craft.cannon_rounds) / craft.config.cannon.magazine_rounds < limits[2]:
 		return "ammunition low"
+	# Whatever the risk: an empty gun is no use out there.
+	if craft.config.cannon != null and craft.config.cannon.magazine_rounds > 0 and craft.cannon_rounds <= 0:
+		return "out of ammunition"
 	return ""
 
 
@@ -194,8 +202,20 @@ static func attack(craft: ShipState, target: ShipState, standoff: float, priorit
 	point(craft, aim_dir, input)
 	var d := craft.orientation.inverse() * aim_dir.normalized()
 	var error_deg := rad_to_deg(acos(clampf(-d.z, -1.0, 1.0)))
-	input.fire = t > 0.0 and error_deg < GunneryAI.FIRE_CONE_DEG * 2.0 and rel_pos.length() < GunneryAI.MAX_RANGE_M \
-		and clear_shot(craft, aim_dir, rel_pos.length(), friends, target)
+	var in_reach := rel_pos.length() < GunneryAI.MAX_RANGE_M
+	var on_aim := error_deg < GunneryAI.FIRE_CONE_DEG * 2.0
+	if cannon.is_beam():
+		# A beam has few charges and no spread: it fires only in reach and
+		# with the line through the target's hit box (not near it).
+		var r := target.config.hit_box_half_extents
+		in_reach = rel_pos.length() < cannon.beam_range_m
+		on_aim = sin(deg_to_rad(minf(error_deg, 90.0))) * rel_pos.length() < maxf(minf(r.x, r.y), BEAM_AIM_MIN_M)
+		if target.systems == null:
+			# Its steering mirror lays it on a craft or missile within
+			# WorldSimulation.BEAM_STEER_DEG of the nose.
+			on_aim = error_deg < WorldSimulation.BEAM_STEER_DEG * 0.8
+		input.lead_target_id = target.id
+	input.fire = t > 0.0 and on_aim and in_reach and clear_shot(craft, aim_dir, rel_pos.length(), friends, target)
 
 
 ## Gun runs on a ship: run in to the role's range firing, then break away
@@ -244,6 +264,11 @@ static func clear_shot(craft: ShipState, aim_dir: Vector3, range_m: float, frien
 
 ## Velocity to add to keep apart from friendly craft and clear of hulls
 ## (friendly or not); `skip`: a ship it may approach (the carrier, landing).
+const AVOID_EVERY := 4
+## Within this of its rack on the way home a craft stops keeping apart.
+const FINAL_APPROACH_M := 150.0
+
+
 static func avoidance(craft: ShipState, friends: Array[ShipState], others: Array[ShipState], skip: ShipState = null) -> Vector3:
 	var push := Vector3.ZERO
 	for list: Array[ShipState] in [friends, others]:
@@ -272,7 +297,18 @@ static func command(craft: ShipState, directive: Directive, carrier: ShipState, 
 	var others: Array[ShipState] = []
 	if target != null:
 		others.append(target)
-	_avoid = avoidance(craft, friends, others, carrier if directive == Directive.RETURN else null)
+	# Avoidance changes slowly: worked out every AVOID_EVERY ticks per craft
+	# (staggered), kept in between (play-test batch 6: many fighters).
+	var n := int(craft.ai_state.get("avoid_n", absi(hash(craft.id)) % AVOID_EVERY))
+	if n <= 0:
+		craft.ai_state["avoid"] = avoidance(craft, friends, others, carrier if directive == Directive.RETURN else null)
+		n = AVOID_EVERY
+	craft.ai_state["avoid_n"] = n - 1
+	_avoid = craft.ai_state.get("avoid", Vector3.ZERO)
+	# On final approach the rack wins: keeping 70 m from a wingman landing at
+	# the next rack would hold both off for ever.
+	if directive == Directive.RETURN and craft.position.distance_to(rack_point) < FINAL_APPROACH_M:
+		_avoid = Vector3.ZERO
 	var input := _command(craft, directive, carrier, rack_point, target, hostiles, priority, slot, friends, missiles, dt)
 	_avoid = Vector3.ZERO
 	return input

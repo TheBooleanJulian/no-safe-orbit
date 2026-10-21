@@ -4,6 +4,376 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 15, part 2 — crew, damage control, medics and PD that scale with the hull (2026-10-21)
+
+#### Changed
+- **The standard complement scales with the ship** (`CrewRoster.complement`):
+  a bridge watch per 200 modules beyond two; an engineer per reactor and per
+  four main engines; a gun crew per two guns and per two launchers; damage
+  control per 40 modules; a medic per 40 berths; security per 12 berths.
+  A frigate's is unchanged (2 / 2 / 2 / 1 / 4 / 1); a destroyer's is 46
+  specialists (was 13), a cruiser's 68, a carrier's 77. The crew page, the
+  hiring tally and the stats panel use it.
+- **Damage-control teams work at the same time**: one team per two fit
+  damage-control crew (a frigate one, a destroyer three, a carrier eight);
+  each patches its own system — [C] sends the next free team. The HUD shows
+  "+N more" and the overview each system being patched.
+- **Every medic treats a patient of their own** at once (was one patient at
+  a time for the whole ship).
+- **Point defence against the hull's size**: the shipyard stats panel shows
+  DEFENCE — PD mounts against those the hull wants (one per 1,500 m² of
+  outside surface) and the share of approaches they cover (48 directions;
+  in arc and clear of the ship's own hull, as in flight) — and CRAFT (bays
+  and racks).
+
+#### Tests changed (and why)
+- New `test_m15_scaling` (4): complements by template (frigate unchanged,
+  capitals over three times the specialists, rosters filled to them);
+  three DC teams patch three systems in 14 s together (mutation-checked:
+  one team fails); six medics treat three wounded in one treatment time
+  (13 s); PD wanted vs carried and coverage by template (all 100 %, ≤ 10 ms),
+  one mount on a frigate 54 %, none 0 %; the carrier's craft.
+- `test_m9_weapons_crew`: gunners by guns now one crew per two guns
+  (`complement`, which replaced `suggested`).
+
+### Milestone 15, part 1 — repair and salvage drones (2026-10-21)
+
+#### Added
+- **Repair drone** (drone rack (repair), uncommon): flies to a damaged
+  system outside a friendly hull — your own ship's first — holds 12 m off
+  its mount and patches it at 1.5 hp/s to 75 %, the crew's field-repair
+  limit, without their walk or airlock. Destroyed parts still need the
+  yard; a part the crew is already on is left to them.
+- **Salvage drone** (drone rack (salvage), uncommon): strips a disabled
+  hostile or a derelict (the wing's target first, else the nearest within
+  8 km of your ship), cutting its most valuable system free every 4 s into
+  half its worth in spare parts (a reactor is lifted out, no blast). With 30
+  aboard, or nothing left to cut, it flies home; the parts go into the hold
+  (at risk until banked). A stripped wreck is worth less to a beacon.
+- Both escort when there is no work, go back out on their own once
+  serviced when there is (auto relaunch), and explain their role in the
+  WING tab and the shipyard.
+
+#### Tests changed (and why)
+- New `test_m15_drones` (3): two systems patched to exactly 75 % in 20 s,
+  a destroyed mast left alone, no crew repair involved, then escort
+  (mutation-checked: no patch at 0 hp/s); 6 systems cut, 30 parts
+  delivered after 126 s, wreck 90 % → 58 % intact, no reactor blast;
+  racks in the catalog under Drones.
+- `smoke_wing`: delivered parts go into the hold.
+
+### Play-test batch 7 — jumps in Δv; the nav chart sets a course (2026-10-21)
+
+#### Changed
+- **Jumps cost Δv, the same for every ship** ("space travel should be in
+  terms of delta v rather than tons of fuel"): 70 m/s plus 160 m/s per
+  tenfold of distance — home 70 m/s, Earth ↔ Moon 487 m/s, Earth → Mars
+  928 m/s; Voyager 1 2,512 m/s round trip. Each ship pays in propellant by
+  the rocket equation at its main-engine Isp (the stock ships, all Isp
+  900 s, burn what they did: Frigate 33 t for the Moon). The nav chart,
+  route button, artifacts list ("round trip Δv … of this ship's …", amber
+  when out of reach), ARMOURY ("JUMP Δv"), refusals, the in-flight JUMP
+  alert and the logs speak Δv.
+- **The nav chart sets a course; LAUNCH jumps** ("selecting a different
+  launch point should not jump until the user presses launch"): clicking a
+  body lays in the course (cyan ring and line, "◎ → LUNAR ORBIT · Δv
+  487 m/s"); LAUNCH tops the tanks up at the berth, jumps, then flies the
+  sortie there. Accepting a contract elsewhere sets its location as the
+  course instead of jumping at once. A course is not saved; with none, an
+  accepted contract's location is used. A course beyond what the ship
+  carries even with full tanks is refused when picked; a jump the tanks
+  can't pay at launch is refused with the refuel price.
+- The directory's Nav chart line and the berth's next-sortie card show the
+  course.
+
+#### Tests changed (and why)
+- `test_m13_jumps`: the cost test is now Δv by distance (same for the
+  Frigate and the Cutter, 487 m/s; the Cutter burns 8.5 t, the Frigate
+  33.2 t), the rocket equation both ways, a lower Isp burns more; the
+  contract test checks it sets the course and the launch pays (it used to
+  jump on accepting); new `test_the_nav_chart_course_waits_for_launch`.
+- `test_m12_shipyard`: an accepted contract sets the launch point (it used
+  to move the berth).
+- `test_m14_artifacts`: Voyager 1 is refused for needing more Δv (2,512 vs
+  1,557 m/s); a survey from the Moon is allowed with a course there.
+- `smoke_shipyard`: clicking the Moon lays in a course and leaves the berth
+  at Earth (saved as Earth); LAUNCH still flies into lunar orbit; an
+  accepted contract sets the course (it used to move the berth).
+
+### Play-test batch 6, part 7 — the shipyard as a place (2026-10-21)
+
+"More gameplay and immersive, and less spreadsheet tabs like."
+
+#### Changed
+- **A station directory replaces the row of tabs**: the shipyard's places
+  down the left, by district — DRYDOCK (Berth, Refit bay, Repair crews,
+  Armoury), CONCOURSE (Mission board, Crew quarters, Ship dealer),
+  OPERATIONS (Hangar & bank, Station tech, Nav chart, Salvage odds) — each
+  with a live line: amber when it needs you (repair jobs, a restock due,
+  offers posted, an empty berth, cargo not banked, an affordable upgrade),
+  teal when fine; credits and parts on top. It narrows beside the builder.
+  Page headings name the district and place.
+- **The berth** (STATION): your ship in a docking bay — deck plate, guide
+  lines, gantry towers with clamp arms, work lights — filling the page, with
+  its name plate, the service tags and the **dockmaster's log** (dockmaster,
+  repair crews, quartermaster, brokers, crew quarters) over the view.
+- **Crew quarters**: a roster board — a card per department, who serves
+  there against the standard complement (amber when short), their post and
+  ✕ to dismiss — and a hiring hall of cards, one per spacer.
+
+#### Fixed
+- README: the capital ships were listed as a row of the shipyard's
+  sections table; they are a paragraph under it now.
+
+#### Tests changed (and why)
+- `smoke_shipyard`: the directory has an entry per section, each with a
+  live line, and the berth shows the dockmaster's log (new checks).
+
+### Play-test batch 6, part 6 — beam weapons (2026-10-21)
+
+#### Added
+- **Lasers for ships, fighters and drones**: a beam has no round — each
+  pulse reaches the first hull on its line at once (no travel time, no
+  recoil, nothing for point defence to shoot), with penetration falling to
+  half at full reach.
+
+  | Part | Carried by | Pulse | Reach | Penetration (close / full reach) | Cost |
+  |---|---|---|---|---|---|
+  | Pulse laser turret (epic) | ships, any outer face | 30 a minute | 5 km | 80 / 40 mm | draws 1,500 kW; 1,500 kW of heat while firing; no magazine |
+  | Fighter bay (Lancer laser) (rare) | hangar | 90 a minute | 1.5 km | 14 / 7 mm | 40 charges |
+  | Drone rack (laser) (rare) | outer face | 60 a minute | 2 km | 14 / 7 mm | 30 charges; flies as an interceptor (missiles first) |
+
+  A craft's charges are recharged aboard from the carrier's power, not its
+  magazine. Fire control holds a beam until its locked target is in reach.
+  A beam's steering mirror lays it on a craft or missile within 2° of the
+  barrel, so a laser drone can hit a missile its nose lags by metres. The
+  shipyard part info shows reach, falloff, power and heat; the HUD weapon
+  strip shows "on power" for an all-laser ship. Pulses are drawn as bright
+  lines that ride with both ships and fade in 0.18 s, with a capacitor
+  "zap" aboard.
+
+#### Changed
+- **Hangars & craft › Fighters / Drones** is decided by the rack (drone
+  racks are drones), so the armed laser drone sorts with the drones.
+- **Gun heat** counts only kinetic guns for rounds fired; beam pulses add
+  their own mount's heat.
+
+#### Tests changed (and why)
+- New `test_beams` (6 tests): a pulse strikes in the tick it fires (56.3 mm
+  at 3 km, expected 56.0), no round in flight, no rounds spent; held beyond
+  reach, stops at 5 km fired blind; +1,440 kW of power demand over the
+  autocannon, +180,000 kW of heat on the pulse's tick (1,500 kW × 2 s);
+  a Lancer spends a charge a pulse, passes through a friendly craft (IFF),
+  recharges 40/40 with the carrier's magazine untouched; a laser drone shoots
+  down a missile (fails with the steering mirror off — mutation-checked);
+  parts and palette sections; a pulse is drawn 589 m long and fades.
+- `smoke_shipyard` (palette): the Weapons list has 11 entries (the pulse
+  laser turret joins the guns).
+
+### Play-test batch 6, part 5 — capital ships as battleships (2026-10-21)
+
+#### Changed
+- **Destroyer, Cruiser and Carrier rebuilt** (`tools/make_capital_templates.gd`)
+  from "a flat flimsy plank" into battleships: a taller hull (3–4 decks)
+  narrowing to a stepped, sloped prow; a two-deck superstructure amidships
+  (quarters, bridge on top, mast); 80 mm plates down the flanks and 40 mm on
+  top and the bow; a main battery on the centreline — heavy kinetic cannons
+  ahead of the superstructure and superfiring on its roof, the Cruiser
+  with two railguns — autocannon secondaries in the flanks and a ventral
+  pair, 10–16 point-defence mounts, missile racks.
+
+  | | was | now |
+  |---|---|---|
+  | Destroyer | 960 t, 8 autocannons, no armour | 3,002 t, 3 heavy guns + 8 autocannons, 536 plates, 0.27 g |
+  | Cruiser | 2,169 t, 14 autocannons | 4,987 t, 4 heavy guns + 2 railguns + 12 autocannons, 816 plates, 0.26 g |
+  | Carrier | 1,954 t, 6 autocannons, 4 hangars | 6,512 t, 2 heavy guns + 10 autocannons, 6 hangars (16 craft), 1,008 plates, 0.20 g |
+- **The dealer sells rarer parts with the ship**: a template's non-common
+  parts (heavy cannons, railguns, missile racks) are priced at the
+  quartermaster's rates plus the margin and banked when you buy it.
+  Destroyer 19,466 cr, Cruiser 37,237 cr, Carrier 34,084 cr (crew included).
+- **The chase camera sits back in proportion to the ship** (frigates and
+  smaller unchanged); the HUD schematic clips to its panel.
+
+#### Tests changed (and why)
+- `test_m12_shipyard`: the dealer's price includes the rarer parts; the
+  capital-ship test checks a main battery, armoured flanks, a superstructure
+  and that the rarer parts come with the ship (it used to require common
+  parts only). Compile times: 14.9 / 27.1 / 36.0 ms.
+- `test_feedback_pass` (templates fly on a new profile): the fresh profile
+  is given the rarer parts the dealer sells with the template before the
+  check; without them the capital ships now (deliberately) fail it.
+
+### Play-test batch 6, part 4 — builder: parts list, radiators, armour, wrecks (2026-10-21)
+
+#### Changed
+- **The builder's parts list is regrouped**: eight categories, each in
+  sections (e.g. Weapons › Guns, Point defence, Missile launchers,
+  Countermeasures & EW; Hangars & craft › Fighters, Drones), with headers,
+  rarest first within a section.
+- **Radiators 1×3 or 3×1**: the long radiators (the 3-cell panel, now named
+  "Radiator panel (3 cells)", and the heat-pipe radiator) are listed both
+  ways round (along the hull, across it).
+- **Armour stands out from bare hull**: gunmetal slabs, glossier, one panel
+  per cell, a little thicker (28 / 45 cm).
+- **Wrecked blocks keep their shape**: no longer shrunk (leaving gaps), but
+  full size, charred and dented — faces pushed in, edges and corners where
+  they were, so they still meet their neighbours.
+
+#### Tests changed (and why)
+- `smoke_shipyard` (palette): counts pickable rows (section headers are not
+  pickable); a search for "radiator" now finds four entries (both
+  long radiators, each both ways round); the Weapons list opens on
+  its "Guns" section.
+
+### Play-test batch 6, part 3 — reduced-rate auto-fire and fairer multi-ship fights (2026-10-21)
+
+#### Added
+- **Auto-fire at a reduced rate**: a policy's auto-fire fires at its own
+  share of the guns' rate (default 50 %, POLICY tab, 25 % steps), saving
+  rounds and heat; your own trigger always fires at the full rate.
+- `tools/balance_sim.gd`: the real flight scene, headless, a scripted
+  player against 1–3 ships at missions 3, 5 and 7.
+
+#### Changed
+- **Multi-ship encounters are fairer.** Before: a scripted stock Frigate
+  lost every 1v2 and 1v3 within 14–20 s. After: 1v2 survives to the 480 s
+  limit at missions 3 and 7 (lost at 327 s at mission 5); 1v3 is lost at
+  188–273 s; 1v1 is still won in 3–10 s.
+  - Only the lead starts close; wingmen arrive from range and must be found.
+  - Wingmen are fitted as for earlier missions (mission − 2, − 3): at
+    mission 7, 109 and 106 armour plates against the lead's 140.
+  - Enemy guns fire as automation: the lead at 70 % of the rated rate,
+    wingmen at 45 %.
+
+#### Fixed
+- **A breached bridge disabled a ship whose crew were in spacesuits**: at
+  general quarters the crew now keep command of a vented bridge. This, not
+  the guns, was how most multi-ship fights were lost.
+
+#### Tests changed (and why)
+- `smoke_encounter`: checks the wingmen start far out, then brings them
+  alongside to test selection and roles as before (stated as scaffolding).
+
+### Play-test batch 6, part 2 — fighters that carry on, a tidy WING tab, screens that scroll (2026-10-21)
+
+#### Added
+- **Fighters move on**: once their target is beaten they strike the nearest
+  combat-ready enemy; with none left they come home.
+- **Fighters rearm on their own**: an empty gun brings a craft home at any
+  risk setting; a craft that came home by itself relaunches once refuelled
+  and rearmed while there is a fight ("Back out after rearming", on by
+  default). Recalled craft stay home.
+- **WING tab redone** as a compact table: a row per craft (state, hull ·
+  fuel · ammo, order, risk, aim, ▲ out / ▼ in), wing-wide launch / recall /
+  order / risk / back-out controls on top, roles as tooltips, "How they fly"
+  folded away. A Carrier's twelve craft fit the drawer.
+- Tests: `test_wing_batch6.gd` (3; mutation-checked on moving on).
+
+#### Fixed
+- **Screens that ran off the bottom**: every Tab-overview tab and the F1
+  controls list scroll.
+
+### Play-test batch 6, part 1 — big-fight performance (2026-10-21)
+
+#### Fixed
+- **Lag with many fighters and thousands of rounds.** Measured with
+  `tools/profile_frames.gd` (new modes `--carrier`, `--carriers`):
+  the usual three-ship fight 77 → 139 fps; your Carrier against three
+  frigates (15 craft, ~1,750 rounds) ~34 → 50 fps; four carriers (46 craft,
+  ~2,100 rounds) 7 → 20 fps.
+  - Rounds that can't reach a ship sleep (no hit test, no tidal term) and
+    settle the tidal pull on waking; awake rounds reuse last tick's pull and
+    test a bounding sphere before the hit box.
+  - Point defence fires a third as many, three times heavier rounds (300 rpm,
+    0.3 kg, 18 mm penetration, 2.6 m flak radius): the same damage rate, and
+    PD rounds had been 69 % of everything in flight. Its magazine holds 200
+    rounds (the same 40 s of fire). It gathers its targets once per tick.
+  - Craft think at 30 Hz, avoidance at 15 Hz; collisions skip pairs that
+    can't collide; tracers are built on the GPU; the HUD ship schematic
+    redraws at 10 Hz.
+  - At most 3 simulation ticks per frame (was 8; still 8 when
+    fast-forwarding): an overloaded fight runs a little slower than real
+    time instead of stuttering.
+  - Craft on final approach (within 150 m of their rack) stop keeping apart
+    from other craft: two landing at neighbouring racks could hold each
+    other off for ever.
+
+#### Tests changed (and why)
+- `test_m8_polish` (60 Hz budget): the duel's load is now > 40 rounds in
+  flight, not > 100 — point defence fires a third as many.
+- `test_combat_ai` (flares once armed): the defending ship's point defence
+  is off; the heavier PD rounds now kill the missile before flares are due.
+
+### Milestone 14, part 2 — derelicts that stay, are salvaged again and break up (2026-10-20)
+
+#### Added
+- **Derelict fields** (`DerelictField`): every beaten ship left behind at
+  the end of a sortie stays at its location (six per place, newest kept).
+  The next sorties there find the newest two 4–7 km out, silent, unpowered
+  and marked on the HUD.
+- **Salvage again**: G within 2 km of a derelict (when there's nothing to
+  beacon in the fight) salvages it once per sortie — its scrap and crates
+  halve for each earlier salvage, no bounty — and strips half of what is
+  left. Measured: a wreck salvaged once paid 140 cr the second time.
+- **Break-up**: each sortie flown anywhere, a derelict loses 15 % of what is
+  left; below 10 % intact, or after 8 sorties, it breaks up and the debrief
+  says so.
+- Tests: `test_m14_derelicts.gd` (5); `smoke_campaign` finds the first
+  sortie's wreck on the relaunch and salvages it again (mutation-checked on
+  recording the field).
+
+#### Changed
+- Profile schema 11: `derelicts`; v10 saves start with empty fields and
+  keep `.v10`.
+- Contacts remember their hull template, mission and variant.
+
+#### Tests changed (and why)
+- `test_m14_artifacts` schema test: the current schema (now 11), not exactly 10.
+
+### Milestone 14, part 1 — real artifacts to survey (2026-10-20)
+
+#### Added
+- **Eleven real objects** where NASA/JPL Horizons puts them on the
+  scenario date (state vectors at 2026-10-19 12:00 UT, sources and
+  uncertainty recorded per object and in `data/ATTRIBUTION.md`): the ISS
+  and Hubble about Earth, LRO about the Moon, MRO and 2001 Mars Odyssey
+  about Mars, and — about the Sun — the Tesla Roadster, New Horizons,
+  Voyager 1 and 2 and Pioneer 10 and 11. JWST is left out (it sits at the
+  Sun–Earth L2 point, which needs a rotating frame), and so is MAVEN (no
+  ephemeris after March 2026).
+- **Survey sorties** (HANGAR › MAP › ARTIFACTS, "Survey next sortie"): you
+  start 3 km behind the object in its real orbit, with no hostile traffic.
+  Close to within 500 m (or five times its size), match its speed within
+  2 m/s and hold for 20 s with a working sensor mast: the survey fee is
+  paid once and its record goes into the codex, shown on the MAP. The
+  target card becomes a survey card (range, relative speed, sensor,
+  progress, distance from the Sun) and the HUD marks the object.
+- **Deep space**: surveys of the Sun-centred objects fly with the Sun as
+  the central body (its real gravity; the Sun drawn at its true size, a
+  point from Voyager 1; nothing casts a shadow). The jump out and back is
+  paid at launch and must fit in the full tanks and the reserve, so these
+  need a ship built for range: the Roadster takes 20 % of a ship's mass in
+  propellant, Voyager 1 28 % (the Frigate Mk I carries 16 %).
+- Real objects are heritage: they can't be damaged, grappled or salvaged.
+- Tests: `test_m14_artifacts.gd` (6) — orbits against what is known (ISS
+  427 km, 51.8°; Hubble 28.3°; MRO and Odyssey near-polar; Roadster
+  0.986–1.664 AU; Voyager 1 172.1 AU, escaping), double precision, survey
+  rules, the codex, schema 10; `smoke_survey.gd` (14 checks: the ISS survey
+  end to end, Voyager 1 about the Sun, back to Earth), mutation-checked on
+  the survey range and on the Sun casting a shadow.
+
+#### Changed
+- Profile schema 10: `survey_target` and `codex`; v9 saves have surveyed
+  nothing and keep `.v9`.
+- `CelestialFrame`: the Sun as a central body (`set_star_sun`),
+  `icrs_to_pci_d` in double precision, the Sun's distance for its disc;
+  `OrbitalBody.is_star`, `shadow_radius_m`, `disc_radius_m`.
+- `tools/run_checks.sh` runs `smoke_survey` (12 stages).
+
+#### Tests changed (and why)
+- `test_m13_jumps` schema test: the current schema (now 10), not exactly 9.
+- `test_release`: the Horizons row joins the credited sources.
+
 ### Milestone 13, part 2 — Mars, brokers, Sun-centred positions (2026-10-20)
 
 #### Added

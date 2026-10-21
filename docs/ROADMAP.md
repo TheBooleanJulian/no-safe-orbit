@@ -518,6 +518,43 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 6 — auto-fire rate and multi-ship balance ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Guns auto-fire at a reduced rate | `test_balance_batch6` (rate rule, half rate = half the rounds) | 10 s on the trigger: 20 rounds at full rate, 10 at half |
+| Enemies not too strong beyond 1v1 | `tools/balance_sim.gd` (manual), `test_balance_batch6`, `smoke_encounter` | 1v2/1v3 lost in 14–20 s before; now 1v2 survives 480 s at m3/m7, lost 327 s at m5; 1v3 lost 188–273 s |
+| Suited crew keep a vented bridge | `test_balance_batch6` | disabled before, fighting now |
+
+### Play-test batch 7 — Δv jumps, the nav chart's course ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Space travel in Δv, not tonnes | `test_m13_jumps`, `test_m14_artifacts` | Moon 487 m/s for the Frigate and the Cutter alike (33.2 t / 8.5 t); Voyager 1 2,512 m/s vs the Frigate's 1,557 m/s |
+| Picking a launch point doesn't jump until LAUNCH | `test_m13_jumps` (course), `smoke_shipyard` | click the Moon: still docked at Earth, course Moon; LAUNCH: lunar orbit, 100.0 km |
+
+### Play-test batch 6 — beam weapons ✅ (2026-10-21)
+
+"Beam and laser weapons can be added (0 travel time but high energy and
+heat) to main weapons, drones and fighters."
+
+| Requirement | Test | Measured |
+|---|---|---|
+| No travel time | `test_beams` | struck in the tick it fired; no round in flight; 56.3 mm at 3 km (expected 56.0) |
+| High energy and heat | `test_beams` | +1,440 kW demand over the autocannon; +180,000 kW on the pulse's tick (1,500 kW × 2 s) |
+| On fighters and drones | `test_beams` (laser drone mutation-checked) | Lancer: a charge a pulse, IFF through a friend, recharged 40/40 aboard; laser drone shoots down a missile |
+| Parts and palette | `test_beams` | turret under Weapons › Guns, Lancer bay under Fighters, laser rack under Drones |
+
+### Play-test batch 6 — performance ✅ (2026-10-21)
+
+"Lag issues are back when thousands of projectiles are fired by many
+fighters."
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Many fighters, thousands of rounds | `tools/profile_frames.gd` (`--carrier`, `--carriers`; manual, needs a GPU) | 3-ship fight 77 → 139 fps; own Carrier vs 3 frigates ~34 → 50 fps; 4 carriers 7 → 20 fps |
+| Simulation still correct | full suite (orbits, rounds, PD, craft) | 374/374 |
+
 ### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts
 
 Done early (play-test batch 3): `Location` resource, Earth and Moon with
@@ -561,6 +598,27 @@ precision, proven by a test.
 
 ### Milestone 14 — orbital artifacts and derelicts
 
+Part 1 ✅ (2026-10-20) — real artifacts:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| `Artifact` resource (location, trajectory, kind, interaction, reward) | `test_m14_artifacts` (recorded) | 11 objects, each validated, source in ATTRIBUTION |
+| Real orbital data from Horizons at a fixed, documented epoch; uncertainty flagged | `test_m14_artifacts` (orbits) | ISS 427 km, 51.8° (real 51.6°; precession ignored); Hubble 28.3°; MRO/Odyssey 92°; Roadster 0.986–1.664 AU; Voyager 1 172.1 AU, escaping |
+| Interaction reuses rendezvous, docking tolerances and scans | `smoke_survey` (mutation-checked on range) | within 500 m, ≤ 2 m/s, 20 s with a mast; no start from 3 km |
+| Lore-first rewards | `test_m14_artifacts` (once-only fee, codex), MAP render | fee once; record on the MAP |
+| Deep space: the Roadster, Voyagers, Pioneers, New Horizons | `smoke_survey` (mutation-checked on the shadow), `test_m14_artifacts` (doubles) | Sun-centred; 3 km kept to 1 mm at 172 AU; 20 s flown, finite |
+| JWST left out, and said so | `test_m14_artifacts` | not in the list; ATTRIBUTION, README |
+| Save format | `test_m14_artifacts` (schema 10), `compat_check` | v9 → empty codex, `.v9` kept; COMPAT: OK |
+
+Part 2 ✅ (2026-10-20) — derelicts:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Wrecks stay | `test_m14_derelicts` (field), `smoke_campaign` (mutation-checked) | the first sortie's wreck lies 5.7 km out on the relaunch |
+| Re-salvageable | `test_m14_derelicts` (yield), `smoke_campaign` | 1,000 → 500 → 250 cr scrap; +140 cr the second time; once per sortie |
+| Break up over time | `test_m14_derelicts` (decay) | −15 % a sortie; gone below 10 % or after 8 sorties |
+| Save format | `test_m14_derelicts` (schema 11), `compat_check` | v10 → empty fields, `.v10` kept; COMPAT: OK |
+
 `Artifact` resource (location, trajectory data, kind, interaction,
 reward); interaction reuses rendezvous, docking tolerances, the grapple and
 scans. Real objects with orbital data from NASA/JPL Horizons at a fixed,
@@ -570,7 +628,7 @@ the ISS, Hubble and similar. Lore-first rewards. Lagrange-point objects
 (JWST) need a rotating frame we don't have: left out, and said so. Wrecks
 become re-salvageable and break up over time.
 
-### Milestone 15 — fleet depth
+### Milestone 15 — fleet depth ✅ (2026-10-21)
 
 Done early (Milestone 12): the capital templates (Destroyer, Cruiser,
 Carrier, generated by `tools/make_capital_templates.gd`) in the dealer; the
@@ -589,8 +647,28 @@ friendly-fire safety (clear shot + IFF) and craft separation.
 | Ramming worse for the lighter ship | `test_combat_ai` | 8 m/s: Cutter −35.5 % (2 modules), Destroyer −0.9 % |
 | Auto flares only once armed | `test_combat_ai` (mutation-checked) | armed at 1.5 s; flares due at 4.0 s out |
 
-Still to do: repair and salvage drones; hangar capacity, crew complement
-and PD coverage that scale with hull size.
+Done in play-test batch 6 (2026-10-21): the capital templates rebuilt as
+armoured battleships with a main battery (`test_m12_shipyard`), rarer parts
+sold with them, a camera that sits back for big hulls.
+
+Part 1 ✅ (2026-10-21) — repair and salvage drones:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Repair drone | `test_m15_drones` (mutation-checked) | two systems 20 % → 75 % (the field limit) in 20 s; destroyed mast left; no crew repair |
+| Salvage drone | `test_m15_drones`, `smoke_wing` | 6 systems cut, 30 parts home after 126 s, wreck 90 % → 58 %; parts into the hold |
+
+Part 2 ✅ (2026-10-21) — hangar capacity, crew complement and PD that scale
+with hull size:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Crew complement scales | `test_m15_scaling` | specialists: frigate 12 (unchanged), destroyer 46, cruiser 68, carrier 77 |
+| …and the extra crew matter | `test_m15_scaling` (DC mutation-checked) | destroyer: 3 DC teams patch 3 systems in 14 s together; 6 medics treat 3 wounded in 13 s (one treatment) |
+| PD coverage scales | `test_m15_scaling` | wanted 1 / 2 / 6 / 8 / 10 (corvette → carrier); every template carries it, 100 % covered; one frigate mount 54 % |
+| Hangar capacity | `test_m15_scaling` | carrier 16 craft vs 2 on frigate, destroyer and cruiser (bays need hangar area) |
+
+Milestone 15 ✅.
 
 More craft as data (interceptor, bomber, repair and salvage drones, EW
 drone); capital templates (destroyer, cruiser, carrier) in the dealer, only

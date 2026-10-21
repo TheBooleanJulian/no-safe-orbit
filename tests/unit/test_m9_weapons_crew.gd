@@ -203,7 +203,7 @@ func test_the_crew_roster_helpers() -> void:
 	for c in CrewRoster.ROLE_COLORS:
 		distinct[(c as Color).to_html(false)] = true
 	assert_true(distinct.size() == CrewRoster.ROLE_COLORS.size(), "every post its own colour")
-	assert_true(CrewRoster.suggested(1)[CrewRoster.Role.WEAPONS] == 1 and CrewRoster.suggested(5)[CrewRoster.Role.WEAPONS] == 2, "gunners by guns")
+	assert_true(CrewRoster.complement(1, 0, 4, 1, 64, 24)[CrewRoster.Role.WEAPONS] == 1 and CrewRoster.complement(5, 0, 4, 1, 64, 24)[CrewRoster.Role.WEAPONS] == 3, "gunners by guns (a crew per two)")
 	var sys := _ship(&"p", _bp()).systems
 	var m := sys.crew.members[0]
 	assert_true(TacticalOverview.crew_status(sys, m) == "fit", "at post: fit")

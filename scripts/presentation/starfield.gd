@@ -49,8 +49,8 @@ func update_view(camera: Camera3D, planet_center: Vector3, body: OrbitalBody, fa
 	var height := maxf(camera.get_viewport().get_visible_rect().size.y, 1.0)
 	_material.set_shader_parameter("pixel_angle", deg_to_rad(camera.fov) / height)
 	_material.set_shader_parameter("planet_center", planet_center)
-	_material.set_shader_parameter("planet_radius", body.radius_m)
-	_material.set_shader_parameter("entry_radius", body.entry_radius_m())
+	_material.set_shader_parameter("planet_radius", body.disc_radius_m())
+	_material.set_shader_parameter("entry_radius", body.entry_radius_m() if not body.is_star else 0.0)
 	_material.set_shader_parameter("far_center", far_center)
 	_material.set_shader_parameter("far_radius", far_radius)
 

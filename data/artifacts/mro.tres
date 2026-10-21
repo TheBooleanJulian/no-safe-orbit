@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "mro"
+display_name = "Mars Reconnaissance Orbiter"
+kind = &"orbiter"
+center = &"mars"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(1514.678951162814, -1609.2106423024, 2957.979416569507)
+v_km_s = PackedFloat64Array(-2.018195238972679, 1.815765513614894, 2.022454387188885)
+horizons_id = "-74"
+horizons_source = "MRO_MERGED"
+uncertainty = "Horizons MRO_MERGED (reconstructed and predicted orbit): tens of metres."
+size_m = 13.6
+mass_kg = 2180.0
+survey_credits = 450
+launched = "2005-08-12 (in Mars orbit since 2006-03-10)"
+lore = "Its HiRISE camera sees details under a metre across on Mars, and it relays data from the rovers on the surface. Its 3 m dish has returned more data than any earlier planetary mission."

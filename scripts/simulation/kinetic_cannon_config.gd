@@ -21,9 +21,34 @@ extends Resource
 @export var traverse_deg_s: float = 0.0
 ## Round-to-round spread (standard deviation, degrees) of a turret.
 @export var dispersion_deg: float = 0.0
+## Beam weapon (laser) when above 0: its reach (m). A beam has no round —
+## each pulse reaches the first hull on its line at once (no travel time, no
+## recoil, nothing to dodge or shoot down), with `penetration_mm` falling to
+## BEAM_FALLOFF of it at full reach. On a ship it uses no magazine: it costs
+## power (its mount's power_kw) and heat (heat_kw per second of fire). On a
+## craft `magazine_rounds` are capacitor charges, recharged aboard the carrier.
+## Set muzzle_velocity_mps to the speed of light so fire control leads by nothing.
+@export var beam_range_m: float = 0.0
+## The beam's colour.
+@export var beam_color: Color = Color(0.45, 1.0, 0.95)
 
 const PENETRATION_SPEED_EXPONENT := 1.4
 const HEAD_ON_BONUS_MAX := 1.3
+## A beam's penetration at full reach, as a fraction of its penetration_mm
+## (the spot spreads with distance).
+const BEAM_FALLOFF := 0.5
+
+
+func is_beam() -> bool:
+	return beam_range_m > 0.0
+
+
+## A beam's penetration (mm) at `range_m`: falls linearly to BEAM_FALLOFF
+## of penetration_mm at full reach; nothing beyond it.
+func beam_penetration_at(range_m: float) -> float:
+	if range_m > beam_range_m:
+		return 0.0
+	return penetration_mm * lerpf(1.0, BEAM_FALLOFF, clampf(range_m / beam_range_m, 0.0, 1.0))
 
 
 func fire_interval_s() -> float:
@@ -46,4 +71,6 @@ func validate() -> PackedStringArray:
 		problems.append("magazine_rounds must not be negative")
 	if round_mass_kg <= 0.0:
 		problems.append("round_mass_kg must be positive")
+	if beam_range_m < 0.0:
+		problems.append("beam_range_m must not be negative")
 	return problems

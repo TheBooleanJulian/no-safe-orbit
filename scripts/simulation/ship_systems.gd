@@ -234,7 +234,12 @@ var heat_rejection_kw: float = 0.0
 ## Recent events for the HUD, newest last.
 var event_log: PackedStringArray = PackedStringArray()
 ## Field repair under way, or null.
-var repair_task: RepairTask
+## Field repairs under way: one per damage-control team (repair_teams()).
+var repair_tasks: Array[RepairTask] = []
+## The first of them (null if none), for panels that show one.
+var repair_task: RepairTask:
+	get:
+		return repair_tasks[0] if not repair_tasks.is_empty() else null
 var crew: CrewRoster
 ## Taken by a boarding party: it surrenders and stops fighting.
 var captured: bool = false
@@ -266,11 +271,13 @@ var damage_rng := RandomNumberGenerator.new()
 var bus_network: Dictionary = {}
 
 var _attachments: Array[Array] = []
-var _treatment_s := 0.0
+## Treatment under way, per medic: member id -> {patient (id), s}.
+var _treating: Dictionary = {}
 ## Exposed faces per module (passive cooling).
 var _module_faces: PackedInt32Array = PackedInt32Array()
 var _config: ShipConfig
 var _rounds_seen: int = 0
+var _pulses_seen: int = 0
 
 
 static func create(bp: ShipBlueprint, p_grid: ShipGrid, p_stats: ShipStats, config: ShipConfig) -> ShipSystems:
@@ -384,7 +391,9 @@ func reachable_rooms() -> Dictionary:
 	var start := -1
 	for i in blueprint.rooms.size():
 		var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
-		if def != null and def.role == &"command" and rooms[i].pressurized:
+		# Suited crew (general quarters) keep command of a vented bridge
+		# (play-test batch 6: one breach of the bridge disabled the ship).
+		if def != null and def.role == &"command" and (rooms[i].pressurized or suited):
 			start = i
 			break
 	var seen := {}
@@ -771,10 +780,27 @@ func tech_factor(id: String) -> float:
 	return TechTree.factor(id, int(tech.get(id, 0)))
 
 
-## The member on the field repair works faster with skill.
-func _repairer_skill() -> float:
-	var m: CrewRoster.Member = crew.by_id(repair_task.member_id) if crew != null and repair_task != null else null
+## The member on a field repair works faster with skill.
+func _repairer_skill(task: RepairTask) -> float:
+	var m: CrewRoster.Member = crew.by_id(task.member_id) if crew != null else null
 	return 1.0 + 0.2 * m.skill if m != null else 1.0
+
+
+## Damage-control teams (Milestone 15): one per two fit damage-control crew,
+## at least one — a frigate's two make one, a destroyer's six three. Each
+## works its own field repair at the same time.
+func repair_teams() -> int:
+	if crew == null:
+		return 1
+	var dc := 0
+	for m in crew.members:
+		if m.fit() and m.role == CrewRoster.Role.DAMAGE_CONTROL:
+			dc += 1
+	return maxi(1, ceili(dc / 2.0))
+
+
+func is_under_repair(equipment_id: String) -> bool:
+	return repair_tasks.any(func(t: RepairTask) -> bool: return t.equipment_id == equipment_id)
 
 
 ## Use the vessel's hired crew instead of the standard complement.
@@ -845,10 +871,19 @@ func tick(ship: ShipState, dt: float) -> bool:
 	if shots > 0 and cfg.cannon != null:
 		var per_shot_kj := 0.0
 		for e in equipment:
-			if e.def.kind == EquipmentDefinition.Kind.CANNON:
+			if e.def.kind == EquipmentDefinition.Kind.CANNON and (e.def.cannon == null or not e.def.cannon.is_beam()):
 				per_shot_kj = e.def.heat_kw * cfg.cannon.fire_interval_s()
 				break
 		gen += shots * per_shot_kj / dt
+	# Beam pulses: each is its mount's heat_kw for one firing interval —
+	# a beam at full rate makes heat_kw continuously (play-test batch 6).
+	var pulses := ship.beam_pulses - _pulses_seen
+	_pulses_seen = ship.beam_pulses
+	if pulses > 0:
+		for e in equipment:
+			if e.def.kind == EquipmentDefinition.Kind.CANNON and e.def.cannon != null and e.def.cannon.is_beam():
+				gen += pulses * e.def.heat_kw * e.def.cannon.fire_interval_s() / dt
+				break
 	var t4 := pow(temperature_k, 4.0)
 	var scale := maxf(t4 - pow(SINK_TEMP_K, 4.0), 0.0) / (pow(NOMINAL_TEMP_K, 4.0) - pow(SINK_TEMP_K, 4.0))
 	heat_generation_kw = gen
@@ -859,8 +894,9 @@ func tick(ship: ShipState, dt: float) -> bool:
 		for e in equipment:
 			if not e.def.is_external() and damage_equipment(e, OVERHEAT_DAMAGE_PER_S * dt):
 				changed = true
-	if repair_task != null and _advance_repair(dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * _repairer_skill()):
-		changed = true
+	for task in repair_tasks.duplicate():
+		if _advance_repair(task, dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * _repairer_skill(task)):
+			changed = true
 	if _advance_crew_orders(dt):
 		changed = true
 	if _advance_medical(dt):
@@ -1371,31 +1407,48 @@ func cover_role(role: int) -> String:
 func _advance_medical(dt: float) -> bool:
 	if crew == null:
 		return false
-	var medic: CrewRoster.Member
-	for m in crew.members:
-		if m.role == CrewRoster.Role.MEDICAL and m.fit() and m.location >= 0 and rooms[m.location].pressurized:
-			medic = m
-			break
-	if medic == null:
-		_treatment_s = 0.0
-		return false
-	var patient: CrewRoster.Member
-	for m in crew.members:
-		if m.state == CrewRoster.State.WOUNDED and m.location >= 0 and rooms[m.location].pressurized \
-				and not route(medic.location, m.location).is_empty():
-			patient = m
-			break
-	if patient == null:
-		_treatment_s = 0.0
-		return false
-	_treatment_s += dt * maxf(room_bonus(&"life_support"), 0.5) * tech_factor("medicine") * (1.0 + 0.2 * medic.skill)
-	if _treatment_s < MEDICAL_TREATMENT_S:
-		return false
-	_treatment_s = 0.0
-	patient.state = CrewRoster.State.FIT
-	_note("Medic treated crew member %s (%s): back on duty" % [patient.id, CrewRoster.ROLE_NAMES[patient.role]])
-	invalidate()
-	return true
+	# Every medic treats a patient of their own at once (Milestone 15: a
+	# bigger crew carries more medics); a patient keeps their medic.
+	var taken := {}
+	for id: String in _treating:
+		taken[str(_treating[id].patient)] = id
+	var done := false
+	for medic in crew.members:
+		if medic.role != CrewRoster.Role.MEDICAL or not medic.fit() or medic.location < 0 or not rooms[medic.location].pressurized:
+			_release_patient(medic.id, taken)
+			continue
+		var cur: Dictionary = _treating.get(medic.id, {})
+		var patient: CrewRoster.Member = crew.by_id(str(cur.patient)) if not cur.is_empty() else null
+		if patient == null or patient.state != CrewRoster.State.WOUNDED or patient.location < 0 or not rooms[patient.location].pressurized \
+				or route(medic.location, patient.location).is_empty():
+			_release_patient(medic.id, taken)
+			patient = null
+			for m in crew.members:
+				if m.state == CrewRoster.State.WOUNDED and not taken.has(m.id) and m.location >= 0 and rooms[m.location].pressurized \
+						and not route(medic.location, m.location).is_empty():
+					patient = m
+					break
+			if patient == null:
+				continue
+			cur = {"patient": patient.id, "s": 0.0}
+			taken[patient.id] = medic.id
+		cur.s = float(cur.s) + dt * maxf(room_bonus(&"life_support"), 0.5) * tech_factor("medicine") * (1.0 + 0.2 * medic.skill)
+		if float(cur.s) < MEDICAL_TREATMENT_S:
+			_treating[medic.id] = cur
+			continue
+		_release_patient(medic.id, taken)
+		patient.state = CrewRoster.State.FIT
+		_note("Medic treated crew member %s (%s): back on duty" % [patient.id, CrewRoster.ROLE_NAMES[patient.role]])
+		done = true
+	if done:
+		invalidate()
+	return done
+
+
+func _release_patient(medic_id: String, taken: Dictionary) -> void:
+	if _treating.has(medic_id):
+		taken.erase(str(_treating[medic_id].patient))
+		_treating.erase(medic_id)
 
 
 func _advance_crew_orders(dt: float) -> bool:
@@ -1755,8 +1808,9 @@ func can_reach(e: EquipmentState) -> bool:
 
 ## What blocks a field repair right now ("" = one can start).
 func field_repair_block_reason() -> String:
-	if repair_task != null:
-		return "a repair is already under way"
+	var teams := repair_teams()
+	if repair_tasks.size() >= teams:
+		return "a repair is already under way" if teams == 1 else "all %d damage-control teams are busy" % teams
 	var has_workshop := false
 	for r in blueprint.rooms:
 		var def: RoomDefinition = grid.catalog.rooms.get(r.def_id)
@@ -1817,7 +1871,7 @@ func _access_rooms(e: EquipmentState) -> Array[int]:
 func field_repair_target() -> EquipmentState:
 	var best: EquipmentState
 	for e in equipment:
-		if e.destroyed() or e.hp >= FIELD_REPAIR_LIMIT * e.max_hp - 1e-6 or not can_reach(e):
+		if e.destroyed() or e.hp >= FIELD_REPAIR_LIMIT * e.max_hp - 1e-6 or not can_reach(e) or is_under_repair(e.id):
 			continue
 		if e.id == preferred_repair_id:
 			return e
@@ -1843,24 +1897,25 @@ func start_field_repair() -> EquipmentState:
 	var who: Array = _repair_crew(e)
 	var m: CrewRoster.Member = who[0]
 	var path: Array = who[1]
-	repair_task = RepairTask.new()
-	repair_task.equipment_id = e.id
-	repair_task.member_id = m.id
-	repair_task.target_hp = FIELD_REPAIR_LIMIT * e.max_hp
-	repair_task.travel_s = (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S
-	repair_task.total_s = repair_task.travel_s + (FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)) / maxf(room_bonus(&"workshop"), 1.0)
-	repair_task.remaining_s = repair_task.total_s
+	var task := RepairTask.new()
+	task.equipment_id = e.id
+	task.member_id = m.id
+	task.target_hp = FIELD_REPAIR_LIMIT * e.max_hp
+	task.travel_s = (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S
+	task.total_s = task.travel_s + (FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)) / maxf(room_bonus(&"workshop"), 1.0)
+	task.remaining_s = task.total_s
+	repair_tasks.append(task)
 	m.busy = true
 	m.location = path[-1]
 	_note("Damage control: %s (%s) patching %s %s — %.0f s incl. %.0f s to get there" % [
-		m.id, CrewRoster.ROLE_NAMES[m.role], e.def.display_name, e.id, repair_task.total_s, repair_task.travel_s])
+		m.id, CrewRoster.ROLE_NAMES[m.role], e.def.display_name, e.id, task.total_s, task.travel_s])
 	return e
 
 
 ## Returns true when the task finished (the flight config changes).
-func _advance_repair(dt: float) -> bool:
-	var e := equipment_by_id(repair_task.equipment_id)
-	var m: CrewRoster.Member = crew.by_id(repair_task.member_id) if crew != null else null
+func _advance_repair(task: RepairTask, dt: float) -> bool:
+	var e := equipment_by_id(task.equipment_id)
+	var m: CrewRoster.Member = crew.by_id(task.member_id) if crew != null else null
 	var why := ""
 	if m == null or not m.fit():
 		why = "the repairer was hurt"
@@ -1871,17 +1926,17 @@ func _advance_repair(dt: float) -> bool:
 	elif not can_reach(e):
 		why = "the crew lost access"
 	if why != "":
-		_note("Repair of %s interrupted: %s" % [repair_task.equipment_id, why])
+		_note("Repair of %s interrupted: %s" % [task.equipment_id, why])
 		if m != null:
 			m.busy = false
-		repair_task = null
+		repair_tasks.erase(task)
 		return false
-	repair_task.remaining_s -= dt
-	if repair_task.remaining_s > 0.0:
+	task.remaining_s -= dt
+	if task.remaining_s > 0.0:
 		return false
 	m.busy = false
-	e.hp = maxf(e.hp, repair_task.target_hp)
+	e.hp = maxf(e.hp, task.target_hp)
 	_note("%s %s patched to %.0f%%" % [e.def.display_name, e.id, 100.0 * e.hp / e.max_hp])
-	repair_task = null
+	repair_tasks.erase(task)
 	solve_power()
 	return true

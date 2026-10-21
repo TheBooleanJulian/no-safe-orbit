@@ -12,6 +12,7 @@ var _waiting_action: StringName = &""
 var _waiting_kind: InputBindings.Kind = InputBindings.Kind.NONE
 var _status: Label
 var _grid: GridContainer
+var _grid_scroll: ScrollContainer
 var _credits: ScrollContainer
 var _credits_button: Button
 var _credits_text: Label
@@ -33,7 +34,12 @@ func _ready() -> void:
 	_grid = grid
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 12)
-	box.add_child(grid)
+	# The list scrolls (play-test batch 6: it ran off the bottom of the screen).
+	_grid_scroll = ScrollContainer.new()
+	_grid_scroll.custom_minimum_size = Vector2(0, 560)
+	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_grid_scroll.add_child(grid)
+	box.add_child(_grid_scroll)
 	for header in ["ACTION", "KEYBOARD / MOUSE", "GAMEPAD"]:
 		var h := Label.new()
 		h.text = header
@@ -115,6 +121,7 @@ func show_credits(on: bool) -> void:
 		_credits_text.text = Credits.full_text()
 	_credits.visible = on
 	_grid.visible = not on
+	_grid_scroll.visible = not on
 	_credits_button.text = "Bindings" if on else "Credits & licences"
 	_title.text = "CREDITS & LICENCES — No Safe Orbit %s · scroll for the Godot Engine licences" % Credits.version() if on else BINDINGS_TITLE
 

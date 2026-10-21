@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "hubble"
+display_name = "Hubble Space Telescope"
+kind = &"telescope"
+center = &"earth"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(5265.952579742369, 2965.77780402007, 3204.332438337588)
+v_km_s = PackedFloat64Array(-4.007245235817544, 6.476656609730156, 0.5879205276429665)
+horizons_id = "-48"
+horizons_source = "hst"
+uncertainty = "Horizons 'hst' trajectory, from tracking elements (TLEs): good to a few kilometres."
+size_m = 13.2
+mass_kg = 11110.0
+survey_credits = 250
+launched = "1990-04-24 (STS-31, Discovery)"
+lore = "A 2.4 m telescope above the air. Its first images were blurred by a mirror polished very precisely to the wrong shape; corrective optics fitted by astronauts in 1993 fixed it. Five Space Shuttle servicing missions kept it going, the last in 2009."

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="Artifact" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/artifact.gd" id="1_art"]
+
+[resource]
+script = ExtResource("1_art")
+id = "pioneer10"
+display_name = "Pioneer 10"
+kind = &"probe"
+center = &"sun"
+epoch_utc = "2026-10-19T12:00:00"
+r_km = PackedFloat64Array(3602941517.41811, 18748138464.22511, 9334717208.808794)
+v_km_s = PackedFloat64Array(1.22695492210826, 10.55886934372878, 5.235073597189097)
+horizons_id = "-23"
+horizons_source = "pioneer_10_merged"
+uncertainty = "Horizons pioneer_10_merged: no tracking since 2003 — the position is extrapolated, uncertain by tens of thousands of kilometres or more."
+size_m = 3.0
+mass_kg = 258.0
+survey_credits = 2000
+launched = "1972-03-03"
+lore = "The first spacecraft through the asteroid belt and the first to fly past Jupiter, in December 1973. Its last signal reached Earth on 23 January 2003. It carries a plaque by Carl Sagan and Frank Drake, drawn by Linda Salzman Sagan, showing two people and where the Sun is among the pulsars."
