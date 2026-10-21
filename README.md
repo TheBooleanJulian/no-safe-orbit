@@ -749,7 +749,11 @@ rack. They fly with the same physics as every ship and can be shot down.
   a strike is a gun run (run in, break off at 600 m, come round). The WING
   tab's HOW THEY FLY block lists every directive and risk setting.
 - Enemies launch their own fighter from mission 3 once hostile,
-  interceptors from mission 5 and bombers from mission 7.
+  interceptors from mission 5 and bombers from mission 7; some carry a
+  repair drone from mission 4 (it patches their guns and radiators as
+  yours do), laser drones from mission 6 and Lancer laser fighters from
+  mission 8. From mission 5 a gun may be a pulse laser (more likely the
+  later the mission, and only on a ship whose reactors can feed it).
 - A craft still out when you dock is lost. Lost craft are replaced, and
   damaged ones repaired, at the station.
 

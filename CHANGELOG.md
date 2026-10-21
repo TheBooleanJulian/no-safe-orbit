@@ -4,6 +4,27 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Enemies field the newer kit (2026-10-21)
+
+#### Changed
+- **Enemy ships carry the kit added since Milestone 14**, each from a
+  mission (as the ship is fitted — wingmen as for earlier missions): a
+  repair drone in place of the recon drone from mission 4 (25 %), a laser
+  drone from mission 6 (30 %), Lancer laser fighters in the bay from
+  mission 8 (30 %), and a gun turned pulse laser from mission 5
+  (8 % × (mission − 4), at most 35 %, and only if the reactors carry its
+  1,500 kW). These rolls have their own seed, so every enemy fitted before
+  is unchanged. Over missions 1–12 the first are: repair drone m6 (a
+  wingman), Lancer m8, laser drone m9, pulse laser m11.
+- KNOWN_ISSUES: the "capital templates are plain" entry was stale (they
+  were rebuilt as battleships, and Mars traffic includes destroyers); the
+  laser entry and a Milestone 15 entry are brought up to date.
+
+#### Tests changed (and why)
+- New `test_enemy_kit`: the newer kit never before its mission, valid
+  designs, lasers only within the reactors' output, all four seen by
+  mission 12, deterministic.
+
 ### Play-test batch 8 — a rescue tow on call (2026-10-21)
 
 "Currently ship is sometimes stranded and unable to jump back to

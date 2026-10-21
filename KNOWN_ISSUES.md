@@ -25,8 +25,14 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   on where the Sun is at the start, you may first see an object's dark
   side (the ISS starts in Earth's shadow at the scenario time).
 - **Lasers are new** (play-test batch 6): reach, falloff, power, heat and
-  charges are first guesses, and enemies don't carry them yet (only loot
-  and the quartermaster). Covered by `test_beams`, not yet by play.
+  charges are first guesses. Enemies carry them from mission 5 (rarely
+  before mission 11 — `test_enemy_kit`). Covered by tests, not yet by play.
+- **Repair and salvage drones, scaled crews are new** (Milestone 15):
+  rates, loads and complements are first guesses, covered by tests, not
+  yet by play. No template has a workshop (an uncommon room blueprint found
+  in salvage), so the crew's field repairs — and the damage-control teams —
+  need one fitted first. Capital-ship enemies now carry far more security
+  crew, so boarding one is much harder.
 - **Very large fights are still heavy**: four carriers with 46 craft out run
   at ~20 fps (slightly slower than real time), down from 7; the simulation
   is GDScript and each round, craft and missile costs microseconds.
@@ -54,9 +60,6 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **Audio is silent in headless runs** (tests and checks): the dummy
   driver never retires a playback, so ShipAudio skips playing there
   (`ShipAudio.silent`); the alert and ducking logic still runs and is tested.
-- **Capital templates are plain**: generated slabs of hull blocks armed
-  with standard parts (autocannons, point defence); no sloped bows or
-  heavy guns until you refit them. Enemies don't field capital ships yet.
 - **Contracts are new** (Milestone 12): payouts and threat levels are first
   guesses; a failed contract stays until it is met or abandoned.
 - **Missions and the tutorial are new** (Milestone 8): rewards and the
