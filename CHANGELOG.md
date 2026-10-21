@@ -4,6 +4,43 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 9, part 5 — the bank, a branching tech tree (2026-10-21)
+
+#### Added
+- **The station bank** (Hangar & bank): a deposit earning 1 % a sortie,
+  compounding (deposit / withdraw any amount), and three loans, one of
+  each at a time — Dockyard credit 1,000 cr at 5 % over 5 sorties, Guild
+  loan 5,000 cr at 4 % over 10, Shipbuilder's mortgage 25,000 cr at 3 % over
+  20 — whose interest and instalments (what is owed over the sorties left)
+  are taken on docking; a shortfall adds 10 % of it; repay part or all at
+  any time. The directory's Hangar line shows what you owe.
+
+#### Changed
+- **The tech tree branches left to right**: from the Shipyard charter
+  (150 cr) out to 15 upgrades (43 levels) in four branches, a lane each,
+  with lines from each node to what it opens; a node's first level needs
+  its parent, each later level the one before. New upgrades: jump
+  calibration (−5 % jump Δv a level), PD fire control (+10 % PD rate of
+  fire), sensor suites (+10 % range), hangar crews (+15 % craft
+  turnaround), crew academy (−20 % training), crew welfare fund (−20 %
+  wages), bounty licences (+10 % bounty). Levels bought before keep, and go
+  on from there.
+
+#### Save format
+- **Schema 13**: the bank's deposit and loans (none in older saves; the
+  original kept as `.v12`).
+
+#### Tests changed (and why)
+- New `test_batch9_economy` (4): the tree's shape (one root; 1, 3, 6, 12,
+  10, 8, 2, 1 levels a column), buying in order, old levels kept, the graph
+  a node per level; the newer nodes (jump 487 → 414 m/s, wages −20 %,
+  training −40 %, sensors 25 → 30 km, PD 300 → 390 rpm, the gun data
+  unchanged); the bank (1,000 → 1,020 in two sorties, a 1,000 cr loan paid
+  off in five for 1,163 cr, a missed instalment's penalty, early
+  repayment); v12 → v13.
+- `test_feedback_pass`: an upgrade needs the charter first.
+- `smoke_shipyard`: the station-tech page holds the graph.
+
 ### Play-test batch 9, part 4 — pilots, crew quarters, experience, wages (2026-10-21)
 
 #### Added

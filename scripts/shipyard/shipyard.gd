@@ -761,6 +761,16 @@ func bank_cargo() -> PackedStringArray:
 	return banked
 
 
+## The bank's buttons: save, say what happened, redraw.
+func bank_result(why: String) -> void:
+	if why != "":
+		_set_status(why, true)
+		return
+	_save_profile()
+	_set_status("Bank: done — deposit %d cr, owed %d cr, credits %d" % [profile.bank_deposit, profile.debt(), profile.credits])
+	_refresh()
+
+
 ## QUARTERMASTER: buy `amount` spare parts.
 func buy_spare_parts(amount: int = PlayerProfile.PARTS_LOT) -> bool:
 	var cost := PlayerProfile.parts_price(amount)
@@ -1376,7 +1386,8 @@ func _build_hangar_panel() -> void:
 	for spec in [["CREW", "_crew_tab"], ["QUARTERMASTER", "_vendor_tab"], ["UPGRADES", "_tech_tab"]]:
 		var scroll := ScrollContainer.new()
 		scroll.name = spec[0]
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		# The tech tree is wider than a small window: it scrolls sideways.
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if spec[0] == "UPGRADES" else ScrollContainer.SCROLL_MODE_DISABLED
 		var inner := VBoxContainer.new()
 		inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		scroll.add_child(inner)
@@ -1679,7 +1690,7 @@ func _refresh_station_tabs() -> void:
 		for i: int in members:
 			var c: Dictionary = v.crew[i]
 			var skill := int(c.get("skill", 0))
-			var cost: int = PlayerProfile.TRAINING_COSTS[mini(skill + 1, CrewRoster.MAX_SKILL)]
+			var cost := profile.training_cost(skill)
 			var badge := CrewBadge.new()
 			badge.setup(i, c, cost, profile.credits >= cost)
 			badge.train_pressed.connect(func(index: int) -> void: _station_result(profile.train(index)))
@@ -1754,16 +1765,15 @@ func _refresh_station_tabs() -> void:
 	buy.pressed.connect(func() -> void: buy_spare_parts(parts_amount))
 	parts_row.add_child(buy)
 	_vendor_tab.add_child(parts_row)
-	for branch in ["SHIP", "CAPTAIN"]:
-		_tech_tab.add_child(_station_label("[b]%s[/b] · credits %d" % ["SHIP TECHNOLOGY — every vessel" if branch == "SHIP" else "CAPTAIN'S TRAINING", profile.credits]))
-		for n in TechTree.NODES:
-			if n.branch != branch:
-				continue
-			var level := profile.tech_level(n.id)
-			var cost := TechTree.next_cost(level)
-			var id: String = n.id
-			_tech_tab.add_child(_station_row("%s %s — %s per level" % [n.name, "■".repeat(level) + "□".repeat(TechTree.MAX_LEVEL - level), n.text],
-				"Upgrade (%d cr)" % cost if cost > 0 else "Max", func() -> void: _station_result(profile.buy_tech(id)), cost > 0 and profile.credits >= cost))
+	# The tree, left to right (play-test batch 9): teal bought, gold
+	# buyable now, dim locked; hover a node for what it does.
+	_tech_tab.add_child(_station_label("[b]STATION TECHNOLOGY[/b] · credits %d · from the charter on the left, branching right — each level opens the next; hover a node for what it does" % profile.credits))
+	var graph := TechGraph.new()
+	graph.name = "TechGraph"
+	graph.profile = profile
+	graph.buy_pressed.connect(func(id: String) -> void: _station_result(profile.buy_tech(id)))
+	_tech_tab.add_child(graph)
+	graph.rebuild()
 
 
 const CREW_CARD_WIDTH := 560.0

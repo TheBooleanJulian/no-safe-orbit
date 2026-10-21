@@ -1064,7 +1064,7 @@ func drop_beacon() -> Array:
 	var catalog := ConstructionCatalog.default_catalog()
 	var intact := target.systems.intact_fraction()
 	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.BEACON_SCRAP_RATE * TechTree.factor("salvage", p.tech_level("salvage")))
-	var bounty := Salvage.bounty_for(target.systems)
+	var bounty := roundi(Salvage.bounty_for(target.systems) * TechTree.factor("bounty", get_profile().tech_level("bounty")))
 	var crates := p.open_crates(Salvage.pulls_for(target.systems), Salvage.BEACON_LOOT_CHANCE, catalog)
 	var stripped := _stripped_part(target)
 	if stripped != null:
@@ -1107,7 +1107,7 @@ func take_prize(c: Contact = null) -> Array:
 	var p := get_profile()
 	var catalog := ConstructionCatalog.default_catalog()
 	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.TAKEOVER_SCRAP_RATE * TechTree.factor("salvage", p.tech_level("salvage")))
-	var bounty := Salvage.bounty_for(target.systems)
+	var bounty := roundi(Salvage.bounty_for(target.systems) * TechTree.factor("bounty", get_profile().tech_level("bounty")))
 	var parts := Salvage.spare_parts_for(target.systems)
 	p.vessel.cargo["spare_parts"] = int(p.vessel.cargo.get("spare_parts", 0)) + parts
 	var crates := p.open_crates(Salvage.pulls_for(target.systems), Salvage.TAKEOVER_LOOT_CHANCE, catalog)

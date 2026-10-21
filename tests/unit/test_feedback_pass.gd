@@ -367,8 +367,9 @@ func test_the_quartermaster_and_the_upgrades() -> void:
 	var item: Dictionary = p.vendor_stock[0]
 	p.credits = int(item.price)
 	assert_true(p.buy_stock(0, cat) == "" and p.owned(StringName(item.id)) == 1 and p.credits == 0, "bought one %s" % item.id)
-	p.credits = 300
-	assert_true(p.buy_tech("thrusters") == "" and p.tech_level("thrusters") == 1, "an upgrade level")
+	p.credits = 300 + TechTree.CHARTER_COST
+	assert_true(p.buy_tech("thrusters").contains("charter"), "the tree starts from the charter (play-test batch 9)")
+	assert_true(p.buy_tech("charter") == "" and p.buy_tech("thrusters") == "" and p.tech_level("thrusters") == 1, "an upgrade level")
 	var q := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())), PackedStringArray())
 	assert_true(q.tech_level("thrusters") == 1 and q.hire_pool.size() == p.hire_pool.size(), "kept in the save")
 	var ship := _ship(&"s")

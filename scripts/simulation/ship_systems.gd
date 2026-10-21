@@ -1338,6 +1338,9 @@ func effective_config() -> ShipConfig:
 	cfg.thrust_torque_body *= eng
 	cfg.max_torque_nm *= sys
 	cfg.assist_max_rate_rad_s *= sys
+	if cfg.pd_gun != null and tech_factor("pd_control") != 1.0:
+		cfg.pd_gun = cfg.pd_gun.duplicate()
+		cfg.pd_gun.rate_of_fire_rpm *= tech_factor("pd_control")
 	var gunnery := channel_factor(Channel.WEP) * tech_factor("gunnery") * (1.0 + GUNNER_SKILL_STEP * _gunner_skill)
 	if cfg.cannon != null and gunnery != 1.0:
 		cfg.scale_rate_of_fire(gunnery)
@@ -1686,7 +1689,7 @@ func sensor_range_m() -> float:
 	var best := VISUAL_RANGE_M
 	for e in equipment:
 		if e.def.kind == EquipmentDefinition.Kind.SENSOR and e.working():
-			best = maxf(best, e.def.sensor_range_m)
+			best = maxf(best, e.def.sensor_range_m * tech_factor("sensors"))
 	return best
 
 

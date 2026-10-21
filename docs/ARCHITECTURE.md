@@ -265,6 +265,16 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Economy (play-test batch 9, part 5)**: `TechTree.NODES` carry `after`
+  [parent, level] and `levels`; `requirement`, `tier` (parent's tier +
+  level), `block_reason`; `PlayerProfile.buy_tech` follows it. New factors
+  read in `jump_dv`/`survey_dv`, `wages`, `training_cost`,
+  `ShipSystems.sensor_range_m`, `effective_config` (a duplicated `pd_gun`),
+  `AirWing` service, `Main` bounties. `TechGraph` (a lane per upgrade,
+  columns by tier, lines in `_draw`). Bank: `PlayerProfile.bank_deposit`,
+  `loans`, `LOAN_OFFERS`, `deposit` / `withdraw` / `take_loan` / `repay`,
+  `bank_sortie` (from `dock`); schema 13. The bank card is built by
+  `ShipyardSections._build_bank`.
 - **Crew (play-test batch 9, part 4)**: `CrewRoster.Role.PILOT` (appended:
   saved role numbers keep their meaning), `needs_pilot(def)` (a craft rack
   not named "drone"), `complement(..., fighters)`, `specialist_roles()`,
