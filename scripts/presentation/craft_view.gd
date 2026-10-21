@@ -94,6 +94,23 @@ static func build_model(parent: Node3D, cfg: ShipConfig, fighter: bool, is_hosti
 		(bell.mesh as CylinderMesh).bottom_radius = e.y * 0.22
 		(bell.mesh as CylinderMesh).height = e.z * 0.3
 		bell.rotation_degrees = Vector3(90, 0, 0)
+		# Detail (play-test batch 10): a nose cone, intakes either side, a
+		# missile on a pylon under each wing, a spine and a tail light.
+		var nose := _mesh(parent, CylinderMesh.new(), Vector3(0, 0, -e.z * 1.05), hull)
+		(nose.mesh as CylinderMesh).top_radius = 0.0
+		(nose.mesh as CylinderMesh).bottom_radius = e.y * 0.3
+		(nose.mesh as CylinderMesh).height = e.z * 0.35
+		nose.rotation_degrees = Vector3(-90, 0, 0)
+		for side in [-1.0, 1.0]:
+			_box_in(parent, Vector3(e.y * 0.3, e.y * 0.35, e.z * 0.6), Vector3(side * e.y * 0.5, -e.y * 0.1, -e.z * 0.05), dark)
+			_box_in(parent, Vector3(0.08, e.y * 0.25, 0.4), Vector3(side * e.x * 0.55, -e.y * 0.2, e.z * 0.15), dark)
+			var store := _mesh(parent, CylinderMesh.new(), Vector3(side * e.x * 0.55, -e.y * 0.38, e.z * 0.1), hull)
+			(store.mesh as CylinderMesh).top_radius = 0.11
+			(store.mesh as CylinderMesh).bottom_radius = 0.11
+			(store.mesh as CylinderMesh).height = e.z * 0.7
+			store.rotation_degrees = Vector3(90, 0, 0)
+		_box_in(parent, Vector3(e.y * 0.18, e.y * 0.15, e.z * 1.1), Vector3(0, e.y * 0.42, e.z * 0.1), dark)
+		_box_in(parent, Vector3(0.18, 0.18, 0.18), Vector3(0, e.y * 0.3, e.z * 1.0), accent)
 		return
 	var core := _mesh(parent, SphereMesh.new(), Vector3.ZERO, hull)
 	(core.mesh as SphereMesh).radius = e.x * 0.45
@@ -114,6 +131,25 @@ static func build_model(parent: Node3D, cfg: ShipConfig, fighter: bool, is_hosti
 	(dish.mesh as CylinderMesh).height = e.y * 0.25
 	for side in [-1.0, 1.0]:
 		_box_in(parent, Vector3(e.x * 1.1, 0.04, e.z * 0.5), Vector3(side * e.x * 1.25, 0, 0), accent)
+		# Panel frames round the solar wings.
+		_box_in(parent, Vector3(e.x * 1.15, 0.07, 0.06), Vector3(side * e.x * 1.25, 0, e.z * 0.25), dark)
+		_box_in(parent, Vector3(e.x * 1.15, 0.07, 0.06), Vector3(side * e.x * 1.25, 0, -e.z * 0.25), dark)
+	# Detail (play-test batch 10): an antenna mast with a tip light, a sensor
+	# ball underneath, a thruster nozzle under each pod.
+	var mast := _mesh(parent, CylinderMesh.new(), Vector3(e.x * 0.15, e.y * 0.85, 0), dark)
+	(mast.mesh as CylinderMesh).top_radius = 0.03
+	(mast.mesh as CylinderMesh).bottom_radius = 0.04
+	(mast.mesh as CylinderMesh).height = e.y * 0.9
+	_box_in(parent, Vector3(0.1, 0.1, 0.1), Vector3(e.x * 0.15, e.y * 1.3, 0), accent)
+	var ball := _mesh(parent, SphereMesh.new(), Vector3(0, -e.y * 0.42, 0), dark)
+	(ball.mesh as SphereMesh).radius = e.x * 0.17
+	(ball.mesh as SphereMesh).height = e.x * 0.34
+	for k in 4:
+		var a := TAU * (k + 0.5) / 4.0
+		var nozzle := _mesh(parent, CylinderMesh.new(), Vector3(cos(a), 0, sin(a)) * e.x - Vector3(0, e.y * 0.38, 0), dark)
+		(nozzle.mesh as CylinderMesh).top_radius = e.x * 0.06
+		(nozzle.mesh as CylinderMesh).bottom_radius = e.x * 0.1
+		(nozzle.mesh as CylinderMesh).height = e.y * 0.18
 
 
 static func _mesh(parent: Node3D, mesh: PrimitiveMesh, pos: Vector3, mat: Material) -> MeshInstance3D:

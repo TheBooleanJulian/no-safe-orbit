@@ -15,8 +15,18 @@ var tint: Color = Color.WHITE
 var hull_name: String = ""
 
 var _plumes: Array[Node3D] = []
+var _plume_widths: Array[float] = []
 var _plume_material: StandardMaterial3D
 var _parts: Dictionary = {}
+var _missile_cones: Dictionary = {}  # launcher id -> Array[Node3D]
+var _arms: Dictionary = {}  # grappling arm id -> ShipModelBuilder arm
+## What each arm holds: arm id -> the point it grips (body frame); Main sets
+## it every frame (empty: folded). How far out each arm is (0 folded, 1 out).
+var grapple_holds: Dictionary = {}
+var _arm_out: Dictionary = {}
+## Seconds an arm takes to unfold onto its target, or to fold back.
+const ARM_UNFOLD_S := 1.8
+var _cones_shown: Dictionary = {}  # launcher id -> how many are shown
 var _wreck_material: StandardMaterial3D
 var _jets: Array[Dictionary] = []  # {pivot, id, position, normal}
 var _jet_material: StandardMaterial3D
@@ -52,9 +62,12 @@ func _ready() -> void:
 	var model := ShipModelBuilder.build(blueprint, grid, stats.center_of_mass_m, tint, hull_name)
 	add_child(model.root)
 	_parts = model.parts
+	_missile_cones = model.missile_cones
+	_arms = model.grapple_arms
 	_beacons = model.beacons
 	_turrets = model.turrets
 	_docked_craft = model.docked_craft
+	_plume_widths = model.engine_widths
 	_build_plumes(model.engine_nozzles, model.engine_normals)
 	_plates = model.plates
 	_bake_hull(model)
@@ -83,18 +96,230 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 			var cap := state.config.max_thrust(axis, n[axis] < 0.0)
 			f = clampf(state.last_thrust_body.dot(-n) / cap, 0.0, 1.0) if cap > 0.0 else 0.0
 		_plumes[k].visible = f > 0.01
-		_plumes[k].scale = Vector3(1.0, 1.0, lerpf(0.2, 1.0, f))
+		var w := (_plume_widths[k] if k < _plume_widths.size() else 1.4) / 1.4
+		_plumes[k].scale = Vector3(w, w, lerpf(0.2, 1.0, f) * w)
 	_plume_material.albedo_color.a = 0.15 + 0.4 * fwd_fraction
 	if state.systems != null:
 		_show_damage(state.systems)
+		_show_emp(state.systems, get_process_delta_time())
 		_update_lights_and_radar(state.systems, get_process_delta_time())
+	_update_spool(get_process_delta_time())
 	_drift_pieces(get_process_delta_time())
 	_train_turrets(state)
+	_move_arms(get_process_delta_time())
 	_update_jets(state)
 	_clock += get_process_delta_time()
 	var on := fmod(_clock, BEACON_PERIOD_S) < 0.25
 	for b in _beacons:
 		b.visible = on and b.get_parent().visible
+
+
+## EMP (play-test batch 9): a part an EMP has reset crackles with light-blue
+## static — jagged arcs redrawn EMP_REDRAW_S apart — until it recovers; with
+## several parts down the static crawls over the hull too.
+const EMP_ARCS_PER_PART := 3
+const EMP_REDRAW_S := 0.07
+const EMP_ARC_RADIUS_M := 2.4
+const EMP_COLOR := Color(0.55, 0.85, 1.0, 0.9)
+## Parts crackling now (ids), and the arcs drawn last.
+var emp_sparking := PackedStringArray()
+var emp_arcs := 0
+var _emp_mesh: MeshInstance3D
+var _emp_clock := 0.0
+var _emp_rng := RandomNumberGenerator.new()
+
+
+func _show_emp(systems: ShipSystems, delta: float) -> void:
+	_emp_clock -= delta
+	if _emp_clock > 0.0:
+		return
+	_emp_clock = EMP_REDRAW_S
+	var points: Array[Vector3] = []
+	emp_sparking = PackedStringArray()
+	emp_arcs = 0
+	for e in systems.equipment:
+		if e.disrupted_s > 0.0 and not e.destroyed():
+			emp_sparking.append(e.id)
+			points.append(e.body_position)
+	if points.is_empty():
+		if _emp_mesh != null:
+			_emp_mesh.visible = false
+		return
+	if _emp_mesh == null:
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mat.albedo_color = EMP_COLOR
+		_emp_mesh = MeshInstance3D.new()
+		_emp_mesh.name = "EmpStatic"
+		_emp_mesh.mesh = ImmediateMesh.new()
+		_emp_mesh.material_override = mat
+		_emp_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_emp_mesh)
+	if points.size() >= 3:
+		# Over the hull: points on its bounding box's faces.
+		var b := stats.hull_bounds_m
+		for k in points.size():
+			var p := b.position + Vector3(_emp_rng.randf(), _emp_rng.randf(), _emp_rng.randf()) * b.size
+			var axis := _emp_rng.randi() % 3
+			p[axis] = b.position[axis] if _emp_rng.randf() < 0.5 else b.end[axis]
+			points.append(p - stats.center_of_mass_m)
+	var im := _emp_mesh.mesh as ImmediateMesh
+	im.clear_surfaces()
+	im.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	for p in points:
+		for k in EMP_ARCS_PER_PART:
+			_emp_arc(im, p)
+			emp_arcs += 1
+	im.surface_end()
+	_emp_mesh.visible = true
+
+
+## One jagged arc near `centre`: five short kinked segments.
+func _emp_arc(im: ImmediateMesh, centre: Vector3) -> void:
+	var a := centre + _rand_dir() * EMP_ARC_RADIUS_M * 0.4
+	var heading := _rand_dir()
+	for k in 5:
+		heading = (heading + _rand_dir() * 0.9).normalized()
+		var b := a + heading * EMP_ARC_RADIUS_M * _emp_rng.randf_range(0.15, 0.3)
+		# Two crossed ribbons, so it reads from any side.
+		var dir := (b - a).normalized()
+		var u := dir.cross(Vector3.UP if absf(dir.y) < 0.9 else Vector3.RIGHT).normalized() * 0.11
+		var v := dir.cross(u).normalized() * 0.11
+		for side: Vector3 in [u, v]:
+			for q: Vector3 in [a - side, a + side, b + side, a - side, b + side, b - side]:
+				im.surface_add_vertex(q)
+		a = b
+
+
+func _rand_dir() -> Vector3:
+	var d := Vector3(_emp_rng.randf_range(-1, 1), _emp_rng.randf_range(-1, 1), _emp_rng.randf_range(-1, 1))
+	return d.normalized() if d.length_squared() > 1e-4 else Vector3.UP
+
+
+## Earth re-entry (play-test batch 10): Main plays it when the ship crosses an
+## atmosphere's entry interface — a plasma sheath builds on the side facing
+## the flow, stretched back along it, and the hull comes apart a module at a
+## time (`f` 0 → 1 over the cutscene). `flow_body`: the air's direction past
+## the hull (body frame).
+const REENTRY_BREAK_FROM := 0.2
+var reentry_broken := 0
+var _plasma: MeshInstance3D
+var _plasma_mat: StandardMaterial3D
+var _break_order: Array = []
+
+
+func show_reentry(f: float, flow_body: Vector3) -> void:
+	var b := stats.hull_bounds_m
+	if _plasma == null:
+		_plasma_mat = StandardMaterial3D.new()
+		_plasma_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_plasma_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_plasma_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		_plasma_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		var shell := SphereMesh.new()
+		shell.radius = b.size.length() * 0.45
+		shell.height = shell.radius * 2.0
+		_plasma = MeshInstance3D.new()
+		_plasma.name = "Plasma"
+		_plasma.mesh = shell
+		_plasma.material_override = _plasma_mat
+		_plasma.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_plasma)
+		for m in blueprint.modules:
+			_break_order.append(m.id)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(ship_id)
+		for k in range(_break_order.size() - 1, 0, -1):
+			var j := rng.randi_range(0, k)
+			var tmp: Variant = _break_order[k]
+			_break_order[k] = _break_order[j]
+			_break_order[j] = tmp
+	var flow := flow_body.normalized() if flow_body.length_squared() > 1e-6 else Vector3.BACK
+	var side := Vector3.UP if absf(flow.y) < 0.9 else Vector3.RIGHT
+	var x := side.cross(flow).normalized()
+	# Stretched back along the flow, its leading edge just ahead of the hull.
+	var stretch := 1.0 + 1.5 * f
+	_plasma.transform = Transform3D(Basis(x, flow.cross(x), flow * stretch),
+		b.get_center() - stats.center_of_mass_m + flow * b.size.length() * 0.3 * (stretch - 1.0))
+	_plasma_mat.albedo_color = Color(1.0, lerpf(0.35, 0.85, f), lerpf(0.1, 0.6, f), 0.06 + 0.3 * f)
+	var want := int(clampf((f - REENTRY_BREAK_FROM) / (1.0 - REENTRY_BREAK_FROM), 0.0, 1.0) * _break_order.size())
+	while reentry_broken < want:
+		var id: String = _break_order[reentry_broken]
+		reentry_broken += 1
+		var mi := _parts.get(id) as MeshInstance3D
+		if mi == null or _broken.has(id):
+			continue
+		_broken[id] = true
+		_break_off(mi)
+		_hull_flats[mi] = [PackedVector3Array(), PackedVector3Array()]
+		_hull_dirty = true
+	if _hull_dirty:
+		_hull_dirty = false
+		_hull_batch.mesh = ShipModelBuilder.mesh_from_flats(_hull_pieces, _hull_flats)
+
+
+## Hold [B] (play-test batch 9): Main sets how far the jump drive has charged
+## (0–1). Rings of light gather along the hull and spin up, closing in on
+## its middle, brightening until it jumps.
+var jump_spool := 0.0
+const SPOOL_RINGS := 3
+const SPOOL_COLOR := Color(0.55, 0.8, 1.0)
+var _spool: Node3D
+var _spool_rings: Array[Node3D] = []
+var _spool_ring_z: Array[float] = []
+var _spool_mat: StandardMaterial3D
+
+
+func _update_spool(delta: float) -> void:
+	if jump_spool <= 0.0:
+		if _spool != null:
+			_spool.visible = false
+		return
+	if _spool == null:
+		_build_spool()
+	_spool.visible = true
+	var s := clampf(jump_spool, 0.0, 1.0)
+	for k in _spool_rings.size():
+		var ring := _spool_rings[k]
+		ring.rotate_object_local(Vector3.UP, (1.0 + 12.0 * s * s) * delta * (1.0 if k % 2 == 0 else -1.0))
+		ring.position.z = _spool_ring_z[k] * (1.0 - 0.7 * s)
+		ring.scale = Vector3.ONE * lerpf(1.2, 0.9, s)
+	_spool_mat.albedo_color.a = 0.2 + 0.6 * s
+
+
+func _build_spool() -> void:
+	var b := stats.hull_bounds_m
+	var centre := b.get_center() - stats.center_of_mass_m
+	var r := maxf(b.size.x, b.size.y) * 0.6 + 3.0
+	_spool = Node3D.new()
+	_spool.name = "JumpSpool"
+	_spool.position = Vector3(centre.x, centre.y, 0.0)
+	add_child(_spool)
+	_spool_mat = StandardMaterial3D.new()
+	_spool_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_spool_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_spool_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_spool_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_spool_mat.albedo_color = SPOOL_COLOR
+	var torus := TorusMesh.new()
+	torus.inner_radius = r * 0.94
+	torus.outer_radius = r
+	torus.rings = 48
+	for k in SPOOL_RINGS:
+		var holder := Node3D.new()
+		var z := centre.z + b.size.z * lerpf(-0.4, 0.4, float(k) / float(SPOOL_RINGS - 1))
+		holder.position.z = z
+		_spool.add_child(holder)
+		var ring := MeshInstance3D.new()
+		ring.mesh = torus
+		ring.material_override = _spool_mat
+		ring.rotation_degrees = Vector3(90, 0, 0)  # the torus's axis (+Y) along the ship's length
+		holder.add_child(ring)
+		_spool_rings.append(ring)
+		_spool_ring_z.append(z)
 
 
 ## A black shell hole where a round pierced the hull (body frame point and
@@ -206,6 +431,32 @@ static func _snap_exhaust(dir: Vector3, normal: Vector3) -> Vector3:
 
 
 ## Each turret's house and barrel point along its mount's barrel direction.
+## Grappling arms: unfold and telescope out to the point each holds, or fold
+## back along the hull (the joints ease between the two poses).
+func _move_arms(delta: float) -> void:
+	for id: String in _arms:
+		var arm: Dictionary = _arms[id]
+		var folded: Array = arm.folded
+		var holding := grapple_holds.has(id)
+		var was := float(_arm_out.get(id, 0.0))
+		var out := clampf(was + (delta if holding else -delta) / ARM_UNFOLD_S, 0.0, 1.0)
+		if is_equal_approx(out, was) and not holding:
+			continue
+		_arm_out[id] = out
+		if holding:
+			arm["target"] = grapple_holds[id]
+		var p0: Vector3 = folded[0]
+		var goal: Vector3 = arm.get("target", folded[3])
+		var reach := minf(p0.distance_to(goal), Grapple.REACH_M)
+		var dir := (goal - p0).normalized() if p0.distance_to(goal) > 1e-3 else (arm.normal as Vector3)
+		var s := smoothstep(0.0, 1.0, out)
+		var joints := []
+		for k in 4:
+			var straight := p0 + dir * reach * k / 3.0
+			joints.append((folded[k] as Vector3).lerp(straight, s))
+		ShipModelBuilder.place_arm(arm, joints)
+
+
 func _train_turrets(state: ShipState) -> void:
 	var ids := state.config.cannon_mount_ids
 	for t in _turrets:
@@ -288,6 +539,17 @@ func _char_material(level: int, current: Material) -> Material:
 ## blocks around it).
 func _show_damage(systems: ShipSystems) -> void:
 	_show_plate_wear(systems)
+	# Missiles left: a tube shows a white nose while its share is aboard.
+	for id: String in _missile_cones:
+		var e := systems.equipment_by_id(id)
+		if e == null:
+			continue
+		var cones: Array = _missile_cones[id]
+		var shown := ceili(float(systems.missiles_left(e)) / maxf(e.def.missile_capacity, 1.0) * cones.size())
+		if int(_cones_shown.get(id, -1)) != shown:
+			_cones_shown[id] = shown
+			for k in cones.size():
+				(cones[k] as Node3D).visible = k < shown
 	for e in systems.equipment:
 		if e.destroyed() and _parts.has(e.id):
 			(_parts[e.id] as Node3D).visible = false

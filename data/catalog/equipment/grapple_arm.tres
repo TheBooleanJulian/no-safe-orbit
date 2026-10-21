@@ -9,6 +9,7 @@ display_name = "Grappling arm"
 kind = 11
 mount = 1
 footprint_cells = Vector2i(1, 1)
+length_cells = 4
 allowed_room_roles = Array[StringName]([])
 allowed_faces = Array[StringName]([&"fore", &"port", &"starboard", &"dorsal", &"ventral"])
 mass_kg = 2500.0

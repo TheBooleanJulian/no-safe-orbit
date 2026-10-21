@@ -90,15 +90,19 @@ static func part_credits() -> float:
 ## rarer parts it carries included (at the quartermaster's prices — they
 ## come with the ship, PlayerProfile.buy_ship): {ship, units (credits),
 ## unit_ids (id -> count), crew, total, crew_count}.
-static func dealer_price(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Dictionary:
+## `grid` / `stats`: already worked out for `bp` (else built here).
+static func dealer_price(bp: ShipBlueprint, catalog: ConstructionCatalog, grid: ShipGrid = null, stats: ShipStats = null) -> Dictionary:
 	var ship := ceili((parts_value(bp, catalog) * part_credits() + PlayerProfile.NEW_HULL_FEE) * DEALER_MARKUP)
 	var unit_ids := rare_units(bp, catalog)
 	var units := 0
 	for id: StringName in unit_ids:
 		units += int(unit_ids[id]) * PlayerProfile.VENDOR_PRICES[(catalog.equipment[id] as EquipmentDefinition).rarity]
 	units = ceili(units * DEALER_MARKUP)
-	var grid := ShipGrid.build(bp, catalog)
-	var crew_count := CrewRoster.default_for(bp, grid, ShipStats.compute(bp, grid)).members.size()
+	if grid == null:
+		grid = ShipGrid.build(bp, catalog)
+	if stats == null:
+		stats = ShipStats.compute(bp, grid)
+	var crew_count := CrewRoster.default_for(bp, grid, stats).members.size()
 	var crew := crew_count * PlayerProfile.HIRE_FEE
 	return {"ship": ship, "units": units, "unit_ids": unit_ids, "crew": crew, "total": ship + units + crew, "crew_count": crew_count}
 
@@ -145,16 +149,17 @@ static func resupply_needs(vessel: ShipInstance, catalog: ConstructionCatalog) -
 	var missiles := missile_needs(vessel, catalog)
 	var stores: Dictionary = vessel.condition.get("stores", {})
 	if stores.is_empty():
-		return {"propellant_kg": 0.0, "reserve_kg": 0.0, "rounds": 0, "missiles": missiles.count,
+		return {"propellant_kg": 0.0, "reserve_kg": 0.0, "rounds": 0, "pd_rounds": 0, "missiles": missiles.count,
 			"missile_credits": missiles.credits, "credits": missiles.credits}
 	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
 	var prop := maxf(stats.propellant_capacity_kg - float(stores.get("propellant_kg", stats.propellant_capacity_kg)), 0.0)
 	var reserve_cap := JumpDrive.standard().reserve_capacity_kg(stats.propellant_capacity_kg)
 	var reserve := maxf(reserve_cap - float(stores.get("jump_reserve_kg", reserve_cap)), 0.0)
 	var rounds := maxi(stats.rounds_capacity - int(stores.get("rounds", stats.rounds_capacity)), 0)
-	return {"propellant_kg": prop, "reserve_kg": reserve, "rounds": rounds, "missiles": missiles.count,
+	var pd := maxi(stats.pd_rounds_capacity - int(stores.get("pd_rounds", stats.pd_rounds_capacity)), 0)
+	return {"propellant_kg": prop, "reserve_kg": reserve, "rounds": rounds, "pd_rounds": pd, "missiles": missiles.count,
 		"missile_credits": missiles.credits,
-		"credits": ceili((prop + reserve) / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds) / ROUNDS_PER_CREDIT - 1e-9) + missiles.credits}
+		"credits": ceili((prop + reserve) / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9) + ceili(float(rounds + pd) / ROUNDS_PER_CREDIT - 1e-9) + missiles.credits}
 
 
 ## Missiles fired since the last restock: {count, credits, by_launcher
@@ -174,6 +179,75 @@ static func missile_needs(vessel: ShipInstance, catalog: ConstructionCatalog) ->
 	return out
 
 
+## Refuel only (play-test batch 9: a button each for repair, rearm and
+## refuel): the main tank, then the jump reserve, as the credits allow.
+## Returns what was bought ("" if nothing was needed).
+static func refuel(vessel: ShipInstance, profile: PlayerProfile, catalog: ConstructionCatalog) -> String:
+	var need := resupply_needs(vessel, catalog)
+	if float(need.propellant_kg) + float(need.reserve_kg) <= 0.0 or not vessel.condition.has("stores"):
+		return ""
+	var budget := float(profile.credits)
+	var kg := minf(float(need.propellant_kg), budget / PROPELLANT_CREDITS_PER_T * 1000.0)
+	var cost := ceilf(kg / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9)
+	budget -= cost
+	var reserve_kg := minf(float(need.reserve_kg), maxf(budget, 0.0) / PROPELLANT_CREDITS_PER_T * 1000.0)
+	cost += ceilf(reserve_kg / 1000.0 * PROPELLANT_CREDITS_PER_T - 1e-9)
+	profile.credits = maxi(profile.credits - int(cost), 0)
+	var stores: Dictionary = vessel.condition.stores
+	stores["propellant_kg"] = float(stores.get("propellant_kg", 0.0)) + kg
+	if stores.has("jump_reserve_kg"):
+		stores["jump_reserve_kg"] = float(stores.jump_reserve_kg) + reserve_kg
+	_tidy_stores(vessel, catalog)
+	var line := "Refuelled %.1f t%s for %d credits" % [(kg + reserve_kg) / 1000.0,
+		"" if kg + reserve_kg >= float(need.propellant_kg) + float(need.reserve_kg) - 1.0 else " (credits short)", int(cost)]
+	vessel.record(line)
+	return line
+
+
+## Rearm only: rounds, point-defence rounds, then missiles and flares, as
+## the credits allow. Returns what was bought ("" if nothing was needed).
+static func rearm(vessel: ShipInstance, profile: PlayerProfile, catalog: ConstructionCatalog) -> String:
+	var need := resupply_needs(vessel, catalog)
+	if int(need.rounds) + int(need.pd_rounds) + int(need.missiles) <= 0:
+		return ""
+	var budget := float(profile.credits)
+	var rounds := mini(int(need.rounds), int(maxf(budget, 0.0)) * ROUNDS_PER_CREDIT)
+	budget -= ceilf(float(rounds) / ROUNDS_PER_CREDIT)
+	var pd := mini(int(need.pd_rounds), int(maxf(budget, 0.0)) * ROUNDS_PER_CREDIT)
+	budget -= ceilf(float(pd) / ROUNDS_PER_CREDIT)
+	var stocked := 0
+	var fired: Dictionary = vessel.condition.get("missiles_used", {})
+	var by: Dictionary = missile_needs(vessel, catalog).by_launcher
+	for id: String in by:
+		while int(fired.get(id, 0)) > 0 and budget >= float(by[id][1]):
+			budget -= float(by[id][1])
+			fired[id] = int(fired[id]) - 1
+			stocked += 1
+		if int(fired.get(id, 0)) <= 0:
+			fired.erase(id)
+	if fired.is_empty():
+		vessel.condition.erase("missiles_used")
+	var spent := profile.credits - maxi(int(budget), 0)
+	profile.credits = maxi(int(budget), 0)
+	if vessel.condition.has("stores"):
+		var stores: Dictionary = vessel.condition.stores
+		stores["rounds"] = int(stores.get("rounds", 0)) + rounds
+		if stores.has("pd_rounds"):
+			stores["pd_rounds"] = int(stores.pd_rounds) + pd
+	_tidy_stores(vessel, catalog)
+	var line := "Rearmed %d rounds%s%s for %d credits" % [rounds + pd, " and %d missile%s" % [stocked, "" if stocked == 1 else "s"] if stocked > 0 else "",
+		"" if rounds + pd >= int(need.rounds) + int(need.pd_rounds) and stocked >= int(need.missiles) else " (credits short)", spent]
+	vessel.record(line)
+	return line
+
+
+## Stores that are full again need no record (a full ship has none).
+static func _tidy_stores(vessel: ShipInstance, catalog: ConstructionCatalog) -> void:
+	var need := resupply_needs(vessel, catalog)
+	if float(need.propellant_kg) + float(need.reserve_kg) <= 0.0 and int(need.rounds) + int(need.pd_rounds) <= 0:
+		vessel.condition.erase("stores")
+
+
 ## Top up propellant (first) and rounds with what the credits allow. Returns
 ## what was bought ("" if nothing was needed).
 static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: ConstructionCatalog) -> String:
@@ -186,7 +260,7 @@ static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: Cons
 		profile.credits -= int(need.credits)
 		vessel.condition.erase("stores")
 		vessel.condition.erase("missiles_used")
-		var line := "Resupplied %.1f t propellant and %d rounds%s for %d credits" % [(need.propellant_kg + need.reserve_kg) / 1000.0, need.rounds,
+		var line := "Resupplied %.1f t propellant and %d rounds%s for %d credits" % [(need.propellant_kg + need.reserve_kg) / 1000.0, need.rounds + need.pd_rounds,
 			" and %d missile%s" % [need.missiles, "" if need.missiles == 1 else "s"] if need.missiles > 0 else "", need.credits]
 		vessel.record(line)
 		return line
@@ -199,6 +273,8 @@ static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: Cons
 	budget -= ceilf(reserve_kg / 1000.0 * PROPELLANT_CREDITS_PER_T)
 	var rounds := mini(int(need.rounds), int(maxf(budget, 0.0)) * ROUNDS_PER_CREDIT)
 	budget -= ceilf(float(rounds) / ROUNDS_PER_CREDIT)
+	var pd := mini(int(need.pd_rounds), int(maxf(budget, 0.0)) * ROUNDS_PER_CREDIT)
+	budget -= ceilf(float(pd) / ROUNDS_PER_CREDIT)
 	var stocked := 0
 	var fired: Dictionary = vessel.condition.get("missiles_used", {})
 	var by: Dictionary = missile_needs(vessel, catalog).by_launcher
@@ -218,6 +294,8 @@ static func resupply(vessel: ShipInstance, profile: PlayerProfile, catalog: Cons
 		if stores.has("jump_reserve_kg"):
 			stores["jump_reserve_kg"] = float(stores.jump_reserve_kg) + reserve_kg
 		stores["rounds"] = int(stores.get("rounds", 0)) + rounds
+		if stores.has("pd_rounds"):
+			stores["pd_rounds"] = int(stores.pd_rounds) + pd
 	var line := "Partly resupplied (credits short): %.1f t propellant, %d rounds, %d missiles" % [(kg + reserve_kg) / 1000.0, rounds, stocked]
 	vessel.record(line)
 	return line
@@ -310,18 +388,8 @@ static func repair_jobs(vessel: ShipInstance, catalog: ConstructionCatalog) -> A
 		j.label = "Re-run %s" % " and ".join(what)
 		j.order = 0.5
 		jobs.append(j)
-	var foam: Dictionary = vessel.condition.get("foam_used", {})
-	if not foam.is_empty():
-		var charges := 0
-		for id in foam:
-			charges += int(foam[id])
-		var j := Job.new()
-		j.kind = &"foam"
-		j.subject = "foam"
-		j.cost = charges
-		j.label = "Recharge %d foam suppression charge%s" % [charges, "" if charges == 1 else "s"]
-		j.order = 2.5
-		jobs.append(j)
+	# Foam is recharged every sortie (play-test batch 10): no job; an older
+	# save's "foam_used" is dropped with the next sortie's condition.
 	for id in vessel.condition.get("breached", []):
 		var j := Job.new()
 		j.kind = &"breach"
@@ -478,8 +546,6 @@ static func perform(jobs: Array[Job], vessel: ShipInstance, profile: PlayerProfi
 			&"bus":
 				c.erase("bus_cut")
 				c.erase("coolant_cut")
-			&"foam":
-				c.erase("foam_used")
 			&"breach":
 				(c.get("breached", []) as Array).erase(j.subject)
 			&"hatch":

@@ -33,7 +33,11 @@ extends RefCounted
 ##     objects surveyed; older saves have surveyed nothing.
 ## v11: the derelict fields (derelicts, DerelictField); older saves start
 ##     with none.
-const SCHEMA_VERSION := 11
+## v12 (play-test batch 9): pilots — a vessel's fighters each need one, so
+## general crew are posted as pilots where a v11 vessel has none; crew keep
+## the sorties they have served. v13: the bank — a deposit and loans
+## (none in older saves).
+const SCHEMA_VERSION := 13
 ## Ships per encounter the map offers (EnemyFactory spawns them).
 const MAX_ENCOUNTER := 3
 ## Locations every player knows from the start (brokers sell more).
@@ -127,6 +131,10 @@ var hire_pool: Array = []
 var vendor_stock: Array = []
 ## Earth Shipyard upgrades bought: TechTree id -> level.
 var tech: Dictionary = {}
+## The station bank (play-test batch 9): credits on deposit, and loans
+## taken ([{id, balance, rate, sorties_left}]).
+var bank_deposit: int = 0
+var loans: Array = []
 
 ## Loot RNG, persisted so reloading cannot re-roll a pull.
 var _rng := RandomNumberGenerator.new()
@@ -275,7 +283,9 @@ func bank_cargo(catalog: ConstructionCatalog) -> PackedStringArray:
 			d.display_name = table[d.def_id].display_name if table.has(d.def_id) else str(id)
 			_bank_blueprint(d)
 			out.append(d.describe())
-	vessel.cargo = {}
+	# A contract's freight is not ours to bank: it stays aboard.
+	var freight: Dictionary = cargo.get("freight", {})
+	vessel.cargo = {"freight": freight} if not freight.is_empty() else {}
 	if not out.is_empty():
 		vessel.record("Banked: %s" % ", ".join(out))
 	return out
@@ -304,13 +314,20 @@ func _bank_blueprint(d: LootRoller.Drop) -> void:
 		unlocks[String(d.def_id)] = true
 
 
-## Buy a lot of spare parts at the station. False if credits are short.
-func buy_spare_parts() -> bool:
-	if credits < PARTS_LOT_PRICE:
+## Buy `amount` spare parts at the station (play-test batch 9: any amount,
+## at the lot's rate). False if credits are short.
+func buy_spare_parts(amount: int = PARTS_LOT) -> bool:
+	var cost := parts_price(amount)
+	if amount <= 0 or credits < cost:
 		return false
-	credits -= PARTS_LOT_PRICE
-	spare_parts += PARTS_LOT
+	credits -= cost
+	spare_parts += amount
 	return true
+
+
+## What `amount` spare parts cost (credits): PARTS_LOT_PRICE per PARTS_LOT.
+static func parts_price(amount: int) -> int:
+	return ceili(float(maxi(amount, 0)) * PARTS_LOT_PRICE / PARTS_LOT - 1e-9)
 
 
 ## Pulls left until each pity guarantee (1 = the next pull).
@@ -359,7 +376,7 @@ func hire(i: int, catalog: ConstructionCatalog) -> String:
 	if credits < int(c.fee):
 		return "%s's fee is %d credits; you have %d" % [c.name, c.fee, credits]
 	credits -= int(c.fee)
-	vessel.crew.append({"name": c.name, "role": c.role, "skill": c.skill})
+	vessel.crew.append({"name": c.name, "role": c.role, "skill": c.skill, "sorties": 0})
 	hire_pool.remove_at(i)
 	vessel.record("Hired %s (%s)" % [c.name, CrewRoster.ROLE_NAMES[c.role]])
 	return ""
@@ -371,6 +388,188 @@ func dismiss(i: int) -> String:
 	var c: Dictionary = vessel.crew.pop_at(i)
 	vessel.record("Dismissed %s" % c.name)
 	return ""
+
+
+## A pilot for each of the vessel's fighters, posted from its general crew
+## (the v11 → v12 migration; a vessel short of general crew hires the rest).
+## Returns how many were posted.
+func post_pilots(v: ShipInstance, catalog: ConstructionCatalog) -> int:
+	if v.crew.is_empty():
+		return 0
+	var fighters := 0
+	for e in v.blueprint.equipment:
+		if CrewRoster.needs_pilot(catalog.equipment.get(e.def_id)):
+			fighters += 1
+	var pilots := v.crew.filter(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.PILOT).size()
+	var posted := 0
+	for c: Dictionary in v.crew:
+		if pilots + posted >= fighters:
+			break
+		if int(c.role) == CrewRoster.Role.GENERAL:
+			c.role = CrewRoster.Role.PILOT
+			posted += 1
+	if posted > 0:
+		v.record("%d general crew posted as pilots for the fighters" % posted)
+	return posted
+
+
+## Wages for a sortie (play-test batch 9): WAGE_BASE per crew member and
+## WAGE_PER_LEVEL per level of skill — a frigate's rookies 24 cr.
+const WAGE_BASE := 1
+const WAGE_PER_LEVEL := 2
+## Training a crew member to the next level, by the level reached (credits).
+const TRAINING_COSTS := [0, 60, 140, 260]
+
+
+func wages(v: ShipInstance = null) -> int:
+	if v == null:
+		v = vessel
+	var total := 0
+	for c: Dictionary in v.crew:
+		total += WAGE_BASE + WAGE_PER_LEVEL * int(c.get("skill", 0))
+	return roundi(total * TechTree.factor("welfare", tech_level("welfare")))
+
+
+## Training from `level` to the next (credits), less the academy's share.
+func training_cost(level: int) -> int:
+	return roundi(TRAINING_COSTS[mini(level + 1, CrewRoster.MAX_SKILL)] * TechTree.factor("academy", tech_level("academy")))
+
+
+## Train crew member `i` one level at the station. "" or why not.
+func train(i: int) -> String:
+	if i < 0 or i >= vessel.crew.size():
+		return "no such crew member"
+	var c: Dictionary = vessel.crew[i]
+	var level := int(c.get("skill", 0))
+	if level >= CrewRoster.MAX_SKILL:
+		return "%s is already a %s" % [c.name, CrewRoster.title(int(c.role), level)]
+	var cost := training_cost(level)
+	if credits < cost:
+		return "training %s costs %d credits; you have %d" % [c.name, cost, credits]
+	credits -= cost
+	c.skill = level + 1
+	vessel.record("Trained %s to %s" % [c.name, CrewRoster.title(int(c.role), level + 1)])
+	return ""
+
+
+# --- The bank (play-test batch 9) -----------------------------------------------
+
+## Deposits earn DEPOSIT_RATE a sortie, compounding. Loans (LOAN_OFFERS, one
+## of each at a time) grow by their rate each sortie and are paid off in
+## instalments taken on docking — what is owed over the sorties left; a
+## missed or short instalment adds MISSED_PENALTY of what was missed. Repay
+## early at any time; past the term, the whole balance falls due each sortie.
+const DEPOSIT_RATE := 0.01
+const MISSED_PENALTY := 0.1
+const LOAN_OFFERS := [
+	{"id": "dock_credit", "name": "Dockyard credit", "amount": 1000, "rate": 0.05, "term": 5},
+	{"id": "guild_loan", "name": "Guild loan", "amount": 5000, "rate": 0.04, "term": 10},
+	{"id": "mortgage", "name": "Shipbuilder's mortgage", "amount": 25000, "rate": 0.03, "term": 20},
+]
+
+
+static func node_loan(id: String) -> Dictionary:
+	for o in LOAN_OFFERS:
+		if o.id == id:
+			return o
+	return {}
+
+
+func loan(id: String) -> Dictionary:
+	for l: Dictionary in loans:
+		if l.id == id:
+			return l
+	return {}
+
+
+func debt() -> int:
+	var total := 0
+	for l: Dictionary in loans:
+		total += int(l.balance)
+	return total
+
+
+func deposit(amount: int) -> String:
+	if amount <= 0:
+		return "nothing to deposit"
+	if amount > credits:
+		return "you have %d credits" % credits
+	credits -= amount
+	bank_deposit += amount
+	return ""
+
+
+func withdraw(amount: int) -> String:
+	if amount <= 0:
+		return "nothing to withdraw"
+	if amount > bank_deposit:
+		return "the deposit holds %d credits" % bank_deposit
+	bank_deposit -= amount
+	credits += amount
+	return ""
+
+
+func take_loan(id: String) -> String:
+	var o := node_loan(id)
+	if o.is_empty():
+		return "no such loan"
+	if not loan(id).is_empty():
+		return "you already have the %s" % o.name
+	loans.append({"id": id, "balance": int(o.amount), "rate": float(o.rate), "sorties_left": int(o.term)})
+	credits += int(o.amount)
+	loot_log.append("Loan: %s, %d credits at %d %% a sortie" % [o.name, o.amount, roundi(float(o.rate) * 100.0)])
+	return ""
+
+
+## Pay `amount` (all if < 0) off loan `id` from credits. "" or why not.
+func repay(id: String, amount: int = -1) -> String:
+	var l := loan(id)
+	if l.is_empty():
+		return "no such loan"
+	var pay := int(l.balance) if amount < 0 else mini(amount, int(l.balance))
+	if pay <= 0:
+		return "nothing to repay"
+	if pay > credits:
+		return "you have %d credits" % credits
+	credits -= pay
+	l.balance = int(l.balance) - pay
+	if int(l.balance) <= 0:
+		loans.erase(l)
+	return ""
+
+
+## The next instalment of loan `l` (credits).
+static func instalment(l: Dictionary) -> int:
+	return ceili(float(l.balance) / maxi(int(l.sorties_left), 1))
+
+
+## A sortie went by (on docking): interest on the deposit and the loans,
+## and each loan's instalment from credits. Returns what happened.
+func bank_sortie() -> PackedStringArray:
+	var lines := PackedStringArray()
+	if bank_deposit > 0:
+		var earned := floori(bank_deposit * DEPOSIT_RATE)
+		bank_deposit += earned
+		if earned > 0:
+			lines.append("Bank: +%d credits interest on the deposit (%d)" % [earned, bank_deposit])
+	for l: Dictionary in loans.duplicate():
+		l.balance = ceili(float(l.balance) * (1.0 + float(l.rate)))
+		var due := instalment(l)
+		var paid := mini(due, credits)
+		credits -= paid
+		l.balance = int(l.balance) - paid
+		l.sorties_left = maxi(int(l.sorties_left) - 1, 0)
+		var name: String = node_loan(str(l.id)).get("name", "Loan")
+		if paid < due:
+			var penalty := ceili((due - paid) * MISSED_PENALTY)
+			l.balance = int(l.balance) + penalty
+			lines.append("Bank: %s — %d of %d credits paid; %d added for the shortfall (%d owed)" % [name, paid, due, penalty, l.balance])
+		else:
+			lines.append("Bank: %s — %d credits paid (%d owed)" % [name, paid, maxi(int(l.balance), 0)])
+		if int(l.balance) <= 0:
+			loans.erase(l)
+			lines.append("Bank: %s paid off" % name)
+	return lines
 
 
 ## Give crew member `i` a new role (at the station: no walking).
@@ -400,11 +599,10 @@ func tech_level(id: String) -> int:
 
 ## Buy the next level of upgrade `id`. "" or why not.
 func buy_tech(id: String) -> String:
-	if TechTree.node(id).is_empty():
-		return "no such upgrade"
-	var cost := TechTree.next_cost(tech_level(id))
-	if cost < 0:
-		return "already at the top level"
+	var why := TechTree.block_reason(id, tech)
+	if why != "":
+		return why
+	var cost := TechTree.next_cost(tech_level(id), id)
 	if credits < cost:
 		return "%d credits needed; you have %d" % [cost, credits]
 	credits -= cost
@@ -505,6 +703,19 @@ func dock(after: Dictionary, _catalog: ConstructionCatalog) -> PackedStringArray
 		vessel.condition.erase("crew")
 	for n in vessel.bury_dead():
 		lost.append("%s killed in action" % n)
+	# Experience and wages (play-test batch 9): the crew who came back each
+	# count the sortie (and may rise a level), and are paid.
+	for c: Dictionary in vessel.crew:
+		c["sorties"] = int(c.get("sorties", 0)) + 1
+		var earned := CrewRoster.level_for(int(c.sorties))
+		if earned > int(c.get("skill", 0)):
+			c["skill"] = earned
+			lost.append("%s is now %s" % [c.name, CrewRoster.title(int(c.role), earned)])
+	var due := wages()
+	var paid := mini(due, credits)
+	credits -= paid
+	lost.append("Wages: %d credits to %d crew%s" % [paid, vessel.crew.size(), "" if paid == due else " — short by %d" % (due - paid)])
+	lost.append_array(bank_sortie())
 	vessel.sorties += 1
 	refresh_station(ConstructionCatalog.default_catalog())
 	vessel.record("Sortie %d: docked%s" % [vessel.sorties, " damaged" if vessel.is_damaged() else ""])
@@ -532,6 +743,9 @@ func lose_vessel(catalog: ConstructionCatalog) -> PackedStringArray:
 		lost.append("%s ×%d in the hold lost" % [id, int(cargo.equipment[id])])
 	for id in cargo.get("blueprints", {}):
 		lost.append("%s blueprint in the hold lost" % id)
+	if not cargo.get("freight", {}).is_empty() and not active_contract.is_empty():
+		lost.append("Contract failed: %s — the freight was lost with the ship" % active_contract.title)
+		active_contract = {}
 	var fee := respawn_fee(catalog)
 	var paid := mini(fee, credits)
 	credits -= paid
@@ -568,6 +782,8 @@ func to_dict() -> Dictionary:
 		"hire_pool": hire_pool.duplicate(true),
 		"vendor_stock": vendor_stock.duplicate(true),
 		"tech": tech.duplicate(),
+		"bank_deposit": bank_deposit,
+		"loans": loans.duplicate(true),
 		"tutorial": tutorial.duplicate(),
 		"campaign": campaign.duplicate(),
 		"missile_mode": missile_mode,
@@ -628,6 +844,9 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 			var v := ShipInstance.from_dict(vd, errors)
 			if v != null:
 				p.vessels.append(v)
+	if p.loaded_schema < 12:
+		for v in p.vessels:
+			p.post_pilots(v, ConstructionCatalog.default_catalog())
 	for v in p.vessels:
 		BlueprintFix.fit_spans(v.blueprint, ConstructionCatalog.default_catalog())
 		BlueprintFix.prune_plates(v.blueprint, ShipGrid.build(v.blueprint, ConstructionCatalog.default_catalog()))
@@ -638,10 +857,15 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> PlayerProfile
 	for s in d.get("vendor_stock", []):
 		if s is Dictionary:
 			p.vendor_stock.append({"id": str(s.get("id", "")), "price": int(s.get("price", 0))})
+	p.bank_deposit = maxi(int(d.get("bank_deposit", 0)), 0)
+	for l in d.get("loans", []):
+		if l is Dictionary and node_loan(str(l.get("id", ""))) != {}:
+			p.loans.append({"id": str(l.id), "balance": maxi(int(l.get("balance", 0)), 0), "rate": float(l.get("rate", 0.0)),
+				"sorties_left": maxi(int(l.get("sorties_left", 1)), 0)})
 	var tk: Variant = d.get("tech", {})
 	if tk is Dictionary:
 		for id in tk:
-			p.tech[str(id)] = clampi(int(tk[id]), 0, TechTree.MAX_LEVEL)
+			p.tech[str(id)] = clampi(int(tk[id]), 0, TechTree.levels(str(id)))
 	_read_v5_progress(p, d)
 	p.missile_mode = clampi(int(d.get("missile_mode", MissileSalvo.Mode.ALL)), 0, MissileSalvo.Mode.size() - 1)
 	var order: Variant = d.get("missile_order", [])
@@ -720,13 +944,14 @@ func vessel_tanks(catalog: ConstructionCatalog) -> Dictionary:
 		"dv_full_mps": JumpDrive.delta_v_of(full_mass, stats.propellant_capacity_kg + reserve_cap, stats.main_isp_s)}
 
 
-## Δv (m/s) the jump from the dock to `location_id` costs (0 to stay).
+## Δv (m/s) the jump from the dock to `location_id` costs (0 to stay);
+## jump calibration (tech) takes some off.
 func jump_dv(location_id: String) -> float:
 	var here := Location.by_id(location)
 	var there := Location.by_id(location_id)
 	if here.id == there.id:
 		return 0.0
-	return JumpDrive.standard().delta_v(Location.distance_m(here, there))
+	return JumpDrive.standard().delta_v(Location.distance_m(here, there)) * TechTree.factor("jump", tech_level("jump"))
 
 
 ## Propellant (kg) the docked vessel's jump to `location_id` would burn.
@@ -760,7 +985,7 @@ func launch_point() -> String:
 func survey_dv(a: Artifact) -> float:
 	if not a.is_deep_space():
 		return 0.0
-	return 2.0 * JumpDrive.standard().delta_v(a.distance_from(Location.by_id(launch_point())))
+	return 2.0 * JumpDrive.standard().delta_v(a.distance_from(Location.by_id(launch_point()))) * TechTree.factor("jump", tech_level("jump"))
 
 
 ## Propellant (kg) that survey burns, paid at launch with the tanks full.
@@ -829,7 +1054,7 @@ func buy_location(location_id: String) -> String:
 
 ## Jump the docked vessel to the station at a known location, paying the
 ## propellant from its main tank, then the drive's reserve (the yard refills
-## both, for credits, at the next launch or in the ARMOURY). Returns "" or
+## both, for credits, at the next launch or in the SERVICE BAY). Returns "" or
 ## why not.
 func relocate(location_id: String, catalog: ConstructionCatalog = null) -> String:
 	if location_id not in known_locations:
@@ -844,7 +1069,7 @@ func relocate(location_id: String, catalog: ConstructionCatalog = null) -> Strin
 	var paid := JumpDrive.pay(float(tanks.main_kg), float(tanks.reserve_kg), cost)
 	if not paid.ok:
 		var short := ServiceYard.resupply_needs(vessel, catalog)
-		return "The jump to %s needs %s; the tanks and the reserve aboard give %s — refuel in the ARMOURY (%d cr)" % [
+		return "The jump to %s needs %s; the tanks and the reserve aboard give %s — refuel in the SERVICE BAY (%d cr)" % [
 			there.station_name, JumpDrive.dv_text(jump_dv(there.id)), JumpDrive.dv_text(tanks.dv_mps), int(short.credits)]
 	var stores: Dictionary = vessel.condition.get("stores", {})
 	if stores.is_empty():

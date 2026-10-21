@@ -176,7 +176,7 @@ func test_a_beaten_ship_stays_as_a_silent_derelict() -> void:
 	var fired := wreck.rounds_fired
 	for i in 120:
 		world.step()
-	assert_true(wreck.rounds_fired == fired and Array(wreck.pd_rounds).all(func(r: int) -> bool: return r == wreck.config.pd_gun.magazine_rounds),
+	assert_true(wreck.rounds_fired == fired and wreck.pd_rounds == wreck.pd_rounds_capacity,
 		"no rounds, no point defence")
 	# A new contact can take the old id.
 	world.add_ship(_ship(&"target_01", _bp(), Vector3(0, 0, -3000)))

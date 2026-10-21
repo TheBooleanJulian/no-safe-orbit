@@ -32,6 +32,17 @@ var ghost_ok: bool = true
 ## clamp arms reaching in, work lights. Set before show_design.
 var berth: bool = false
 var _berth: Node3D
+## Drawn once and held (the dealer's cards, play-test batch 10): no idle
+## turn, and the view renders again only when it is dragged.
+var still: bool = false
+## The gantries' truss bays (m) and their beacons' turn rate (rad/s).
+const TRUSS_BAY_M := 3.0
+const BEACON_TURN_RAD_S := 3.0
+var _beacon_pivots: Array[Node3D] = []
+## Behind the berth: the station's docking hall, drawn as the sky (play-test
+## batch 9, shaders/shipyard_interior.gdshader).
+const INTERIOR_SKY: Shader = preload("res://shaders/shipyard_interior.gdshader")
+var _env: Environment
 
 var _viewport: SubViewport
 var _pivot: Node3D
@@ -62,6 +73,7 @@ func _ready() -> void:
 	_viewport.msaa_3d = Viewport.MSAA_2X
 	add_child(_viewport)
 	var env := Environment.new()
+	_env = env
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.02, 0.03, 0.05)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -100,6 +112,10 @@ func show_design(editor: ShipEditor) -> void:
 	_parts = model.parts
 	_pivot.add_child(_model)
 	_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.6, 30.0)
+	if still:
+		# A card: closer, and from higher up, so the hull's shape reads.
+		_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.25, 30.0)
+		_pitch = -0.85
 	_extent = maxf(editor.grid.hull_bounds_m().size.length(), 20.0)
 	if berth:
 		_build_berth(editor.grid.hull_bounds_m().size * 0.5)
@@ -113,6 +129,13 @@ func show_design(editor: ShipEditor) -> void:
 func _build_berth(half: Vector3) -> void:
 	if _berth != null:
 		_berth.queue_free()
+	if _env.background_mode != Environment.BG_SKY:
+		var mat := ShaderMaterial.new()
+		mat.shader = INTERIOR_SKY
+		var sky := Sky.new()
+		sky.sky_material = mat
+		_env.sky = sky
+		_env.background_mode = Environment.BG_SKY
 	_berth = Node3D.new()
 	_berth.name = "Berth"
 	_pivot.add_child(_berth)
@@ -128,21 +151,68 @@ func _build_berth(half: Vector3) -> void:
 	for side: float in [-1.0, 1.0]:
 		_berth_box(Vector3(0.25, 0.1, half.z * 2.0 + 30.0), Vector3(side * (half.x + 3.0), floor_y + 0.35, 0), guide)
 	_berth_box(Vector3(half.x * 2.0 + 6.0, 0.1, 0.35), Vector3(0, floor_y + 0.35, -half.z - 8.0), _glow(CyberTheme.AMBER * 0.6, 0.5))
-	# Gantry towers on either beam, a clamp arm from each to the hull side.
+	# Gantry towers on either beam, a clamp arm from each to the hull side:
+	# open truss painted red, a rotating beacon on top (play-test batch 10).
+	_beacon_pivots.clear()
+	var red := StandardMaterial3D.new()
+	red.albedo_color = Color(0.62, 0.08, 0.06)
+	red.metallic = 0.4
+	red.roughness = 0.55
 	var towers := maxi(2, ceili(half.z * 2.0 / 60.0))
 	for side: float in [-1.0, 1.0]:
 		for k in towers:
 			var z := lerpf(-half.z * 0.7, half.z * 0.7, float(k) / float(towers - 1))
 			var height := half.y * 2.0 + 6.0
-			_berth_box(Vector3(2.4, height, 2.4), Vector3(side * reach, floor_y + height * 0.5, z), steel)
-			_berth_box(Vector3(reach - half.x, 1.0, 1.4), Vector3(side * (half.x + (reach - half.x) * 0.5), 0.0, z), steel)
-			_berth_box(Vector3(0.5, 0.5, 0.5), Vector3(side * reach, floor_y + height + 0.4, z), _glow(CyberTheme.AMBER, 2.0))
+			var storeys := maxi(1, ceili(height / TRUSS_BAY_M))
+			for s in storeys:
+				ShipModelBuilder._truss(_berth, Vector3(2.4, height / storeys, 2.4),
+					Vector3(side * reach, floor_y + (s + 0.5) * height / storeys, z), red)
+			var arm := reach - half.x - 1.2
+			var bays := maxi(1, ceili(arm / TRUSS_BAY_M))
+			for s in bays:
+				ShipModelBuilder._truss(_berth, Vector3(arm / bays, 1.2, 1.4),
+					Vector3(side * (half.x + 0.4 + (s + 0.5) * arm / bays), 0.0, z), red)
+			# The clamp pad against the hull.
+			_berth_box(Vector3(0.5, 1.8, 2.2), Vector3(side * (half.x + 0.25), 0.0, z), steel)
+			_beacon(Vector3(side * reach, floor_y + height, z))
 			var lamp := OmniLight3D.new()
 			lamp.light_color = Color(1.0, 0.92, 0.8)
 			lamp.light_energy = 1.2
 			lamp.omni_range = maxf(half.length(), 30.0)
 			lamp.position = Vector3(side * (reach - 1.5), floor_y + height, z)
 			_berth.add_child(lamp)
+
+
+## A rotating beacon: a housing, a lamp and a reflector throwing a beam that
+## sweeps round (`_process` turns it).
+func _beacon(at: Vector3) -> void:
+	_berth_box(Vector3(0.7, 0.3, 0.7), at + Vector3(0, 0.15, 0), _glow(Color(0.2, 0.2, 0.22), 0.0))
+	var pivot := Node3D.new()
+	pivot.position = at + Vector3(0, 0.55, 0)
+	_berth.add_child(pivot)
+	var lamp := MeshInstance3D.new()
+	var bulb := SphereMesh.new()
+	bulb.radius = 0.28
+	bulb.height = 0.56
+	lamp.mesh = bulb
+	lamp.material_override = _glow(CyberTheme.AMBER, 3.0)
+	pivot.add_child(lamp)
+	var reflector := MeshInstance3D.new()
+	var dish := BoxMesh.new()
+	dish.size = Vector3(0.6, 0.6, 0.06)
+	reflector.mesh = dish
+	reflector.material_override = _glow(Color(0.3, 0.3, 0.32), 0.0)
+	reflector.position = Vector3(0, 0, 0.32)
+	pivot.add_child(reflector)
+	var beam := SpotLight3D.new()
+	beam.light_color = Color(1.0, 0.7, 0.2)
+	beam.light_energy = 3.0
+	beam.spot_range = 60.0
+	beam.spot_angle = 14.0
+	beam.rotation_degrees = Vector3(-12, 0, 0)  # down a little, out along -Z
+	pivot.add_child(beam)
+	pivot.rotation.y = randf() * TAU
+	_beacon_pivots.append(pivot)
 
 
 func _berth_box(size: Vector3, pos: Vector3, mat: Material) -> void:
@@ -164,6 +234,23 @@ static func _glow(c: Color, energy: float) -> StandardMaterial3D:
 	return mat
 
 
+const COM_SHADER := """
+shader_type spatial;
+render_mode unshaded, depth_test_disabled, cull_back;
+uniform vec4 gold : source_color = vec4(0.96, 0.78, 0.26, 0.95);
+varying vec3 view_normal;
+void vertex() {
+	view_normal = (MODELVIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+}
+void fragment() {
+	vec3 n = normalize(view_normal);
+	bool dark = n.x * n.y < 0.0;
+	ALBEDO = dark ? vec3(0.02, 0.02, 0.03) : gold.rgb;
+	ALPHA = gold.a;
+}
+"""
+
+
 ## Centre of mass as a gold sphere drawn over the hull (shipyard [C]).
 func set_show_com(on: bool) -> void:
 	_show_com = on
@@ -175,11 +262,13 @@ func _update_com() -> void:
 		var mesh := SphereMesh.new()
 		mesh.radius = 1.0
 		mesh.height = 2.0
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(CyberTheme.AMBER, 0.9)
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.no_depth_test = true
+		# The centre-of-mass symbol: gold with two black quarters, the
+		# quarters worked out in view space so it reads from any angle.
+		var shader := Shader.new()
+		shader.code = COM_SHADER
+		var mat := ShaderMaterial.new()
+		mat.shader = shader
+		mat.set_shader_parameter("gold", Color(CyberTheme.AMBER, 0.95))
 		mat.render_priority = 10
 		_com = MeshInstance3D.new()
 		_com.mesh = mesh
@@ -210,7 +299,9 @@ func refresh_ghost() -> void:
 
 
 func _process(delta: float) -> void:
-	if _idle and not isometric and is_visible_in_tree():
+	for pivot in _beacon_pivots:
+		pivot.rotate_y(BEACON_TURN_RAD_S * delta)
+	if _idle and not still and not isometric and is_visible_in_tree():
 		_yaw += IDLE_TURN_RATE * delta
 		_update_camera()
 
@@ -238,6 +329,8 @@ func _gui_input(event: InputEvent) -> void:
 func _update_camera() -> void:
 	if _camera == null:
 		return
+	if still and _viewport != null:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	if isometric:
 		_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 		_camera.size = _extent * 1.1

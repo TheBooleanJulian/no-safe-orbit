@@ -89,6 +89,39 @@ func location() -> Location:
 	return null
 
 
+## Its orbit in a line (play-test batch 9), once surveyed: "427 × 418 km,
+## 51.6° incl, Earth orbit"; about the Sun in AU against the ecliptic;
+## an object on its way out of the solar system as escaping.
+func orbit_summary() -> String:
+	var st := state_icrs()
+	var body: OrbitalBody
+	var pole: Vector3
+	var where := ""
+	if is_deep_space():
+		body = load("res://data/bodies/sun.tres") as OrbitalBody
+		var eps := deg_to_rad(CelestialFrame.OBLIQUITY_J2000_DEG)
+		pole = Vector3(0.0, -sin(eps), cos(eps))
+		where = "solar orbit"
+	else:
+		body = location().body
+		pole = CelestialFrame.orientation(body, CelestialFrame.julian_date_from_iso(epoch_utc))[0]
+		where = "%s orbit" % body.display_name
+	var el := OrbitElements.from_state(body.mu_m3_s2, st[0], st[1])
+	var inc := rad_to_deg(st[0].cross(st[1]).normalized().to_vector3().angle_to(pole))
+	if is_deep_space():
+		if not el.is_bound():
+			return "escaping, perihelion %.2f AU · %.1f° incl · %s" % [el.periapsis_radius / CelestialFrame.AU_M, inc, where]
+		return "%.2f × %.2f AU · %.1f° incl · %s" % [el.apoapsis_radius / CelestialFrame.AU_M, el.periapsis_radius / CelestialFrame.AU_M, inc, where]
+	return "%.0f × %.0f km · %.1f° incl · %s" % [(el.apoapsis_radius - body.radius_m) / 1000.0, (el.periapsis_radius - body.radius_m) / 1000.0, inc, where]
+
+
+## Before a survey: what the record will hold, unknown.
+func orbit_unknown() -> String:
+	if is_deep_space():
+		return "??? × ??? AU · ???° incl · solar orbit"
+	return "??? × ??? km · ???° incl · %s orbit" % location().body.display_name
+
+
 ## Position and velocity about its central body (ICRS axes, m and m/s).
 func state_icrs() -> Array[Vec3d]:
 	return [Vec3d.new(r_km[0], r_km[1], r_km[2]).times(1000.0), Vec3d.new(v_km_s[0], v_km_s[1], v_km_s[2]).times(1000.0)]

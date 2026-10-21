@@ -6,6 +6,12 @@ extends RefCounted
 ## flies, how many ships it meets and how dangerous they are, and pays its
 ## reward when its goal is met (MissionChain runs it like a chain goal).
 ## Offers are seeded by the profile and refreshed after every sortie.
+## Cargo contracts (play-test batch 9) are work without a fight: freight
+## loaded into the hold on accepting, the destination set as the course,
+## paid on arriving there with it aboard (`deliver`, at LAUNCH).
+## Retrieve contracts (Milestone 13): a pod lost at a charted location,
+## usually guarded; G near it in flight stows it as freight, and it pays
+## once docked at the station that offered the work (`deliver_to`).
 
 const OFFERS := 4
 
@@ -34,6 +40,22 @@ const KINDS := [
 ]
 
 const TARGETS := ["Kestrel raider", "Harrier pirate", "Shrike smuggler", "Goshawk deserter", "Saker privateer"]
+## Cargo contracts: what is carried, how much (m³), and the pay — a base
+## and so much a cubic metre, more the further the jump.
+const FREIGHT := ["medical supplies", "reactor spares", "colonist mail", "ice cores", "survey drones", "luxury foodstuffs"]
+const FREIGHT_M3 := Vector2i(20, 90)
+const FREIGHT_BASE_CREDITS := 120
+const FREIGHT_CREDITS_PER_M3 := 4.0
+## One offer in this many is cargo (when another location is charted).
+const CARGO_ONE_IN := 3
+## Retrieve contracts: what is lost, its size (m³), how often it is offered
+## (one in this many of the rest), and its pay: a base, more per guard and
+## the further it is from the station that wants it.
+const RETRIEVABLES := ["flight-recorder pod", "survey capsule", "courier's cargo pod", "data core", "lifeboat beacon"]
+const RETRIEVE_M3 := 6
+const RETRIEVE_ONE_IN := 4
+const RETRIEVE_BASE_CREDITS := 220
+const RETRIEVE_CREDITS_PER_SHIP := 140
 
 
 ## Fresh offers for `profile` (deterministic for its seed and sortie count).
@@ -43,6 +65,13 @@ static func generate(profile: PlayerProfile) -> Array:
 	var out := []
 	var known: Array = profile.known_locations
 	for i in OFFERS:
+		var elsewhere: Array = known.filter(func(id: String) -> bool: return id != profile.location)
+		if not elsewhere.is_empty() and rng.randi() % CARGO_ONE_IN == 0:
+			out.append(_cargo_offer(profile, rng, elsewhere, i))
+			continue
+		if rng.randi() % RETRIEVE_ONE_IN == 0:
+			out.append(_retrieve_offer(profile, rng, known, i))
+			continue
 		var k: Dictionary = KINDS[rng.randi() % KINDS.size()]
 		var ships := rng.randi_range(1, PlayerProfile.MAX_ENCOUNTER)
 		if k.kind == "defend":
@@ -67,6 +96,78 @@ static func giver(c: Dictionary) -> Dictionary:
 	return GIVERS[clampi(int(c.get("giver", 0)), 0, GIVERS.size() - 1)]
 
 
+## A cargo contract: freight from here to another charted station.
+static func _cargo_offer(profile: PlayerProfile, rng: RandomNumberGenerator, elsewhere: Array, i: int) -> Dictionary:
+	var to := Location.by_id(str(elsewhere[rng.randi() % elsewhere.size()]))
+	var what: String = FREIGHT[rng.randi() % FREIGHT.size()]
+	var m3 := rng.randi_range(FREIGHT_M3.x, FREIGHT_M3.y)
+	var dv := JumpDrive.standard().delta_v(Location.distance_m(Location.by_id(profile.location), to))
+	var credits := roundi((FREIGHT_BASE_CREDITS + FREIGHT_CREDITS_PER_M3 * m3 * (1.0 + dv / 500.0)) / 10.0) * 10
+	return {
+		"id": "c%d_%d" % [profile.sorties_flown(), i],
+		"kind": "cargo", "goal": int(MissionChain.Goal.DELIVER), "title": "Freight to the %s" % to.station_name,
+		"brief": "Carry %d m³ of %s to the %s — no fight: it pays when you arrive there with it aboard" % [m3, what, to.station_name],
+		"giver": 1, "location": to.id, "ships": 0, "threat": 0, "waves": 0, "freight_m3": m3, "freight": what,
+		"credits": credits, "parts": 0,
+	}
+
+
+## A retrieve contract: a pod lost at a charted station (here or elsewhere),
+## to bring back here; guarded by 1–2 ships.
+static func _retrieve_offer(profile: PlayerProfile, rng: RandomNumberGenerator, known: Array, i: int) -> Dictionary:
+	var at := Location.by_id(str(known[rng.randi() % known.size()]))
+	var what: String = RETRIEVABLES[rng.randi() % RETRIEVABLES.size()]
+	var ships := rng.randi_range(1, 2)
+	var level := profile.missions_completed + ships + rng.randi_range(0, 1)
+	var dv := JumpDrive.standard().delta_v(Location.distance_m(Location.by_id(profile.location), at)) if at.id != profile.location else 0.0
+	var credits := roundi((RETRIEVE_BASE_CREDITS + RETRIEVE_CREDITS_PER_SHIP * ships) * (1.0 + 0.1 * (level - 1)) * (1.0 + dv / 1000.0) / 10.0) * 10
+	var home := Location.by_id(profile.location)
+	return {
+		"id": "c%d_%d" % [profile.sorties_flown(), i],
+		"kind": "retrieve", "goal": int(MissionChain.Goal.RETRIEVE), "title": "Recover the %s" % what,
+		"brief": "A %s is adrift %s, with %d ship%s about — G alongside it stows it; bring it back to the %s" % [what,
+			"near here" if at.id == profile.location else "off the %s" % at.station_name, ships, "" if ships == 1 else "s", home.station_name],
+		"giver": 3, "location": at.id, "deliver_to": home.id, "ships": ships, "threat": level, "waves": 0,
+		"freight_m3": RETRIEVE_M3, "freight": what, "credits": credits, "parts": 10 * ships,
+	}
+
+
+## Whether a contract is about freight: cargo carried out, or a pod recovered.
+static func carries_freight(c: Dictionary) -> bool:
+	return str(c.get("kind", "")) in ["cargo", "retrieve"]
+
+
+## Where a contract's freight is handed over.
+static func deliver_to(c: Dictionary) -> String:
+	return str(c.get("deliver_to", c.get("location", "")))
+
+
+## Hand the freight over if the vessel is docked at the cargo contract's
+## destination with it aboard: paid, the contract met. Freight no longer
+## aboard (jettisoned) fails the contract. Returns the line ("" if there is
+## nothing to deliver here).
+static func deliver(profile: PlayerProfile) -> String:
+	var c := profile.active_contract
+	if c.is_empty() or not carries_freight(c):
+		return ""
+	var freight: Dictionary = profile.vessel.cargo.get("freight", {})
+	if str(freight.get("contract", "")) != str(c.id):
+		if str(c.kind) == "retrieve":
+			return ""  # not recovered yet
+		profile.active_contract = {}
+		profile.vessel.record("Contract failed: %s — the freight is gone" % c.title)
+		return "CONTRACT FAILED — %s: the freight is no longer aboard" % c.title
+	if profile.location != deliver_to(c):
+		return ""
+	profile.vessel.cargo.erase("freight")
+	var m := MissionChain.from_dict(profile.campaign)
+	m.contract = c.duplicate()
+	var line := m.complete(profile)
+	profile.vessel.record("%s %d m³ of %s to the %s" % ["Brought back" if str(c.kind) == "retrieve" else "Delivered", int(freight.m3),
+		freight.what, Location.by_id(profile.location).station_name])
+	return line
+
+
 ## Accept offer `id` from the board: it becomes the active contract and sets
 ## the next sortie's encounter size and its launch point — the course
 ## (PlayerProfile.launch_point): the jump there happens at LAUNCH, paid then
@@ -83,10 +184,18 @@ static func accept(profile: PlayerProfile, id: String) -> String:
 			if need > full:
 				return "The jump to %s needs %s; full tanks and the reserve give this ship %s" % [loc.station_name,
 					JumpDrive.dv_text(need), JumpDrive.dv_text(full)]
+			if str(c.get("kind", "")) == "cargo":
+				var cat := ConstructionCatalog.default_catalog()
+				var room := ShipStats.compute(profile.vessel.blueprint, ShipGrid.build(profile.vessel.blueprint, cat)).cargo_m3 \
+					- profile.vessel.cargo_volume_m3(cat)
+				if room < float(c.freight_m3):
+					return "The freight is %d m³; the hold has %.0f m³ free — bank the cargo or fly a bigger hold" % [int(c.freight_m3), room]
+				profile.vessel.cargo["freight"] = {"contract": str(c.id), "m3": int(c.freight_m3), "what": str(c.freight)}
 			profile.jump_target = ""
 			profile.active_contract = (c as Dictionary).duplicate()
 			profile.board.erase(c)
-			profile.encounter_size = int(c.ships)
+			if int(c.ships) > 0:
+				profile.encounter_size = int(c.ships)
 			return ""
 	return "That offer is gone"
 
@@ -94,6 +203,7 @@ static func accept(profile: PlayerProfile, id: String) -> String:
 ## Give the active contract up (no pay, no penalty beyond the lost work).
 static func abandon(profile: PlayerProfile) -> void:
 	profile.active_contract = {}
+	profile.vessel.cargo.erase("freight")  # the freight goes back to its shipper
 
 
 ## After a sortie: new offers if the board is stale.

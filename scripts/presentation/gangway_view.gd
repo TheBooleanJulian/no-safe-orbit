@@ -7,6 +7,11 @@ extends Node3D
 const RADIUS_M := 1.2
 const COLOR_EXTENDING := Color(0.96, 0.78, 0.26)
 const COLOR_SEALED := Color(0.75, 0.8, 0.86)
+## Hexagonal, like the collars it joins (play-test batch 10), ribbed every
+## RIB_SPACING_M.
+const SIDES := 6
+const RIB_SPACING_M := 2.0
+static var _ribs: ImageTexture
 
 var _tubes: Dictionary = {}  # DockingLink -> MeshInstance3D
 
@@ -37,11 +42,23 @@ func sync(world: WorldSimulation, alpha: float, render_origin: Vector3) -> void:
 		var x := up.cross(dir).normalized()
 		# Columns: X and Z across the tube, Y along it, stretched to length.
 		tube.transform = Transform3D(Basis(x, dir * length, x.cross(dir)), (pa + end) * 0.5)
-		(tube.material_override as StandardMaterial3D).albedo_color = COLOR_SEALED if link.sealed() else COLOR_EXTENDING
+		var mat := tube.material_override as StandardMaterial3D
+		mat.albedo_color = COLOR_SEALED if link.sealed() else COLOR_EXTENDING
+		mat.uv1_scale = Vector3(1.0, length / RIB_SPACING_M, 1.0)
 	for link in _tubes.keys():
 		if not seen.has(link):
 			(_tubes[link] as Node).queue_free()
 			_tubes.erase(link)
+
+
+## A dark band in eight: the ribs, repeated along the tube.
+static func rib_texture() -> ImageTexture:
+	if _ribs == null:
+		var img := Image.create(1, 8, false, Image.FORMAT_RGB8)
+		for y in 8:
+			img.set_pixel(0, y, Color(0.45, 0.45, 0.45) if y == 0 else Color.WHITE)
+		_ribs = ImageTexture.create_from_image(img)
+	return _ribs
 
 
 func _make_tube() -> MeshInstance3D:
@@ -49,11 +66,13 @@ func _make_tube() -> MeshInstance3D:
 	mesh.top_radius = RADIUS_M
 	mesh.bottom_radius = RADIUS_M
 	mesh.height = 1.0
-	mesh.radial_segments = 12
+	mesh.radial_segments = SIDES
 	var tube := MeshInstance3D.new()
 	tube.mesh = mesh
 	var mat := StandardMaterial3D.new()
 	mat.roughness = 0.6
 	mat.metallic = 0.3
+	mat.albedo_texture = rib_texture()
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	tube.material_override = mat
 	return tube

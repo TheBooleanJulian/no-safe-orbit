@@ -5,7 +5,7 @@ extends RefCounted
 ## teleporting, no instant kills; everything takes simulated time.
 ##
 ## - Muster: the team walks from their stations to our collar's room
-##   (CrewRoster.ROOM_TRANSIT_S per room), then crosses (GANGWAY_CROSS_S).
+##   (BOARDER_TRANSIT_S per room), then crosses (GANGWAY_CROSS_S).
 ## - Defenders' policy, stated plainly: security crew fall back to hold the
 ##   bridge (walking there takes time; a vented route stops them); everyone
 ##   else fights where they stand; doors ahead of the boarders are locked.
@@ -29,9 +29,13 @@ enum Defence { HOLD_BRIDGE, COUNTERATTACK }
 const DEFENCE_NAMES := ["hold the bridge", "counter-attack"]
 
 const PHASE_NAMES := ["mustering", "crossing", "aboard", "withdrawing", "CAPTURED", "REPELLED", "STRANDED", "returned", "aborted"]
-const GANGWAY_CROSS_S := 5.0
-const HATCH_CUT_S := 20.0
-const KILL_RATE := 0.08
+## Play-test batch 10 halved boarding: the team musters, crosses, cuts and
+## moves twice as fast (BOARDER_TRANSIT_S a room), and fights resolve twice
+## as fast (KILL_RATE doubled — the same odds, half the time).
+const GANGWAY_CROSS_S := 2.5
+const HATCH_CUT_S := 10.0
+const KILL_RATE := 0.16
+const BOARDER_TRANSIT_S := CrewRoster.ROOM_TRANSIT_S * 0.5
 const DEFENDER_BONUS := 1.25
 ## The biggest party we can send (the crew's security and general hands
 ## are the real limit).
@@ -80,7 +84,7 @@ static func start(p_link: DockingLink, p_attacker: ShipSystems, p_defender: Ship
 	for m in candidates(p_attacker, p_link.a_port.room, max_team):
 		b.team.append(m)
 		m.busy = true
-		muster = maxf(muster, (p_attacker.route(m.location, p_link.a_port.room).size() - 1) * CrewRoster.ROOM_TRANSIT_S)
+		muster = maxf(muster, (p_attacker.route(m.location, p_link.a_port.room).size() - 1) * BOARDER_TRANSIT_S)
 	if b.team.is_empty():
 		return null
 	b.action = &"muster"
@@ -250,7 +254,7 @@ func _advance(dt: float, goal: int) -> void:
 		var hatch := defender.hatch_between_rooms(room, next_room)
 		var locked := _locked.has(hatch) and not _cut.has(hatch) and not defender.destroyed_hatches.has(hatch)
 		action = &"cut" if locked else &"move"
-		action_left = (HATCH_CUT_S if locked else 0.0) + CrewRoster.ROOM_TRANSIT_S
+		action_left = (HATCH_CUT_S if locked else 0.0) + BOARDER_TRANSIT_S
 		if locked:
 			_note("Cutting through locked hatch %s" % hatch)
 		return

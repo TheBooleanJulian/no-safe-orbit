@@ -141,9 +141,27 @@ rare part · Earth texture 5400 × 2700.
 
 ## Design decisions (not defects)
 
+- **A cargo contract is delivered at LAUNCH** (decided 2026-10-21): the jump
+  to its station hands the freight over and pays; the sortie that follows is
+  an ordinary one there. There is no flying leg to escort the freight.
+- **Salvage drones extend the beacon; they don't cut parts** (decided
+  2026-10-21, play-test batch 9): G pays for the whole wreck at once from up
+  to 8 km. Their old part-by-part stripping is gone.
+
 - **No drag; the 100 km Kármán line is a hard entry interface** (decided
-  2026-10-19). Crossing it removes the vessel or round; skimming above it costs
+  2026-10-19). Crossing it removes the vessel or round (with a re-entry
+  cutscene for the player since play-test batch 10); skimming above it costs
   nothing.
+- **The dealer's first opening in a session takes a few seconds**
+  (play-test batch 10): the cards come one a frame (4.2 s for all twelve in
+  a windowed review, frames of up to ~0.75 s while a super-heavy is loaded,
+  checked and priced); later openings reuse what was worked out.
+- **The Moon's ground** (play-test batch 10): ships settle on their hit
+  box's smallest half-extent whatever their attitude, and rest without
+  sliding or tipping; the drawn ground reaches 115 km at most (the camera's
+  far plane), short of the 195 km horizon from 11 km up; while descending
+  through 11 → 9 km its drawn heights are still growing in, so near the
+  highest summits the ground drawn can sit below the ground flown into.
 - **The station is reached by jump drive**, not flown to (decided 2026-10-20).
 - **Crew are named, with a role and a skill (0–2 stars)** — no morale or
   individual kit; the wounded recover with a medic aboard or at the yard;

@@ -770,6 +770,7 @@ func step() -> void:
 		_step_far_rounds()
 	_rounds.append_array(spawned)  # fired at end of tick; first move next tick
 	_check_entry_interface()
+	_check_terrain()
 	_rebase_if_needed()
 	_phase("other")
 
@@ -1127,7 +1128,7 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		ship.pd_cooldowns[k] = maxf(ship.pd_cooldowns[k] - fixed_dt, 0.0)
 		ship.pd_targets[k] = ""
 		var e := ship.systems.equipment_by_id(cfg.pd_mount_ids[k])
-		if e == null or not e.working() or ship.pd_rounds[k] <= 0:
+		if e == null or not e.working() or ship.pd_rounds <= 0:
 			continue
 		var n := cfg.pd_normals_body[k]
 		var muzzle := cfg.pd_mounts_body[k] + n * 0.6
@@ -1135,7 +1136,7 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		var chosen := {}
 		var want := Vector3.ZERO
 		for c in candidates:
-			if not policy.pd_allows(c.kind, ship.pd_rounds[k], gun.magazine_rounds) \
+			if not policy.pd_allows(c.kind, ship.pd_rounds, ship.pd_rounds_capacity) \
 					or (c.pos as Vector3).distance_to(muzzle_world) > policy.pd_range_m:
 				continue
 			var rel: Vector3 = c.pos - muzzle_world
@@ -1166,7 +1167,7 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		shot.velocity = ship.velocity + ship.orientation * _scatter(dir, deg_to_rad(gun.dispersion_deg)) * gun.muzzle_velocity_mps
 		shot.pd_target_round = int(chosen.round)
 		spawned.append(shot)
-		ship.pd_rounds[k] -= 1
+		ship.pd_rounds -= 1
 		ship.pd_cooldowns[k] += gun.fire_interval_s()
 
 
@@ -1867,7 +1868,7 @@ func _apply_damage(ship: ShipState, report: DamageReport) -> void:
 
 
 func _check_entry_interface() -> void:
-	if frame == null:
+	if frame == null or terrain != null:
 		return
 	for id in _ship_order:
 		var ship: ShipState = _ships[id]
@@ -1877,8 +1878,91 @@ func _check_entry_interface() -> void:
 			GameLog.info("sim", "%s crossed the %s entry interface at T+%.2f s" % [ship.display_name, body.display_name, sim_time])
 
 
+# --- The surface (play-test batch 10) ------------------------------------------------
+
+## The central body's ground, when it has one (OrbitalBody.terrain()): ships
+## meet it instead of an entry interface. `pci_to_fixed` turns PCI into the
+## body's fixed axes and `surface_spin_pci` is its rotation (rad/s, PCI) —
+## Main keeps both current from the celestial frame.
+var terrain: TerrainMap
+var pci_to_fixed: Basis = Basis.IDENTITY
+var surface_spin_pci: Vector3 = Vector3.ZERO
+## A landed anchor's local frame is moved to its speed past this (m/s): the
+## origin otherwise falls on through the ground.
+const LANDED_REBASE_MPS := 20.0
+var _landing_events: PackedStringArray = PackedStringArray()
+
+
+## Ground height (m above the mean radius) under local position `local`.
+func ground_height_at(local: Vector3) -> float:
+	if terrain == null or frame == null:
+		return 0.0
+	return terrain.height_at(pci_to_fixed * frame.pci_position(local).to_vector3().normalized())
+
+
+## Height (m) of a ship above the ground under it, to its underside.
+func height_above_ground(ship: ShipState) -> float:
+	if frame == null:
+		return NAN
+	var r := frame.pci_position(ship.position).length()
+	return r - body.radius_m - ground_height_at(ship.position) - ship.contact_radius_m()
+
+
+## Its velocity over the turning ground (m/s, local axes).
+func velocity_over_ground(ship: ShipState) -> Vector3:
+	if frame == null:
+		return ship.velocity
+	return frame.pci_velocity(ship.velocity).to_vector3() - surface_spin_pci.cross(frame.pci_position(ship.position).to_vector3())
+
+
+## Touchdowns, lift-offs and crashes since the last call.
+func take_landing_events() -> PackedStringArray:
+	var out := _landing_events
+	_landing_events = PackedStringArray()
+	return out
+
+
+## Ships at the ground: slower than the body's safe landing speed they land
+## and rest there (moving with the surface) until they thrust away; faster —
+## or a missile — they crash.
+func _check_terrain() -> void:
+	if frame == null or terrain == null:
+		return
+	for id in _ship_order:
+		var ship: ShipState = _ships[id]
+		if not ship.is_active():
+			continue
+		var pci := frame.pci_position(ship.position).to_vector3()
+		var up := pci.normalized()
+		var clearance := height_above_ground(ship)
+		if clearance > 0.0:
+			if ship.landed:
+				ship.landed = false
+				_landing_events.append("%s lifted off" % ship.display_name)
+			continue
+		var surface_v := surface_spin_pci.cross(pci)
+		var rel := frame.pci_velocity(ship.velocity).to_vector3() - surface_v
+		if not ship.landed:
+			ship.touchdown_mps = rel.length()
+			if ship.missile != null or ship.touchdown_mps > body.safe_landing_mps:
+				ship.status = ShipState.Status.ENTERED_ATMOSPHERE
+				ship.status_time = sim_time
+				_landing_events.append("%s hit the surface at %.1f m/s" % [ship.display_name, ship.touchdown_mps])
+				GameLog.info("sim", "%s hit the %s at %.1f m/s at T+%.2f s" % [ship.display_name, body.display_name, ship.touchdown_mps, sim_time])
+				continue
+			ship.landed = true
+			_landing_events.append("%s landed at %.1f m/s" % [ship.display_name, ship.touchdown_mps])
+			GameLog.info("sim", "%s landed on the %s at %.1f m/s" % [ship.display_name, body.display_name, ship.touchdown_mps])
+		# Resting: on the ground, moving with it, not turning.
+		ship.position -= up * clearance
+		ship.velocity = surface_v - frame.origin_velocity.to_vector3()
+		ship.angular_velocity = Vector3.ZERO
+
+
 func _rebase_if_needed() -> void:
 	var anchor := get_ship(anchor_id) if anchor_id != &"" else null
+	if anchor != null and anchor.landed and frame != null and anchor.velocity.length() > LANDED_REBASE_MPS:
+		_rebase_velocity(anchor.velocity)
 	if anchor == null or anchor.position.length() < REBASE_DISTANCE_M:
 		return
 	var shift := anchor.position
@@ -1895,3 +1979,15 @@ func _rebase_if_needed() -> void:
 		shot.prev_position -= shift
 	for d in decoys:
 		d.position = (d.position as Vector3) - shift
+
+
+## Gives the local frame's origin velocity `dv` more (local velocities `dv`
+## less): the same motion, seen from a frame that keeps up.
+func _rebase_velocity(dv: Vector3) -> void:
+	frame.origin_velocity = frame.origin_velocity.plus_v3(dv)
+	for id in _ship_order:
+		(_ships[id] as ShipState).velocity -= dv
+	for shot in _rounds:
+		shot.velocity -= dv
+	for d in decoys:
+		d.velocity = (d.velocity as Vector3) - dv

@@ -4,6 +4,399 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Milestone 13, part 3 — retrieve contracts (2026-10-22)
+
+#### Added
+- **Retrieve contracts** from the salvage boss: a pod (flight recorder,
+  survey capsule, data core…) lost at a charted station, guarded by one or
+  two ships. Accepting sets the course and the fight; in flight the pod's
+  beacon is marked 6 km out; **G** alongside it (within the beacon's reach —
+  8 km with a salvage drone — and 5 m/s, with 6 m³ free in the hold) stows
+  it; it pays once you dock at the station that offered the work. Abandoned
+  or lost with the ship, it is gone. Milestone 13 is complete.
+
+#### Tests changed (and why)
+- New `test_m13_retrieve` (2): offers (21 of 160 over 40 boards, back to
+  the offering station, guarded), accepting (course and guards, nothing
+  loaded), delivery only at that station with the pod aboard (mutation-
+  checked), lost with the ship.
+- `smoke_campaign`: a retrieve sortie — the pod marked 6.0 km out, G
+  refusing from there and stowing it alongside, paid on docking.
+
+### Play-test batch 10, part 3 — more hulls at the dealer, super-heavies (2026-10-22)
+
+#### Added
+- **Six new hulls** (tools/make_capital_templates.gd), after Elite Dangerous
+  and Halo lines: Halberd Frigate (hammerhead prow), Wyvern Battlecruiser
+  (tapered bow, swept wings with engines), Anvil Heavy Cruiser (hammerhead,
+  short wings), and three super-heavies — Sovereign Supercarrier (forked
+  prow, 30 craft), Colossus Battleship (hammerhead, two-deck wings) and
+  Leviathan Dreadnought (broad wings, 6 railguns) — the three with a
+  three-level bridge tower. 2.7 kt to 12.5 kt, 18,153 to 92,859 cr.
+
+#### Changed
+- **The template tool works cell by cell** (prow shapes, wings, tower
+  height, extra RCS rows); it still writes the Destroyer, Cruiser and
+  Carrier byte for byte as before.
+- **The dealer fills in as it opens**: what it knows of each template is
+  worked out once a session, cards come one a frame in price order, and a
+  card's 3D view (drawn once, closer and from higher up so the shape reads)
+  is only built when it scrolls into sight. Before, every card was built at
+  once when the shipyard opened.
+
+#### Tests changed (and why)
+- New `test_batch10_dealer` (2): the six hulls valid and for sale (compiled
+  in 14–78 ms), the super-heavies over 10 kt with the bridge three levels
+  up; their shapes (heads 8/10/12 cells over necks 4/6/8; a 4-cell fork;
+  wings 18 and 24 cells across against 10 and 12 amidships).
+- `smoke_shipyard`: waits for the dealer's twelve cards (one a frame).
+
+### Play-test batch 10, part 2 — the Moon's ground, landing, Earth re-entry (2026-10-21)
+
+#### Added
+- **NASA's LOLA elevation map of the Moon** (`data/moon/lola_elevation.bin`,
+  5.9 MB: 8 pixels a degree, whole metres; `tools/convert_lola.py` from the
+  SVS 4720 CGI Moon Kit) plus seeded detail under 90 m finer than its
+  pixels.
+- **Lunar landing**: touch down slower than 4 m/s over the turning surface
+  and the ship rests there until it thrusts away; faster is a crash. The
+  own-ship card's GROUND line (height above ground, vertical speed, speed
+  over ground); a GROUND alert below 3 km coming down too fast; notices on
+  touchdown, lift-off and impact.
+- **The ground drawn below 11 km**: a mesh of the real heights out to the
+  horizon (115 km at most), the colour map on it, its heights growing in
+  over the first 2 km and fading into the flat map at its edge.
+- **Earth re-entry cutscene**: crossing 100 km, a plasma sheath builds and
+  the hull comes apart module by module over 7 s before the debrief.
+
+#### Changed
+- **No instant loss at the Moon's 11 km**: the ground is where the ground
+  is. The orbit panel's TERRAIN line is the band the summits reach into.
+
+#### Tests changed (and why)
+- New `test_batch10_surface` (5): the map (2880 × 1440; a 1° scan −7.8 …
+  10.0 km; 10.4 km near the Selenean summit), a landing from 3 m at 1 m/s
+  (landed at 3.3 m/s, 120 s without moving, the frame keeping up; off again
+  on the main engines), a crash from 5 km (128 m/s) with no loss at the old
+  11 km line, the ground mesh below 11 km (none at 20 km), re-entry
+  breaking up all 64 modules. Checked in a windowed render too.
+- `smoke_campaign`: losing the ship over Earth now waits for the 7 s
+  re-entry cutscene before the debrief (checked that it played).
+- `test_release`: the LOLA attribution row needs its credit line too.
+
+### Play-test batch 10, part 1 — crew under fire, boarding, models (2026-10-21)
+
+#### Fixed
+- **Crew killed by venting while they should have been suited**: general
+  quarters ended the moment no contact was hostile, with its fighters still
+  out, its missiles still in flight or the next ship arriving. Now
+  **battle stations** hold while anything hostile is about (a hostile ship,
+  its craft, a missile, fire taken in the last 10 s) and the crew **stand
+  down** only after 10 s confirmed clear.
+- **Foam didn't put fires out** when the hit that started the fire also cut
+  the room's power: the bottles are self-contained now.
+
+#### Changed
+- **Foam is per sortie**: two charges per room every sortie (no more yard
+  recharge job); a notice when a fire takes hold and when foam is deployed.
+- **Crew fix their own room first**: with a working workshop aboard, fit
+  crew in a room with a damaged system patch it where they stand (damage
+  control and engineers 0.5 hp/s each, others half; × SYS pips, workshop
+  bonus, damage-control tech) up to 75 %; damage-control teams aren't sent
+  to it.
+- **Boarding takes half the time**: the gangway mates in 5 s (cuts in
+  22.5 s), the party crosses in 2.5 s, moves 2.5 s a room, cuts a locked
+  hatch in 10 s, and fights resolve twice as fast (same odds). The same
+  rules for enemy boarders.
+- **Radiator fins fold along their length**, like the flat panel.
+- **Models**: engine bells grow with thrust (620 kN 1.30 × 2.06 m to 1.45 MN
+  1.50 × 3.43 m) with a gimbal, chamber, feed lines and cooling bands, the
+  plume as wide; RCS blocks with five nozzles (the heavy one bigger, with an
+  armour cap); gun turrets with mantlet, recoil sleeve, muzzle brake (or
+  an emitter lens), sight and hatch; PD with an ammunition drum and a
+  fire-control dish; fighters with nose cone, intakes, pylons and stores,
+  spine and tail light; drones with an antenna, sensor ball, nozzles and
+  framed panels; missiles with a nozzle, a band and canards. The docking
+  collar and the gangway are **hexagonal** (the gangway ribbed). The berth's
+  gantries and clamp arms are **red truss** with a **rotating beacon** on
+  each tower and a clamp pad on the hull.
+
+#### Tests changed (and why)
+- New `test_batch10_crew` (3): in-place repair (the reactor 30 → 75 % in
+  31 s by its engineer; no team sent; nothing without a workshop), foam
+  without power and per sortie (an older save's used charges ignored),
+  the boarding timings.
+- New `test_batch10_models` (5): the fin's folds run out from the hull (12
+  panels 0.4 → 8.4 m, fold lines across its width), engine bells by thrust
+  and a plume width each, the hexagonal collar (6 edges, 6-sided hatch)
+  and gangway, 4 beacons on 44 red truss bays turning 0.30 rad in 0.1 s,
+  craft (fighter 19 parts, drone 27; were 10 and 16) and missiles (still
+  two surfaces). Checked in a windowed render too.
+- `smoke_encounter`: battle stations hold with every contact passive, a
+  hostile missile counts, stand down 10 s after nothing is left.
+- `test_feedback_pass`: foam charges are not saved into the next sortie.
+
+### Play-test batch 9, part 7 — effects, the opening range, craft fire rate (2026-10-21)
+
+#### Added
+- **EMP static**: a part an EMP has reset crackles with light-blue static
+  outside the hull until it recovers; with three or more down it crawls
+  over the whole hull.
+- **Jump spool-up**: holding B, rings of light gather round the hull, spin
+  up and close in on its middle, brightening until the jump.
+- **The docking hall behind the berth**: a minimal station interior drawn as
+  the 3D view's sky — ribbed walls, two catwalks with amber lamps, a gridded
+  deck with teal guide lines, light strips overhead.
+
+#### Changed
+- **The encounter's lead starts 4 km out** (was 2.5 km), so the first
+  seconds aren't spent inside its guns' and fighters' reach. 5 km was tried
+  first: the balance sim's scripted (non-manoeuvring) player then lost the
+  mission-5 1v1 to missile salvos.
+- **Craft guns fire at half their old rate**: Hornet interceptor 600 → 300
+  rpm, Wasp fighter 300 → 150 rpm (yours and the enemy's alike; same
+  magazines, so they stay out longer). Balance sim, mission 5: 1 ship won
+  in 12 s (as before); 2 ships survived the 480 s limit at 84 % (lost at
+  333 s before); 3 ships lost at 401 s (259 s before).
+
+#### Tests changed (and why)
+- New `test_batch9_effects` (4): EMP static (10 parts reset → 10 crackling,
+  60 arcs; gone on recovery), the jump spool (3 rings, the end ring 20.8 →
+  7.5 m from the middle, glow 0.26 → 0.77, gone when B is let go), the
+  berth's sky shader, the 4 km opening range and the craft gun rates.
+  Shaders and effects also checked by a windowed render.
+- `smoke_encounter`: brings the two wingmen alongside at fixed close
+  positions instead of `Main.CONTACT_OFFSETS` (which moved out); the checks
+  are about the fight once they are close.
+- `smoke_campaign`: puts the mission-1 target at the old 2.5 km start
+  before the scripted burst — from the new 4 km angle its first round
+  disabled the ship before it could fire back, and the checks need its hits.
+
+### Play-test batch 9, part 6 — cargo contracts, remote salvage (2026-10-21)
+
+#### Added
+- **Cargo contracts** on the missions board — work without a fight. About
+  one offer in three once a second station is charted: 20–90 m³ of freight
+  (medical supplies, reactor spares, colonist mail, …) to another station,
+  paying 120 cr + 4 cr a m³, more the further the jump. Accepting loads it
+  into the hold (refused if there is no room) and sets the course; it pays
+  on arriving there (at LAUNCH, after the jump). It has a line of its own in
+  the hold, the last to vent; banking leaves it aboard; jettisoning it,
+  abandoning the contract or losing the ship fails the contract.
+
+#### Changed
+- **Salvage drones carry the salvage beacon**: with one on the wing (aboard
+  or out, not lost), **G** reaches a disabled wreck or derelict 8 km off
+  instead of 2 km, paying for the whole wreck at once. They no longer cut
+  systems off one at a time into spare parts (removed with their 30-part
+  load and the delivered-parts hand-over); otherwise they escort. The HUD's
+  BEACON line and the 2 km refusal mention the drone.
+
+#### Save format
+- None: the freight lives in the hold's cargo dictionary (schema 13).
+
+#### Tests changed (and why)
+- New `test_batch9_cargo` (4): offers (40 of 120 over 30 boards, 290–830
+  cr, none with one station charted), accepting (a 217 m³ load refused by a
+  216 m³ hold; 20 m³ loaded, the course the Moon, the chosen fight size
+  kept), delivery (banking keeps it, saved, paid once at the Moon), failure
+  (jettisoned, abandoned, lost with the ship). Mutation-checked: a
+  `bank_cargo` that wipes the freight fails it.
+- `test_m15_drones`: the salvage-drone test now measures the beacon reach (8
+  km with the drone, 2 km without or once it is lost) and that a drone out
+  for 60 s cuts nothing (90 % → 90 % intact); the old cutting test is gone
+  with the behaviour. Mutation-checked.
+- `smoke_wing`: the beacon reach follows the wing, instead of salvage
+  drones' parts going into the hold.
+- `smoke_shipyard`: accepting the first offer — a cargo one keeps the
+  chosen fight size and loads its freight (it expected the offer's ship
+  count, 0 for cargo).
+
+### Play-test batch 9, part 5 — the bank, a branching tech tree (2026-10-21)
+
+#### Added
+- **The station bank** (Hangar & bank): a deposit earning 1 % a sortie,
+  compounding (deposit / withdraw any amount), and three loans, one of
+  each at a time — Dockyard credit 1,000 cr at 5 % over 5 sorties, Guild
+  loan 5,000 cr at 4 % over 10, Shipbuilder's mortgage 25,000 cr at 3 % over
+  20 — whose interest and instalments (what is owed over the sorties left)
+  are taken on docking; a shortfall adds 10 % of it; repay part or all at
+  any time. The directory's Hangar line shows what you owe.
+
+#### Changed
+- **The tech tree branches left to right**: from the Shipyard charter
+  (150 cr) out to 15 upgrades (43 levels) in four branches, a lane each,
+  with lines from each node to what it opens; a node's first level needs
+  its parent, each later level the one before. New upgrades: jump
+  calibration (−5 % jump Δv a level), PD fire control (+10 % PD rate of
+  fire), sensor suites (+10 % range), hangar crews (+15 % craft
+  turnaround), crew academy (−20 % training), crew welfare fund (−20 %
+  wages), bounty licences (+10 % bounty). Levels bought before keep, and go
+  on from there.
+
+#### Save format
+- **Schema 13**: the bank's deposit and loans (none in older saves; the
+  original kept as `.v12`).
+
+#### Tests changed (and why)
+- New `test_batch9_economy` (4): the tree's shape (one root; 1, 3, 6, 12,
+  10, 8, 2, 1 levels a column), buying in order, old levels kept, the graph
+  a node per level; the newer nodes (jump 487 → 414 m/s, wages −20 %,
+  training −40 %, sensors 25 → 30 km, PD 300 → 390 rpm, the gun data
+  unchanged); the bank (1,000 → 1,020 in two sorties, a 1,000 cr loan paid
+  off in five for 1,163 cr, a missed instalment's penalty, early
+  repayment); v12 → v13.
+- `test_feedback_pass`: an upgrade needs the charter first.
+- `smoke_shipyard`: the station-tech page holds the graph.
+
+### Play-test batch 9, part 4 — pilots, crew quarters, experience, wages (2026-10-21)
+
+#### Added
+- **Pilots**: a new post. Every fighter, bomber and interceptor needs a fit
+  pilot aboard to launch ("no pilot aboard for Wasp F1 — post someone as
+  pilot"); drones fly themselves. The pilot flies out with the craft, comes
+  back with it, and dies with it if it is lost. The standard complement has
+  a pilot per fighter.
+- **Experience and training**: crew rise a level with sorties served (3, 8,
+  15) or training at the station (60 / 140 / 260 cr), up to a specialist
+  with a title per post (Tactician, Reactor chief, Rigger, Gunnery chief,
+  Marine, Surgeon, Bosun, Ace). Levels already sped repairs and treatment;
+  now gunners fire 3 % faster and engineers draw 2 % more from the reactors
+  per level of their post's average.
+- **Wages**: each sortie (on docking) 1 cr per crew member and 2 cr per
+  level — a frigate of rookies 24 cr; short of credits, the debrief says by
+  how much.
+
+#### Changed
+- **Crew quarters**: all eight departments as drop targets, the crew as
+  badges with placeholder portraits (a face and hair from the name, the
+  post's colour, initials), level, sorties and wage — drag a badge onto a
+  department to repost them (no role menus), ▲ to train, ✕ to dismiss.
+  Portraits in the hiring hall too.
+
+#### Save format
+- **Schema 12**: crew entries carry the sorties they have served; a v11
+  vessel with fighters gets general crew posted as pilots (one per fighter,
+  as far as it has general crew). The original is kept as `.v11`.
+
+#### Tests changed (and why)
+- New `test_batch9_crew` (5): a fighter grounded without a pilot, the pilot
+  out and back with it and lost with it, drones need none; the v11 → v12
+  migration (one pilot posted, original kept); levels with sorties, wages
+  each sortie, training to a specialist; skilled gunners 120 → 131 rpm and
+  engineers ×1.06; a department posts a dropped crew member.
+- `test_m15_scaling`: the frigate's complement includes its pilot; loops
+  over the specialist posts include pilots.
+- `test_boarding`: the default frigate crew has a pilot (11 general, 1
+  pilot).
+- `smoke_wing`: the lost fighter's pilot is lost with it; a new one is
+  posted before the replacement launches.
+- `smoke_campaign`: the tow checks count the crew's wages paid on docking.
+
+### Play-test batch 9, part 3 — the service bay and the quartermaster (2026-10-21)
+
+#### Changed
+- **One service bay** (DRYDOCK) replaces REPAIRS and ARMOURY: three large
+  buttons — REPAIR (spare parts), REARM (rounds, point defence, missiles
+  and flares) and REFUEL (propellant and the jump reserve, with the Δv it
+  gives) — each priced and each buying what the credits allow
+  (`ServiceYard.refuel` / `rearm`; the main tank before the reserve;
+  rounds, then PD, then missiles); the damage report and the cargo hold
+  below.
+- **The quartermaster** has a page of its own in the CONCOURSE: the rarer
+  parts, and **spare parts in any amount** (a counter in tens, 25 cr per
+  10 — `PlayerProfile.buy_spare_parts(amount)`, `parts_price`). The hangar
+  no longer sells them.
+- The berth's service cards lead to the service bay; refusals say "refuel
+  in the SERVICE BAY".
+
+#### Tests changed (and why)
+- New `test_batch9_services` (3): partial refuel (main tank first, 65 t for
+  65 cr, the magazine untouched); rearm fills rounds and PD at the yard's
+  rate and clears the stores record; spare parts priced by amount.
+- `smoke_shipyard`: the SERVICE BAY's three buttons, REFUEL and REARM each
+  filling only their own stores, no parts button in the hangar, the
+  QUARTERMASTER selling 120 parts for 300 cr (replaces the ARMOURY check);
+  the directory's SERVICES line.
+- `test_m13_jumps`: refusals point to the SERVICE BAY.
+
+### Play-test batch 9, part 2 — the builder (2026-10-21)
+
+#### Changed
+- **The 3×1 radiator is a fin**: one cell on the hull, standing its three
+  cells straight out (it lay across the hull before; designs saved that way
+  keep it). Refused where hull is in the way (`fin_blocked`); rejects as
+  much as lying flat. Stored as rotation 4 (`ShipGrid.FIN_ROTATION`).
+- **Bigger rooms do more**: every cell beyond a room's first adds, with
+  diminishing returns — engine rooms main thrust, reactor rooms reactor
+  output (up to +25 %; the stock Frigate +11 % / +15 %, Destroyer +24 %), a
+  hangar's free deck its craft's turnaround (up to ×2). The room card and
+  the stats panel say what size does (workshops, medbays and bridges
+  already scaled; now it is shown). Every design with roomy engine and
+  reactor rooms is a little faster and better powered.
+- **Point defence draws from the magazine**: 15 % of its mass beside guns
+  (all of it without guns), one store for every mount, kept between
+  sorties and restocked at the yard. The Frigate: 600 PD rounds (was
+  2 × 200 built in) and 1,020 gun rounds (was 1,200). A warning when there
+  is PD but no magazine.
+- **The grappling arm** lies folded along four cells (a 4 × 1 mount) and,
+  holding, unfolds and telescopes out to the target's hull (up to 60 m),
+  folding back when it lets go. The Frigate's and Corvette's arms were
+  moved to fit (`tools/fit_grapple_arms.gd`); a saved design whose arm no
+  longer fits is slid to the nearest spot on load, or flagged.
+
+#### Tests changed (and why)
+- New `test_batch9_builder` (4): the fin (one hull cell, three out, valid,
+  saved and loaded, flat-panel rejection; refused when blocked; rotation 1
+  still lies across); room factors on three templates (engine thrust in
+  the stats and in flight; diminishing gains); PD from the magazine (600
+  rounds, more with a dense magazine, restocked, warned without); the arm
+  (4 cells, the Frigate valid, unfolds to a grip 39 m out and folds back).
+- `test_m7_weapons`, `test_m10_contacts`, `test_m9_weapons_crew`,
+  `test_turrets_and_collisions`: point-defence rounds are one store
+  (`pd_rounds`), not one per mount.
+- `smoke_shipyard`: the magazine line now reads "1020 rounds · 600 PD
+  rounds"; the radiator search finds "3×1 — fin, 3 out".
+- `test_blueprint`, `test_feedback_pass`: main thrust is the engines' times
+  the engine rooms' factor.
+
+### Play-test batch 9, part 1 — fixes and quick wins (2026-10-21)
+
+#### Fixed
+- **Our point defence fired on the escorted courier**: it had no side, and
+  point defence takes an unaligned craft for hostile. It is on our side
+  now (craft IFF spares it too). Measured: 300 PD ticks on it in 5 s
+  before, none after.
+- **Front and 3D views** shown alone now fill the width (they kept their
+  narrow fixed widths).
+- **Jumping into a fight half empty after a long trip** (asked): LAUNCH
+  now docks you at the destination station on arrival, whose yard tops the
+  tanks up again (credits allowing) before the sortie — the trip costs
+  credits and propellant, not readiness.
+
+#### Changed
+- **The CoM orb** in the 3D views carries the centre-of-mass symbol's
+  black quarters (seen from any side).
+- **No incoming-round alert** (`RND`) in the banner.
+- **Missile racks are red, saturation pods green**; each tube shows a
+  white missile nose while its share of the load is aboard, fewer as they
+  fire. The part info no longer says "a launch every 0.4 s".
+- **Heavy RCS blocks come armoured**: 30 hp (was 10), 40 mm of shielding
+  (was 5), gunmetal, 2.6 t (was 2.0).
+- **The weapon strip shows the fuel left**: `FUEL ▮▮▮▮▮▮▮▯▯▯ 70 % · Δv 870 m/s`.
+- **Artifacts show their orbit** once surveyed (apoapsis × periapsis,
+  inclination, around what), question marks before.
+
+#### Tests changed (and why)
+- New `test_batch9_fixes` (4): PD on the courier (unaligned 300 ticks, ours
+  0); missile noses 4 / 2 / 0 full, half, empty, rack red, pod green; heavy
+  RCS 30 hp / 40 mm; artifact orbits (ISS 440 × 426 km 51.8°, Roadster
+  1.66 × 0.99 AU, Voyager 1 escaping) and the unknown form.
+- `smoke_shipyard`: the 3D and front views fill the row (700 of 700 px);
+  arrival at the Moon with full tanks (80 of 80 t); the strip shows FUEL.
+- `test_pass_a` (every alert follows its condition): a round on a
+  collision course now raises no alert (it checked the `RND` alert).
+
 ### Enemies field the newer kit (2026-10-21)
 
 #### Changed

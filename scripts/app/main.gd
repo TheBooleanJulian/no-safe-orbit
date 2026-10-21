@@ -36,6 +36,12 @@ var beam_view: BeamView
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 var gangways := GangwayView.new()
+## The ground close up (a body with an elevation map, below its terrain altitude).
+var terrain_view := TerrainView.new()
+## Earth re-entry (play-test batch 10): the cutscene's clock once the player
+## crosses an atmosphere's entry interface (-1 = not playing).
+const REENTRY_CUTSCENE_S := 7.0
+var _reentry_s := -1.0
 var audio := ShipAudio.new()
 var _rounds_heard := 0
 var _pulses_heard := 0
@@ -108,6 +114,10 @@ const DEFAULT_AIM_RANGE_M := 2000.0
 const JUMP_HOLD_S := 5.0
 ## The jump drive is blocked while a hostile has fired on us this recently.
 const UNDER_FIRE_S := 10.0
+## Battle stations (play-test batch 10): the crew stay in their suits until
+## it is confirmed clear — no hostile contact, no hostile craft out, no
+## missile on its way to us and no fire taken — for this long.
+const STAND_DOWN_CLEAR_S := 10.0
 ## The rescue tow (play-test batch 8: "the ship is sometimes stranded and
 ## unable to jump back to the shipyard"): keep holding B while the jump is
 ## blocked under fire for TOW_HOLD_S, or call it from the Tab drawer (press
@@ -121,6 +131,10 @@ var _tow_hold := 0.0
 var _tow_armed_ms := -100_000
 ## When a hostile (ship or craft) last fired, and the rounds counted so far.
 var _last_enemy_fire := -INF
+## When a threat was last seen (battle stations); fires and foam announced.
+var _threat_seen := -INF
+var _fires_known: Dictionary = {}
+var _foam_known: Dictionary = {}
 var _enemy_rounds_seen := {}
 ## A beaten enemy that runs this far is gone: no payout, the next contact comes.
 const ESCAPE_RANGE_M := 40_000.0
@@ -166,8 +180,10 @@ var _wreck_count := 0
 ## An enemy boarding party is at most this big (ours: BoardingAction.MAX_TEAM).
 const ENEMY_BOARDING_TEAM := 8
 ## Where the encounter's ships start, relative to the player (the first of
-## a sortie; arrivals come from ARRIVAL_DISTANCE_M out).
-const CONTACT_OFFSETS := [Vector3(400, 120, -2500), Vector3(-1500, -250, -3800), Vector3(2300, 450, -4400)]
+## a sortie; arrivals come from ARRIVAL_DISTANCE_M out). The lead 4 km ahead
+## (play-test batch 9: 2.5 km put the player inside the enemy's gun and
+## fighter reach from the first second).
+const CONTACT_OFFSETS := [Vector3(640, 190, -4000), Vector3(-2400, -400, -6100), Vector3(3700, 720, -7000)]
 ## The campaign's current goal and the guided first sortie (Milestone 8).
 var mission: MissionChain
 var tutorial: Tutorial
@@ -195,6 +211,7 @@ func _ready() -> void:
 	DisplaySettings.apply_saved()
 	gangways.name = "Gangways"
 	add_child(gangways)
+	add_child(terrain_view)
 	audio.name = "Audio"
 	add_child(audio)
 	location = Location.by_id(get_profile().location)
@@ -274,6 +291,9 @@ func _start_scenario() -> void:
 			celestial.set_star_sun(anchor_r)
 	world.set_central_body(body, anchor_r, anchor_v)
 	world.anchor_id = PLAYER_ID
+	# A real surface to land on (the Moon: NASA's LOLA heights).
+	world.terrain = body.terrain() if not body.is_star else null
+	_update_surface_frame()
 	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
 	player.side = &"player"
 	player.policy = ShipPolicy.from_dict(vessel.policy)
@@ -289,6 +309,7 @@ func _start_scenario() -> void:
 		player.propellant_kg = minf(float(stores.get("propellant_kg", player.propellant_kg)), player.propellant_kg)
 		player.propellant_kg = minf(player.propellant_kg, _intact_tank_capacity(systems))
 		player.set_rounds(mini(int(stores.get("rounds", player.cannon_rounds)), player.cannon_rounds))
+		player.pd_rounds = mini(int(stores.get("pd_rounds", player.pd_rounds)), player.pd_rounds_capacity)
 	var reserve_cap := JumpDrive.standard().reserve_capacity_kg(player.config.propellant_capacity_kg)
 	jump_reserve_kg = reserve_cap
 	if _designs[PLAYER_ID].blueprint == vessel.blueprint:
@@ -312,6 +333,7 @@ func _start_scenario() -> void:
 	else:
 		_spawn_encounter()
 		_spawn_derelicts(player)
+		_spawn_pod(player)
 	_sortie_closed = false
 	combat_log = CombatLog.begin(player, world.sim_time)
 	if _jump_prepaid:
@@ -367,11 +389,70 @@ func _spawn_derelicts(player: ShipState) -> void:
 	hud.derelict_ids.assign(_field.keys())
 
 
+## A retrieve contract's pod (Milestone 13): adrift POD_OFFSET out when the
+## sortie is at the contract's location and it isn't aboard yet; marked
+## like a derelict. G within the beacon's reach and POD_MATCH_MPS stows it.
+const POD_ID := &"contract_pod"
+const POD_OFFSET := Vector3(-3500, 400, -4800)
+const POD_MATCH_MPS := 5.0
+
+
+func _spawn_pod(player: ShipState) -> void:
+	var c := get_profile().active_contract
+	if c.is_empty() or str(c.get("kind", "")) != "retrieve" or str(c.location) != location.id \
+			or str(get_profile().vessel.cargo.get("freight", {}).get("contract", "")) == str(c.id):
+		return
+	var bp := ShipBlueprint.new()
+	bp.name = "Pod"
+	bp.add_module(&"hull_block", Vector3i.ZERO)
+	var grid := ShipGrid.build(bp, ConstructionCatalog.default_catalog())
+	var stats := ShipStats.compute(bp, grid)
+	_designs[POD_ID] = {"blueprint": bp, "grid": grid, "stats": stats, "config": stats.to_ship_config("Pod")}
+	var pod := ShipState.create(POD_ID, "POD %s" % str(c.freight).to_upper(), _designs[POD_ID].config, player.position + POD_OFFSET,
+		player.velocity + Vector3(0.4, 0.1, -0.3), Quaternion(Vector3(0.2, 1, 0.3).normalized(), 0.7))
+	pod.angular_velocity = Vector3(0.02, 0.05, -0.01)
+	pod.side = &"neutral"
+	pod.derelict = true
+	world.add_ship(pod)
+	world.set_input(POD_ID, ShipControlInput.neutral())
+	_spawn_view(POD_ID, Color(1.0, 0.8, 0.35))
+	hud.derelict_ids.append(POD_ID)
+	hud.notice("RETRIEVE — the %s's beacon: %.1f km out" % [c.freight, POD_OFFSET.length() / 1000.0], world.sim_time)
+
+
+## G by the pod: stow it as the contract's freight. Returns why not ("" if done).
+func recover_pod(player: ShipState) -> String:
+	var pod := world.get_ship(POD_ID) if world.has_ship(POD_ID) else null
+	var c := get_profile().active_contract
+	if pod == null or c.is_empty():
+		return "no pod"
+	var d := pod.position.distance_to(player.position)
+	if d > beacon_reach_m():
+		return "close to < %.1f km of the pod (now %.1f km)" % [beacon_reach_m() / 1000.0, d / 1000.0]
+	if (pod.velocity - player.velocity).length() > POD_MATCH_MPS:
+		return "match its speed (within %.0f m/s)" % POD_MATCH_MPS
+	var vessel := get_profile().vessel
+	var room := player.systems.stats.cargo_m3 - vessel.cargo_volume_m3(ConstructionCatalog.default_catalog()) if player.systems != null else 0.0
+	if room < float(c.freight_m3):
+		return "the hold needs %d m³ free (%.0f) — vent cargo [Tab › CARGO]" % [int(c.freight_m3), room]
+	vessel.cargo["freight"] = {"contract": str(c.id), "m3": int(c.freight_m3), "what": str(c.freight)}
+	world.remove_ship(POD_ID)
+	(_views[POD_ID] as Node).queue_free()
+	_views.erase(POD_ID)
+	hud.derelict_ids.erase(POD_ID)
+	var line := "RECOVERED the %s — bring it back to the %s" % [c.freight, Location.by_id(ContractBoard.deliver_to(c)).station_name]
+	hud.notice(line, world.sim_time)
+	if combat_log != null:
+		combat_log.record(world.sim_time, "salvage", line)
+	_save_profile()
+	return ""
+
+
 ## The nearest field derelict within beacon range not yet salvaged this
 ## sortie (&"" if none).
 func derelict_in_reach(player: ShipState) -> StringName:
 	var best := &""
-	var best_d := Salvage.BEACON_RANGE_M
+	var best_d := beacon_reach_m()
 	for id: StringName in _field:
 		if _field_salvaged.has(id) or not world.has_ship(id):
 			continue
@@ -380,6 +461,11 @@ func derelict_in_reach(player: ShipState) -> StringName:
 			best_d = d
 			best = id
 	return best
+
+
+## How far off G drops a beacon: further with a salvage drone on the wing.
+func beacon_reach_m() -> float:
+	return player_wing.beacon_reach_m() if player_wing != null else Salvage.BEACON_RANGE_M
 
 
 ## G by a derelict: the tug takes what is left worth taking — the scrap
@@ -506,7 +592,7 @@ func _update_survey(player: ShipState) -> void:
 
 ## The next encounter: the size picked on the shipyard map, in slots
 ## target_01, target_02, …, each with its own policy and role. The first of
-## a sortie is already close (the lead 2.5 km ahead, crossing the bow at
+## a sortie is already close (the lead 4 km ahead, crossing the bow at
 ## ~25 m/s); one arriving after a salvage (`arriving`) starts
 ## ARRIVAL_DISTANCE_M out and closes; it must be detected before it engages.
 func _spawn_encounter(arriving: bool = false) -> void:
@@ -1003,9 +1089,14 @@ func close_sortie() -> void:
 		GameLog.info("main", "Vessel %s — the hold is gone; the station rebuilds the same design" % ("captured" if player_captured() else "lost"))
 	elif _designs[PLAYER_ID].blueprint == p.vessel.blueprint:
 		var after := player.systems.condition()
-		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds,
+		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds, "pd_rounds": player.pd_rounds,
 			"missiles": player.systems.missile_count(), "jump_reserve_kg": jump_reserve_kg}
 		lines.append_array(p.dock(after, catalog))
+		# A retrieve contract's pod, brought back to the station that wanted it.
+		var delivered := ContractBoard.deliver(p)
+		if delivered != "":
+			lines.append(delivered)
+			mission.contract = {}
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	lines.append_array(_update_derelict_field())
 	for line in lines:
@@ -1041,7 +1132,18 @@ func _on_salvage_pressed() -> void:
 	if hud.loot.visible:
 		hud.loot.close()
 		return
-	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), target_ship())
+	# A retrieve contract's pod first; if it can't be taken yet, a beacon or
+	# a derelict in reach instead, else why not the pod.
+	if world.has_ship(POD_ID):
+		var me := world.get_ship(PLAYER_ID)
+		var why_pod := recover_pod(me)
+		if why_pod == "":
+			return
+		var pod_targeted := target_ship() != null and target_ship().id == POD_ID
+		if pod_targeted or (Salvage.block_reason(me, target_ship(), beacon_reach_m()) != "" and derelict_in_reach(me) == &""):
+			hud.notice("POD: " + why_pod, world.sim_time)
+			return
+	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), target_ship(), beacon_reach_m())
 	if why != "":
 		# Nothing to beacon in the fight: an old derelict close by, then.
 		var old := derelict_in_reach(world.get_ship(PLAYER_ID))
@@ -1063,7 +1165,7 @@ func drop_beacon() -> Array:
 	var catalog := ConstructionCatalog.default_catalog()
 	var intact := target.systems.intact_fraction()
 	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.BEACON_SCRAP_RATE * TechTree.factor("salvage", p.tech_level("salvage")))
-	var bounty := Salvage.bounty_for(target.systems)
+	var bounty := roundi(Salvage.bounty_for(target.systems) * TechTree.factor("bounty", get_profile().tech_level("bounty")))
 	var crates := p.open_crates(Salvage.pulls_for(target.systems), Salvage.BEACON_LOOT_CHANCE, catalog)
 	var stripped := _stripped_part(target)
 	if stripped != null:
@@ -1073,8 +1175,10 @@ func drop_beacon() -> Array:
 			p.stow(d)
 	p.credits += scrap + bounty
 	_salvaged = true
-	var summary := "Salvage beacon on %s (%d%% intact): %d cr scrap (%d%%) + %d cr bounty; %d crates into the hold" % [
-		target.display_name, roundi(intact * 100.0), scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), bounty, crates.size()]
+	var off_m := target.position.distance_to(world.get_ship(PLAYER_ID).position)
+	var carried := " (a salvage drone carried it %.1f km)" % (off_m / 1000.0) if off_m > Salvage.BEACON_RANGE_M else ""
+	var summary := "Salvage beacon on %s%s (%d%% intact): %d cr scrap (%d%%) + %d cr bounty; %d crates into the hold" % [
+		target.display_name, carried, roundi(intact * 100.0), scrap, roundi(Salvage.BEACON_SCRAP_RATE * 100.0), bounty, crates.size()]
 	_record_payout(target, summary, crates, "in the hold")
 	hud.loot.show_rewards("SALVAGE BEACON — %s" % target.display_name, PackedStringArray([
 		"Wreck %d%% intact · the station's tug brings it in" % roundi(intact * 100.0),
@@ -1106,7 +1210,7 @@ func take_prize(c: Contact = null) -> Array:
 	var p := get_profile()
 	var catalog := ConstructionCatalog.default_catalog()
 	var scrap := roundi(Salvage.scrap_value(target.systems) * Salvage.TAKEOVER_SCRAP_RATE * TechTree.factor("salvage", p.tech_level("salvage")))
-	var bounty := Salvage.bounty_for(target.systems)
+	var bounty := roundi(Salvage.bounty_for(target.systems) * TechTree.factor("bounty", get_profile().tech_level("bounty")))
 	var parts := Salvage.spare_parts_for(target.systems)
 	p.vessel.cargo["spare_parts"] = int(p.vessel.cargo.get("spare_parts", 0)) + parts
 	var crates := p.open_crates(Salvage.pulls_for(target.systems), Salvage.TAKEOVER_LOOT_CHANCE, catalog)
@@ -1249,6 +1353,77 @@ func in_combat() -> bool:
 	return false
 
 
+## The body's surface turns: its fixed axes and spin for the simulation.
+func _update_surface_frame() -> void:
+	if world == null or world.terrain == null:
+		return
+	world.pci_to_fixed = celestial.pci_to_body_fixed(world.sim_time)
+	var pole := world.pci_to_fixed.transposed() * Vector3(0, 0, 1)
+	world.surface_spin_pci = pole * deg_to_rad(world.body.rotation_deg_per_day) / 86400.0
+
+
+## Earth re-entry: crossing an atmosphere's entry interface plays the
+## cutscene — the plasma sheath builds and the hull comes apart — before the
+## debrief. True while it plays.
+func _play_reentry(player: ShipState, delta: float) -> bool:
+	if player.status != ShipState.Status.ENTERED_ATMOSPHERE or not world.body.has_atmosphere:
+		return false
+	if _reentry_s < 0.0:
+		_reentry_s = 0.0
+		hud.notice("RE-ENTRY — %s is breaking up" % get_profile().vessel.name, world.sim_time)
+		if combat_log != null:
+			combat_log.record(world.sim_time, "entry", "Re-entry: the hull broke up in the atmosphere")
+	_reentry_s += delta
+	var flow := (player.orientation.inverse() * -player.velocity).normalized() if player.velocity.length() > 1.0 else Vector3.BACK
+	(_views[PLAYER_ID] as ShipView).show_reentry(clampf(_reentry_s / REENTRY_CUTSCENE_S, 0.0, 1.0), flow)
+	camera.h_offset = randf_range(-0.3, 0.3) * minf(_reentry_s, 2.0)
+	camera.v_offset = randf_range(-0.3, 0.3) * minf(_reentry_s, 2.0)
+	if _reentry_s < REENTRY_CUTSCENE_S:
+		return true
+	camera.h_offset = 0.0
+	camera.v_offset = 0.0
+	return false
+
+
+## Anything that could still hurt us: a hostile contact, a hostile's craft
+## out, a missile on its way to us or ours, fire taken within UNDER_FIRE_S.
+func threat_present() -> bool:
+	if encounter.any_hostile(world) or world.sim_time - _last_enemy_fire < UNDER_FIRE_S:
+		return true
+	for c in encounter.contacts:
+		if not c.wing.flying().is_empty():
+			return true
+	for m in world.missiles:
+		if m.side != &"player" and m.is_active():
+			return true
+	return false
+
+
+## A notice when a fire takes hold aboard, and when the foam is deployed
+## (play-test batch 10).
+func _announce_fires(player: ShipState) -> void:
+	var sys := player.systems
+	if sys == null:
+		return
+	for room: int in sys.fires:
+		if not _fires_known.has(room):
+			var left := sys.foam_left(room)
+			var where := "%s %s" % [sys._room_name(room), sys.blueprint.rooms[room].id]
+			hud.notice("FIRE in %s — %s" % [where, "foam in %.0f s (%d charge%s)" % [ShipSystems.FOAM_DELAY_S, left, "" if left == 1 else "s"]
+				if left > 0 else "no foam left: damage control"], world.sim_time)
+			if combat_log != null:
+				combat_log.record(world.sim_time, "fire", "Fire in %s" % where)
+	_fires_known = sys.fires.duplicate()
+	for room: int in sys.foam_used:
+		if int(sys.foam_used[room]) > int(_foam_known.get(room, 0)):
+			var where := "%s %s" % [sys._room_name(room), sys.blueprint.rooms[room].id]
+			var left := sys.foam_left(room)
+			hud.notice("FOAM deployed in %s — fire out (%d charge%s left this sortie)" % [where, left, "" if left == 1 else "s"], world.sim_time)
+			if combat_log != null:
+				combat_log.record(world.sim_time, "fire", "Foam deployed in %s" % where)
+	_foam_known = sys.foam_used.duplicate()
+
+
 ## Note hostile fire: every hostile contact's rounds and its craft's.
 func _note_enemy_fire() -> void:
 	for c in encounter.contacts:
@@ -1363,6 +1538,9 @@ func _update_jump(player: ShipState, delta: float) -> bool:
 		_jump_hold = 0.0
 		_tow_hold = 0.0
 	hud.jump_state = state
+	# The drive spooling up around the hull (play-test batch 9).
+	if _views.has(PLAYER_ID):
+		(_views[PLAYER_ID] as ShipView).jump_spool = _jump_hold / JUMP_HOLD_S
 	return false
 
 
@@ -1809,8 +1987,8 @@ func _complete_mission() -> void:
 
 ## The escort mission's courier: ahead and to starboard, drifting with us.
 func _spawn_courier(player: ShipState) -> void:
-	var c := ShipState.create(COURIER_ID, "COURIER", MissionChain.courier_config(),
-		player.position + player.orientation * Vector3(300, 60, -400), player.velocity + player.orientation * Vector3(0, 0, -4), player.orientation)
+	var c := MissionChain.courier_ship(COURIER_ID, player.position + player.orientation * Vector3(300, 60, -400),
+		player.velocity + player.orientation * Vector3(0, 0, -4), player.orientation)
 	world.add_ship(c)
 	world.set_input(COURIER_ID, ShipControlInput.neutral())
 	hud.escort_id = COURIER_ID
@@ -1977,11 +2155,17 @@ func _process(delta: float) -> void:
 				hud.notice("Prize crew aboard %s — it holds station" % s.display_name, world.sim_time)
 				_next_contact(true, c)
 	target = target_ship()
-	# General quarters while a hostile is about: every crew in spacesuits.
-	var quarters := encounter.any_hostile(world)
+	# Battle stations while anything hostile is about: every crew in
+	# spacesuits; stand down only once it is confirmed clear.
+	if threat_present():
+		_threat_seen = world.sim_time
+	var quarters := world.sim_time - _threat_seen < STAND_DOWN_CLEAR_S
 	if player.systems != null and player.systems.suited != quarters:
 		player.systems.suited = quarters
-		hud.notice("General quarters — crew in spacesuits" if quarters else "Stand down — suits off", world.sim_time)
+		hud.notice("BATTLE STATIONS — crew in spacesuits" if quarters else "Stand down — confirmed clear, suits off", world.sim_time)
+		if combat_log != null:
+			combat_log.record(world.sim_time, "crew", "Battle stations" if quarters else "Stand down: confirmed clear")
+	_announce_fires(player)
 	var courier := world.get_ship(COURIER_ID) if world.has_ship(COURIER_ID) and world.get_ship(COURIER_ID).is_active() else null
 	# What the enemy may shoot at: us, our craft out, an escorted courier
 	# (never a wreck); with focus fire the courier first, else the player.
@@ -2013,15 +2197,20 @@ func _process(delta: float) -> void:
 	hud.missile_chip = "[SPC]" if player.systems != null and player.systems.decoys_aboard() > 0 else ""
 	# Freeze the moment the player is lost (Backspace restarts) and while the
 	# controls panel is open.
-	if (not player.is_active() or player_captured()) and not _sortie_closed:
+	if (not player.is_active() or player_captured()) and not _sortie_closed and not _play_reentry(player, delta):
 		close_sortie()
 		var p := get_profile()
 		hud.debrief.show_debrief(p.last_debrief, "[BACKSPACE] respawn the %s here  ·  [B] back to %s" % [p.vessel.name, location.station_name])
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var running := player.is_active() and not player_captured() and not hud.controls.visible
 	_lap("ai")
+	_update_surface_frame()
 	var alpha := world.advance(delta) if running else 1.0
 	_lap("sim")
+	for line in world.take_landing_events():
+		hud.notice(line.to_upper() if line.contains("PLAYER") else line, world.sim_time)
+		if combat_log != null:
+			combat_log.record(world.sim_time, "landing", line)
 	for line in world.take_link_events():
 		if line.contains("sealed") or line.contains("SEALED"):
 			audio.play("dock")
@@ -2065,14 +2254,6 @@ func _process(delta: float) -> void:
 		_show_burst(burst, player)
 	beam_view.add(world.take_beams())
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
-	# Salvage drones' loads: into the hold (at risk until banked), like a beacon's crates.
-	if player_wing.delivered_parts > 0:
-		var parts := player_wing.delivered_parts
-		player_wing.delivered_parts = 0
-		var vessel := get_profile().vessel
-		vessel.cargo["spare_parts"] = int(vessel.cargo.get("spare_parts", 0)) + parts
-		hud.notice("Salvage drones: +%d spare parts into the hold" % parts, world.sim_time)
-		combat_log.record(world.sim_time, "salvage", "Salvage drones brought %d spare parts aboard" % parts)
 	var log_wings: Array[AirWing] = [player_wing]
 	for c in encounter.contacts:
 		log_wings.append(c.wing)
@@ -2103,10 +2284,19 @@ func _process(delta: float) -> void:
 	_sync_courier_view(alpha, render_origin)
 	if _artifact_view != null and world.has_ship(ARTIFACT_ID):
 		_artifact_view.sync_from(world.get_ship(ARTIFACT_ID), alpha, render_origin)
+	# Grappling arms: where each holding arm grips its target (the attacker's body frame).
+	var holds := {}
+	for g in world.grapples:
+		var a := world.get_ship(g.attacker_id)
+		var b := world.get_ship(g.target_id)
+		if g.holding() and a != null and b != null:
+			var grip := Grapple.grip_point(a, b, g.arm_id)
+			(holds.get_or_add(g.attacker_id, {}) as Dictionary)[g.arm_id] = a.orientation.inverse() * (grip - a.position)
 	for id: StringName in _views:
 		var ship := world.get_ship(id)
 		var view: ShipView = _views[id]
-		view.visible = ship.is_active()
+		view.visible = ship.is_active() or (id == PLAYER_ID and _reentry_s >= 0.0)
+		view.grapple_holds = holds.get(id, {})
 		view.sync_from(ship, alpha, render_origin)
 
 	if player_input.zoom_changed:
@@ -2130,6 +2320,7 @@ func _process(delta: float) -> void:
 	var planet_center := Vec3d.new().minus(world.frame.interpolated_origin(alpha).plus_v3(render_origin)).to_vector3()
 	_update_sun(player)
 	sky.update_view(planet_center, camera, celestial, world.sim_time)
+	terrain_view.update_view(world, player, planet_center, delta)
 	_update_sky_light()
 	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
 		location.sky_body.radius_m if location.sky_body != null else 0.0)

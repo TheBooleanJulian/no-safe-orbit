@@ -78,7 +78,7 @@ func _run() -> void:
 	# with its live line; the berth has the dockmaster's log.
 	var lines := yard.sections.directory_status()
 	_check(yard.sections.buttons.size() == ShipyardSections.SECTIONS.size() and lines.size() == ShipyardSections.SECTIONS.size()
-		and (yard.sections.status_labels["REPAIRS"] as Label).text != ""
+		and (yard.sections.status_labels["SERVICES"] as Label).text != ""
 		and (yard.sections.station_cards["log"] as RichTextLabel).get_parsed_text().contains("DOCKMASTER"),
 		"the station directory lists every place with a live line (%s); the berth has the dockmaster's log" % (yard.sections.status_labels["CREW"] as Label).text)
 	(yard.sections.buttons["CREW"] as Button).pressed.emit()
@@ -90,9 +90,9 @@ func _run() -> void:
 	var ed := yard.editor
 	_check(ed.blueprint.name == "Frigate Mk I" and ed.report.issues.is_empty(), "shipyard opens on the Frigate Mk I template with no issues")
 	_check(yard.issue_text.get_parsed_text().contains("No issues") and not yard.launch_button.disabled, "validation panel reads clean; launch enabled")
-	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   1.2 t · 1200 rounds"), "stats panel shows mass and magazine")
+	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   1.2 t · 1020 rounds · 600 PD rounds"), "stats panel shows mass and magazine (point defence drawing from it)")
 	await process_frame
-	_check(yard._crew_tab.get_child_count() > 2 and yard._vendor_tab.get_child_count() > 1 and yard._tech_tab.get_child_count() > 2,
+	_check(yard._crew_tab.get_child_count() > 2 and yard._vendor_tab.get_child_count() > 1 and yard._tech_tab.find_child("TechGraph", true, false) != null,
 		"the CREW, QUARTERMASTER and UPGRADES tabs are filled")
 
 	# Searchable, categorised palette.
@@ -100,7 +100,7 @@ func _run() -> void:
 	yard.palette_search.text_changed.emit("radiator")
 	var names := yard.palette_items()
 	_check(names.size() == 4 and " ".join(names).contains("Radiator panel (3 cells) 1×3 — along")
-		and " ".join(names).contains("Radiator panel (3 cells) 3×1 — across") and " ".join(names).contains("Heat-pipe radiator 3×1"),
+		and " ".join(names).contains("Radiator panel (3 cells) 3×1 — fin, 3 out") and " ".join(names).contains("Heat-pipe radiator 3×1"),
 		"search 'radiator' lists both long radiators, each both ways round: %s" % ", ".join(names))
 	yard.palette_search.text = ""
 	yard.palette_category.select(Shipyard.CATEGORIES.find("Weapons"))
@@ -120,7 +120,12 @@ func _run() -> void:
 	yard.set_tool(Shipyard.Tool.SELECT)
 	yard.expand_view("3d")
 	await _frames(2)
-	_check(not yard.deck_editor.visible and yard.preview.visible and not yard.side_view.visible, "the 3D preview expands")
+	var row_w := (yard.preview.get_parent() as Control).size.x
+	_check(not yard.deck_editor.visible and yard.preview.visible and not yard.side_view.visible and yard.preview.size.x > 0.9 * row_w,
+		"the 3D preview expands, to the full width (%.0f of %.0f px)" % [yard.preview.size.x, row_w])
+	yard.expand_view("front")
+	await _frames(2)
+	_check(yard.front_view.visible and yard.front_view.size.x > 0.9 * row_w, "so does the front view (%.0f of %.0f px)" % [yard.front_view.size.x, row_w])
 	yard.expand_view("")
 	await _frames(2)
 	_check(yard.deck_editor.visible and yard.side_view.visible, "restore brings the deck editor back")
@@ -220,6 +225,9 @@ func _run() -> void:
 		var speed := main.world.pci_velocity(player.velocity).length()
 		_check(main.world.body.display_name == "Moon" and absf(alt - 100_000.0) < 500.0 and absf(speed - 1633.0) < 5.0,
 			"launched into lunar orbit: %s, %.1f km, %.0f m/s" % [main.world.body.display_name, alt / 1000.0, speed])
+		_check(player.propellant_kg >= player.config.propellant_capacity_kg - 1.0,
+			"topped up at the Lunar Shipyard on arrival: %.1f of %.1f t" % [player.propellant_kg / 1000.0, player.config.propellant_capacity_kg / 1000.0])
+		_check(main.hud.weapon_label.text.contains("FUEL") and main.hud.weapon_label.text.contains("Δv"), "the weapon strip shows the fuel left")
 		var earth_km: float = main.sky.sky_body_center.length() / 1000.0 if main.sky.sky_body != null else 0.0
 		_check(main.sky.sky_body != null and main.sky.sky_body.display_name == "Earth" and earth_km > 356_000.0 and earth_km < 407_000.0,
 			"Earth hangs in the lunar sky (%.0f km)" % earth_km)
@@ -260,7 +268,12 @@ func _run() -> void:
 func _dealer_and_services(yard: Shipyard) -> void:
 	var p := yard.profile
 	yard.show_section("DEALER")
-	await _frames(2)
+	# The cards come one a frame (play-test batch 10: twelve hulls).
+	var waited := 0
+	while yard.sections.dealer_rows.size() < BlueprintIO.list_templates().size() and waited < 600:
+		await process_frame
+		waited += 1
+	_check(yard.sections.dealer_rows.size() == BlueprintIO.list_templates().size(), "the dealer shows all %d hulls" % yard.sections.dealer_rows.size())
 	var cutter_path := ""
 	for path: String in yard.sections.dealer_rows:
 		if path.contains("cutter"):
@@ -283,14 +296,44 @@ func _dealer_and_services(yard: Shipyard) -> void:
 	yard.show_section("MISSIONS")
 	await _frames(2)
 	var offer: Dictionary = p.board[0]
+	var size_before := p.encounter_size
 	(yard.sections.accept_buttons[str(offer.id)] as Button).pressed.emit()
 	await _frames(2)
-	_check(p.active_contract.get("id", "") == offer.id and p.launch_point() == offer.location and p.encounter_size == int(offer.ships),
+	# A cargo contract (play-test batch 9) keeps the chosen fight size and loads its freight.
+	var sized := p.vessel.cargo.has("freight") and p.encounter_size == size_before if offer.kind == "cargo" else p.encounter_size == int(offer.ships)
+	_check(p.active_contract.get("id", "") == offer.id and p.launch_point() == offer.location and sized,
 		"MISSIONS: accepting %s sets the next sortie's course (%s → %s, %d ships)" % [offer.title, p.location, p.launch_point(), p.encounter_size])
 	yard.sections.abandon_button.pressed.emit()
 	await _frames(2)
 	_check(p.active_contract.is_empty(), "and it can be abandoned")
-	yard.show_section("ARMOURY")
+	# The service bay (play-test batch 9): a big button each to repair,
+	# rearm and refuel, with the cargo hold; spare parts are the quartermaster's.
+	var cat := yard.editor.catalog
+	var st := ShipStats.compute(p.vessel.blueprint, ShipGrid.build(p.vessel.blueprint, cat))
+	p.vessel.condition["stores"] = {"propellant_kg": st.propellant_capacity_kg * 0.5, "rounds": st.rounds_capacity / 2,
+		"pd_rounds": st.pd_rounds_capacity / 2, "jump_reserve_kg": JumpDrive.standard().reserve_capacity_kg(st.propellant_capacity_kg)}
+	p.credits = 5000
+	yard.show_section("SERVICES")
 	await _frames(2)
-	_check(yard.sections.armoury_label.get_parsed_text().contains("PROPELLANT") and yard.sections.resupply_button.is_visible_in_tree(),
-		"the ARMOURY lists what needs restocking")
+	var sb: Dictionary = yard.sections.service_buttons
+	_check((sb.repair as Button).is_visible_in_tree() and (sb.rearm as Button).is_visible_in_tree() and (sb.refuel as Button).is_visible_in_tree()
+		and (sb.refuel as Button).text.begins_with("REFUEL ·") and (sb.rearm as Button).text.begins_with("REARM ·"),
+		"the SERVICE BAY has its three buttons (%s / %s / %s)" % [(sb.repair as Button).text, (sb.rearm as Button).text, (sb.refuel as Button).text])
+	(sb.refuel as Button).pressed.emit()
+	await _frames(2)
+	var after: Dictionary = ServiceYard.resupply_needs(p.vessel, cat)
+	_check(float(after.propellant_kg) <= 0.0 and int(after.rounds) > 0, "REFUEL fills the tanks, not the magazine")
+	(sb.rearm as Button).pressed.emit()
+	await _frames(2)
+	after = ServiceYard.resupply_needs(p.vessel, cat)
+	_check(int(after.rounds) == 0 and int(after.pd_rounds) == 0 and not p.vessel.condition.has("stores"), "REARM fills the magazine and point defence")
+	_check(not (yard._bank_button.get_parent() as Node).get_children().any(func(n: Node) -> bool: return n is Button and (n as Button).text.contains("parts")),
+		"the cargo hold no longer sells spare parts")
+	yard.show_section("QUARTERMASTER")
+	await _frames(2)
+	var parts_before := p.spare_parts
+	var credits_before := p.credits
+	yard.parts_amount = 120
+	_check(yard.buy_spare_parts(yard.parts_amount) and p.spare_parts == parts_before + 120 and p.credits == credits_before - PlayerProfile.parts_price(120),
+		"the QUARTERMASTER sells any number of spare parts (120 for %d cr)" % PlayerProfile.parts_price(120))
+	_check(yard._vendor_tab.find_child("BuyParts", true, false) != null and yard._vendor_tab.is_visible_in_tree(), "with a counter and a buy button")

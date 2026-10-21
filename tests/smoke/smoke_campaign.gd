@@ -72,7 +72,11 @@ func _run() -> void:
 	var player := main.world.get_ship(Main.PLAYER_ID)
 	var target := main.world.get_ship(Main.TARGET_ID)
 
-	# 1. Fight: we hit them (scripted aim, real fire action) ...
+	# 1. Fight: we hit them (scripted aim, real fire action) ... From the old
+	# 2.5 km start: the opening range moved out in play-test batch 9, and from
+	# there the first round disables this mission-1 ship before it can fire
+	# back — this is about hits and damage, not the opening range.
+	target.position = player.position + Vector3(400, 120, -2500)
 	Input.action_press("fire")
 	var t0 := main.world.sim_time
 	while target.hits_taken == 0 and main.world.sim_time - t0 < 8.0:
@@ -235,8 +239,14 @@ func _run() -> void:
 	var credits_before_loss := profile.credits
 	var fee := profile.respawn_fee(ConstructionCatalog.default_catalog())
 	main.world.get_ship(Main.PLAYER_ID).status = ShipState.Status.ENTERED_ATMOSPHERE
-	for i in 3:
+	# Earth: the re-entry cutscene first (play-test batch 10), then the debrief.
+	Engine.time_scale = 8.0
+	var waited := 0
+	while not main.hud.debrief.visible and waited < 5000:
 		await process_frame
+		waited += 1
+	Engine.time_scale = 1.0
+	_check(main._reentry_s >= Main.REENTRY_CUTSCENE_S, "the re-entry cutscene played first (%.1f s)" % main._reentry_s)
 	_check(main.hud.debrief.visible and main.hud.debrief.text().contains("VESSEL LOST") and main.hud.debrief.text().contains("Respawn fee"),
 		"losing the ship shows the debrief with the fee")
 	_check(profile.credits == credits_before_loss - fee and profile.vessel.cargo_is_empty(), "fee %d credits paid; the hold's 25 parts lost" % fee)
@@ -252,7 +262,7 @@ func _run() -> void:
 	var tow := JumpDrive.standard().tow_credits(reborn.mass_kg())
 	await _press("restart_scenario")
 	await _frames(3)
-	_check(profile.credits == 1000 - tow, "dry tanks: the rescue tow brings the ship home for %d credits (left %d)" % [tow, profile.credits])
+	_check(profile.credits == 1000 - tow - _wages_paid(profile), "dry tanks: the rescue tow brings the ship home for %d credits (left %d, after wages)" % [tow, profile.credits])
 	# Stranded under fire (play-test batch 8): the jump is blocked, but held
 	# on, B calls a rescue tow at hazard pay.
 	var me := main.world.get_ship(Main.PLAYER_ID)
@@ -275,7 +285,7 @@ func _run() -> void:
 	Engine.time_scale = 1.0
 	await _frames(3)
 	var base_fee := JumpDrive.standard().tow_credits(me.mass_kg() + main.jump_reserve_kg) if is_instance_valid(main) else 0
-	_check(saw_blocked and current_scene is Shipyard and hazard_fee > 0 and profile.credits == 5000 - hazard_fee,
+	_check(saw_blocked and current_scene is Shipyard and hazard_fee > 0 and profile.credits == 5000 - hazard_fee - _wages_paid(profile),
 		"under fire: the jump is blocked, holding on calls the tow — home for %d cr hazard pay (left %d)" % [hazard_fee, profile.credits])
 	# Tab › Call rescue tow: twice to confirm; out of a fight, the plain fee.
 	var yard2 := current_scene as Shipyard
@@ -291,9 +301,46 @@ func _run() -> void:
 		_check(current_scene == main2 and profile.credits == 5000, "the first press only quotes the fee (%d cr)" % fee2)
 		main2.request_rescue_tow()
 		await _frames(3)
-		_check(current_scene is Shipyard and profile.credits == 5000 - fee2 and fee2 < hazard_fee,
+		_check(current_scene is Shipyard and profile.credits == 5000 - fee2 - _wages_paid(profile) and fee2 < hazard_fee,
 			"the second calls it: home for %d cr, no hazard pay out of a fight (left %d)" % [fee2, profile.credits])
+	# Milestone 13: a retrieve contract — the pod in flight, G stows it, paid at the dock.
+	var yard3 := current_scene as Shipyard
+	if yard3 != null:
+		yard3.debrief.hide_debrief()
+		profile.active_contract = {}
+		var offer := ContractBoard._retrieve_offer(profile, RandomNumberGenerator.new(), [profile.location], 9)
+		profile.board = [offer]
+		_check(ContractBoard.accept(profile, str(offer.id)) == "", "a retrieve contract accepted")
+		_check(yard3.launch(), "launched for the pod")
+		await _frames(4)
+		var main3 := current_scene as Main
+		var pod := main3.world.get_ship(Main.POD_ID) if main3 != null and main3.world.has_ship(Main.POD_ID) else null
+		_check(pod != null and main3.hud.derelict_ids.has(Main.POD_ID), "the pod is out there, marked")
+		if pod != null:
+			var me3 := main3.world.get_ship(Main.PLAYER_ID)
+			var far := main3.recover_pod(me3)
+			_check(far.contains("close to"), "from %.1f km, G says to close (%s)" % [pod.position.distance_to(me3.position) / 1000.0, far])
+			pod.position = me3.position + Vector3(0, 0, -300)
+			pod.velocity = me3.velocity
+			main3._on_salvage_pressed()
+			_check(not main3.world.has_ship(Main.POD_ID) and profile.vessel.cargo.has("freight"), "G alongside: stowed in the hold")
+			var credits3 := profile.credits
+			main3.open_shipyard()
+			await _frames(4)
+			_check(profile.active_contract.is_empty() and not profile.vessel.cargo.has("freight")
+				and profile.credits == credits3 + int(offer.credits) - _wages_paid(profile),
+				"docked at the station that wanted it: paid %d cr" % int(offer.credits))
 	_finish()
+
+
+## The crew's wages paid on the last docking (play-test batch 9), from the
+## vessel's record.
+func _wages_paid(p: PlayerProfile) -> int:
+	for k in range(p.vessel.history.size() - 1, -1, -1):
+		var line := p.vessel.history[k]
+		if line.begins_with("Wages: "):
+			return line.trim_prefix("Wages: ").get_slice(" ", 0).to_int()
+	return 0
 
 
 func _finish() -> void:

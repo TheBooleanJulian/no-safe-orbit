@@ -92,7 +92,6 @@ var _history_label: RichTextLabel
 var _priority: OptionButton
 var _repair_button: Button
 var _bank_button: Button
-var _buy_button: Button
 var debrief: DebriefPanel
 ## Searchable, categorised palette (replaces the three tabs).
 var palette_list: ItemList
@@ -583,7 +582,25 @@ func scrap_active() -> int:
 	return parts
 
 
-## ARMOURY: rearm and refuel now (otherwise the launch does it).
+## SERVICE BAY: refuel now (otherwise the launch does it).
+func refuel_now() -> String:
+	var line := ServiceYard.refuel(profile.vessel, profile, editor.catalog)
+	_save_profile()
+	_set_status(line if line != "" else "The tanks are full")
+	_refresh()
+	return line
+
+
+## SERVICE BAY: rearm now — rounds, point defence, missiles and flares.
+func rearm_only() -> String:
+	var line := ServiceYard.rearm(profile.vessel, profile, editor.catalog)
+	_save_profile()
+	_set_status(line if line != "" else "The magazines and launchers are full")
+	_refresh()
+	return line
+
+
+## Rearm and refuel now (otherwise the launch does it).
 func rearm_now() -> String:
 	var line := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
 	_save_profile()
@@ -629,6 +646,16 @@ func launch() -> bool:
 			_set_status(why_jump + " — or change course on the nav chart", true)
 			return false
 		GameLog.info("shipyard", "Jumped to %s at launch: %s" % [jumped.station_name, JumpDrive.dv_text(dv)])
+		# Docked there on arrival: its yard tops the tanks up again (credits
+		# allowing) — a long trip doesn't send the ship into a fight half
+		# empty (play-test batch 9).
+		var topped := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
+		if topped != "":
+			GameLog.info("shipyard", "%s on arrival: %s" % [jumped.station_name, topped])
+	# A cargo contract's freight is handed over on arrival (play-test batch 9).
+	var delivered := ContractBoard.deliver(profile)
+	if delivered != "":
+		GameLog.info("shipyard", delivered)
 	# A deep-space survey's round trip is paid from what is aboard now.
 	var survey := Artifact.by_id(profile.survey_target)
 	if survey != null and survey.is_deep_space():
@@ -738,14 +765,32 @@ func bank_cargo() -> PackedStringArray:
 	return banked
 
 
-func buy_spare_parts() -> bool:
-	if not profile.buy_spare_parts():
-		_set_status("Not enough credits (%d needed)" % PlayerProfile.PARTS_LOT_PRICE, true)
+## The bank's buttons: save, say what happened, redraw.
+func bank_result(why: String) -> void:
+	if why != "":
+		_set_status(why, true)
+		return
+	_save_profile()
+	_set_status("Bank: done — deposit %d cr, owed %d cr, credits %d" % [profile.bank_deposit, profile.debt(), profile.credits])
+	_refresh()
+
+
+## QUARTERMASTER: buy `amount` spare parts.
+func buy_spare_parts(amount: int = PlayerProfile.PARTS_LOT) -> bool:
+	var cost := PlayerProfile.parts_price(amount)
+	if not profile.buy_spare_parts(amount):
+		_set_status("Not enough credits (%d needed)" % cost, true)
 		return false
 	_save_profile()
-	_set_status("Bought %d spare parts for %d credits" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE])
+	_set_status("Bought %d spare parts for %d credits" % [amount, cost])
 	_refresh_hangar()
+	if sections != null:
+		sections.refresh()
 	return true
+
+
+## How many spare parts the quartermaster's counter is set to.
+var parts_amount: int = 50
 
 
 func _save_profile() -> void:
@@ -837,8 +882,9 @@ func _refresh_stats() -> void:
 		"HEAT       %.0f / %.0f kW rejected" % [s.heat_generation_kw, s.heat_rejection_kw],
 		"CREW       %d berths · standard %s" % [s.crew_capacity, _complement_text(CrewRoster.complement_for(editor.blueprint, editor.grid, s))],
 		_defence_text(PdCoverage.of(editor.grid)),
+		_rooms_text(s),
 		_craft_text(),
-		"MAGAZINE   %.1f t · %d rounds" % [s.magazine_kg / 1000.0, s.rounds_capacity],
+		"MAGAZINE   %.1f t · %d rounds%s" % [s.magazine_kg / 1000.0, s.rounds_capacity, " · %d PD rounds" % s.pd_rounds_capacity if s.pd_gun != null else ""],
 		"CARGO      %.0f m³" % s.cargo_m3,
 		"HULL       %.0f × %.0f × %.0f m" % [s.hull_bounds_m.size.x, s.hull_bounds_m.size.y, s.hull_bounds_m.size.z],
 	])
@@ -847,9 +893,45 @@ func _refresh_stats() -> void:
 ## "CMD 2 · ENG 2 · …" (the specialists; the rest are general hands).
 static func _complement_text(want: Array[int]) -> String:
 	var parts := PackedStringArray()
-	for r in CrewRoster.Role.GENERAL:
+	for r in CrewRoster.specialist_roles():
 		parts.append("%s %d" % [CrewRoster.ROLE_SHORT[r], want[r]])
 	return " ".join(parts)
+
+
+## What a bigger room of `d` does (play-test batch 9), for the room card.
+static func room_size_text(d: RoomDefinition) -> String:
+	var step := ShipSystems.ROOM_BONUS_PER_CELL
+	match d.id:
+		&"engine_room":
+			return "BIGGER IS BETTER  every cell beyond the first adds main thrust — +%d %% for the first, up to +%d %% (all engine rooms together)" % [
+				roundi((ShipStats.size_gain(1, ShipStats.ROOM_SIZE_GAIN, ShipStats.ROOM_SIZE_SCALE) - 1.0) * 100.0), roundi(ShipStats.ROOM_SIZE_GAIN * 100.0)]
+		&"reactor_room":
+			return "BIGGER IS BETTER  every cell beyond the first adds reactor output — +%d %% for the first, up to +%d %% (all reactor rooms together)" % [
+				roundi((ShipStats.size_gain(1, ShipStats.ROOM_SIZE_GAIN, ShipStats.ROOM_SIZE_SCALE) - 1.0) * 100.0), roundi(ShipStats.ROOM_SIZE_GAIN * 100.0)]
+		&"hangar":
+			return "BIGGER IS BETTER  every free deck cell (no bay on it) turns craft round faster — up to ×%.0f" % (1.0 + ShipStats.HANGAR_DECK_GAIN)
+	match d.role:
+		&"workshop":
+			return "BIGGER IS BETTER  +%d %% faster repairs and hull sealing per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+		&"life_support":
+			return "BIGGER IS BETTER  +%d %% faster treatment of the wounded per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+		&"command":
+			return "BIGGER IS BETTER  +%d %% faster scans per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+		&"quarters", &"cargo", &"magazine":
+			return "Holds more with every cell"
+	return "Size doesn't matter: it only connects rooms"
+
+
+## What the design's rooms add by their size, for the stats panel.
+func _rooms_text(s: ShipStats) -> String:
+	var parts := PackedStringArray()
+	if s.engine_room_factor > 1.0:
+		parts.append("engine rooms +%d %% thrust" % roundi((s.engine_room_factor - 1.0) * 100.0))
+	if s.reactor_room_factor > 1.0:
+		parts.append("reactor rooms +%d %% output" % roundi((s.reactor_room_factor - 1.0) * 100.0))
+	if s.hangar_factor > 1.0:
+		parts.append("hangar ×%.1f turnaround" % s.hangar_factor)
+	return "ROOMS      %s" % (" · ".join(parts) if not parts.is_empty() else "all 1 cell or no size bonus — bigger engine and reactor rooms, workshops, medbays, bridges and hangars do more")
 
 
 ## Point defence against what the hull wants (Milestone 15).
@@ -1084,7 +1166,7 @@ func _fill_palette_list() -> void:
 				# Long radiators: both ways round, as their own entries.
 				var n: int = (def as EquipmentDefinition).length_cells
 				rows.append([place[0], place[1], key + "|a", "%s 1×%d — along the hull%s" % [text, n, suffix], [entry[0], id, 0], color, tip])
-				rows.append([place[0], place[1], key + "|b", "%s %d×1 — across the hull%s" % [text, n, suffix], [entry[0], id, 1], color, tip])
+				rows.append([place[0], place[1], key + "|b", "%s %d×1 — fin, %d out from the hull%s" % [text, n, n, suffix], [entry[0], id, ShipGrid.FIN_ROTATION], color, tip])
 				continue
 			rows.append([place[0], place[1], key, text + suffix, [entry[0], id], color, tip])
 	var cat_order: Array = CATEGORIES.slice(1)
@@ -1210,6 +1292,10 @@ func expand_view(which: String) -> void:
 	side_view.visible = which in ["", "side"]
 	front_view.visible = which in ["", "front"]
 	preview.visible = which in ["", "3d"]
+	# Shown alone, a view takes the whole width (the front and 3D panes are
+	# fixed-width beside the side view otherwise — play-test batch 9).
+	front_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if which == "front" else Control.SIZE_FILL
+	preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL if which == "3d" else Control.SIZE_FILL
 	_refresh_views()
 
 
@@ -1266,6 +1352,8 @@ func _build_hangar_panel() -> void:
 	_repair_button.pressed.connect(func() -> void: repair())
 	row.add_child(_priority)
 	row.add_child(_repair_button)
+	# The service bay's big REPAIR button does this now; the priority stays here.
+	_repair_button.visible = false
 	_convert_button = Button.new()
 	_convert_button.text = "Convert to blocks"
 	_convert_button.tooltip_text = "Rebuild the old large sections from blocks with armour plates (free on your own vessel's design)"
@@ -1277,9 +1365,6 @@ func _build_hangar_panel() -> void:
 	_bank_button.text = "Bank cargo"
 	_bank_button.tooltip_text = "Unload the hold into the station's bank: safe from loss"
 	_bank_button.pressed.connect(func() -> void: bank_cargo())
-	_buy_button = Button.new()
-	_buy_button.text = "Buy %d parts (%d cr)" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE]
-	_buy_button.pressed.connect(func() -> void: buy_spare_parts())
 	var debrief_button := Button.new()
 	debrief_button.text = "Last debrief"
 	debrief_button.pressed.connect(func() -> void: debrief.show_debrief(profile.last_debrief))
@@ -1287,9 +1372,9 @@ func _build_hangar_panel() -> void:
 	dev_button.text = "DEV +100 cr"
 	dev_button.tooltip_text = "Testing aid: 100 free credits"
 	dev_button.pressed.connect(func() -> void: dev_add_credits())
-	for b in [_bank_button, _buy_button, dev_button]:
+	for b in [_bank_button, dev_button]:
 		row2.add_child(b)
-	for b in [_repair_button, _bank_button, _buy_button, debrief_button]:
+	for b in [_repair_button, _bank_button, debrief_button]:
 		CyberTheme.style_button(b)
 	CyberTheme.style_button(dev_button, CyberTheme.AMBER)
 	box.add_child(_hangar_label)
@@ -1305,7 +1390,8 @@ func _build_hangar_panel() -> void:
 	for spec in [["CREW", "_crew_tab"], ["QUARTERMASTER", "_vendor_tab"], ["UPGRADES", "_tech_tab"]]:
 		var scroll := ScrollContainer.new()
 		scroll.name = spec[0]
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		# The tech tree is wider than a small window: it scrolls sideways.
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if spec[0] == "UPGRADES" else ScrollContainer.SCROLL_MODE_DISABLED
 		var inner := VBoxContainer.new()
 		inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		scroll.add_child(inner)
@@ -1491,7 +1577,7 @@ func _refresh_artifacts() -> void:
 				cost = CyberTheme.tint(cost + " — out of reach", CyberTheme.AMBER)
 		var done := profile.codex.has(a.id)
 		var status := CyberTheme.tint("✔ surveyed", CyberTheme.CYAN) if done else "%d cr" % a.survey_credits
-		var line := "%s — %s · %s%s" % [a.display_name, where, status, cost]
+		var line := "%s — %s · %s · %s%s" % [a.display_name, where, a.orbit_summary() if done else a.orbit_unknown(), status, cost]
 		if done:
 			line += "\n" + CyberTheme.tint("%s Launched %s. %s" % [a.lore, a.launched, a.uncertainty], CyberTheme.TEXT_DIM)
 		text.text = line
@@ -1555,57 +1641,69 @@ func _refresh_station_tabs() -> void:
 		for c in tab.get_children():
 			c.queue_free()
 	var berths := profile.berths(catalog)
-	_crew_tab.add_child(_station_label("[b]%s[/b] · %d / %d berths · posts change here for free; in flight Tab › CREW sends someone to a new post" % [
-		v.name, v.crew.size(), berths]))
+	_crew_tab.add_child(_station_label("[b]%s[/b] · %d / %d berths · wages %d cr a sortie · drag a crew member onto a department to post them there (free here; in flight Tab › CREW)" % [
+		v.name, v.crew.size(), berths, profile.wages()]))
 	# Grouped by post, with this design's standard complement beside each.
 	var by_role := {}
 	for i in v.crew.size():
 		(by_role.get_or_add(clampi(int(v.crew[i].role), 0, CrewRoster.ROLE_NAMES.size() - 1), []) as Array).append(i)
 	var vgrid := ShipGrid.build(v.blueprint, catalog)
 	var want := CrewRoster.complement_for(v.blueprint, vgrid, ShipStats.compute(v.blueprint, vgrid))
-	# The roster board (play-test batch 6): a card per department — who
-	# serves there, against the standard complement (amber when short).
+	# The roster board (play-test batch 9): every department, each a drop
+	# target, its crew as badges with portraits — drag to repost, ▲ to
+	# train, ✕ to dismiss.
 	var board := HFlowContainer.new()
+	board.name = "CrewBoard"
 	board.add_theme_constant_override("h_separation", CyberTheme.SPACE_M)
 	board.add_theme_constant_override("v_separation", CyberTheme.SPACE_M)
 	_crew_tab.add_child(board)
 	for r in CrewRoster.ROLE_NAMES.size():
 		var members: Array = by_role.get(r, [])
-		if members.is_empty() and want[r] == 0:
-			continue
 		var short := members.size() < want[r]
-		var dept := ShipyardSections.card(board, "%s   %d%s" % [str(CrewRoster.ROLE_NAMES[r]).to_upper(), members.size(), " / %d" % want[r] if want[r] > 0 else ""],
-			CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r], Vector2(CREW_CARD_WIDTH, 0))
+		var dept := CrewDepartment.new()
+		dept.name = "Dept" + str(CrewRoster.ROLE_SHORT[r])
+		dept.role = r
+		dept.custom_minimum_size = Vector2(CREW_CARD_WIDTH, 120)
+		dept.add_theme_stylebox_override("panel", CyberTheme.panel(CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r], CyberTheme.SPACE_S, 0.6))
+		dept.crew_dropped.connect(func(index: int, role: int) -> void:
+			profile.set_crew_role(index, role)
+			_save_profile()
+			_refresh_station_tabs())
+		board.add_child(dept)
+		var box := VBoxContainer.new()
+		box.mouse_filter = Control.MOUSE_FILTER_PASS
+		box.add_theme_constant_override("separation", CyberTheme.SPACE_XS)
+		dept.add_child(box)
+		var head := Label.new()
+		head.text = "%s   %d%s" % [str(CrewRoster.ROLE_NAMES[r]).to_upper(), members.size(), " / %d" % want[r] if want[r] > 0 else ""]
+		head.add_theme_color_override("font_color", CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r])
+		head.add_theme_font_size_override("font_size", CyberTheme.SIZE_TITLE)
+		head.mouse_filter = Control.MOUSE_FILTER_PASS
+		box.add_child(head)
 		if members.is_empty():
-			dept.add_child(_station_label("[color=#%s]no one posted — short of the standard complement[/color]" % CyberTheme.AMBER.to_html(false)))
+			var hint := Label.new()
+			hint.text = "drop crew here" + (" — short of the standard complement" if short else "")
+			hint.add_theme_color_override("font_color", CyberTheme.AMBER if short else CyberTheme.TEXT_FAINT)
+			hint.mouse_filter = Control.MOUSE_FILTER_PASS
+			box.add_child(hint)
+		var badges := HFlowContainer.new()
+		badges.mouse_filter = Control.MOUSE_FILTER_PASS
+		badges.add_theme_constant_override("h_separation", CyberTheme.SPACE_XS)
+		badges.add_theme_constant_override("v_separation", CyberTheme.SPACE_XS)
+		box.add_child(badges)
 		for i: int in members:
 			var c: Dictionary = v.crew[i]
-			var row := HBoxContainer.new()
-			var who := Label.new()
-			who.text = "%s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
-			who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			who.clip_text = true
-			row.add_child(who)
-			var role := OptionButton.new()
-			for n in CrewRoster.ROLE_NAMES:
-				role.add_item(n)
-			role.select(int(c.role))
-			role.tooltip_text = "Post %s elsewhere" % c.name
-			role.item_selected.connect(func(post: int) -> void:
-				profile.set_crew_role(i, post)
-				_save_profile())
-			row.add_child(role)
-			var out := Button.new()
-			out.text = "✕"
-			out.tooltip_text = "Dismiss %s" % c.name
-			CyberTheme.style_button(out, CyberTheme.RED)
-			out.pressed.connect(func() -> void:
-				profile.dismiss(i)
+			var skill := int(c.get("skill", 0))
+			var cost := profile.training_cost(skill)
+			var badge := CrewBadge.new()
+			badge.setup(i, c, cost, profile.credits >= cost)
+			badge.train_pressed.connect(func(index: int) -> void: _station_result(profile.train(index)))
+			badge.dismiss_pressed.connect(func(index: int) -> void:
+				profile.dismiss(index)
 				_save_profile()
 				_refresh_hangar())
-			row.add_child(out)
-			dept.add_child(row)
-	_crew_tab.add_child(_station_label("[b]HIRING HALL[/b] · credits %d · %d / %d berths filled · ★ = skill (faster repairs and treatment)" % [
+			badges.add_child(badge)
+	_crew_tab.add_child(_station_label("[b]HIRING HALL[/b] · credits %d · %d / %d berths filled · ★ = level (sorties or training: faster at their post)" % [
 		profile.credits, v.crew.size(), berths]))
 	var hall := HFlowContainer.new()
 	hall.add_theme_constant_override("h_separation", CyberTheme.SPACE_S)
@@ -1615,8 +1713,18 @@ func _refresh_station_tabs() -> void:
 		var c: Dictionary = profile.hire_pool[i]
 		var role_index := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
 		var who := ShipyardSections.card(hall, "", CrewRoster.ROLE_COLORS[role_index], Vector2(250, 0))
-		who.add_child(_station_label("[b]%s[/b]\n[color=#%s]%s[/color] %s" % [c.name, (CrewRoster.ROLE_COLORS[role_index] as Color).to_html(false),
-			CrewRoster.ROLE_NAMES[role_index], "★".repeat(int(c.skill))]))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+		who.add_child(row)
+		var face := CrewPortrait.new()
+		face.person = str(c.name)
+		face.role = role_index
+		face.custom_minimum_size = Vector2(52, 52)
+		row.add_child(face)
+		var text := _station_label("[b]%s[/b]\n[color=#%s]%s[/color] %s" % [c.name, (CrewRoster.ROLE_COLORS[role_index] as Color).to_html(false),
+			CrewRoster.ROLE_NAMES[role_index], "★".repeat(int(c.skill))])
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(text)
 		var hire := Button.new()
 		hire.text = "Hire · %d cr" % int(c.fee)
 		hire.disabled = not (v.crew.size() < berths and profile.credits >= int(c.fee))
@@ -1635,21 +1743,44 @@ func _refresh_station_tabs() -> void:
 			"Buy (%d cr)" % int(item.price), func() -> void: _station_result(profile.buy_stock(i, catalog)), profile.credits >= int(item.price)))
 	if profile.vendor_stock.is_empty():
 		_vendor_tab.add_child(_station_label("Sold out until the next sortie."))
-	_vendor_tab.add_child(_station_row("Spare parts ×%d" % PlayerProfile.PARTS_LOT, "Buy (%d cr)" % PlayerProfile.PARTS_LOT_PRICE,
-		func() -> void: buy_spare_parts(), profile.credits >= PlayerProfile.PARTS_LOT_PRICE))
-	for branch in ["SHIP", "CAPTAIN"]:
-		_tech_tab.add_child(_station_label("[b]%s[/b] · credits %d" % ["SHIP TECHNOLOGY — every vessel" if branch == "SHIP" else "CAPTAIN'S TRAINING", profile.credits]))
-		for n in TechTree.NODES:
-			if n.branch != branch:
-				continue
-			var level := profile.tech_level(n.id)
-			var cost := TechTree.next_cost(level)
-			var id: String = n.id
-			_tech_tab.add_child(_station_row("%s %s — %s per level" % [n.name, "■".repeat(level) + "□".repeat(TechTree.MAX_LEVEL - level), n.text],
-				"Upgrade (%d cr)" % cost if cost > 0 else "Max", func() -> void: _station_result(profile.buy_tech(id)), cost > 0 and profile.credits >= cost))
+	# Spare parts in any amount (play-test batch 9), at the lot's rate.
+	var parts_row := HBoxContainer.new()
+	parts_row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	var parts_label := _station_label("[b]Spare parts[/b] · %d cr per %d · you have %d" % [PlayerProfile.PARTS_LOT_PRICE, PlayerProfile.PARTS_LOT, profile.spare_parts])
+	parts_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parts_row.add_child(parts_label)
+	var amount := SpinBox.new()
+	amount.name = "PartsAmount"
+	amount.min_value = PlayerProfile.PARTS_LOT
+	amount.max_value = 5000
+	amount.step = PlayerProfile.PARTS_LOT
+	amount.value = parts_amount
+	amount.custom_minimum_size = Vector2(120, 0)
+	parts_row.add_child(amount)
+	var buy := Button.new()
+	buy.name = "BuyParts"
+	CyberTheme.style_button(buy, CyberTheme.AMBER, true)
+	var show_price := func(v: float) -> void:
+		parts_amount = int(v)
+		buy.text = "Buy %d · %d cr" % [parts_amount, PlayerProfile.parts_price(parts_amount)]
+		buy.disabled = profile.credits < PlayerProfile.parts_price(parts_amount)
+	show_price.call(amount.value)
+	amount.value_changed.connect(show_price)
+	buy.pressed.connect(func() -> void: buy_spare_parts(parts_amount))
+	parts_row.add_child(buy)
+	_vendor_tab.add_child(parts_row)
+	# The tree, left to right (play-test batch 9): teal bought, gold
+	# buyable now, dim locked; hover a node for what it does.
+	_tech_tab.add_child(_station_label("[b]STATION TECHNOLOGY[/b] · credits %d · from the charter on the left, branching right — each level opens the next; hover a node for what it does" % profile.credits))
+	var graph := TechGraph.new()
+	graph.name = "TechGraph"
+	graph.profile = profile
+	graph.buy_pressed.connect(func(id: String) -> void: _station_result(profile.buy_tech(id)))
+	_tech_tab.add_child(graph)
+	graph.rebuild()
 
 
-const CREW_CARD_WIDTH := 400.0
+const CREW_CARD_WIDTH := 560.0
 
 
 func _station_label(text: String) -> RichTextLabel:
@@ -1753,7 +1884,6 @@ func _refresh_hangar() -> void:
 	var plan := ServiceYard.plan(jobs, _priority.selected, profile.spare_parts, v, profile)
 	_repair_button.disabled = plan.is_empty()
 	_bank_button.disabled = v.cargo_is_empty()
-	_buy_button.disabled = profile.credits < PlayerProfile.PARTS_LOT_PRICE
 	_repair_button.text = "Repair (%d)" % ServiceYard.total_cost(plan) if not plan.is_empty() else "Repair"
 	_refresh_station_tabs()
 
@@ -1830,7 +1960,7 @@ func _update_ghost() -> void:
 				var def: EquipmentDefinition = editor.catalog.equipment[place_def]
 				if def.is_external():
 					var step := ShipGrid.external_step(_hover_face, place_rotation)
-					for k in maxi(def.length_cells, 1):
+					for k in (1 if ShipGrid.is_fin(def, place_rotation) else maxi(def.length_cells, 1)):
 						deck_editor.ghost_cells.append(cell + step * k)
 					deck_editor.ghost_face = _hover_face
 					hint = "%s — %s face (near an edge: that side; middle: %s — [V] switches, Shift: the other)" % [
@@ -1944,6 +2074,7 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 			return "\n".join(PackedStringArray([
 				"%s — role: %s" % [d.display_name, d.role],
 				"PER CELL  " + " · ".join(per),
+				room_size_text(d),
 				"COST %d spare parts per cell" % ServiceYard.room_cost(d, 1),
 				"Drag on the deck to place",
 			]))
@@ -1970,8 +2101,8 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 				0.5 * g.round_mass_kg * g.muzzle_velocity_mps * g.muzzle_velocity_mps / 1.0e6])
 		EquipmentDefinition.Kind.POINT_DEFENCE:
 			var pg := e.cannon
-			lines.append("POINT DEFENCE engages hostile craft within %.1f km on its own · %.0f rpm · %d rounds of its own · trains %.0f°/s · works with a gangway attached" % [
-				WorldSimulation.PD_RANGE_M / 1000.0, pg.rate_of_fire_rpm, pg.magazine_rounds, pg.traverse_deg_s])
+			lines.append("POINT DEFENCE engages hostile craft within %.1f km on its own · %.0f rpm · fed from the magazine (%d %% of it beside guns; %.1f kg rounds) · trains %.0f°/s · works with a gangway attached" % [
+				WorldSimulation.PD_RANGE_M / 1000.0, pg.rate_of_fire_rpm, roundi(ShipStats.PD_MAGAZINE_SHARE * 100.0), pg.round_mass_kg, pg.traverse_deg_s])
 		EquipmentDefinition.Kind.MAIN_ENGINE:
 			lines.append("THRUST %.0f kN · Isp %.0f s · burns %.1f kg/s · any aft face; other faces with an engine room on the inside (pushes away from that face)" % [e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
 		EquipmentDefinition.Kind.RCS:
@@ -2006,9 +2137,8 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 					effect = "EMP: resets unhardened electronics (full strength within %.0f m), no damage" % m.effect_radius_m
 				MissileConfig.Warhead.NUCLEAR:
 					effect = "radiation, heat and EMP (full strength within %.0f m); armour facing it shields the crew" % m.effect_radius_m
-			lines.append("LAUNCHER %d × %s%s · [M] salvo (needs a lock) · a launch every %.1f s · restocked at the yard for %d cr each" % [
-				e.missile_capacity, m.display_name, ", %d per launch" % e.missile_salvo if e.missile_salvo > 1 else "",
-				ShipSystems.LAUNCHER_CYCLE_S, m.unit_credits])
+			lines.append("LAUNCHER %d × %s%s · [M] salvo (needs a lock) · restocked at the yard for %d cr each" % [
+				e.missile_capacity, m.display_name, ", %d per launch" % e.missile_salvo if e.missile_salvo > 1 else "", m.unit_credits])
 			lines.append("MISSILE %.0f m/s² · Δv %.1f km/s · turns %.0f°/s · %s · point defence can shoot it down" % [
 				m.accel_mps2, m.delta_v_mps / 1000.0, m.turn_rate_deg_s, effect])
 		EquipmentDefinition.Kind.DECOY_LAUNCHER:

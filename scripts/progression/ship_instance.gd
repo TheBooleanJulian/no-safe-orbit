@@ -24,7 +24,8 @@ var sorties: int = 0
 var salvaged: int = 0
 ## Service record, newest last.
 var history: PackedStringArray = PackedStringArray()
-## Hired crew, one per berth: [{name, role (CrewRoster.Role), skill}].
+## Hired crew, one per berth: [{name, role (CrewRoster.Role), skill,
+## sorties served}].
 ## Empty = the standard (unnamed) complement — older saves until named.
 var crew: Array = []
 ## The vessel's automation (ShipPolicy.to_dict()); set in Tab › POLICY.
@@ -109,11 +110,13 @@ func cargo_volume_m3(catalog: ConstructionCatalog) -> float:
 		v += equipment_m3(catalog.equipment.get(StringName(id))) * int(cargo.equipment[id])
 	for id in cargo.get("blueprints", {}):
 		v += BLUEPRINT_M3 * int((cargo.blueprints[id] as Array)[2])
+	v += float(cargo.get("freight", {}).get("m3", 0))
 	return v
 
 
 ## Each line of the hold: {kind, id, units, m3}, cheapest to lose first
-## (spare parts, then equipment by rarity, then blueprints).
+## (spare parts, then equipment by rarity, then blueprints, then a cargo
+## contract's freight — jettisoning that fails the contract).
 func cargo_lines(catalog: ConstructionCatalog) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var parts := int(cargo.get("spare_parts", 0))
@@ -130,6 +133,9 @@ func cargo_lines(catalog: ConstructionCatalog) -> Array[Dictionary]:
 	for id in cargo.get("blueprints", {}):
 		var entry: Array = cargo.blueprints[id]
 		out.append({"kind": "blueprints", "id": str(id), "name": "%s blueprint" % id, "units": int(entry[2]), "m3": BLUEPRINT_M3 * int(entry[2]), "rarity": int(entry[1])})
+	var freight: Dictionary = cargo.get("freight", {})
+	if not freight.is_empty():
+		out.append({"kind": "freight", "id": "freight", "name": "Contract freight: %s" % freight.what, "units": 1, "m3": float(freight.m3), "rarity": 99})
 	return out
 
 
@@ -148,6 +154,10 @@ func vent(kind: String, id: String) -> String:
 			if table.is_empty():
 				cargo.erase(kind)
 			return "%s %s" % [id, "blueprint" if kind == "blueprints" else "(all units)"]
+		"freight":
+			var f: Dictionary = cargo.get("freight", {})
+			cargo.erase("freight")
+			return "%d m³ of contract freight (%s)" % [int(f.m3), f.what] if not f.is_empty() else ""
 	return ""
 
 
@@ -254,7 +264,8 @@ static func from_dict(d: Dictionary, errors: PackedStringArray) -> ShipInstance:
 	v.salvaged = int(d.get("salvaged", 0))
 	for entry in d.get("crew", []):
 		if entry is Dictionary:
-			v.crew.append({"name": str(entry.get("name", "")), "role": int(entry.get("role", 6)), "skill": int(entry.get("skill", 0))})
+			v.crew.append({"name": str(entry.get("name", "")), "role": int(entry.get("role", 6)), "skill": int(entry.get("skill", 0)),
+				"sorties": int(entry.get("sorties", 0))})
 	for line in d.get("history", []):
 		v.history.append(str(line))
 	# Before schema 6 there was none: the Defensive preset (point defence on,

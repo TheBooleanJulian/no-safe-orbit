@@ -222,8 +222,7 @@ func test_point_defence_respects_range_and_ammo_reserve() -> void:
 	assert_true(_engaged(f.world, f.ship).is_empty(), "everything is beyond a 600 m engagement range: nothing engaged")
 	var g := _pd_world(ShipPolicy.preset("Defensive"))
 	var ship: ShipState = g.ship
-	for k in ship.pd_rounds.size():
-		ship.pd_rounds[k] = 10  # under the 15 % reserve of a full magazine
+	ship.pd_rounds = 10  # under the 15 % reserve of a full magazine
 	g.world.remove_ship(&"hostile_msl")
 	assert_true(_engaged(g.world, ship).is_empty(), "below the reserve, a mount keeps its rounds for missiles only: the craft is left alone")
 	var off := ShipPolicy.preset("Defensive")

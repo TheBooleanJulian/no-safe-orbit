@@ -518,6 +518,52 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 10 — part 3: more hulls, super-heavies ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| More ship variants at the dealer, especially super-heavies, with sci-fi shapes (Elite Dangerous, Halo) | `test_batch10_dealer`, `smoke_shipyard`, windowed render | 12 hulls (was 6); 3 super-heavies 10.8–12.5 kt; hammerhead, forked and winged hulls |
+
+### Play-test batch 10 — part 2: the Moon's ground, landing, Earth re-entry ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| NASA elevation map, accuracy against file size | `test_batch10_surface`, `tools/convert_lola.py` | 8 px/deg, 5.9 MB (16 px/deg 21.6 MB, 4 px/deg 1.6 MB); summit 10.4 km |
+| No instakill at the Moon's 11 km; land below a safe speed | `test_batch10_surface` | 1.2 km above the mean radius, still flying; landed at 3.3 m/s; crashed at 128 m/s |
+| Terrain to the horizon below 11 km, flat map beyond | `test_batch10_surface`, windowed render | 2,952-vertex mesh at 2 km, none at 20 km |
+| Earth re-entry cutscene, ship breaking up | `test_batch10_surface`, windowed render | 64 of 64 modules off over 7 s |
+
+### Play-test batch 10 — part 1: crew under fire, boarding, models ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Suited crew don't die to venting; battle stations / stand down when confirmed clear | `smoke_encounter` | suits held with all contacts passive; a missile in flight a threat; stand down 10 s after clear |
+| Crew repair their own damaged room first (workshop aboard) | `test_batch10_crew` | reactor 30 → 75 % in 31 s; no team sent; none without a workshop |
+| Foam deals with fires, limited per sortie per room, with notices | `test_batch10_crew`, `test_feedback_pass` | unpowered room foamed; 2 a room each sortie |
+| 3×1 radiator fins fold along their length | `test_batch10_models` | 12 panels 0.4 → 8.4 m out, fold lines across the width |
+| Detailed engines (bigger for more thrust), RCS, craft, missiles, turrets, red truss clamps with beacons | `test_batch10_models`, windowed render | bells 1.30 × 2.06 → 1.50 × 3.43 m; 4 beacons, 44 truss bays |
+| Hexagonal collar and gangway | `test_batch10_models` | 6 edges, 6-sided hatch and tube |
+| Boarding at half the time | `test_batch10_crew` | gangway 5 / 22.5 s, cross 2.5 s, 2.5 s a room, hatch 10 s, fights ×2 |
+
+### Play-test batch 9 — part 7: effects, opening range, craft fire rate ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| EMP light-blue static until recovery | `test_batch9_effects`, windowed render | 10 parts reset → 10 crackling, 60 arcs; none after recovery |
+| B-key jump spool-up animation | `test_batch9_effects`, windowed render | 3 rings close 20.8 → 7.5 m, glow 0.26 → 0.77 |
+| Shipyard interior as the berth's sky | `test_batch9_effects`, windowed render | sky shader in place of the flat background |
+| Spawn further than 2.5 km | `test_batch9_effects`, `tools/balance_sim.gd --quick` | lead at 4 km; m5 1v1 won 12 s, 1v2 survived 480 s (lost 333 s before), 1v3 lost 401 s (259 s) |
+| Enemy fighters' fire rate | `test_batch9_effects` | Hornet 600 → 300 rpm, Wasp 300 → 150 rpm |
+
+### Play-test batch 9 — part 6: cargo contracts, remote salvage ✅ (2026-10-21)
+
+Parts 1–5 (fixes, builder, services, crew, economy) are in the CHANGELOG.
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Non-combat missions: cargo delivery | `test_batch9_cargo` (mutation-checked) | 40 of 120 offers cargo, 290–830 cr; 217 m³ refused by a 216 m³ hold; delivered at the Moon for 700 cr; fails when jettisoned or lost |
+| Salvage drones: remote G salvage, no slow cutting | `test_m15_drones` (mutation-checked), `smoke_wing` | beacon reach 8 km with the drone, 2 km without; out 60 s: wreck 90 % → 90 % |
+
 ### Play-test batch 6 — auto-fire rate and multi-ship balance ✅ (2026-10-21)
 
 | Requirement | Test | Measured |
@@ -561,7 +607,7 @@ fighters."
 | Many fighters, thousands of rounds | `tools/profile_frames.gd` (`--carrier`, `--carriers`; manual, needs a GPU) | 3-ship fight 77 → 139 fps; own Carrier vs 3 frigates ~34 → 50 fps; 4 carriers 7 → 20 fps |
 | Simulation still correct | full suite (orbits, rounds, PD, craft) | 374/374 |
 
-### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts
+### Milestone 13 — world map, real bodies, jump fuel, brokers, contracts ✅ (2026-10-22)
 
 Done early (play-test batch 3): `Location` resource, Earth and Moon with
 per-body config and NASA textures, the shipyard map, known locations in the
@@ -590,8 +636,15 @@ Part 2 ✅ (2026-10-20) — Mars, brokers, Sun-centred positions:
 | Jumps pay the real distance | `test_m13_mars`, `test_m13_jumps` | Earth→Mars 229 Mkm: 64.6 t; Earth→Moon 400,985 km: 33.9 t |
 | Local traffic and shelves | `test_m13_mars` | destroyers among frigates, threat +2; 5 items ≤ epic ×1.5 |
 
-Not done: delivery and retrieve contracts (the board has bounty, capture,
-escort, defend and salvage).
+Delivery done in play-test batch 9 (cargo contracts). Part 3 ✅ (2026-10-22)
+— retrieve contracts:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Retrieve contracts on the board | `test_m13_retrieve` (mutation-checked on the station) | 21 of 160 offers over 40 boards; guarded by 1–2 ships |
+| Recover in flight, bring it back | `smoke_campaign`, `test_m13_retrieve` | pod 6.0 km out, marked; G refuses from there, stows it alongside; paid on docking (+400 cr); lost with the ship |
+
+Milestone 13 ✅.
 
 `Location` resource (body, start orbit, shipyard stock and prices,
 encounter table, broker). Per-body config (μ, radius, entry interface:
@@ -602,7 +655,7 @@ contract board (bounty, escort, delivery, defend, retrieve); the four-goal
 chain becomes the tutorial thread. Sun-centred locations need `Vec3d`
 precision, proven by a test.
 
-### Milestone 14 — orbital artifacts and derelicts
+### Milestone 14 — orbital artifacts and derelicts ✅ (2026-10-20)
 
 Part 1 ✅ (2026-10-20) — real artifacts:
 
@@ -662,7 +715,7 @@ Part 1 ✅ (2026-10-21) — repair and salvage drones:
 | Requirement | Test | Measured |
 |---|---|---|
 | Repair drone | `test_m15_drones` (mutation-checked) | two systems 20 % → 75 % (the field limit) in 20 s; destroyed mast left; no crew repair |
-| Salvage drone | `test_m15_drones`, `smoke_wing` | 6 systems cut, 30 parts home after 126 s, wreck 90 % → 58 %; parts into the hold |
+| Salvage drone | `test_m15_drones`, `smoke_wing` | 6 systems cut, 30 parts home after 126 s, wreck 90 % → 58 %; parts into the hold (replaced in play-test batch 9: it carries G's beacon 8 km instead) |
 
 Part 2 ✅ (2026-10-21) — hangar capacity, crew complement and PD that scale
 with hull size:

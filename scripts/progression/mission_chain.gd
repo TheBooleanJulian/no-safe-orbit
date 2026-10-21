@@ -6,7 +6,11 @@ extends RefCounted
 ## pays its reward and moves the chain on. A goal not met stays for the next
 ## sortie. Saved in the profile as {"step": n} (PlayerProfile.campaign).
 
-enum Goal { DISABLE, CAPTURE, ESCORT, WAVES, PATROL }
+## DELIVER (play-test batch 9): a cargo contract — no fight; it is met on
+## arriving at the destination with the freight aboard (ContractBoard.deliver).
+## RETRIEVE (Milestone 13): recover a pod at the contract's location and
+## bring it back to the station that offered the work (ContractBoard.deliver).
+enum Goal { DISABLE, CAPTURE, ESCORT, WAVES, PATROL, DELIVER, RETRIEVE }
 
 const CHAIN := [
 	{"goal": Goal.DISABLE, "title": "First blood",
@@ -136,3 +140,12 @@ static func courier_config() -> ShipConfig:
 	cfg.cannon_muzzles_body = PackedVector3Array()
 	cfg.hull_hp = COURIER_HULL_HP
 	return cfg
+
+
+## The escort's courier as a ship on our side: with no side, our point
+## defence took it for hostile craft (play-test batch 9: "automatic weapons
+## fire upon friendly escorts"); our craft's IFF spares it too.
+static func courier_ship(id: StringName, position: Vector3, velocity: Vector3, orientation: Quaternion) -> ShipState:
+	var c := ShipState.create(id, "COURIER", courier_config(), position, velocity, orientation)
+	c.side = &"player"
+	return c

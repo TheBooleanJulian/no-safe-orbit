@@ -217,7 +217,8 @@ func test_engines_on_any_face_with_an_engine_room_inside() -> void:
 			var push: Vector3i = -ShipGrid.FACE_NORMALS[face]
 			var axis := 0 if push.x != 0 else (1 if push.y != 0 else 2)
 			var positive: bool = push[axis] > 0
-			var thrust: float = cat.equipment[&"main_engine"].thrust_n
+			# Bigger engine rooms add thrust (play-test batch 9).
+			var thrust: float = cat.equipment[&"main_engine"].thrust_n * ShipStats.compute(t, ShipGrid.build(t, cat)).engine_room_factor
 			assert_near(after.max_thrust(axis, positive) - before.max_thrust(axis, positive), thrust, 1.0,
 				"an engine on the %s face pushes the other way" % face)
 			assert_near(after.max_thrust(axis, not positive), before.max_thrust(axis, not positive), 1.0, "and only that way")
@@ -291,7 +292,7 @@ func test_foam_puts_out_fires_until_it_runs_out() -> void:
 	s.fires[room] = {"burn_s": 0.0, "smoulder_s": 0.0}
 	s._advance_fires(ShipSystems.FOAM_DELAY_S + 1.0)
 	assert_true(s.fires.has(room), "no foam left: it keeps burning")
-	assert_true(s.condition().has("foam_used"), "the used charges are saved for the yard to recharge")
+	assert_true(not s.condition().has("foam_used"), "per sortie (play-test batch 10): the used charges aren't carried over")
 	s.breach_room(room)
 	for i in roundi(ShipSystems.SMOULDER_S / 5.0) + 1:
 		s._advance_fires(5.0)
@@ -366,8 +367,9 @@ func test_the_quartermaster_and_the_upgrades() -> void:
 	var item: Dictionary = p.vendor_stock[0]
 	p.credits = int(item.price)
 	assert_true(p.buy_stock(0, cat) == "" and p.owned(StringName(item.id)) == 1 and p.credits == 0, "bought one %s" % item.id)
-	p.credits = 300
-	assert_true(p.buy_tech("thrusters") == "" and p.tech_level("thrusters") == 1, "an upgrade level")
+	p.credits = 300 + TechTree.CHARTER_COST
+	assert_true(p.buy_tech("thrusters").contains("charter"), "the tree starts from the charter (play-test batch 9)")
+	assert_true(p.buy_tech("charter") == "" and p.buy_tech("thrusters") == "" and p.tech_level("thrusters") == 1, "an upgrade level")
 	var q := PlayerProfile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())), PackedStringArray())
 	assert_true(q.tech_level("thrusters") == 1 and q.hire_pool.size() == p.hire_pool.size(), "kept in the save")
 	var ship := _ship(&"s")

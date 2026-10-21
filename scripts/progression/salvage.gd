@@ -36,7 +36,9 @@ const CREDITS_PER_PART := 2.5
 
 
 ## Why a beacon can't be dropped on `wreck` by `ship` ("" = it can).
-static func block_reason(ship: ShipState, wreck: ShipState) -> String:
+## `reach_m`: how far off the beacon can be dropped — BEACON_RANGE_M, or a
+## salvage drone's reach (AirWing.beacon_reach_m; play-test batch 9).
+static func block_reason(ship: ShipState, wreck: ShipState, reach_m: float = BEACON_RANGE_M) -> String:
 	if wreck == null or not wreck.is_active():
 		return "no wreck"
 	if wreck.systems == null or not wreck.systems.is_disabled():
@@ -44,8 +46,9 @@ static func block_reason(ship: ShipState, wreck: ShipState) -> String:
 	if wreck.systems.captured:
 		return "already taken by our boarders"
 	var range_m := ship.position.distance_to(wreck.position)
-	if range_m > BEACON_RANGE_M:
-		return "close to < %.1f km to drop a beacon (now %.1f km)" % [BEACON_RANGE_M / 1000.0, range_m / 1000.0]
+	if range_m > reach_m:
+		return "close to < %.1f km to drop a beacon (now %.1f km)%s" % [reach_m / 1000.0, range_m / 1000.0,
+			"" if reach_m > BEACON_RANGE_M else " — a salvage drone carries one 8 km"]
 	return ""
 
 

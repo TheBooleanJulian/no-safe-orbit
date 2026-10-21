@@ -202,4 +202,4 @@ func test_point_defence_engages_hostile_craft_but_not_our_own() -> void:
 	assert_true(hostile.hull_damage > 0.0 or not hostile.is_active(), "the hostile fighter is hit (%.1f)" % hostile.hull_damage)
 	assert_true(ours.hull_damage == 0.0, "ours is untouched")
 	# Automatic defences keep working with a gangway attached.
-	assert_true(ship.pd_rounds[0] + ship.pd_rounds[1] < 2 * ship.config.pd_gun.magazine_rounds, "it spent its own rounds")
+	assert_true(ship.pd_rounds < ship.pd_rounds_capacity, "it spent rounds from the magazine")

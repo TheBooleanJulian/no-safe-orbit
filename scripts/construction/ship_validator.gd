@@ -249,6 +249,12 @@ static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 							"%s %s is on the sloped face of a wedge at %s: systems need a flat face. Put it on a block." % [
 								def.display_name, e.id, _cell_text(cell)], e.id)
 						break
+				for cell in grid.fin_cells(i):
+					if grid.is_hull(cell):
+						_add(report, Severity.ERROR, &"fin_blocked",
+							"%s %s stands out %d cells from its face as a fin; the hull at %s is in the way." % [
+								def.display_name, e.id, def.length_cells, _cell_text(cell)], e.id)
+						break
 				if def.kind == EquipmentDefinition.Kind.MAIN_ENGINE and e.face != &"aft":
 					var room: int = grid.room_at.get(e.cell, -1)
 					if room < 0 or bp.rooms[room].def_id != ENGINE_ROOM_ID:
@@ -326,6 +332,9 @@ static func _check_systems(bp: ShipBlueprint, grid: ShipGrid, stats: ShipStats, 
 		if stats.rounds_capacity == 0:
 			_add(report, Severity.WARNING, &"weapon_no_magazine",
 				"%s %s has no magazine to feed it: 0 rounds. Add a magazine room." % [def.display_name, e.id], e.id)
+	if stats.pd_gun != null and stats.pd_rounds_capacity == 0:
+		_add(report, Severity.WARNING, &"pd_no_magazine",
+			"Point defence draws its rounds from the magazine, and there is none: it can't fire. Add a magazine room.", "")
 
 
 	if not bp.bus.is_empty():

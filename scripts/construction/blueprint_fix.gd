@@ -13,7 +13,7 @@ static func fit_spans(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Packed
 	var grid := ShipGrid.build(bp, catalog)
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
-		if def == null or not def.is_external() or def.length_cells <= 1:
+		if def == null or not def.is_external() or def.length_cells <= 1 or ShipGrid.is_fin(def, bp.equipment[i].rotation):
 			continue
 		if _span_ok(grid, bp, i, bp.equipment[i].cell, bp.equipment[i].rotation):
 			continue

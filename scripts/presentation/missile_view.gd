@@ -56,13 +56,28 @@ static func _body_mesh(is_hostile: bool) -> ArrayMesh:
 	cone.height = 0.6
 	var plate := BoxMesh.new()
 	plate.size = Vector3(0.04, 0.5, 0.5)
+	# Detail (play-test batch 10): a flared nozzle, a band and four canards.
+	var nozzle := CylinderMesh.new()
+	nozzle.top_radius = 0.2
+	nozzle.bottom_radius = 0.14
+	nozzle.height = 0.35
+	var band := CylinderMesh.new()
+	band.top_radius = 0.24
+	band.bottom_radius = 0.24
+	band.height = 0.1
+	var canard := BoxMesh.new()
+	canard.size = Vector3(0.03, 0.22, 0.26)
 	var shell := SurfaceTool.new()
 	shell.append_from(tube, 0, Transform3D(Basis.from_euler(Vector3(PI * 0.5, 0, 0)), Vector3.ZERO))
 	shell.append_from(cone, 0, Transform3D(Basis.from_euler(Vector3(-PI * 0.5, 0, 0)), Vector3(0, 0, -1.6)))
+	shell.append_from(nozzle, 0, Transform3D(Basis.from_euler(Vector3(PI * 0.5, 0, 0)), Vector3(0, 0, 1.45)))
 	var fins := SurfaceTool.new()
 	for k in 4:
 		var b := Basis.from_euler(Vector3(0, 0, PI * 0.5 * k))
 		fins.append_from(plate, 0, Transform3D(b, Vector3(0, 0, 1.05) + b * Vector3(0, 0.35, 0)))
+		var c := Basis.from_euler(Vector3(0, 0, PI * 0.5 * k + PI * 0.25))
+		fins.append_from(canard, 0, Transform3D(c, Vector3(0, 0, -0.95) + c * Vector3(0, 0.3, 0)))
+	fins.append_from(band, 0, Transform3D(Basis.from_euler(Vector3(PI * 0.5, 0, 0)), Vector3(0, 0, -0.35)))
 	var mesh := shell.commit()
 	mesh.surface_set_material(0, body_mat)
 	fins.commit(mesh)

@@ -266,7 +266,8 @@ func test_thrust_and_torque_come_from_placed_thrusters() -> void:
 	var s := _stats(bp)
 	var engine: EquipmentDefinition = _catalog().equipment[&"main_engine"]
 	var rcs: EquipmentDefinition = _catalog().equipment[&"rcs_block"]
-	assert_near(s.thrust_forward_n, 4.0 * engine.thrust_n, 1e-6, "forward thrust = 4 aft engines (N)")
+	# Times what the engine rooms' size adds (play-test batch 9).
+	assert_near(s.thrust_forward_n, 4.0 * engine.thrust_n * s.engine_room_factor, 1e-3, "forward thrust = 4 aft engines × the engine rooms' factor (N)")
 	assert_near(s.thrust_rcs_n, 8.0 * rcs.thrust_n, 1e-6, "RCS thrust per direction = 8 blocks (N)")
 	# Torque about each axis = Σ thrust × lever arm perpendicular to it.
 	var grid := ShipGrid.build(bp, _catalog())
@@ -278,7 +279,7 @@ func test_thrust_and_torque_come_from_placed_thrusters() -> void:
 	assert_vec_near(s.torque_nm, expected, 1.0, "RCS torque capacity (N·m)")
 	var fewer := _template()
 	fewer.remove("e29")
-	assert_near(_stats(fewer).thrust_forward_n, 3.0 * engine.thrust_n, 1e-6, "removing an engine removes its thrust (N)")
+	assert_near(_stats(fewer).thrust_forward_n, 3.0 * engine.thrust_n * _stats(fewer).engine_room_factor, 1e-3, "removing an engine removes its thrust (N)")
 
 
 func test_compiled_design_flies_with_its_own_numbers() -> void:

@@ -11,6 +11,7 @@ const DATA_CREDITS := [
 	"Star positions and colours: Yale Bright Star Catalogue, 5th revised ed. (Hoffleit & Warren 1991), via CDS (catalogue V/50).",
 	"Earth: NASA Blue Marble: Next Generation (Reto Stöckli, NASA Earth Observatory), via NASA's Scientific Visualization Studio. Public domain.",
 	"Moon: NASA CGI Moon Kit (Ernie Wright, USRA; Noah Petro, NASA/GSFC), from LRO LROC WAC (Arizona State University) and LOLA data, via NASA's Scientific Visualization Studio. Public domain.",
+	"Moon elevation: LRO LOLA (Lunar Orbiter Laser Altimeter) heights from the same CGI Moon Kit, 8 pixels a degree. Public domain.",
 	"Mars: Mars Viking Colorized Global Mosaic (MDIM 2.1), USGS Astrogeology Science Center and NASA Ames. Public domain.",
 	"Artifact positions (ISS, Hubble, LRO, MRO, Mars Odyssey, the Tesla Roadster, New Horizons, the Voyagers and the Pioneers): NASA/JPL Horizons On-Line Ephemeris System.",
 	"Sound effects: Kenney (www.kenney.nl) — Sci-Fi Sounds, Impact Sounds, Interface Sounds. CC0 1.0.",

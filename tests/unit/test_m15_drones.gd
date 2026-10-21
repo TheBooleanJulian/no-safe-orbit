@@ -2,9 +2,10 @@ extends TestCase
 ## Measures: Milestone 15 — repair and salvage drones. A repair drone flies
 ## to a damaged system outside its carrier's hull and patches it to the
 ## field-repair limit (never past it, never a destroyed one); a salvage
-## drone strips a disabled hostile, a system at a time, into spare parts,
-## brings a full load home and delivers it; with nothing to do they escort;
-## the racks are in the catalog under Drones and their roles are explained.
+## drone carries the salvage beacon — G reaches a wreck 8 km off instead of
+## 2 km while one is on the wing, and it cuts nothing off by itself (play-
+## test batch 9); with nothing to do they escort; the racks are in the
+## catalog under Drones and their roles are explained.
 
 const DT := 1.0 / 60.0
 
@@ -77,10 +78,10 @@ func test_a_repair_drone_patches_systems_outside_the_hull() -> void:
 	assert_true(drone.status == AirWing.Status.FLYING and drone.override_reason == "", "no work: it flies its escort slot")
 
 
-func test_a_salvage_drone_strips_a_wreck_and_brings_the_parts_home() -> void:
+func test_a_salvage_drone_carries_the_beacon_further() -> void:
 	var world := WorldSimulation.new(DT)
 	var me := _carrier(&"me", Vector3.ZERO, &"player", &"salvage_drone_rack")
-	var wreck := _carrier(&"wreck", Vector3(0, 0, -1500), &"hostile")
+	var wreck := _carrier(&"wreck", Vector3(0, 0, -5000), &"hostile")
 	world.add_ship(me)
 	world.add_ship(wreck)
 	var wing := AirWing.for_ship(me)
@@ -90,32 +91,32 @@ func test_a_salvage_drone_strips_a_wreck_and_brings_the_parts_home() -> void:
 	assert_true(drone != null, "the rack carries a salvage drone")
 	if drone == null:
 		return
-	# Still fighting: nothing to salvage.
-	assert_true(wing._work_job(world, drone, me.position, me, wreck).is_empty(), "a ship still fighting isn't salvage")
 	for e in wreck.systems.equipment:
 		if e.def.kind == EquipmentDefinition.Kind.REACTOR:
 			e.hp = 0.0
 	wreck.systems.solve_power()
 	wreck.systems._state_changed()
 	assert_true(wreck.systems.is_disabled(), "the hostile is disabled (%s)" % wreck.systems.disabled_reason())
+	var plain := AirWing.for_ship(_carrier(&"plain", Vector3.ZERO, &"player"))
+	var with_drone := Salvage.block_reason(me, wreck, wing.beacon_reach_m())
+	var without := Salvage.block_reason(me, wreck, plain.beacon_reach_m())
+	print("    measured: beacon reach %.0f km with a salvage drone, %.0f km without; at 5 km: \"%s\" / \"%s\"" % [
+		wing.beacon_reach_m() / 1000.0, plain.beacon_reach_m() / 1000.0, with_drone, without])
+	assert_true(with_drone == "" and without.contains("salvage drone"), "5 km off: only with the drone (and the hint says so)")
+	wreck.position = Vector3(0, 0, -9000)
+	assert_true(Salvage.block_reason(me, wreck, wing.beacon_reach_m()).contains("close to"), "not past 8 km")
+	# Out, it cuts nothing off by itself: it escorts.
 	var intact := wreck.systems.intact_fraction()
 	wing.auto_relaunch = false
 	assert_true(wing.launch(world, drone) == "", "launched")
-	var t := 0.0
-	var peak := 0
-	while t < 300.0 and wing.delivered_parts == 0:
+	for i in 60 * 60:
 		world.step()
-		t += DT
-		peak = maxi(peak, drone.cargo_parts)
-	var cuts := "\n".join(wing.log).count("cut ")
-	print("    measured: %d systems cut free, load %d / %d, %d delivered after %.0f s; wreck %d %% → %d %% intact; drone %s" % [
-		cuts, peak, AirWing.SALVAGE_CAPACITY, wing.delivered_parts, t, roundi(intact * 100.0), roundi(wreck.systems.intact_fraction() * 100.0),
-		AirWing.STATUS_NAMES[drone.status]])
-	assert_true(cuts >= 2 and wreck.systems.intact_fraction() < intact, "it cut systems free")
-	assert_true(peak == AirWing.SALVAGE_CAPACITY and wing.delivered_parts == AirWing.SALVAGE_CAPACITY,
-		"a full load (%d) brought home and delivered" % AirWing.SALVAGE_CAPACITY)
-	assert_true(drone.status == AirWing.Status.DOCKED and drone.cargo_parts == 0, "recovered, its hold emptied")
-	assert_true(wreck.systems.explosions.is_empty(), "cutting the reactor out sets nothing off")
+	print("    measured: after 60 s out, the wreck %d %% → %d %% intact; drone: %s" % [roundi(intact * 100.0),
+		roundi(wreck.systems.intact_fraction() * 100.0), drone.override_reason if drone.override_reason != "" else "escorting"])
+	assert_near(wreck.systems.intact_fraction(), intact, 1e-9, "nothing cut off (intact fraction)")
+	assert_true(drone.status == AirWing.Status.FLYING and wing.beacon_reach_m() == AirWing.SALVAGE_RANGE_M, "out, it still carries the beacon")
+	drone.status = AirWing.Status.LOST
+	assert_near(wing.beacon_reach_m(), Salvage.BEACON_RANGE_M, 1e-6, "lost: back to the 2 km beacon (m)")
 
 
 func test_drone_racks_in_the_catalog() -> void:

@@ -28,7 +28,7 @@ func _ship(bp: ShipBlueprint) -> ShipState:
 
 func _specialists(want: Array[int]) -> int:
 	var n := 0
-	for r in CrewRoster.Role.GENERAL:
+	for r in CrewRoster.specialist_roles():
 		n += want[r]
 	return n
 
@@ -48,12 +48,12 @@ func test_the_standard_complement_scales_with_the_hull() -> void:
 		print("    measured: %s %d berths — standard %s (%d specialists); the roster has %d" % [name, stats.crew_capacity,
 			Shipyard._complement_text(want), _specialists(want), roster.members.size()])
 		if _specialists(want) <= stats.crew_capacity:
-			for r in CrewRoster.Role.GENERAL:
+			for r in CrewRoster.specialist_roles():
 				assert_true(int(counts.get(r, 0)) == want[r], "%s: the roster fills %s to the standard (%d)" % [name, CrewRoster.ROLE_NAMES[r], want[r]])
-	assert_true(by_ship.frigate_mk1 == [2, 2, 2, 1, 4, 1, 0], "the frigate's complement is unchanged (%s)" % [by_ship.frigate_mk1])
+	assert_true(by_ship.frigate_mk1 == [2, 2, 2, 1, 4, 1, 0, 1], "the frigate's complement is unchanged, and a pilot for its fighter (%s)" % [by_ship.frigate_mk1])
 	for big in ["destroyer_mk1", "cruiser_mk1", "carrier_mk1"]:
 		var w: Array[int] = by_ship[big]
-		for r in CrewRoster.Role.GENERAL:
+		for r in CrewRoster.specialist_roles():
 			assert_true(w[r] >= by_ship.frigate_mk1[r], "%s: at least a frigate's %s" % [big, CrewRoster.ROLE_NAMES[r]])
 		assert_true(_specialists(w) > 3 * _specialists(by_ship.frigate_mk1), "%s: over three times the specialists (%d)" % [big, _specialists(w)])
 

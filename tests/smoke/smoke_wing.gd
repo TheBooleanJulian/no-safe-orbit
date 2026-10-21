@@ -140,6 +140,11 @@ func _run() -> void:
 	profile.spare_parts = 200
 	yard.repair(ServiceYard.Priority.FULL)
 	_check(not profile.vessel.wing.has(fighter.rack_id), "replaced at the station")
+	# Its pilot was lost with it (play-test batch 9): post a new one.
+	var general := profile.vessel.crew.find_custom(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.GENERAL)
+	var pilots_left := profile.vessel.crew.filter(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.PILOT).size()
+	_check(pilots_left == 0, "the lost fighter's pilot was lost with it")
+	profile.set_crew_role(general, CrewRoster.Role.PILOT)
 	yard.launch()
 	for i in 4:
 		await process_frame
@@ -148,13 +153,10 @@ func _run() -> void:
 		if not c.is_drone():
 			fighter = c
 	_check(fighter.status == AirWing.Status.DOCKED and main.player_wing.launch(main.world, fighter) == "", "the replacement launches")
-	# Milestone 15: what salvage drones bring aboard goes into the hold.
-	var held := int(profile.vessel.cargo.get("spare_parts", 0))
-	main.player_wing.delivered_parts = 12
-	for i in 3:
-		await process_frame
-	_check(int(profile.vessel.cargo.get("spare_parts", 0)) == held + 12 and main.player_wing.delivered_parts == 0,
-		"salvage drones' 12 spare parts go into the hold (%d → %d)" % [held, int(profile.vessel.cargo.get("spare_parts", 0))])
+	# Play-test batch 9: G's beacon reach follows the wing (a salvage drone carries it 8 km).
+	var has_salvage := main.player_wing.crafts.any(func(c: AirWing.Craft) -> bool: return c.config.craft_role == &"salvage")
+	_check(main.beacon_reach_m() == (AirWing.SALVAGE_RANGE_M if has_salvage else Salvage.BEACON_RANGE_M),
+		"the beacon reaches %.0f km (salvage drone aboard: %s)" % [main.beacon_reach_m() / 1000.0, has_salvage])
 	_finish()
 
 

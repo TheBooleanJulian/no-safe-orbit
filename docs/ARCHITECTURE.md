@@ -265,6 +265,116 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Retrieve contracts (Milestone 13, part 3)**: `ContractBoard._retrieve_offer`
+  (kind "retrieve", `MissionChain.Goal.RETRIEVE`, `deliver_to` the offering
+  station, guards as `ships`); `carries_freight` / `deliver_to` let
+  `deliver` serve cargo and retrieve (an unrecovered pod is not a failure).
+  `Main._spawn_pod` (a one-block design, `derelict`, marked in
+  `hud.derelict_ids`) when the sortie is at the contract's location;
+  `recover_pod` on G (beacon reach, `POD_MATCH_MPS`, hold space) stows it as
+  `vessel.cargo.freight`; `close_sortie` calls `ContractBoard.deliver` after
+  docking.
+- **Dealer (play-test batch 10, part 3)**: `tools/make_capital_templates.gd`
+  describes the hull cell by cell (`_row_cols`: taper, "hammer" head and
+  neck, "split" fork; swept "wing_*" blocks; `tower` levels; "rcs_mid"),
+  places wedges ahead of any cell with nothing ahead of it, and kit at each
+  row's outermost hull (`outer`); it reproduces the batch-6 capitals byte
+  for byte. `ShipyardSections` keeps a static `_templates` cache ({bp,
+  price, capital, text}, the editor when a view needs it), fills the dealer
+  one card a frame in price order (`_dealer_order.bsearch`), and builds a
+  card's `ShipPreview3D` (`still`: rendered once) when it is in sight.
+  `ServiceYard.dealer_price` takes an optional grid and stats.
+- **Surfaces (play-test batch 10, part 2)**: `TerrainMap` (data/moon's
+  LOLA heights from `tools/convert_lola.py`; rows decoded on first use;
+  `height_at(body-fixed dir)` = bilinear map + `FastNoiseLite` detail);
+  `OrbitalBody.elevation_map` / `safe_landing_mps` / `terrain()`.
+  `WorldSimulation.terrain`, `pci_to_fixed`, `surface_spin_pci` (Main's
+  `_update_surface_frame` from `CelestialFrame.pci_to_body_fixed`);
+  `_check_terrain` replaces `_check_entry_interface` for such a body:
+  contact by `ShipState.contact_radius_m`, `landed` / `touchdown_mps`, a
+  crash is `ENTERED_ATMOSPHERE`; landed ships are pinned with the surface
+  velocity; `_rebase_velocity` keeps a landed anchor's frame up with it;
+  `take_landing_events` for notices. `TerrainView` (a polar mesh under the
+  player, rebuilt every 0.4 s, heights morphed in and faded at the edge).
+  HUD `ground_text` and a GROUND alert. Earth: `Main._play_reentry` holds
+  `close_sortie` for `REENTRY_CUTSCENE_S` while `ShipView.show_reentry`
+  grows the plasma sheath and breaks modules off (`mesh_from_flats` skips
+  emptied materials).
+- **Crew and models (play-test batch 10, part 1)**: `Main.threat_present`
+  (hostile contact, hostile craft flying, a non-player missile, fire within
+  `UNDER_FIRE_S`) stamps `_threat_seen`; `systems.suited` holds until
+  `STAND_DOWN_CLEAR_S` after it (battle stations / stand down);
+  `_announce_fires` diffs `systems.fires` and `foam_used` for notices.
+  `ShipSystems._advance_in_place_repairs` (before the repair tasks):
+  fit, free crew in a room patch `_damaged_in_room` while
+  `working_workshop() >= 0`; `in_place_repairs` keeps teams off those parts.
+  Foam: no power check; `foam_used` is no longer in `condition()` (the
+  yard's foam job is gone). Boarding: `GANGWAY_CROSS_S` 2.5, `HATCH_CUT_S`
+  10, `BOARDER_TRANSIT_S` (half a crew room), `KILL_RATE` 0.16;
+  `Docking.COLLAR_SEAL_S` 5, `HULL_CUT_S` 22.5. Models:
+  `ShipModelBuilder.radiator_panels` (flat or fin), `engine_bell(thrust)`
+  and `Model.engine_widths` (ShipView scales each plume), RCS nozzles,
+  turret/PD detail merged per pivot (`_merge_static(pivot)`), a hexagonal
+  `_collar` (`COLLAR_SIDES`), `GangwayView` hexagonal with a rib texture,
+  berth gantries of `_truss` bays in red with `_beacon` pivots turned in
+  `ShipPreview3D._process`, more `CraftView` / `MissileView` pieces.
+- **Effects and the opening range (play-test batch 9, part 7)**:
+  `ShipView._show_emp` redraws an `ImmediateMesh` of jagged arcs (two
+  crossed ribbons a segment) round each part with `disrupted_s > 0`, at its
+  `body_position`, every `EMP_REDRAW_S`; `emp_sparking` / `emp_arcs` say
+  what it drew. `ShipView.jump_spool` (Main sets `_jump_hold /
+  JUMP_HOLD_S` in `_update_jump`) drives `_update_spool`: `SPOOL_RINGS`
+  additive tori along the hull, spinning up and closing in.
+  `ShipPreview3D._build_berth` switches its environment to `BG_SKY` with
+  `shaders/shipyard_interior.gdshader` (a sky shader: walls, catwalks,
+  deck grid, ceiling strips from `EYEDIR` alone). `Main.CONTACT_OFFSETS`
+  start the lead 4 km out; craft guns are data
+  (`interceptor_gun` 300 rpm, `fighter_gun` 150 rpm).
+- **Contracts and salvage (play-test batch 9, part 6)**: cargo offers
+  (`ContractBoard._cargo_offer`, kind "cargo", `MissionChain.Goal.DELIVER`,
+  `freight_m3` / `freight`); `accept` checks the hold and puts
+  `vessel.cargo["freight"] = {contract, m3, what}`; `ContractBoard.deliver`
+  (called by `Shipyard.launch` after the jump) pays through
+  `MissionChain.complete`, or fails the contract when the freight is gone.
+  `ShipInstance.cargo_volume_m3` / `cargo_lines` / `vent` know the freight;
+  `PlayerProfile.bank_cargo` keeps it; `lose_vessel` fails the contract.
+  `AirWing.beacon_reach_m` (SALVAGE_RANGE_M with a salvage drone, else
+  `Salvage.BEACON_RANGE_M`) feeds `Salvage.block_reason(ship, wreck,
+  reach_m)` in `Main` and the HUD; `_work_job` / `_work` are repair only.
+- **Economy (play-test batch 9, part 5)**: `TechTree.NODES` carry `after`
+  [parent, level] and `levels`; `requirement`, `tier` (parent's tier +
+  level), `block_reason`; `PlayerProfile.buy_tech` follows it. New factors
+  read in `jump_dv`/`survey_dv`, `wages`, `training_cost`,
+  `ShipSystems.sensor_range_m`, `effective_config` (a duplicated `pd_gun`),
+  `AirWing` service, `Main` bounties. `TechGraph` (a lane per upgrade,
+  columns by tier, lines in `_draw`). Bank: `PlayerProfile.bank_deposit`,
+  `loans`, `LOAN_OFFERS`, `deposit` / `withdraw` / `take_loan` / `repay`,
+  `bank_sortie` (from `dock`); schema 13. The bank card is built by
+  `ShipyardSections._build_bank`.
+- **Crew (play-test batch 9, part 4)**: `CrewRoster.Role.PILOT` (appended:
+  saved role numbers keep their meaning), `needs_pilot(def)` (a craft rack
+  not named "drone"), `complement(..., fighters)`, `specialist_roles()`,
+  `MAX_SKILL` 3, `level_for(sorties)`, `title(role, skill)`. `AirWing`:
+  `launch_block_reason` / `_free_pilot`, `Craft.pilot_id` (the member off
+  the ship, busy, while out), `_pilot_home` (back at their station, or
+  DEAD with a lost craft). `ShipSystems.crew_skill(role)` → gunnery and
+  `reactor_output` factors. `PlayerProfile.dock`: sorties, levels, `wages`;
+  `train(i)`; schema 12 `post_pilots`. Shipyard crew board: `CrewDepartment`
+  (drop target), `CrewBadge` (drag source), `CrewPortrait` (placeholder).
+- **Builder (play-test batch 9, part 2)**: `ShipGrid.FIN_ROTATION` (4) /
+  `is_fin` / `fin_cells` — a long radiator's span collapses to its root
+  cell and the validator checks the cells out from its face
+  (`fin_blocked`); `ShipBlueprint` keeps rotation 4 when adding and
+  loading. `ShipStats._room_factors` (`size_gain`: 1 + gain·(1 − e^(−extra /
+  scale))) → `engine_room_factor` (main thrust in the stats and
+  `ShipSystems.effective_config`), `reactor_room_factor`
+  (`ShipSystems.reactor_output`), `hangar_factor` (`AirWing` service).
+  `ShipStats.pd_rounds_capacity` (`PD_MAGAZINE_SHARE` of the magazine) →
+  `ShipConfig.pd_magazine_rounds` → `ShipState.pd_rounds` /
+  `pd_rounds_capacity` (one store; stores `pd_rounds`; `ServiceYard`
+  restocks). Grappling arm: `length_cells` 4; `ShipModelBuilder` arm
+  segments (`place_arm`), `ShipView.grapple_holds` set by `Main` from
+  `Grapple.grip_point`, eased over `ARM_UNFOLD_S`.
 - **Work drones (Milestone 15)**: `ShipConfig.craft_role` `repair` /
   `salvage` (`AirWing.WORK_ROLES`, `Craft.is_worker`). In `AirWing._fly`, on
   any directive but RETURN, `_work_job` picks the job (repair: external,
@@ -677,7 +787,7 @@ bounding-box hit test.
   deck (crew routes, reachability, venting, validator access).
   `ShipSystems.room_bonus(role)` (1 + 25 % per extra cell, ≤ 2×) speeds
   scans (bridge), repairs and sealing (workshop) and treatment (life
-  support). `suited` (general quarters) lets the crew route through vacuum
+  support). `suited` (battle stations) lets the crew route through vacuum
   and survive venting. `_advance_hull_sealing` clears breaches.
 - **Fire** (`ShipSystems.fires`, `foam_used`): started from
   `damage_equipment` with the ship's seeded generator; burns only in

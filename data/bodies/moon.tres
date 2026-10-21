@@ -21,3 +21,5 @@ geometric_albedo = 0.12
 phase_law = &"lunar"
 ephemeris = &"moon"
 surface_map = ExtResource("2_map")
+elevation_map = "res://data/moon/lola_elevation.bin"
+safe_landing_mps = 4.0
