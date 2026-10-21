@@ -518,6 +518,15 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Next — to be decided (2026-10-22)
+
+The agreed roadmap (M10 → M15) and play-test batches up to 11 are done.
+Candidates proposed on 2026-10-22, **not agreed yet**: a play-test of
+batch 11; a balance pass with `tools/balance_sim.gd` for the new lasers,
+craft and crew numbers; big-fight performance; Steam release preparation
+(export templates, application icon — `docs/STEAM.md`); new content (more
+locations, mission types, a campaign arc).
+
 ### Play-test batch 11 — part 4: flight and shipyard ✅ (2026-10-22)
 
 | Requirement | Test | Measured |
