@@ -139,6 +139,12 @@ func test_earth_reentry_takes_the_hull_apart() -> void:
 		bp.modules.size(), glow, view._plasma_mat.albedo_color.a])
 	assert_true(early == 0 and view.reentry_broken == bp.modules.size(), "the hull comes apart as it goes")
 	assert_true(view._plasma_mat.albedo_color.a > glow, "the sheath brightens")
+	# A cone (play-test batch 11): its tip into the flow (ahead, -Z for a
+	# flow running +Z), opening behind.
+	var cone := view._plasma.mesh as CylinderMesh
+	var tip_dir := view._plasma.transform.basis.y.normalized()
+	print("    measured: re-entry cone tip %.2f → base 1, tip pointing %s" % [cone.top_radius, tip_dir])
+	assert_true(cone.top_radius < 0.25 * cone.bottom_radius and tip_dir.is_equal_approx(Vector3.FORWARD), "a cone, its tip upstream")
 	assert_true(not _moon().has_atmosphere and (load("res://data/bodies/earth.tres") as OrbitalBody).elevation_map == "",
 		"Earth keeps its entry interface; the Moon has ground instead")
 	view.free()

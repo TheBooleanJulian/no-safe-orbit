@@ -202,16 +202,17 @@ func vent_excess(capacity_m3: float, catalog: ConstructionCatalog) -> PackedStri
 
 ## One line: what is in the hold.
 func cargo_summary() -> String:
-	if cargo_is_empty():
-		return "empty"
 	var parts := PackedStringArray()
+	var freight: Dictionary = cargo.get("freight", {})
+	if not freight.is_empty():
+		parts.append("contract freight: %s (%d m³)" % [freight.get("what", "cargo"), int(freight.get("m3", 0))])
 	if int(cargo.get("spare_parts", 0)) > 0:
 		parts.append("%d spare parts" % int(cargo.spare_parts))
 	for id in cargo.get("equipment", {}):
 		parts.append("%s ×%d" % [id, int(cargo.equipment[id])])
 	for id in cargo.get("blueprints", {}):
 		parts.append("%s blueprint" % id)
-	return ", ".join(parts)
+	return ", ".join(parts) if not parts.is_empty() else "empty"
 
 
 ## Crew killed, by role name ({} = full complement).

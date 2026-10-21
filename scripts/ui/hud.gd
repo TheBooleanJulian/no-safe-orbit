@@ -53,6 +53,9 @@ var loot: LootCarousel
 ## With the drawer open, the target card / hit cam / radar still fit to its left.
 var right_column_fits: bool = true
 var radar_fits: bool = true
+## The Tab drawer is open: the hit cam stays shut (play-test batch 11 — it
+## sat over the middle of the screen beside the drawer).
+var drawer_open: bool = false
 ## Level ("danger" / "caution") of the alert in the banner, "" if none.
 var top_alert_level: String = ""
 ## Pass A alerts: ordered, steadied, trimmed (AlertQueue).
@@ -397,6 +400,7 @@ func _reflow_for_drawer() -> void:
 	radar.offset_right = -gutter - drawer
 	var left_end := ($Root/LeftColumn as Control).get_global_rect().end.x
 	right_column_fits = drawer <= 0.0 or right - gutter - _side_w >= left_end + gutter
+	drawer_open = drawer > 0.0
 	# The radar also needs to clear the (re-centred) weapon strip.
 	radar_fits = drawer <= 0.0 or right - gutter - _radar_size >= right * 0.5 + w * 0.5 + gutter
 
@@ -586,7 +590,9 @@ func update_display(world: WorldSimulation, player_id: StringName, target_id: St
 	_reflow_for_drawer()
 	($Root/TargetPanel as Control).visible = right_column_fits
 	radar.visible = right_column_fits and radar_fits
-	if not right_column_fits and not hit_cam.showing_boarding():
+	if hit_cam.showing_boarding():
+		hit_cam.visible = not drawer_open
+	elif drawer_open:
 		hit_cam.visible = false
 	if overview.visible:
 		overview.vessel = profile.vessel if profile != null else null

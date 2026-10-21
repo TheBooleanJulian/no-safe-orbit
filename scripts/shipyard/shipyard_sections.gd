@@ -53,14 +53,18 @@ var station_buttons: Dictionary = {}  # key -> Button
 var missions_box: VBoxContainer
 var accept_buttons: Dictionary = {}  # contract id -> Button
 var abandon_button: Button
-## DEALER: one card per template.
-var dealer_box: HFlowContainer
+## DEALER: one card per template, three across (play-test batch 11).
+const DEALER_COLUMNS := 3
+const DEALER_SHOT_H := 150.0
+var dealer_box: GridContainer
 var dealer_rows: Dictionary = {}  # template path -> Button (buy)
 ## What the dealer knows of each template — {bp, editor, price, capital,
 ## text} by path — worked out once a session (templates don't change while
 ## the game runs; a super-heavy takes ~0.3 s to load, check and price). The
-## cards are built the first time the dealer opens, one a frame; each
-## card's 3D view (~0.2 s for a super-heavy) only once it scrolls into view.
+## cards are built the first time the dealer opens; a card shows its
+## catalogue picture (DealerShots) — or, the first time, builds its 3D view
+## (~0.2 s for a super-heavy) once it scrolls into view and keeps a picture
+## of it.
 static var _templates: Dictionary = {}
 var _dealer_filled := false
 var _dealer_order: Array[int] = []  # the cards' prices, in the order shown
@@ -603,7 +607,8 @@ func _build_dealer() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box.add_child(scroll)
-	dealer_box = HFlowContainer.new()
+	dealer_box = GridContainer.new()
+	dealer_box.columns = DEALER_COLUMNS
 	dealer_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dealer_box.add_theme_constant_override("h_separation", CyberTheme.SPACE_M)
 	dealer_box.add_theme_constant_override("v_separation", CyberTheme.SPACE_M)
@@ -616,8 +621,8 @@ func _build_dealer() -> void:
 
 
 ## The cards: one per template, cheapest first — built when the dealer is
-## first opened, one a frame (each has its 3D view: a super-heavy's takes
-## ~0.2 s), each put in its place by price as it comes.
+## first opened, one a frame, each put in its place by price as it comes. A
+## card shows its catalogue picture, or builds a 3D view the first time.
 func _fill_dealer() -> void:
 	if _dealer_filled:
 		return
@@ -628,15 +633,21 @@ func _fill_dealer() -> void:
 			continue
 		var bp: ShipBlueprint = info.bp
 		var price := int(info.price.total)
-		var c := card(dealer_box, bp.name.to_upper(), CyberTheme.AMBER if info.capital else CyberTheme.CYAN, Vector2(460, 0))
+		var c := card(dealer_box, bp.name.to_upper(), _dealer_accent(info))
+		(c.get_parent() as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var at := _dealer_order.bsearch(price, false)
 		_dealer_order.insert(at, price)
 		dealer_box.move_child(c.get_parent(), at)  # the card's panel
-		var preview := ShipPreview3D.new()
-		preview.custom_minimum_size = Vector2(440, 200)
-		preview.still = true
-		c.add_child(preview)
-		_dealer_views[path] = preview
+		var shot := DealerShots.load_shot(path)
+		if shot != null:
+			c.add_child(_dealer_picture(shot))
+		else:
+			var preview := ShipPreview3D.new()
+			preview.custom_minimum_size = Vector2(0, DEALER_SHOT_H)
+			preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			preview.still = true
+			c.add_child(preview)
+			_dealer_views[path] = preview
 		var text := _rich()
 		text.text = info.text
 		c.add_child(text)
@@ -647,7 +658,7 @@ func _fill_dealer() -> void:
 		c.add_child(buy)
 		dealer_rows[path] = buy
 		_dealer_button(path)
-		if dealer_box.is_inside_tree():
+		if dealer_box.is_inside_tree():  # one a frame: loading and pricing a template is the slow part now
 			await dealer_box.get_tree().process_frame
 			if not is_instance_valid(dealer_box) or not dealer_box.is_inside_tree():
 				return  # the shipyard closed meanwhile
@@ -670,6 +681,54 @@ func _dealer_views_in_sight() -> void:
 		if not info.has("editor"):
 			info["editor"] = ShipEditor.new(info.bp, yard.editor.catalog)
 		view.show_design(info.editor)
+		_keep_picture(path, view, _dealer_accent(info))
+
+
+func _dealer_accent(info: Dictionary) -> Color:
+	return CyberTheme.AMBER if info.capital else CyberTheme.CYAN
+
+
+func _dealer_picture(tex: Texture2D) -> TextureRect:
+	var pic := TextureRect.new()
+	pic.texture = tex
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	pic.custom_minimum_size = Vector2(0, DEALER_SHOT_H)
+	pic.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return pic
+
+
+## Once `view` has drawn, save it as the template's catalogue picture and
+## show that instead (no picture without a renderer, e.g. headless).
+func _keep_picture(path: String, view: ShipPreview3D, accent: Color) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	# Drawn afresh at the card's laid-out size, then kept — unless the card
+	# changed size meanwhile (a stale texture is garbage) or no ship shows.
+	var img: Image = null
+	for attempt in 5:
+		await RenderingServer.frame_post_draw
+		if not is_instance_valid(view) or not view.is_inside_tree():
+			return
+		var size := Vector2i(view.size)
+		view.redraw()
+		for k in 2:
+			await RenderingServer.frame_post_draw
+		if not is_instance_valid(view) or not view.is_inside_tree():
+			return
+		var shot := view.snapshot()
+		if Vector2i(view.size) == size and shot != null and shot.get_size() == size and DealerShots.has_subject(shot):
+			img = shot
+			break
+	if img == null:
+		return
+	var pic := _dealer_picture(DealerShots.save_shot(path, img, accent))
+	var at := view.get_index()
+	var box := view.get_parent()
+	box.remove_child(view)
+	view.queue_free()
+	box.add_child(pic)
+	box.move_child(pic, at)
 
 
 func _dealer_button(path: String) -> void:

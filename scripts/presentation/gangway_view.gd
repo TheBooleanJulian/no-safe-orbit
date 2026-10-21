@@ -7,9 +7,8 @@ extends Node3D
 const RADIUS_M := 1.2
 const COLOR_EXTENDING := Color(0.96, 0.78, 0.26)
 const COLOR_SEALED := Color(0.75, 0.8, 0.86)
-## Hexagonal, like the collars it joins (play-test batch 10), ribbed every
-## RIB_SPACING_M.
-const SIDES := 6
+## Octagonal like the collars it joins — a square with its corners cut
+## short (play-test batch 11) — and ribbed every RIB_SPACING_M.
 const RIB_SPACING_M := 2.0
 static var _ribs: ImageTexture
 
@@ -38,7 +37,7 @@ func sync(world: WorldSimulation, alpha: float, render_origin: Vector3) -> void:
 		var length := maxf(pa.distance_to(end), 0.01)
 		var dir := (end - pa) / length
 		var up := Vector3.RIGHT if absf(dir.dot(Vector3.UP)) > 0.95 else Vector3.UP
-		# CylinderMesh runs along +Y: point Y along the gangway.
+		# The tube runs along +Y: point Y along the gangway.
 		var x := up.cross(dir).normalized()
 		# Columns: X and Z across the tube, Y along it, stretched to length.
 		tube.transform = Transform3D(Basis(x, dir * length, x.cross(dir)), (pa + end) * 0.5)
@@ -61,14 +60,14 @@ static func rib_texture() -> ImageTexture:
 	return _ribs
 
 
+## The tube's cross-section: the collar's octagon.
+static func outline() -> PackedVector2Array:
+	return ShipModelBuilder.octagon(RADIUS_M, ShipModelBuilder.COLLAR_CHAMFER)
+
+
 func _make_tube() -> MeshInstance3D:
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = RADIUS_M
-	mesh.bottom_radius = RADIUS_M
-	mesh.height = 1.0
-	mesh.radial_segments = SIDES
 	var tube := MeshInstance3D.new()
-	tube.mesh = mesh
+	tube.mesh = ShipModelBuilder.prism_mesh(outline(), 1.0, false)
 	var mat := StandardMaterial3D.new()
 	mat.roughness = 0.6
 	mat.metallic = 0.3

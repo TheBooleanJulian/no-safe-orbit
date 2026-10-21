@@ -306,8 +306,11 @@ static func radiator_panels(mount: Vector3, normal: Vector3, along: Vector3, sid
 const ENGINE_REF_THRUST_N := 800_000.0
 const RCS_HEAVY_N := 150_000.0
 ## The docking collar and its gangway are hexagonal.
-const COLLAR_SIDES := 6
+## The collar's half-width (to its long edges) and the cut across each
+## corner: an octagon with four long sides and four short ones, almost a
+## rounded square (play-test batch 11).
 const COLLAR_RADIUS_M := 1.35
+const COLLAR_CHAMFER := 0.4
 
 
 static func engine_bell(thrust_n: float) -> Vector2:
@@ -579,19 +582,23 @@ static func _collar(part: Node3D, mount: Vector3, normal: Vector3) -> Node3D:
 	ring_mat.emission_enabled = true
 	ring_mat.emission = Color(1.0, 0.75, 0.1)
 	ring_mat.emission_energy_multiplier = 0.35
-	# A hexagonal ring (play-test batch 10): six hazard-striped edges round a
-	# hexagonal hatch.
-	for k in COLLAR_SIDES:
-		var a := TAU * k / COLLAR_SIDES
-		var out := basis.x * cos(a) + basis.z * sin(a)
-		var along := basis.z * cos(a) - basis.x * sin(a)
-		var edge := _box(part, Vector3(COLLAR_RADIUS_M * 1.02 + 0.3, 0.45, 0.55), Vector3.ZERO, ring_mat)
-		edge.transform = Transform3D(Basis(along, normal, along.cross(normal)), mount + normal * 0.25 + out * COLLAR_RADIUS_M * cos(PI / COLLAR_SIDES))
+	# An octagonal ring: eight hazard-striped edges, long and short by turns,
+	# round an octagonal hatch.
+	var ring := octagon(COLLAR_RADIUS_M, COLLAR_CHAMFER)
+	for k in ring.size():
+		var a := ring[k]
+		var b := ring[(k + 1) % ring.size()]
+		var mid := (a + b) * 0.5
+		var along := (basis.x * (b.x - a.x) + basis.z * (b.y - a.y)).normalized()
+		var edge := _box(part, Vector3(a.distance_to(b) + 0.3, 0.45, 0.55), Vector3.ZERO, ring_mat)
+		edge.transform = Transform3D(Basis(along, normal, along.cross(normal)), mount + normal * 0.25 + basis.x * mid.x + basis.z * mid.y)
 	var hatch_mat := StandardMaterial3D.new()
 	hatch_mat.albedo_color = Color(0.08, 0.08, 0.09)
-	var hatch := _cylinder(part, 1.0, 1.0, 0.2, Vector3.ZERO, hatch_mat)
-	(hatch.mesh as CylinderMesh).radial_segments = COLLAR_SIDES
-	hatch.transform = Transform3D(basis * Basis(Vector3.UP, PI / COLLAR_SIDES), mount + normal * 0.12)
+	var hatch := MeshInstance3D.new()
+	hatch.mesh = prism_mesh(octagon(COLLAR_RADIUS_M - 0.25, COLLAR_CHAMFER), 0.2, true)
+	hatch.material_override = hatch_mat
+	part.add_child(hatch)
+	hatch.transform = Transform3D(basis, mount + normal * 0.12)
 	var beacon_mat := StandardMaterial3D.new()
 	beacon_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	beacon_mat.albedo_color = Color(1.0, 0.85, 0.2)
@@ -1025,6 +1032,53 @@ static func _mat(cache: Dictionary, color: Color) -> StandardMaterial3D:
 		mat.roughness = 0.55
 		cache[color] = mat
 	return cache[color]
+
+
+## A square of half-width `half` with each corner cut `chamfer` × half
+## back: eight points (x, z), four long sides and four short.
+static func octagon(half: float, chamfer: float) -> PackedVector2Array:
+	var c := half * (1.0 - chamfer)
+	return PackedVector2Array([Vector2(half, -c), Vector2(half, c), Vector2(c, half), Vector2(-c, half),
+		Vector2(-half, c), Vector2(-half, -c), Vector2(-c, -half), Vector2(c, -half)])
+
+
+## `outline` (x, z, convex round the origin) drawn out along Y, `height`
+## tall and centred; with `caps`, closed at both ends. Round the sides, UV u
+## runs round the outline and v along the height.
+static func prism_mesh(outline: PackedVector2Array, height: float, caps: bool) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var h := height * 0.5
+	var n := outline.size()
+	for k in n:
+		var a := outline[k]
+		var b := outline[(k + 1) % n]
+		var out := Vector3(b.y - a.y, 0.0, a.x - b.x).normalized()
+		if out.dot(Vector3(a.x + b.x, 0.0, a.y + b.y)) < 0.0:
+			out = -out
+		var a0 := Vector3(a.x, -h, a.y)
+		var a1 := Vector3(a.x, h, a.y)
+		var b0 := Vector3(b.x, -h, b.y)
+		var b1 := Vector3(b.x, h, b.y)
+		var u0 := float(k) / n
+		var u1 := float(k + 1) / n
+		_face(st, [a0, b0, b1], [Vector2(u0, 0), Vector2(u1, 0), Vector2(u1, 1)], out)
+		_face(st, [a0, b1, a1], [Vector2(u0, 0), Vector2(u1, 1), Vector2(u0, 1)], out)
+		if caps:
+			_face(st, [Vector3(0, h, 0), a1, b1], [Vector2.ZERO, Vector2.ZERO, Vector2.ZERO], Vector3.UP)
+			_face(st, [Vector3(0, -h, 0), a0, b0], [Vector2.ZERO, Vector2.ZERO, Vector2.ZERO], Vector3.DOWN)
+	return st.commit()
+
+
+## One triangle facing `normal` (Godot's front faces wind clockwise).
+static func _face(st: SurfaceTool, p: Array, uv: Array, normal: Vector3) -> void:
+	var order := [0, 1, 2]
+	if ((p[1] as Vector3) - (p[0] as Vector3)).cross((p[2] as Vector3) - (p[0] as Vector3)).dot(normal) > 0.0:
+		order = [0, 2, 1]
+	for i: int in order:
+		st.set_normal(normal)
+		st.set_uv(uv[i])
+		st.add_vertex(p[i])
 
 
 static func _box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> MeshInstance3D:

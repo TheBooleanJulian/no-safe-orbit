@@ -117,7 +117,7 @@ func show_design(editor: ShipEditor) -> void:
 	_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.6, 30.0)
 	if still:
 		# A card: closer, and from higher up, so the hull's shape reads.
-		_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.25, 30.0)
+		_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.0, 30.0)
 		_pitch = -0.85
 	_extent = maxf(editor.grid.hull_bounds_m().size.length(), 20.0)
 	if berth:
@@ -126,6 +126,17 @@ func show_design(editor: ShipEditor) -> void:
 	_refresh_overlay()
 	_update_com()
 	_update_camera()
+
+
+## What the view last drew (null before it has drawn).
+func snapshot() -> Image:
+	return _viewport.get_texture().get_image() if _viewport != null else null
+
+
+## Draw once more (a still view draws only when asked).
+func redraw() -> void:
+	if _viewport != null:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 ## The docking bay around a hull of half-size `half` (m), centred on it.
@@ -352,13 +363,12 @@ func _update_camera() -> void:
 		# turned to face the nose; ⟲ / ⟳ turn it in quarter steps.
 		var yaw := PI * 1.25 + _iso_turn * PI * 0.5
 		var dir := Vector3(sin(yaw) * cos(ISO_PITCH), -sin(ISO_PITCH), cos(yaw) * cos(ISO_PITCH))
-		_camera.position = dir * 400.0
-		_camera.look_at(Vector3.ZERO, Vector3.UP)
+		# Basis.looking_at, not look_at: the view may not be in the tree yet.
+		_camera.transform = Transform3D(Basis.looking_at(-dir, Vector3.UP), dir * 400.0)
 		return
 	_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	var d := Vector3(sin(_yaw) * cos(_pitch), -sin(_pitch), cos(_yaw) * cos(_pitch))
-	_camera.position = d * _distance
-	_camera.look_at(Vector3.ZERO, Vector3.UP)
+	_camera.transform = Transform3D(Basis.looking_at(-d, Vector3.UP), d * _distance)
 
 
 # --- Isometric editing ------------------------------------------------------------

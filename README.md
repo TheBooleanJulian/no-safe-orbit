@@ -420,7 +420,8 @@ spins the ship it strikes. A round that punches through keeps going, slower.
 
 **Hit cam:** each hit you score opens a small X-ray replay of the target —
 the round's path through the hull and every module it damaged or destroyed,
-in order (the most severe recent hit wins the window).
+in order (the most severe recent hit wins the window). It stays shut while
+the Tab drawer is open, where it would sit over the middle of the screen.
 
 **Sky:** stars, Sun and the central body's rotation are real for 2026-10-19
 12:00 UTC (Yale Bright Star Catalogue, NASA Blue Marble, NASA CGI Moon Kit;
@@ -449,7 +450,8 @@ courses: how near and in how long (and COLLISION COURSE inside 50 m).
 ≈92 min). Burn prograde (along the green ring) to raise the far side of your
 orbit, retrograde to lower it. The **entry interface is 100 km** (the Kármán
 line). If your periapsis drops below it, the HUD warns you and counts down.
-Crossing it ends the flight in a **re-entry**: the plasma sheath builds and
+Crossing it ends the flight in a **re-entry**: a cone of plasma builds round
+the hull, its tip just ahead of the nose, and
 the ship breaks up (7 s), then the debrief; Backspace restarts.
 
 **Lunar orbit** (Lunar Shipyard): 100 km circular at 1.63 km/s (period
@@ -912,12 +914,12 @@ Beside the builder the directory narrows to the names.
 |---|---|
 | **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights) inside the station's docking hall — ribbed walls, catwalks with amber lamps, a gridded deck, light strips overhead — turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
 | **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage, **retrieve** (a pod lost at a charted station, guarded by a ship or two: G alongside it — within the beacon's reach, 8 km with a salvage drone, and 5 m/s — stows it in the hold; paid once you dock at the station that offered the work) — and **cargo** (about one offer in three once a second station is charted): no fight, 20–90 m³ of freight to another station, loaded into your hold on accepting (refused if it won't fit), paid on arriving there with it aboard (120 cr + 4 cr a m³, more the further the jump). Banking leaves the freight aboard; jettisoning it, abandoning the contract or losing the ship fails it. Accepting a combat contract sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
-| **DEALER** | Every template for credits, with its standard crew hired — twelve hulls, cheapest first: Cutter, Corvette, Frigate, and capital ships (Halberd Frigate, Destroyer, Carrier, Cruiser, Wyvern Battlecruiser, Anvil Heavy Cruiser) up to the super-heavies (Sovereign Supercarrier, Colossus Battleship, Leviathan Dreadnought). The cards fill in as the dealer opens; each card's 3D view is drawn once it scrolls into sight. The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
+| **DEALER** | Every template for credits, with its standard crew hired — twelve hulls, cheapest first: Cutter, Corvette, Frigate, and capital ships (Halberd Frigate, Destroyer, Carrier, Cruiser, Wyvern Battlecruiser, Anvil Heavy Cruiser) up to the super-heavies (Sovereign Supercarrier, Colossus Battleship, Leviathan Dreadnought). Three cards across, filling in as the dealer opens. Each card shows a catalogue picture of the hull; the first time a template is seen its 3D view is drawn as it scrolls into sight and kept as that picture (in `user://dealer_shots`, redrawn when the template changes), so the dealer opens quickly from then on. The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** (Hangar & bank) | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the service record — and the **station bank**: a deposit (1 % a sortie, compounding) and three loans, one of each at a time — Dockyard credit 1,000 cr at 5 % over 5 sorties, Guild loan 5,000 cr at 4 % over 10, Shipbuilder's mortgage 25,000 cr at 3 % over 20 — paid off in instalments on docking (a shortfall adds 10 % of it) or repaid early |
 | **REFIT** | The builder below |
 | **CREW** (Crew manifest) | All eight departments (pilots too), each against the standard complement (amber when short), its crew as badges with a placeholder portrait, level, previous occupation and sorties (wage on hover) — **drag a badge onto another department** to post them there, ▲ to train, ✕ to dismiss. Top right, the **hiring hall** (never empty: each hire is replaced; **Fill berths** brings resting crew aboard, then hires general hands). Below it, **resting crew**: ashore and unpaid — drag a badge there to rest them, back onto a department (or ▲) to bring them aboard. Berths follow the design on the slip live (2 a quarters cell); anyone over goes ashore |
 | **SERVICES** (Service bay) | Three large buttons — **REPAIR** (the spare parts it takes), **REARM** (rounds, point defence, missiles and flares) and **REFUEL** (propellant and the jump reserve, with the Δv it gives) — each buying what the credits allow (or leave it to the launch); the damage report with what to fix first; the **cargo hold** and Bank cargo |
-| **QUARTERMASTER** | The quartermaster's rarer parts, and **spare parts in any amount** (a counter, 25 cr per 10) |
+| **QUARTERMASTER** | The quartermaster's rarer parts, **spare parts in any amount** (a counter, 25 cr per 10), and **found equipment still in the cargo hold bought back** at 40 % of the shelf price (a common part as if it cost 100 cr), one at a time |
 | **UPGRADES** (Station tech) | The **tech tree**, left to right: from the Shipyard charter it branches out — propulsion (thrusters, reactor, radiators, jump calibration −5 % Δv a level), weapons (gunnery, PD fire control +10 % PD rate, hangar crews +15 % turnaround, sensor suites +10 % range), crew (damage control, medicine, crew academy −20 % training, crew welfare −20 % wages) and salvage (salvage contacts, bounty licences +10 %). A node's first level needs its parent, each later level the one before: teal bought, gold buyable now, dim locked; hover for what it does. Upgrades bought before the tree branched are kept |
 | **MAP** | Where you launch from, how many you meet |
 | **LOOT** | Every crate drop and its odds |
@@ -1039,7 +1041,7 @@ needed between them.
 | Zoom / pan | Mouse wheel / middle-drag on the deck editor |
 | Centre of mass | ◉ CoM [C]: a marker in the deck, side and front views and a sphere in 3D |
 | New ship | HANGAR → New ship: design on an empty slip, COMMISSION builds it (every part + 250 cr) as another vessel; the picker switches vessels |
-| Testing aid | HANGAR → CARGO & BANK → DEV +100 cr |
+| Testing aid | HANGAR → CARGO & BANK → DEV +100k cr |
 | Loot odds | HANGAR → LOOT TABLES: crate odds, tier odds, every item |
 | Select / move / delete | Select tool (S): click and drag, or arrow keys, Delete; Shift-click modules to move several together, Ctrl+A for the whole hull (everything inside comes along) |
 | Old designs | HANGAR → SERVICE → Convert to blocks: rebuilds old large sections from blocks with plates (free on your own vessel) |

@@ -265,6 +265,15 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Flight and shipyard (play-test batch 11, part 4)**: `Hud.drawer_open`
+  shuts the hit cam while the Tab drawer is open. `ShipInstance.cargo_summary`
+  names the contract freight. `PlayerProfile.sell_price` / `sell_cargo_equipment`
+  (`SELL_SHARE`). The dealer is a `GridContainer` of `DEALER_COLUMNS`;
+  `DealerShots` keeps each card's picture in `user://dealer_shots` keyed by
+  the template's MD5 and `STYLE` — `ShipyardSections._keep_picture` redraws
+  the card's `ShipPreview3D` at its laid-out size, keeps the frame only if it
+  is that size and `has_subject`, decorates and saves it, and swaps the view
+  for a `TextureRect`. `Shipyard.DEV_CREDITS`.
 - **Refit bay (play-test batch 11, part 3)**: `EquipmentIcons` (a shape per
   kind; drones by `CrewRoster.needs_pilot`; a palette icon in the rarity
   colour; `draw` on the deck). Palette text is `Shipyard.palette_color(def.color)`.
@@ -332,8 +341,9 @@ and the location's central body:
   player, rebuilt every 0.4 s, heights morphed in and faded at the edge).
   HUD `ground_text` and a GROUND alert. Earth: `Main._play_reentry` holds
   `close_sortie` for `REENTRY_CUTSCENE_S` while `ShipView.show_reentry`
-  grows the plasma sheath and breaks modules off (`mesh_from_flats` skips
-  emptied materials).
+  grows the plasma cone (a unit `CylinderMesh`, tip `REENTRY_TIP`, scaled
+  along the flow) and breaks modules off (`mesh_from_flats` skips emptied
+  materials).
 - **Crew and models (play-test batch 10, part 1)**: `Main.threat_present`
   (hostile contact, hostile craft flying, a non-player missile, fire within
   `UNDER_FIRE_S`) stamps `_threat_seen`; `systems.suited` holds until
@@ -348,8 +358,10 @@ and the location's central body:
   `Docking.COLLAR_SEAL_S` 5, `HULL_CUT_S` 22.5. Models:
   `ShipModelBuilder.radiator_panels` (flat or fin), `engine_bell(thrust)`
   and `Model.engine_widths` (ShipView scales each plume), RCS nozzles,
-  turret/PD detail merged per pivot (`_merge_static(pivot)`), a hexagonal
-  `_collar` (`COLLAR_SIDES`), `GangwayView` hexagonal with a rib texture,
+  turret/PD detail merged per pivot (`_merge_static(pivot)`), an octagonal
+  `_collar` (`octagon(COLLAR_RADIUS_M, COLLAR_CHAMFER)`: a square with its
+  corners cut; `prism_mesh` for the hatch), `GangwayView` the same octagon
+  (`outline()`) with a rib texture,
   berth gantries of `_truss` bays in red with `_beacon` pivots turned in
   `ShipPreview3D._process`, more `CraftView` / `MissileView` pieces.
 - **Effects and the opening range (play-test batch 9, part 7)**:

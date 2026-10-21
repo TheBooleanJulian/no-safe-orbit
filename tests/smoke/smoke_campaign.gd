@@ -170,13 +170,18 @@ func _run() -> void:
 	yard.debrief.hide_debrief()
 	var hold_parts := int(vessel.cargo.get("spare_parts", 0))
 	var banked_from := profile.spare_parts
+	var damage_before := JSON.stringify(vessel.condition)
+	var jobs_before := ServiceYard.repair_jobs(vessel, yard.editor.catalog).size()
 	_check(not yard.bank_cargo().is_empty() and vessel.cargo_is_empty() and profile.spare_parts >= banked_from + hold_parts,
 		"Bank cargo moves the hold into the station bank")
+	_check(vessel.is_damaged() and JSON.stringify(vessel.condition) == damage_before
+		and ServiceYard.repair_jobs(vessel, yard.editor.catalog).size() == jobs_before,
+		"banking repairs nothing: still damaged, %d repair jobs" % jobs_before)
 	_check(yard.loot_tables_label.get_parsed_text().contains("LEGENDARY") and yard.loot_tables_label.get_parsed_text().contains("takeover"),
 		"the shipyard lists the loot tables")
 	var credits_dev := profile.credits
 	yard.dev_add_credits()
-	_check(profile.credits == credits_dev + 100, "DEV +100 cr adds 100 credits")
+	_check(profile.credits == credits_dev + 100000, "DEV +100k cr adds 100 000 credits")
 
 	# 5. Repair and reconfigure.
 	var before_repair := profile.spare_parts

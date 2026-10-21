@@ -4,6 +4,52 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 11, part 4 — flight and shipyard (2026-10-22)
+
+#### Added
+- **Sell found equipment** from the cargo hold to the quartermaster, at 40 %
+  of the shelf price (a common part as if it cost 100 cr).
+- **Ship dealer catalogue pictures**: each card shows a decorated picture of
+  the hull (vignette, faint grid, corner brackets in the card's colour). It
+  is drawn once — the first time the card scrolls into sight — and kept in
+  `user://dealer_shots`, keyed by the template's contents, so the dealer
+  opens without building a 3D view per card.
+
+#### Changed
+- **The re-entry plasma is a cone**, its tip just ahead of the nose and
+  opening aft, instead of a stretched ball.
+- **The docking collar and gangway are octagonal**: a square with its
+  corners cut short, almost a rounded square.
+- **The dealer shows three cards across** instead of two.
+- **The hold's line names the contract freight** ("contract freight:
+  medical supplies (40 m³)") in the shipyard and in flight; before, a hold
+  with only freight read "empty".
+- **The hit cam stays shut while the Tab drawer is open** (it sat over the
+  middle of the screen beside the drawer).
+- **DEV +100k cr** (was +100).
+- The shipyard's 3D views aim their camera without `look_at`, so building
+  one before it is on screen no longer logs an engine error.
+
+#### Not reproduced
+- Banking the cargo does not repair the ship: before and after banking the
+  vessel keeps the same damage and repair jobs (now checked in
+  `smoke_campaign`). Banking spare parts makes the REPAIR button affordable,
+  but it still has to be pressed.
+
+#### Tests changed (and why)
+- New `test_batch11_cargo` (4): the freight named; selling from the hold
+  (480 cr for a rare part, the hold emptied, the bank untouched); DEV 100k;
+  dealer pictures saved, loaded, decorated and keyed per template, empty
+  frames refused.
+- `test_batch10_models`: `test_hexagonal_collar_and_gangway` →
+  `test_octagonal_collar_and_gangway` — eight edges, long and short by turns,
+  the gangway's faces pointing out.
+- `test_batch10_surface`: the re-entry plasma is a cone with its tip into
+  the flow.
+- `smoke_campaign`: banking leaves the damage as it was; DEV +100k.
+- `smoke_encounter`: with the drawer open, the hit cam stays shut
+  (mutation-checked: fails without the rule).
+
 ### Play-test batch 11, part 3 — the refit bay (2026-10-22)
 
 #### Added
