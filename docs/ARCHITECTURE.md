@@ -265,6 +265,16 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Dealer (play-test batch 10, part 3)**: `tools/make_capital_templates.gd`
+  describes the hull cell by cell (`_row_cols`: taper, "hammer" head and
+  neck, "split" fork; swept "wing_*" blocks; `tower` levels; "rcs_mid"),
+  places wedges ahead of any cell with nothing ahead of it, and kit at each
+  row's outermost hull (`outer`); it reproduces the batch-6 capitals byte
+  for byte. `ShipyardSections` keeps a static `_templates` cache ({bp,
+  price, capital, text}, the editor when a view needs it), fills the dealer
+  one card a frame in price order (`_dealer_order.bsearch`), and builds a
+  card's `ShipPreview3D` (`still`: rendered once) when it is in sight.
+  `ServiceYard.dealer_price` takes an optional grid and stats.
 - **Surfaces (play-test batch 10, part 2)**: `TerrainMap` (data/moon's
   LOLA heights from `tools/convert_lola.py`; rows decoded on first use;
   `height_at(body-fixed dir)` = bilinear map + `FastNoiseLite` detail);

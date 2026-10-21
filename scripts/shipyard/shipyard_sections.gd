@@ -56,6 +56,16 @@ var abandon_button: Button
 ## DEALER: one card per template.
 var dealer_box: HFlowContainer
 var dealer_rows: Dictionary = {}  # template path -> Button (buy)
+## What the dealer knows of each template — {bp, editor, price, capital,
+## text} by path — worked out once a session (templates don't change while
+## the game runs; a super-heavy takes ~0.3 s to load, check and price). The
+## cards are built the first time the dealer opens, one a frame; each
+## card's 3D view (~0.2 s for a super-heavy) only once it scrolls into view.
+static var _templates: Dictionary = {}
+var _dealer_filled := false
+var _dealer_order: Array[int] = []  # the cards' prices, in the order shown
+var _dealer_views: Dictionary = {}  # path -> the card's 3D view, not built yet
+var _dealer_scroll: ScrollContainer
 ## SERVICES: a big button each to repair, rearm and refuel, what each costs.
 var service_labels: Dictionary = {}  # repair / rearm / refuel -> RichTextLabel
 var service_buttons: Dictionary = {}  # repair / rearm / refuel -> Button
@@ -595,43 +605,104 @@ func _build_dealer() -> void:
 	dealer_box.add_theme_constant_override("h_separation", CyberTheme.SPACE_M)
 	dealer_box.add_theme_constant_override("v_separation", CyberTheme.SPACE_M)
 	scroll.add_child(dealer_box)
-	var paths: Array = Array(BlueprintIO.list_templates())
-	paths.sort_custom(func(a: String, b: String) -> bool: return _price_of(a) < _price_of(b))
-	for path in paths:
-		var bp := BlueprintIO.load_file(path, PackedStringArray())
-		if bp == null:
+	_dealer_scroll = scroll
+	# Scrolled: the cards have moved by the next frame.
+	scroll.get_v_scroll_bar().value_changed.connect(func(_v: float) -> void:
+		if dealer_box.is_inside_tree() and not dealer_box.get_tree().process_frame.is_connected(_dealer_views_in_sight):
+			dealer_box.get_tree().process_frame.connect(_dealer_views_in_sight, CONNECT_ONE_SHOT))
+
+
+## The cards: one per template, cheapest first — built when the dealer is
+## first opened, one a frame (each has its 3D view: a super-heavy's takes
+## ~0.2 s), each put in its place by price as it comes.
+func _fill_dealer() -> void:
+	if _dealer_filled:
+		return
+	_dealer_filled = true
+	for path in BlueprintIO.list_templates():
+		var info := _template(path)
+		if info.is_empty() or not is_instance_valid(dealer_box):
 			continue
-		var c := card(dealer_box, bp.name.to_upper(), CyberTheme.AMBER if _is_capital(bp) else CyberTheme.CYAN, Vector2(460, 0))
+		var bp: ShipBlueprint = info.bp
+		var price := int(info.price.total)
+		var c := card(dealer_box, bp.name.to_upper(), CyberTheme.AMBER if info.capital else CyberTheme.CYAN, Vector2(460, 0))
+		var at := _dealer_order.bsearch(price, false)
+		_dealer_order.insert(at, price)
+		dealer_box.move_child(c.get_parent(), at)  # the card's panel
 		var preview := ShipPreview3D.new()
 		preview.custom_minimum_size = Vector2(440, 200)
+		preview.still = true
 		c.add_child(preview)
-		preview.show_design(ShipEditor.new(bp, yard.editor.catalog))
-		var info := _rich()
-		info.text = _offer_text(bp)
-		c.add_child(info)
+		_dealer_views[path] = preview
+		var text := _rich()
+		text.text = info.text
+		c.add_child(text)
 		var buy := Button.new()
 		buy.custom_minimum_size = Vector2(0, 34)
 		CyberTheme.style_button(buy, CyberTheme.AMBER, true)
 		buy.pressed.connect(func() -> void: yard.buy_ship(path))
 		c.add_child(buy)
 		dealer_rows[path] = buy
+		_dealer_button(path)
+		if dealer_box.is_inside_tree():
+			await dealer_box.get_tree().process_frame
+			if not is_instance_valid(dealer_box) or not dealer_box.is_inside_tree():
+				return  # the shipyard closed meanwhile
+		_dealer_views_in_sight()  # laid out now: where each card is is known
+
+
+## Build the 3D views of the cards now in sight (all of them when the
+## dealer isn't on screen to measure).
+func _dealer_views_in_sight() -> void:
+	var sight := _dealer_scroll.get_global_rect() if _dealer_scroll != null and _dealer_scroll.is_inside_tree() else Rect2()
+	for path: String in _dealer_views.keys():
+		var view: ShipPreview3D = _dealer_views[path]
+		if not is_instance_valid(view):
+			_dealer_views.erase(path)
+			continue
+		if sight.has_area() and (view.size.x < 1.0 or not sight.intersects(view.get_global_rect())):
+			continue  # not laid out yet, or out of sight
+		_dealer_views.erase(path)
+		var info := _template(path)
+		if not info.has("editor"):
+			info["editor"] = ShipEditor.new(info.bp, yard.editor.catalog)
+		view.show_design(info.editor)
+
+
+func _dealer_button(path: String) -> void:
+	var price := _price_of(path)
+	var b: Button = dealer_rows[path]
+	b.text = "BUY · %d cr" % price
+	b.disabled = price > yard.profile.credits
+	b.tooltip_text = "Short of credits (you have %d)" % yard.profile.credits if b.disabled else "Buy it: it joins your hangar as the active vessel"
+
+
+## The dealer's facts about a template ({} if it can't be read).
+func _template(path: String) -> Dictionary:
+	if not _templates.has(path):
+		var bp := BlueprintIO.load_file(path, PackedStringArray())
+		if bp == null:
+			return {}
+		var cat := yard.editor.catalog
+		var grid := ShipGrid.build(bp, cat)
+		var stats := ShipStats.compute(bp, grid)
+		var price := ServiceYard.dealer_price(bp, cat, grid, stats)
+		var capital := stats.mass_kg >= CAPITAL_MASS_KG
+		_templates[path] = {"bp": bp, "price": price, "capital": capital, "text": _offer_text(bp, stats, price, capital)}
+	return _templates[path]
 
 
 func _price_of(path: String) -> int:
-	var bp := BlueprintIO.load_file(path, PackedStringArray())
-	return int(ServiceYard.dealer_price(bp, yard.editor.catalog).total) if bp != null else 0
+	var info := _template(path)
+	return int(info.price.total) if not info.is_empty() else 0
 
 
 ## A capital ship: 900 t or more (the Destroyer and up).
-func _is_capital(bp: ShipBlueprint) -> bool:
-	var grid := ShipGrid.build(bp, yard.editor.catalog)
-	return ShipStats.compute(bp, grid).mass_kg >= 900_000.0
+const CAPITAL_MASS_KG := 900_000.0
 
 
-func _offer_text(bp: ShipBlueprint) -> String:
+func _offer_text(bp: ShipBlueprint, stats: ShipStats, price: Dictionary, capital: bool) -> String:
 	var cat := yard.editor.catalog
-	var grid := ShipGrid.build(bp, cat)
-	var stats := ShipStats.compute(bp, grid)
 	var counts := {}
 	for e in bp.equipment:
 		var def: EquipmentDefinition = cat.equipment.get(e.def_id)
@@ -644,9 +715,8 @@ func _offer_text(bp: ShipBlueprint) -> String:
 		var n := int(counts.get(spec[0], 0))
 		if n > 0:
 			arms.append("%d %s" % [n, spec[1]])
-	var price := ServiceYard.dealer_price(bp, cat)
 	return "%s%.0f t · %.2f g · Δv %.0f m/s · crew %d · cargo %.0f m³\n%s\n%s" % [
-		CyberTheme.tint("CAPITAL SHIP · ", CyberTheme.AMBER) if _is_capital(bp) else "",
+		CyberTheme.tint("CAPITAL SHIP · ", CyberTheme.AMBER) if capital else "",
 		stats.mass_kg / 1000.0, stats.thrust_forward_n / maxf(stats.mass_kg, 1.0) / ShipDynamics.G0, stats.delta_v_m_s(),
 		int(price.crew_count), stats.cargo_m3, " · ".join(arms),
 		CyberTheme.tint("hull and parts %d cr%s · crew %d × %d cr" % [price.ship,
@@ -834,12 +904,9 @@ func refresh() -> void:
 		"MISSIONS":
 			_refresh_missions()
 		"DEALER":
+			_fill_dealer()
 			for path in dealer_rows:
-				var price := _price_of(path)
-				var b: Button = dealer_rows[path]
-				b.text = "BUY · %d cr" % price
-				b.disabled = price > yard.profile.credits
-				b.tooltip_text = "Short of credits (you have %d)" % yard.profile.credits if b.disabled else "Buy it: it joins your hangar as the active vessel"
+				_dealer_button(path)
 		"SERVICES":
 			_refresh_services()
 		"HANGAR":

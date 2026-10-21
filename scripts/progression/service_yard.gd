@@ -90,15 +90,19 @@ static func part_credits() -> float:
 ## rarer parts it carries included (at the quartermaster's prices — they
 ## come with the ship, PlayerProfile.buy_ship): {ship, units (credits),
 ## unit_ids (id -> count), crew, total, crew_count}.
-static func dealer_price(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Dictionary:
+## `grid` / `stats`: already worked out for `bp` (else built here).
+static func dealer_price(bp: ShipBlueprint, catalog: ConstructionCatalog, grid: ShipGrid = null, stats: ShipStats = null) -> Dictionary:
 	var ship := ceili((parts_value(bp, catalog) * part_credits() + PlayerProfile.NEW_HULL_FEE) * DEALER_MARKUP)
 	var unit_ids := rare_units(bp, catalog)
 	var units := 0
 	for id: StringName in unit_ids:
 		units += int(unit_ids[id]) * PlayerProfile.VENDOR_PRICES[(catalog.equipment[id] as EquipmentDefinition).rarity]
 	units = ceili(units * DEALER_MARKUP)
-	var grid := ShipGrid.build(bp, catalog)
-	var crew_count := CrewRoster.default_for(bp, grid, ShipStats.compute(bp, grid)).members.size()
+	if grid == null:
+		grid = ShipGrid.build(bp, catalog)
+	if stats == null:
+		stats = ShipStats.compute(bp, grid)
+	var crew_count := CrewRoster.default_for(bp, grid, stats).members.size()
 	var crew := crew_count * PlayerProfile.HIRE_FEE
 	return {"ship": ship, "units": units, "unit_ids": unit_ids, "crew": crew, "total": ship + units + crew, "crew_count": crew_count}
 

@@ -32,6 +32,9 @@ var ghost_ok: bool = true
 ## clamp arms reaching in, work lights. Set before show_design.
 var berth: bool = false
 var _berth: Node3D
+## Drawn once and held (the dealer's cards, play-test batch 10): no idle
+## turn, and the view renders again only when it is dragged.
+var still: bool = false
 ## The gantries' truss bays (m) and their beacons' turn rate (rad/s).
 const TRUSS_BAY_M := 3.0
 const BEACON_TURN_RAD_S := 3.0
@@ -109,6 +112,10 @@ func show_design(editor: ShipEditor) -> void:
 	_parts = model.parts
 	_pivot.add_child(_model)
 	_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.6, 30.0)
+	if still:
+		# A card: closer, and from higher up, so the hull's shape reads.
+		_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.25, 30.0)
+		_pitch = -0.85
 	_extent = maxf(editor.grid.hull_bounds_m().size.length(), 20.0)
 	if berth:
 		_build_berth(editor.grid.hull_bounds_m().size * 0.5)
@@ -294,7 +301,7 @@ func refresh_ghost() -> void:
 func _process(delta: float) -> void:
 	for pivot in _beacon_pivots:
 		pivot.rotate_y(BEACON_TURN_RAD_S * delta)
-	if _idle and not isometric and is_visible_in_tree():
+	if _idle and not still and not isometric and is_visible_in_tree():
 		_yaw += IDLE_TURN_RATE * delta
 		_update_camera()
 
@@ -322,6 +329,8 @@ func _gui_input(event: InputEvent) -> void:
 func _update_camera() -> void:
 	if _camera == null:
 		return
+	if still and _viewport != null:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	if isometric:
 		_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 		_camera.size = _extent * 1.1
