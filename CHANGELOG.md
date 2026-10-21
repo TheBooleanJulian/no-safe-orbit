@@ -4,6 +4,33 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 9, part 3 — the service bay and the quartermaster (2026-10-21)
+
+#### Changed
+- **One service bay** (DRYDOCK) replaces REPAIRS and ARMOURY: three large
+  buttons — REPAIR (spare parts), REARM (rounds, point defence, missiles
+  and flares) and REFUEL (propellant and the jump reserve, with the Δv it
+  gives) — each priced and each buying what the credits allow
+  (`ServiceYard.refuel` / `rearm`; the main tank before the reserve;
+  rounds, then PD, then missiles); the damage report and the cargo hold
+  below.
+- **The quartermaster** has a page of its own in the CONCOURSE: the rarer
+  parts, and **spare parts in any amount** (a counter in tens, 25 cr per
+  10 — `PlayerProfile.buy_spare_parts(amount)`, `parts_price`). The hangar
+  no longer sells them.
+- The berth's service cards lead to the service bay; refusals say "refuel
+  in the SERVICE BAY".
+
+#### Tests changed (and why)
+- New `test_batch9_services` (3): partial refuel (main tank first, 65 t for
+  65 cr, the magazine untouched); rearm fills rounds and PD at the yard's
+  rate and clears the stores record; spare parts priced by amount.
+- `smoke_shipyard`: the SERVICE BAY's three buttons, REFUEL and REARM each
+  filling only their own stores, no parts button in the hangar, the
+  QUARTERMASTER selling 120 parts for 300 cr (replaces the ARMOURY check);
+  the directory's SERVICES line.
+- `test_m13_jumps`: refusals point to the SERVICE BAY.
+
 ### Play-test batch 9, part 2 — the builder (2026-10-21)
 
 #### Changed

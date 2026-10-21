@@ -92,7 +92,6 @@ var _history_label: RichTextLabel
 var _priority: OptionButton
 var _repair_button: Button
 var _bank_button: Button
-var _buy_button: Button
 var debrief: DebriefPanel
 ## Searchable, categorised palette (replaces the three tabs).
 var palette_list: ItemList
@@ -583,7 +582,25 @@ func scrap_active() -> int:
 	return parts
 
 
-## ARMOURY: rearm and refuel now (otherwise the launch does it).
+## SERVICE BAY: refuel now (otherwise the launch does it).
+func refuel_now() -> String:
+	var line := ServiceYard.refuel(profile.vessel, profile, editor.catalog)
+	_save_profile()
+	_set_status(line if line != "" else "The tanks are full")
+	_refresh()
+	return line
+
+
+## SERVICE BAY: rearm now — rounds, point defence, missiles and flares.
+func rearm_only() -> String:
+	var line := ServiceYard.rearm(profile.vessel, profile, editor.catalog)
+	_save_profile()
+	_set_status(line if line != "" else "The magazines and launchers are full")
+	_refresh()
+	return line
+
+
+## Rearm and refuel now (otherwise the launch does it).
 func rearm_now() -> String:
 	var line := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
 	_save_profile()
@@ -744,14 +761,22 @@ func bank_cargo() -> PackedStringArray:
 	return banked
 
 
-func buy_spare_parts() -> bool:
-	if not profile.buy_spare_parts():
-		_set_status("Not enough credits (%d needed)" % PlayerProfile.PARTS_LOT_PRICE, true)
+## QUARTERMASTER: buy `amount` spare parts.
+func buy_spare_parts(amount: int = PlayerProfile.PARTS_LOT) -> bool:
+	var cost := PlayerProfile.parts_price(amount)
+	if not profile.buy_spare_parts(amount):
+		_set_status("Not enough credits (%d needed)" % cost, true)
 		return false
 	_save_profile()
-	_set_status("Bought %d spare parts for %d credits" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE])
+	_set_status("Bought %d spare parts for %d credits" % [amount, cost])
 	_refresh_hangar()
+	if sections != null:
+		sections.refresh()
 	return true
+
+
+## How many spare parts the quartermaster's counter is set to.
+var parts_amount: int = 50
 
 
 func _save_profile() -> void:
@@ -1313,6 +1338,8 @@ func _build_hangar_panel() -> void:
 	_repair_button.pressed.connect(func() -> void: repair())
 	row.add_child(_priority)
 	row.add_child(_repair_button)
+	# The service bay's big REPAIR button does this now; the priority stays here.
+	_repair_button.visible = false
 	_convert_button = Button.new()
 	_convert_button.text = "Convert to blocks"
 	_convert_button.tooltip_text = "Rebuild the old large sections from blocks with armour plates (free on your own vessel's design)"
@@ -1324,9 +1351,6 @@ func _build_hangar_panel() -> void:
 	_bank_button.text = "Bank cargo"
 	_bank_button.tooltip_text = "Unload the hold into the station's bank: safe from loss"
 	_bank_button.pressed.connect(func() -> void: bank_cargo())
-	_buy_button = Button.new()
-	_buy_button.text = "Buy %d parts (%d cr)" % [PlayerProfile.PARTS_LOT, PlayerProfile.PARTS_LOT_PRICE]
-	_buy_button.pressed.connect(func() -> void: buy_spare_parts())
 	var debrief_button := Button.new()
 	debrief_button.text = "Last debrief"
 	debrief_button.pressed.connect(func() -> void: debrief.show_debrief(profile.last_debrief))
@@ -1334,9 +1358,9 @@ func _build_hangar_panel() -> void:
 	dev_button.text = "DEV +100 cr"
 	dev_button.tooltip_text = "Testing aid: 100 free credits"
 	dev_button.pressed.connect(func() -> void: dev_add_credits())
-	for b in [_bank_button, _buy_button, dev_button]:
+	for b in [_bank_button, dev_button]:
 		row2.add_child(b)
-	for b in [_repair_button, _bank_button, _buy_button, debrief_button]:
+	for b in [_repair_button, _bank_button, debrief_button]:
 		CyberTheme.style_button(b)
 	CyberTheme.style_button(dev_button, CyberTheme.AMBER)
 	box.add_child(_hangar_label)
@@ -1682,8 +1706,32 @@ func _refresh_station_tabs() -> void:
 			"Buy (%d cr)" % int(item.price), func() -> void: _station_result(profile.buy_stock(i, catalog)), profile.credits >= int(item.price)))
 	if profile.vendor_stock.is_empty():
 		_vendor_tab.add_child(_station_label("Sold out until the next sortie."))
-	_vendor_tab.add_child(_station_row("Spare parts ×%d" % PlayerProfile.PARTS_LOT, "Buy (%d cr)" % PlayerProfile.PARTS_LOT_PRICE,
-		func() -> void: buy_spare_parts(), profile.credits >= PlayerProfile.PARTS_LOT_PRICE))
+	# Spare parts in any amount (play-test batch 9), at the lot's rate.
+	var parts_row := HBoxContainer.new()
+	parts_row.add_theme_constant_override("separation", CyberTheme.SPACE_S)
+	var parts_label := _station_label("[b]Spare parts[/b] · %d cr per %d · you have %d" % [PlayerProfile.PARTS_LOT_PRICE, PlayerProfile.PARTS_LOT, profile.spare_parts])
+	parts_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parts_row.add_child(parts_label)
+	var amount := SpinBox.new()
+	amount.name = "PartsAmount"
+	amount.min_value = PlayerProfile.PARTS_LOT
+	amount.max_value = 5000
+	amount.step = PlayerProfile.PARTS_LOT
+	amount.value = parts_amount
+	amount.custom_minimum_size = Vector2(120, 0)
+	parts_row.add_child(amount)
+	var buy := Button.new()
+	buy.name = "BuyParts"
+	CyberTheme.style_button(buy, CyberTheme.AMBER, true)
+	var show_price := func(v: float) -> void:
+		parts_amount = int(v)
+		buy.text = "Buy %d · %d cr" % [parts_amount, PlayerProfile.parts_price(parts_amount)]
+		buy.disabled = profile.credits < PlayerProfile.parts_price(parts_amount)
+	show_price.call(amount.value)
+	amount.value_changed.connect(show_price)
+	buy.pressed.connect(func() -> void: buy_spare_parts(parts_amount))
+	parts_row.add_child(buy)
+	_vendor_tab.add_child(parts_row)
 	for branch in ["SHIP", "CAPTAIN"]:
 		_tech_tab.add_child(_station_label("[b]%s[/b] · credits %d" % ["SHIP TECHNOLOGY — every vessel" if branch == "SHIP" else "CAPTAIN'S TRAINING", profile.credits]))
 		for n in TechTree.NODES:
@@ -1800,7 +1848,6 @@ func _refresh_hangar() -> void:
 	var plan := ServiceYard.plan(jobs, _priority.selected, profile.spare_parts, v, profile)
 	_repair_button.disabled = plan.is_empty()
 	_bank_button.disabled = v.cargo_is_empty()
-	_buy_button.disabled = profile.credits < PlayerProfile.PARTS_LOT_PRICE
 	_repair_button.text = "Repair (%d)" % ServiceYard.total_cost(plan) if not plan.is_empty() else "Repair"
 	_refresh_station_tabs()
 

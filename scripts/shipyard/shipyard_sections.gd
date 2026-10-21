@@ -11,17 +11,17 @@ extends RefCounted
 ## dockmaster's log. Each place is a page; the builder (REFIT) is one of
 ## them, with the directory narrowed beside it.
 
-const SECTIONS := ["STATION", "MISSIONS", "DEALER", "HANGAR", "REFIT", "CREW", "ARMOURY", "REPAIRS", "UPGRADES", "MAP", "LOOT"]
+const SECTIONS := ["STATION", "MISSIONS", "DEALER", "HANGAR", "REFIT", "CREW", "SERVICES", "QUARTERMASTER", "UPGRADES", "MAP", "LOOT"]
 const START := "STATION"
 const HINTS := {
 	"STATION": "Your ship, what it needs, the next sortie",
 	"MISSIONS": "People at the yard with work — contracts",
 	"DEALER": "Ships for credits, crew included",
-	"HANGAR": "Your vessels, the hold and the bank, history",
+	"HANGAR": "Your vessels and their service record",
 	"REFIT": "Design and refit: the builder",
 	"CREW": "Who serves aboard, who is for hire",
-	"ARMOURY": "Rearm, refuel, the quartermaster's parts",
-	"REPAIRS": "Damage and what fixing it costs",
+	"SERVICES": "Repair, rearm and refuel — and the cargo hold",
+	"QUARTERMASTER": "Parts and spare parts for sale",
 	"UPGRADES": "Station technology for your ships",
 	"MAP": "Where you launch from, how many you meet",
 	"LOOT": "Every crate drop and its odds",
@@ -29,8 +29,8 @@ const HINTS := {
 
 ## The directory: [district, [[section, place name], ...]].
 const DIRECTORY := [
-	["DRYDOCK", [["STATION", "Berth"], ["REFIT", "Refit bay"], ["REPAIRS", "Repair crews"], ["ARMOURY", "Armoury"]]],
-	["CONCOURSE", [["MISSIONS", "Mission board"], ["CREW", "Crew quarters"], ["DEALER", "Ship dealer"]]],
+	["DRYDOCK", [["STATION", "Berth"], ["REFIT", "Refit bay"], ["SERVICES", "Service bay"]]],
+	["CONCOURSE", [["MISSIONS", "Mission board"], ["CREW", "Crew quarters"], ["DEALER", "Ship dealer"], ["QUARTERMASTER", "Quartermaster"]]],
 	["OPERATIONS", [["HANGAR", "Hangar & bank"], ["UPGRADES", "Station tech"], ["MAP", "Nav chart"], ["LOOT", "Salvage odds"]]],
 ]
 const DIRECTORY_WIDTH := 232.0
@@ -56,9 +56,9 @@ var abandon_button: Button
 ## DEALER: one card per template.
 var dealer_box: HFlowContainer
 var dealer_rows: Dictionary = {}  # template path -> Button (buy)
-## ARMOURY.
-var armoury_label: RichTextLabel
-var resupply_button: Button
+## SERVICES: a big button each to repair, rearm and refuel, what each costs.
+var service_labels: Dictionary = {}  # repair / rearm / refuel -> RichTextLabel
+var service_buttons: Dictionary = {}  # repair / rearm / refuel -> Button
 ## HANGAR.
 var scrap_button: Button
 var fleet_box: HFlowContainer
@@ -107,7 +107,7 @@ func build() -> void:
 	_build_station()
 	_build_missions()
 	_build_dealer()
-	_build_armoury()
+	_build_services()
 	_adopt_hangar_tabs()
 
 
@@ -210,8 +210,10 @@ func directory_status() -> Dictionary:
 	return {
 		"STATION": [v.name, false],
 		"REFIT": [v.blueprint.name, false],
-		"REPAIRS": ["%d job%s · %d parts" % [jobs.size(), "" if jobs.size() == 1 else "s", ServiceYard.total_cost(jobs)], true] if not jobs.is_empty() else ["in full repair", false],
-		"ARMOURY": ["restock %d cr" % need.credits, true] if int(need.credits) > 0 else ["stocked · %d on the shelf" % p.vendor_stock.size(), false],
+		"SERVICES": ["%s%s" % ["%d job%s · " % [jobs.size(), "" if jobs.size() == 1 else "s"] if not jobs.is_empty() else "",
+			"restock %d cr" % need.credits if int(need.credits) > 0 else "stocked"], true] if not jobs.is_empty() or int(need.credits) > 0
+			else ["repaired, armed, fuelled", false],
+		"QUARTERMASTER": ["%d on the shelf · %d parts" % [p.vendor_stock.size(), p.spare_parts], false],
 		"MISSIONS": ["on contract · %s" % p.active_contract.title, false] if not p.active_contract.is_empty() else ["%d offers posted" % p.board.size(), not p.board.is_empty()],
 		"CREW": ["%d / %d aboard · %d for hire" % [v.crew.size(), berths, p.hire_pool.size()], v.crew.size() < berths],
 		"DEALER": ["%d hulls for sale" % BlueprintIO.list_templates().size(), false],
@@ -273,9 +275,9 @@ static func _rich(min_width: float = 0.0) -> RichTextLabel:
 ## MAP, CREW, QUARTERMASTER, UPGRADES) become sections of their own.
 func _adopt_hangar_tabs() -> void:
 	var tabs := yard._hangar_tabs
-	var where := {"SERVICE": "REPAIRS", "CARGO & BANK": "HANGAR", "HISTORY": "HANGAR", "LOOT TABLES": "LOOT", "MAP": "MAP",
-		"CREW": "CREW", "QUARTERMASTER": "ARMOURY", "UPGRADES": "UPGRADES"}
-	var titles := {"SERVICE": "Repairs and refit", "CARGO & BANK": "The hold and the bank", "HISTORY": "Service record",
+	var where := {"SERVICE": "SERVICES", "CARGO & BANK": "SERVICES", "HISTORY": "HANGAR", "LOOT TABLES": "LOOT", "MAP": "MAP",
+		"CREW": "CREW", "QUARTERMASTER": "QUARTERMASTER", "UPGRADES": "UPGRADES"}
+	var titles := {"SERVICE": "Damage report", "CARGO & BANK": "Cargo hold", "HISTORY": "Service record",
 		"QUARTERMASTER": "Quartermaster: parts for sale"}
 	var columns := {}  # section -> HBoxContainer (several old tabs side by side)
 	for child in tabs.get_children():
@@ -288,7 +290,7 @@ func _adopt_hangar_tabs() -> void:
 		page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		var holder: Control = _content(section)
-		if section in ["HANGAR", "ARMOURY"]:
+		if section in ["HANGAR", "SERVICES"]:
 			if not columns.has(section):
 				var row := HBoxContainer.new()
 				row.add_theme_constant_override("separation", CyberTheme.SPACE_M)
@@ -407,7 +409,7 @@ func _build_station() -> void:
 	side.offset_top = CyberTheme.SPACE_M
 	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bay.add_child(side)
-	for spec in [["repairs", "Repair crews", "REPAIRS", CyberTheme.AMBER], ["rearm", "Armoury", "ARMOURY", CyberTheme.AMBER],
+	for spec in [["repairs", "Repairs", "SERVICES", CyberTheme.AMBER], ["rearm", "Rearm & refuel", "SERVICES", CyberTheme.AMBER],
 			["crew", "Crew quarters", "CREW", CyberTheme.CYAN], ["sortie", "Next sortie", "MISSIONS", CyberTheme.AMBER]]:
 		var c := card(side, spec[1], spec[3])
 		var label := _rich()
@@ -485,11 +487,11 @@ func _refresh_station() -> void:
 	var jobs := ServiceYard.repair_jobs(v, cat)
 	(station_cards.repairs as RichTextLabel).text = CyberTheme.tint("✔ in full repair", CyberTheme.CYAN) if jobs.is_empty() \
 		else "%d jobs · %d spare parts for everything" % [jobs.size(), ServiceYard.total_cost(jobs)]
-	(station_buttons.repairs as Button).text = "Repair crews ›"
+	(station_buttons.repairs as Button).text = "Service bay ›"
 	var need := ServiceYard.resupply_needs(v, cat)
 	(station_cards.rearm as RichTextLabel).text = CyberTheme.tint("✔ full", CyberTheme.CYAN) if int(need.credits) == 0 \
 		else "%d credits to fill propellant, rounds, missiles and flares (or at launch)" % need.credits
-	(station_buttons.rearm as Button).text = "Armoury ›"
+	(station_buttons.rearm as Button).text = "Service bay ›"
 	(station_cards.crew as RichTextLabel).text = "%d / %d aboard · %d for hire" % [v.crew.size(), stats.crew_capacity, p.hire_pool.size()]
 	(station_buttons.crew as Button).text = "Crew quarters ›"
 	var contract := p.active_contract
@@ -643,18 +645,64 @@ func _offer_text(bp: ShipBlueprint) -> String:
 			" · rarer parts %d cr (yours with it)" % price.units if int(price.units) > 0 else "", price.crew_count, PlayerProfile.HIRE_FEE], CyberTheme.TEXT_DIM)]
 
 
-# --- ARMOURY ----------------------------------------------------------------------
+# --- SERVICE BAY -------------------------------------------------------------------
 
-func _build_armoury() -> void:
-	var box := _content("ARMOURY")
-	var c := card(box, "Rearm & refuel", CyberTheme.AMBER)
-	armoury_label = _rich()
-	c.add_child(armoury_label)
-	resupply_button = Button.new()
-	resupply_button.custom_minimum_size = Vector2(240, 34)
-	CyberTheme.style_button(resupply_button, CyberTheme.AMBER, true)
-	resupply_button.pressed.connect(func() -> void: yard.rearm_now())
-	c.add_child(resupply_button)
+## Three cards across the top — repair, rearm, refuel — each with what it
+## needs and one large button; the damage report and the cargo hold below.
+func _build_services() -> void:
+	var box := _content("SERVICES")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", CyberTheme.SPACE_M)
+	box.add_child(row)
+	for spec in [["repair", "REPAIR", func() -> void: yard.repair()], ["rearm", "REARM", func() -> void: yard.rearm_only()],
+			["refuel", "REFUEL", func() -> void: yard.refuel_now()]]:
+		var c := card(row, spec[1], CyberTheme.AMBER)
+		c.get_parent().size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var label := _rich()
+		label.custom_minimum_size = Vector2(0, 60)
+		c.add_child(label)
+		var b := Button.new()
+		b.name = String(spec[0]).capitalize() + "Button"
+		b.custom_minimum_size = Vector2(0, 64)
+		b.add_theme_font_size_override("font_size", CyberTheme.SIZE_TITLE + 5)
+		CyberTheme.style_button(b, CyberTheme.AMBER, true)
+		b.pressed.connect(spec[2])
+		c.add_child(b)
+		service_labels[spec[0]] = label
+		service_buttons[spec[0]] = b
+
+
+func _refresh_services() -> void:
+	var p := yard.profile
+	var v := p.vessel
+	var cat := yard.editor.catalog
+	var jobs := ServiceYard.repair_jobs(v, cat)
+	var parts := ServiceYard.total_cost(jobs)
+	(service_labels.repair as RichTextLabel).text = CyberTheme.tint("✔ in full repair", CyberTheme.CYAN) if jobs.is_empty() \
+		else "%d job%s · %d spare parts for everything\nyou have %d · what first: the damage report below" % [jobs.size(), "" if jobs.size() == 1 else "s", parts, p.spare_parts]
+	var rb: Button = service_buttons.repair
+	rb.text = "REPAIR · %d parts" % parts if not jobs.is_empty() else "Nothing to repair"
+	rb.disabled = jobs.is_empty() or p.spare_parts <= 0
+	var need := ServiceYard.resupply_needs(v, cat)
+	var msl := ServiceYard.missile_needs(v, cat)
+	var arms_cr := ceili(float(int(need.rounds) + int(need.pd_rounds)) / ServiceYard.ROUNDS_PER_CREDIT - 1e-9) + int(msl.credits)
+	var lines := PackedStringArray()
+	lines.append("ROUNDS %s" % ("full" if int(need.rounds) <= 0 else "%d to fill" % need.rounds))
+	lines.append("POINT DEFENCE %s" % ("full" if int(need.pd_rounds) <= 0 else "%d to fill" % need.pd_rounds))
+	lines.append("MISSILES & FLARES %s" % ("full" if int(msl.count) == 0 else "%d to restock" % msl.count))
+	(service_labels.rearm as RichTextLabel).text = "\n".join(lines)
+	var ab: Button = service_buttons.rearm
+	ab.text = "REARM · %d cr" % arms_cr if arms_cr > 0 else "Fully armed"
+	ab.disabled = arms_cr <= 0 or p.credits <= 0
+	var tanks := p.vessel_tanks(cat)
+	var fuel_cr := ceili((float(need.propellant_kg) + float(need.reserve_kg)) / 1000.0 * ServiceYard.PROPELLANT_CREDITS_PER_T - 1e-9)
+	(service_labels.refuel as RichTextLabel).text = "PROPELLANT %s\nJUMP RESERVE %s\n%s aboard · %s full" % [
+		"full" if float(need.propellant_kg) <= 0.0 else "%.1f t to fill" % (float(need.propellant_kg) / 1000.0),
+		"full" if float(need.reserve_kg) <= 0.0 else "%.1f t to fill" % (float(need.reserve_kg) / 1000.0),
+		JumpDrive.dv_text(tanks.dv_mps), JumpDrive.dv_text(tanks.dv_full_mps)]
+	var fb: Button = service_buttons.refuel
+	fb.text = "REFUEL · %d cr" % fuel_cr if fuel_cr > 0 else "Tanks full"
+	fb.disabled = fuel_cr <= 0 or p.credits <= 0
 
 
 func _armoury_text() -> String:
@@ -715,11 +763,8 @@ func refresh() -> void:
 				b.text = "BUY · %d cr" % price
 				b.disabled = price > yard.profile.credits
 				b.tooltip_text = "Short of credits (you have %d)" % yard.profile.credits if b.disabled else "Buy it: it joins your hangar as the active vessel"
-		"ARMOURY":
-			armoury_label.text = _armoury_text()
-			var need := ServiceYard.resupply_needs(yard.profile.vessel, yard.editor.catalog)
-			resupply_button.text = "REARM & REFUEL · %d cr" % need.credits if int(need.credits) > 0 else "Nothing to restock"
-			resupply_button.disabled = int(need.credits) <= 0 or int(need.credits) > yard.profile.credits
+		"SERVICES":
+			_refresh_services()
 		"HANGAR":
 			_refresh_fleet()
 			scrap_button.disabled = yard.profile.vessels.size() <= 1
