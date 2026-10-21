@@ -736,6 +736,8 @@ rack. They fly with the same physics as every ship and can be shot down.
   | EW drone | EW drone rack | holds 1.2 km out towards the threat and jams for ships within 3 km |
   | Lancer laser fighter | fighter bay (Lancer laser) | gun runs like the Wasp with a laser: 1.5 km reach, 40 charges, no lead needed |
   | Laser drone | drone rack (laser) | an interceptor drone: lasers inbound missiles (one pulse each, 2 km) and craft; 30 charges |
+  | Repair drone | drone rack (repair) | patches damaged systems outside your hulls — guns, radiators, engines, sensors, racks — to 75 % (the field-repair limit) at 1.5 hp/s, your own ship first, then your side's; no walk or airlock, so it frees the crew for the inside. Destroyed parts still need the yard |
+  | Salvage drone | drone rack (salvage) | strips disabled hostiles and derelicts (your target first, else the nearest within 8 km): it cuts the most valuable system free every 4 s into half its worth in spare parts, and brings 30 home at a time — into the hold, at risk until banked. A stripped wreck is worth less to a beacon later |
 
 - **How they fly:** a craft never fires with a friend within 25 m of its
   line of fire, its rounds carry an IFF interlock that passes through your

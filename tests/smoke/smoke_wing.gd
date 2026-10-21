@@ -148,6 +148,13 @@ func _run() -> void:
 		if not c.is_drone():
 			fighter = c
 	_check(fighter.status == AirWing.Status.DOCKED and main.player_wing.launch(main.world, fighter) == "", "the replacement launches")
+	# Milestone 15: what salvage drones bring aboard goes into the hold.
+	var held := int(profile.vessel.cargo.get("spare_parts", 0))
+	main.player_wing.delivered_parts = 12
+	for i in 3:
+		await process_frame
+	_check(int(profile.vessel.cargo.get("spare_parts", 0)) == held + 12 and main.player_wing.delivered_parts == 0,
+		"salvage drones' 12 spare parts go into the hold (%d → %d)" % [held, int(profile.vessel.cargo.get("spare_parts", 0))])
 	_finish()
 
 

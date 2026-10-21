@@ -651,8 +651,15 @@ Done in play-test batch 6 (2026-10-21): the capital templates rebuilt as
 armoured battleships with a main battery (`test_m12_shipyard`), rarer parts
 sold with them, a camera that sits back for big hulls.
 
-Still to do: repair and salvage drones; hangar capacity, crew complement
-and PD coverage that scale with hull size.
+Part 1 ✅ (2026-10-21) — repair and salvage drones:
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Repair drone | `test_m15_drones` (mutation-checked) | two systems 20 % → 75 % (the field limit) in 20 s; destroyed mast left; no crew repair |
+| Salvage drone | `test_m15_drones`, `smoke_wing` | 6 systems cut, 30 parts home after 126 s, wreck 90 % → 58 %; parts into the hold |
+
+Still to do: hangar capacity, crew complement and PD coverage that scale
+with hull size.
 
 More craft as data (interceptor, bomber, repair and salvage drones, EW
 drone); capital templates (destroyer, cruiser, carrier) in the dealer, only
