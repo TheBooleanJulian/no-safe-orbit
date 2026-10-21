@@ -518,6 +518,18 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 10 — part 1: crew under fire, boarding, models ✅ (2026-10-21)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Suited crew don't die to venting; battle stations / stand down when confirmed clear | `smoke_encounter` | suits held with all contacts passive; a missile in flight a threat; stand down 10 s after clear |
+| Crew repair their own damaged room first (workshop aboard) | `test_batch10_crew` | reactor 30 → 75 % in 31 s; no team sent; none without a workshop |
+| Foam deals with fires, limited per sortie per room, with notices | `test_batch10_crew`, `test_feedback_pass` | unpowered room foamed; 2 a room each sortie |
+| 3×1 radiator fins fold along their length | `test_batch10_models` | 12 panels 0.4 → 8.4 m out, fold lines across the width |
+| Detailed engines (bigger for more thrust), RCS, craft, missiles, turrets, red truss clamps with beacons | `test_batch10_models`, windowed render | bells 1.30 × 2.06 → 1.50 × 3.43 m; 4 beacons, 44 truss bays |
+| Hexagonal collar and gangway | `test_batch10_models` | 6 edges, 6-sided hatch and tube |
+| Boarding at half the time | `test_batch10_crew` | gangway 5 / 22.5 s, cross 2.5 s, 2.5 s a room, hatch 10 s, fights ×2 |
+
 ### Play-test batch 9 — part 7: effects, opening range, craft fire rate ✅ (2026-10-21)
 
 | Requirement | Test | Measured |

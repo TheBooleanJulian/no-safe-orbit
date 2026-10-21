@@ -159,6 +159,31 @@ func _run() -> void:
 	_check(world.has_ship(&"target_01") and world.get_ship(&"target_01").display_name.begins_with("TGT-07 "),
 		"the lead was not touched")
 
+	# Battle stations hold until confirmed clear (play-test batch 10).
+	_check(player.systems.suited, "in the fight: battle stations, suits on")
+	for c in main.encounter.contacts:
+		c.hostile = false
+	main._last_enemy_fire = -INF
+	await process_frame
+	await process_frame
+	_check(player.systems.suited, "every contact passive: still at battle stations until confirmed clear")
+	var fake_missile := ShipState.create(&"smoke_missile", "missile", ShipConfig.new(), player.position + Vector3(0, 0, -5000))
+	fake_missile.side = &"hostile"
+	world.missiles.append(fake_missile)
+	_check(main.threat_present(), "a hostile missile still on its way: a threat")
+	world.missiles.erase(fake_missile)
+	# The salvos still in flight are threats too: gone, for the stand-down.
+	for m in world.missiles.duplicate():
+		if m.side != &"player":
+			world.missiles.erase(m)
+	for c in main.encounter.contacts:
+		for craft in c.wing.flying():
+			world.remove_ship(craft.id)
+			craft.status = AirWing.Status.DOCKED
+	_check(not main.threat_present(), "nothing hostile left")
+	await _wait(main, Main.STAND_DOWN_CLEAR_S + 2.0, func() -> bool: return not player.systems.suited)
+	_check(not player.systems.suited, "stand down after %.0f s confirmed clear" % Main.STAND_DOWN_CLEAR_S)
+
 	Engine.time_scale = 1.0
 	for s in ["", PlayerProfile.BACKUP_SUFFIX]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + s))

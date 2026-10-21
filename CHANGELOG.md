@@ -4,6 +4,58 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 10, part 1 — crew under fire, boarding, models (2026-10-21)
+
+#### Fixed
+- **Crew killed by venting while they should have been suited**: general
+  quarters ended the moment no contact was hostile, with its fighters still
+  out, its missiles still in flight or the next ship arriving. Now
+  **battle stations** hold while anything hostile is about (a hostile ship,
+  its craft, a missile, fire taken in the last 10 s) and the crew **stand
+  down** only after 10 s confirmed clear.
+- **Foam didn't put fires out** when the hit that started the fire also cut
+  the room's power: the bottles are self-contained now.
+
+#### Changed
+- **Foam is per sortie**: two charges per room every sortie (no more yard
+  recharge job); a notice when a fire takes hold and when foam is deployed.
+- **Crew fix their own room first**: with a working workshop aboard, fit
+  crew in a room with a damaged system patch it where they stand (damage
+  control and engineers 0.5 hp/s each, others half; × SYS pips, workshop
+  bonus, damage-control tech) up to 75 %; damage-control teams aren't sent
+  to it.
+- **Boarding takes half the time**: the gangway mates in 5 s (cuts in
+  22.5 s), the party crosses in 2.5 s, moves 2.5 s a room, cuts a locked
+  hatch in 10 s, and fights resolve twice as fast (same odds). The same
+  rules for enemy boarders.
+- **Radiator fins fold along their length**, like the flat panel.
+- **Models**: engine bells grow with thrust (620 kN 1.30 × 2.06 m to 1.45 MN
+  1.50 × 3.43 m) with a gimbal, chamber, feed lines and cooling bands, the
+  plume as wide; RCS blocks with five nozzles (the heavy one bigger, with an
+  armour cap); gun turrets with mantlet, recoil sleeve, muzzle brake (or
+  an emitter lens), sight and hatch; PD with an ammunition drum and a
+  fire-control dish; fighters with nose cone, intakes, pylons and stores,
+  spine and tail light; drones with an antenna, sensor ball, nozzles and
+  framed panels; missiles with a nozzle, a band and canards. The docking
+  collar and the gangway are **hexagonal** (the gangway ribbed). The berth's
+  gantries and clamp arms are **red truss** with a **rotating beacon** on
+  each tower and a clamp pad on the hull.
+
+#### Tests changed (and why)
+- New `test_batch10_crew` (3): in-place repair (the reactor 30 → 75 % in
+  31 s by its engineer; no team sent; nothing without a workshop), foam
+  without power and per sortie (an older save's used charges ignored),
+  the boarding timings.
+- New `test_batch10_models` (5): the fin's folds run out from the hull (12
+  panels 0.4 → 8.4 m, fold lines across its width), engine bells by thrust
+  and a plume width each, the hexagonal collar (6 edges, 6-sided hatch)
+  and gangway, 4 beacons on 44 red truss bays turning 0.30 rad in 0.1 s,
+  craft (fighter 19 parts, drone 27; were 10 and 16) and missiles (still
+  two surfaces). Checked in a windowed render too.
+- `smoke_encounter`: battle stations hold with every contact passive, a
+  hostile missile counts, stand down 10 s after nothing is left.
+- `test_feedback_pass`: foam charges are not saved into the next sortie.
+
 ### Play-test batch 9, part 7 — effects, the opening range, craft fire rate (2026-10-21)
 
 #### Added

@@ -103,8 +103,8 @@ const HULL_SEAL_S := 30.0
 ## air — in a vented room it smoulders (up to SMOULDER_S) and flares up if
 ## the room is re-pressurised. Burning: the room's systems take
 ## FIRE_HP_PER_S, its crew may be hurt, the ship takes FIRE_HEAT_KW. Every
-## room has FOAM_CHARGES of automatic foam (powered rooms), fired
-## FOAM_DELAY_S after a fire takes hold; recharged at the yard. Without foam,
+## room has FOAM_CHARGES of automatic foam a sortie (self-contained bottles:
+## no power needed), fired FOAM_DELAY_S after a fire takes hold. Without foam,
 ## damage control put it out by hand in CREW_FIGHT_S.
 const FIRE_START_CHANCE := 0.3
 const SMOULDER_S := 90.0
@@ -212,7 +212,7 @@ var equipment: Array[EquipmentState] = []
 var modules: Array[ModuleState] = []
 var rooms: Array[RoomState] = []
 var destroyed_hatches: Dictionary = {}  # hatch id -> true
-## General quarters: the crew are in spacesuits (Main sets it while a
+## Battle stations: the crew are in spacesuits (Main sets it while a
 ## hostile is about) — they move through vented rooms and survive a room
 ## venting around them.
 var suited: bool = false
@@ -397,7 +397,7 @@ func reachable_rooms() -> Dictionary:
 	var start := -1
 	for i in blueprint.rooms.size():
 		var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
-		# Suited crew (general quarters) keep command of a vented bridge
+		# Suited crew (battle stations) keep command of a vented bridge
 		# (play-test batch 6: one breach of the bridge disabled the ship).
 		if def != null and def.role == &"command" and (rooms[i].pressurized or suited):
 			start = i
@@ -920,6 +920,8 @@ func tick(ship: ShipState, dt: float) -> bool:
 		for e in equipment:
 			if not e.def.is_external() and damage_equipment(e, OVERHEAT_DAMAGE_PER_S * dt):
 				changed = true
+	if _advance_in_place_repairs(dt):
+		changed = true
 	for task in repair_tasks.duplicate():
 		if _advance_repair(task, dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * _repairer_skill(task)):
 			changed = true
@@ -1188,7 +1190,7 @@ func _advance_fires(dt: float) -> bool:
 			continue
 		f.burn_s += dt
 		var left := FOAM_CHARGES - int(foam_used.get(room, 0))
-		if f.burn_s >= FOAM_DELAY_S and left > 0 and rooms[room].powered:
+		if f.burn_s >= FOAM_DELAY_S and left > 0:
 			foam_used[room] = int(foam_used.get(room, 0)) + 1
 			fires.erase(room)
 			_note("Foam suppression put out the fire in %s %s (%d charge%s left)" % [_room_name(room), blueprint.rooms[room].id,
@@ -1542,7 +1544,7 @@ func set_isolated(room: int, isolated: bool) -> void:
 ## (sealed doors) are impassable; destroyed hatches are open holes.
 ## Isolated compartments can't be entered or left (suited boarders cut through).
 ## `suited`: boarders in suits (they also ignore our isolated compartments).
-## Our own crew in suits (general quarters) go through vented rooms too.
+## Our own crew in suits (battle stations) go through vented rooms too.
 func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -> Array[int]:
 	var none: Array[int] = []
 	var eva := suited or self.suited
@@ -1740,11 +1742,6 @@ func condition() -> Dictionary:
 		var pipes := coolant_cut.keys()
 		pipes.sort()
 		out["coolant_cut"] = pipes
-	if not foam_used.is_empty():
-		var foam := {}
-		for room: int in foam_used:
-			foam[blueprint.rooms[room].id] = foam_used[room]
-		out["foam_used"] = foam
 	if not missiles_used.is_empty():
 		out["missiles_used"] = missiles_used.duplicate()
 	var worn := {}
@@ -1788,11 +1785,8 @@ func apply_condition(c: Dictionary) -> void:
 	for e in equipment:
 		if fired.has(e.id):
 			missiles_used[e.id] = clampi(int(fired[e.id]), 0, maxi(e.def.missile_capacity, e.def.decoy_capacity))
+	# Foam is per sortie (play-test batch 10): a saved "foam_used" is ignored.
 	foam_used.clear()
-	var foam: Dictionary = c.get("foam_used", {})
-	for i in blueprint.rooms.size():
-		if foam.has(blueprint.rooms[i].id):
-			foam_used[i] = clampi(int(foam[blueprint.rooms[i].id]), 0, FOAM_CHARGES)
 	var worn: Dictionary = c.get("plates", {})
 	for key in blueprint.armor:
 		plates[key] = float(blueprint.armor[key]) * clampf(float(worn.get(key, 1.0)), 0.0, 1.0)
@@ -1816,6 +1810,56 @@ func apply_condition(c: Dictionary) -> void:
 
 
 # --- Field repair --------------------------------------------------------------
+
+## Crew in a damaged room fix it first (play-test batch 10): with a working
+## workshop aboard, every fit crew member not otherwise busy patches the
+## damaged internal systems of the room they are in, where they stand —
+## IN_PLACE_HP_PER_S each (damage control and engineers; anyone else at
+## IN_PLACE_UNTRAINED of it), × the SYS channel, the workshop bonus and
+## damage-control tech, up to FIELD_REPAIR_LIMIT. A system a damage-control
+## team is on is left to the team; one being patched in place isn't sent a team.
+const IN_PLACE_HP_PER_S := 0.5
+const IN_PLACE_UNTRAINED := 0.5
+## Systems being patched in place this tick (id -> hands on it).
+var in_place_repairs: Dictionary = {}
+
+
+func _advance_in_place_repairs(dt: float) -> bool:
+	in_place_repairs.clear()
+	if crew == null or working_workshop() < 0:
+		return false
+	var rate := dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * maxf(room_bonus(&"workshop"), 1.0)
+	var changed := false
+	for m in crew.members:
+		if not m.available() or m.location < 0 or not (suited or rooms[m.location].pressurized):
+			continue
+		var e := _damaged_in_room(m.location)
+		if e == null:
+			continue
+		var trained := m.role == CrewRoster.Role.DAMAGE_CONTROL or m.role == CrewRoster.Role.ENGINEERING
+		var limit := FIELD_REPAIR_LIMIT * e.max_hp
+		e.hp = minf(e.hp + IN_PLACE_HP_PER_S * (1.0 if trained else IN_PLACE_UNTRAINED) * rate, limit)
+		in_place_repairs[e.id] = int(in_place_repairs.get(e.id, 0)) + 1
+		if e.hp >= limit - 1e-6:
+			_note("%s %s patched to %d%% by the crew in %s %s" % [e.def.display_name, e.id, roundi(FIELD_REPAIR_LIMIT * 100.0),
+				_room_name(m.location), blueprint.rooms[m.location].id])
+			solve_power()
+			changed = true
+	return changed
+
+
+## The damaged internal system in `room` most worth patching first, or null.
+func _damaged_in_room(room: int) -> EquipmentState:
+	var best: EquipmentState
+	for e in equipment:
+		if e.destroyed() or e.def.is_external() or e.hp >= FIELD_REPAIR_LIMIT * e.max_hp - 1e-6 or is_under_repair(e.id):
+			continue
+		if grid.room_at.get(blueprint.equipment[e.index].cell, -1) != room:
+			continue
+		if best == null or _repair_rank(e) < _repair_rank(best):
+			best = e
+	return best
+
 
 ## Index of a workshop room that is powered, pressurised and reachable, or -1.
 func working_workshop() -> int:
@@ -1902,7 +1946,8 @@ func _access_rooms(e: EquipmentState) -> Array[int]:
 func field_repair_target() -> EquipmentState:
 	var best: EquipmentState
 	for e in equipment:
-		if e.destroyed() or e.hp >= FIELD_REPAIR_LIMIT * e.max_hp - 1e-6 or not can_reach(e) or is_under_repair(e.id):
+		if e.destroyed() or e.hp >= FIELD_REPAIR_LIMIT * e.max_hp - 1e-6 or not can_reach(e) or is_under_repair(e.id) \
+				or in_place_repairs.has(e.id):
 			continue
 		if e.id == preferred_repair_id:
 			return e

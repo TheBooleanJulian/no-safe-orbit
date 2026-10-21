@@ -16,8 +16,9 @@ const GANGWAY_MAX_M := 25.0
 const MAX_REL_SPEED_MPS := 0.5
 const MAX_REL_RATE_RAD_S := 0.06
 const MAX_MISALIGN_DEG := 20.0
-const COLLAR_SEAL_S := 10.0
-const HULL_CUT_S := 45.0
+## Halved in play-test batch 10 (boarding at half the time).
+const COLLAR_SEAL_S := 5.0
+const HULL_CUT_S := 22.5
 
 
 ## A place a gangway can attach: body-frame point on the hull surface and

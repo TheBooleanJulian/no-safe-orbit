@@ -15,6 +15,7 @@ var tint: Color = Color.WHITE
 var hull_name: String = ""
 
 var _plumes: Array[Node3D] = []
+var _plume_widths: Array[float] = []
 var _plume_material: StandardMaterial3D
 var _parts: Dictionary = {}
 var _missile_cones: Dictionary = {}  # launcher id -> Array[Node3D]
@@ -66,6 +67,7 @@ func _ready() -> void:
 	_beacons = model.beacons
 	_turrets = model.turrets
 	_docked_craft = model.docked_craft
+	_plume_widths = model.engine_widths
 	_build_plumes(model.engine_nozzles, model.engine_normals)
 	_plates = model.plates
 	_bake_hull(model)
@@ -94,7 +96,8 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 			var cap := state.config.max_thrust(axis, n[axis] < 0.0)
 			f = clampf(state.last_thrust_body.dot(-n) / cap, 0.0, 1.0) if cap > 0.0 else 0.0
 		_plumes[k].visible = f > 0.01
-		_plumes[k].scale = Vector3(1.0, 1.0, lerpf(0.2, 1.0, f))
+		var w := (_plume_widths[k] if k < _plume_widths.size() else 1.4) / 1.4
+		_plumes[k].scale = Vector3(w, w, lerpf(0.2, 1.0, f) * w)
 	_plume_material.albedo_color.a = 0.15 + 0.4 * fwd_fraction
 	if state.systems != null:
 		_show_damage(state.systems)
