@@ -74,6 +74,15 @@ func _run() -> void:
 	_check(yard.sections.current == "STATION" and yard.sections.pages.size() == ShipyardSections.SECTIONS.size()
 		and yard.sections.station_label.get_parsed_text().contains("CREDITS"),
 		"the shipyard opens on its STATION page, %d sections" % yard.sections.pages.size())
+	# The station directory (play-test batch 6): a place per section, each
+	# with its live line; the berth has the dockmaster's log.
+	var lines := yard.sections.directory_status()
+	_check(yard.sections.buttons.size() == ShipyardSections.SECTIONS.size() and lines.size() == ShipyardSections.SECTIONS.size()
+		and (yard.sections.status_labels["REPAIRS"] as Label).text != ""
+		and (yard.sections.station_cards["log"] as RichTextLabel).get_parsed_text().contains("DOCKMASTER"),
+		"the station directory lists every place with a live line (%s); the berth has the dockmaster's log" % (yard.sections.status_labels["CREW"] as Label).text)
+	(yard.sections.buttons["CREW"] as Button).pressed.emit()
+	_check(yard.sections.current == "CREW", "a directory entry opens its place")
 	yard.show_section("REFIT")
 	await _frames(2)
 	_check(yard.deck_editor.is_visible_in_tree() and not yard.sections.pages["STATION"].visible, "REFIT shows the builder")

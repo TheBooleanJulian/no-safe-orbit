@@ -833,7 +833,7 @@ func _refresh_stats() -> void:
 func _refresh_issues() -> void:
 	var report := editor.report
 	var lines := PackedStringArray()
-	var title := get_node_or_null("Margin/VBox/Body/Right/IssuesTitle") as Label
+	var title := find_child("IssuesTitle", true, false) as Label
 	if title != null:
 		title.text = "VALIDATION   ✖ %d errors   ▲ %d warnings" % [report.errors().size(), report.warnings().size()]
 		title.add_theme_color_override("font_color", COLOR_ERROR if report.has_errors() else (COLOR_WARNING if not report.issues.is_empty() else CyberTheme.CYAN))
@@ -1508,52 +1508,68 @@ func _refresh_station_tabs() -> void:
 		if gdef != null and gdef.kind == EquipmentDefinition.Kind.CANNON:
 			guns += 1
 	var want := CrewRoster.suggested(guns)
-	var tally := PackedStringArray()
+	# The roster board (play-test batch 6): a card per department — who
+	# serves there, against the standard complement (amber when short).
+	var board := HFlowContainer.new()
+	board.add_theme_constant_override("h_separation", CyberTheme.SPACE_M)
+	board.add_theme_constant_override("v_separation", CyberTheme.SPACE_M)
+	_crew_tab.add_child(board)
 	for r in CrewRoster.ROLE_NAMES.size():
-		var have := (by_role.get(r, []) as Array).size()
-		var col: Color = CyberTheme.AMBER if have < want[r] else CrewRoster.ROLE_COLORS[r]
-		tally.append("[color=#%s]● %s %d%s[/color]" % [col.to_html(false), CrewRoster.ROLE_SHORT[r], have, "/%d" % want[r] if want[r] > 0 else ""])
-	_crew_tab.add_child(_station_label("  ".join(tally) + "   [color=#%s](amber: short of the standard complement)[/color]" % CyberTheme.TEXT_DIM.to_html(false)))
-	var listed: Array[int] = []
-	for r in CrewRoster.ROLE_NAMES.size():
-		for i in by_role.get(r, []):
-			listed.append(i)
-	var last_role := -1
-	for i in listed:
-		var c: Dictionary = v.crew[i]
-		var post := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
-		if post != last_role:
-			last_role = post
-			_crew_tab.add_child(_station_label("[color=#%s][b]%s[/b][/color]" % [(CrewRoster.ROLE_COLORS[post] as Color).to_html(false),
-				str(CrewRoster.ROLE_NAMES[post]).to_upper()]))
-		var row := HBoxContainer.new()
-		var who := Label.new()
-		who.text = "   %s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
-		who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		who.clip_text = true
-		row.add_child(who)
-		var role := OptionButton.new()
-		for n in CrewRoster.ROLE_NAMES:
-			role.add_item(n)
-		role.select(int(c.role))
-		role.item_selected.connect(func(r: int) -> void:
-			profile.set_crew_role(i, r)
-			_save_profile())
-		row.add_child(role)
-		var out := Button.new()
-		out.text = "Dismiss"
-		out.pressed.connect(func() -> void:
-			profile.dismiss(i)
-			_save_profile()
-			_refresh_hangar())
-		row.add_child(out)
-		_crew_tab.add_child(row)
-	_crew_tab.add_child(_station_label("[b]FOR HIRE[/b] · credits %d · ★ = skill (faster repairs and treatment)" % profile.credits))
+		var members: Array = by_role.get(r, [])
+		if members.is_empty() and want[r] == 0:
+			continue
+		var short := members.size() < want[r]
+		var dept := ShipyardSections.card(board, "%s   %d%s" % [str(CrewRoster.ROLE_NAMES[r]).to_upper(), members.size(), " / %d" % want[r] if want[r] > 0 else ""],
+			CyberTheme.AMBER if short else CrewRoster.ROLE_COLORS[r], Vector2(CREW_CARD_WIDTH, 0))
+		if members.is_empty():
+			dept.add_child(_station_label("[color=#%s]no one posted — short of the standard complement[/color]" % CyberTheme.AMBER.to_html(false)))
+		for i: int in members:
+			var c: Dictionary = v.crew[i]
+			var row := HBoxContainer.new()
+			var who := Label.new()
+			who.text = "%s%s" % [c.name, "  " + "★".repeat(int(c.skill)) if int(c.skill) > 0 else ""]
+			who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			who.clip_text = true
+			row.add_child(who)
+			var role := OptionButton.new()
+			for n in CrewRoster.ROLE_NAMES:
+				role.add_item(n)
+			role.select(int(c.role))
+			role.tooltip_text = "Post %s elsewhere" % c.name
+			role.item_selected.connect(func(post: int) -> void:
+				profile.set_crew_role(i, post)
+				_save_profile())
+			row.add_child(role)
+			var out := Button.new()
+			out.text = "✕"
+			out.tooltip_text = "Dismiss %s" % c.name
+			CyberTheme.style_button(out, CyberTheme.RED)
+			out.pressed.connect(func() -> void:
+				profile.dismiss(i)
+				_save_profile()
+				_refresh_hangar())
+			row.add_child(out)
+			dept.add_child(row)
+	_crew_tab.add_child(_station_label("[b]HIRING HALL[/b] · credits %d · %d / %d berths filled · ★ = skill (faster repairs and treatment)" % [
+		profile.credits, v.crew.size(), berths]))
+	var hall := HFlowContainer.new()
+	hall.add_theme_constant_override("h_separation", CyberTheme.SPACE_S)
+	hall.add_theme_constant_override("v_separation", CyberTheme.SPACE_S)
+	_crew_tab.add_child(hall)
 	for i in profile.hire_pool.size():
 		var c: Dictionary = profile.hire_pool[i]
-		_crew_tab.add_child(_station_row("[color=#%s]●[/color] %s — %s %s" % [(CrewRoster.ROLE_COLORS[clampi(int(c.role), 0, 6)] as Color).to_html(false),
-			c.name, CrewRoster.ROLE_NAMES[int(c.role)], "★".repeat(int(c.skill))],
-			"Hire (%d cr)" % int(c.fee), func() -> void: _station_result(profile.hire(i, catalog)), v.crew.size() < berths and profile.credits >= int(c.fee)))
+		var role_index := clampi(int(c.role), 0, CrewRoster.ROLE_NAMES.size() - 1)
+		var who := ShipyardSections.card(hall, "", CrewRoster.ROLE_COLORS[role_index], Vector2(250, 0))
+		who.add_child(_station_label("[b]%s[/b]\n[color=#%s]%s[/color] %s" % [c.name, (CrewRoster.ROLE_COLORS[role_index] as Color).to_html(false),
+			CrewRoster.ROLE_NAMES[role_index], "★".repeat(int(c.skill))]))
+		var hire := Button.new()
+		hire.text = "Hire · %d cr" % int(c.fee)
+		hire.disabled = not (v.crew.size() < berths and profile.credits >= int(c.fee))
+		hire.tooltip_text = "No free berth" if v.crew.size() >= berths else ("Short of credits" if hire.disabled else "Sign %s on" % c.name)
+		CyberTheme.style_button(hire, CyberTheme.AMBER)
+		var index := i
+		hire.pressed.connect(func() -> void: _station_result(profile.hire(index, catalog)))
+		who.add_child(hire)
 	_vendor_tab.add_child(_station_label("[b]QUARTERMASTER OKAFOR[/b] — \"Fresh off the freighters. Cash only, no questions.\" · credits %d · new stock after every sortie" % profile.credits))
 	for i in profile.vendor_stock.size():
 		var item: Dictionary = profile.vendor_stock[i]
@@ -1576,6 +1592,9 @@ func _refresh_station_tabs() -> void:
 			var id: String = n.id
 			_tech_tab.add_child(_station_row("%s %s — %s per level" % [n.name, "■".repeat(level) + "□".repeat(TechTree.MAX_LEVEL - level), n.text],
 				"Upgrade (%d cr)" % cost if cost > 0 else "Max", func() -> void: _station_result(profile.buy_tech(id)), cost > 0 and profile.credits >= cost))
+
+
+const CREW_CARD_WIDTH := 400.0
 
 
 func _station_label(text: String) -> RichTextLabel:

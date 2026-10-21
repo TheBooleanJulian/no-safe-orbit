@@ -27,6 +27,11 @@ var deck: int = 0
 var drag_rooms: bool = false
 var ghost_cells: Array[Vector3i] = []
 var ghost_ok: bool = true
+## The station's berth (play-test batch 6): the ship sits in a docking bay —
+## a deck plate with guide lines below it, gantry towers on either beam with
+## clamp arms reaching in, work lights. Set before show_design.
+var berth: bool = false
+var _berth: Node3D
 
 var _viewport: SubViewport
 var _pivot: Node3D
@@ -96,10 +101,67 @@ func show_design(editor: ShipEditor) -> void:
 	_pivot.add_child(_model)
 	_distance = maxf(editor.grid.hull_bounds_m().size.length() * 1.6, 30.0)
 	_extent = maxf(editor.grid.hull_bounds_m().size.length(), 20.0)
+	if berth:
+		_build_berth(editor.grid.hull_bounds_m().size * 0.5)
 	_apply_cutaway()
 	_refresh_overlay()
 	_update_com()
 	_update_camera()
+
+
+## The docking bay around a hull of half-size `half` (m), centred on it.
+func _build_berth(half: Vector3) -> void:
+	if _berth != null:
+		_berth.queue_free()
+	_berth = Node3D.new()
+	_berth.name = "Berth"
+	_pivot.add_child(_berth)
+	var steel := StandardMaterial3D.new()
+	steel.albedo_color = Color(0.11, 0.12, 0.14)
+	steel.metallic = 0.6
+	steel.roughness = 0.45
+	var floor_y := -half.y - 5.0
+	var reach := half.x + 14.0
+	_berth_box(Vector3(reach * 2.0 + 24.0, 0.6, half.z * 2.0 + 36.0), Vector3(0, floor_y, 0), steel)
+	# Guide lines along the berth, a hazard bar across its head.
+	var guide := _glow(CyberTheme.CYAN * 0.5, 0.5)
+	for side: float in [-1.0, 1.0]:
+		_berth_box(Vector3(0.25, 0.1, half.z * 2.0 + 30.0), Vector3(side * (half.x + 3.0), floor_y + 0.35, 0), guide)
+	_berth_box(Vector3(half.x * 2.0 + 6.0, 0.1, 0.35), Vector3(0, floor_y + 0.35, -half.z - 8.0), _glow(CyberTheme.AMBER * 0.6, 0.5))
+	# Gantry towers on either beam, a clamp arm from each to the hull side.
+	var towers := maxi(2, ceili(half.z * 2.0 / 60.0))
+	for side: float in [-1.0, 1.0]:
+		for k in towers:
+			var z := lerpf(-half.z * 0.7, half.z * 0.7, float(k) / float(towers - 1))
+			var height := half.y * 2.0 + 6.0
+			_berth_box(Vector3(2.4, height, 2.4), Vector3(side * reach, floor_y + height * 0.5, z), steel)
+			_berth_box(Vector3(reach - half.x, 1.0, 1.4), Vector3(side * (half.x + (reach - half.x) * 0.5), 0.0, z), steel)
+			_berth_box(Vector3(0.5, 0.5, 0.5), Vector3(side * reach, floor_y + height + 0.4, z), _glow(CyberTheme.AMBER, 2.0))
+			var lamp := OmniLight3D.new()
+			lamp.light_color = Color(1.0, 0.92, 0.8)
+			lamp.light_energy = 1.2
+			lamp.omni_range = maxf(half.length(), 30.0)
+			lamp.position = Vector3(side * (reach - 1.5), floor_y + height, z)
+			_berth.add_child(lamp)
+
+
+func _berth_box(size: Vector3, pos: Vector3, mat: Material) -> void:
+	var box := BoxMesh.new()
+	box.size = size
+	var m := MeshInstance3D.new()
+	m.mesh = box
+	m.material_override = mat
+	m.position = pos
+	_berth.add_child(m)
+
+
+static func _glow(c: Color, energy: float) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = c
+	mat.emission_enabled = true
+	mat.emission = c
+	mat.emission_energy_multiplier = energy
+	return mat
 
 
 ## Centre of mass as a gold sphere drawn over the hull (shipyard [C]).

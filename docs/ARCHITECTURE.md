@@ -285,8 +285,15 @@ and the location's central body:
 
 ## The station (Milestone 12, 2026-10-20)
 
-- `ShipyardSections` turns the shipyard into a station: a rail of sections
-  over full-width pages. The builder's body is the REFIT page, and the
+- `ShipyardSections` turns the shipyard into a station: a station directory
+  (play-test batch 6; it replaced a rail of section tabs) beside full-width
+  pages. `DIRECTORY` groups the sections into districts with place names;
+  `directory_status()` gives each its live line and whether it needs the
+  player (skipped in REFIT, where the directory narrows — the builder
+  refreshes on every edit). The berth (STATION) is a `ShipPreview3D` with
+  `berth = true` (docking-bay set dressing) filling the page, with overlaid
+  cards and the dockmaster's log (`_dock_log`); the CREW page is a roster
+  board of department cards and a hiring hall. The builder's body is the REFIT page, and the
   builder's top-bar controls and keys work only there. The old right-hand
   tabs' pages were moved into their sections (SERVICE → REPAIRS, CARGO &
   HISTORY → HANGAR, QUARTERMASTER → ARMOURY, …). New pages: STATION (3D
