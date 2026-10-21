@@ -1127,7 +1127,7 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		ship.pd_cooldowns[k] = maxf(ship.pd_cooldowns[k] - fixed_dt, 0.0)
 		ship.pd_targets[k] = ""
 		var e := ship.systems.equipment_by_id(cfg.pd_mount_ids[k])
-		if e == null or not e.working() or ship.pd_rounds[k] <= 0:
+		if e == null or not e.working() or ship.pd_rounds <= 0:
 			continue
 		var n := cfg.pd_normals_body[k]
 		var muzzle := cfg.pd_mounts_body[k] + n * 0.6
@@ -1135,7 +1135,7 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		var chosen := {}
 		var want := Vector3.ZERO
 		for c in candidates:
-			if not policy.pd_allows(c.kind, ship.pd_rounds[k], gun.magazine_rounds) \
+			if not policy.pd_allows(c.kind, ship.pd_rounds, ship.pd_rounds_capacity) \
 					or (c.pos as Vector3).distance_to(muzzle_world) > policy.pd_range_m:
 				continue
 			var rel: Vector3 = c.pos - muzzle_world
@@ -1166,7 +1166,7 @@ func _update_point_defence(ship: ShipState, spawned: Array[ProjectileState]) -> 
 		shot.velocity = ship.velocity + ship.orientation * _scatter(dir, deg_to_rad(gun.dispersion_deg)) * gun.muzzle_velocity_mps
 		shot.pd_target_round = int(chosen.round)
 		spawned.append(shot)
-		ship.pd_rounds[k] -= 1
+		ship.pd_rounds -= 1
 		ship.pd_cooldowns[k] += gun.fire_interval_s()
 
 

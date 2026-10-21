@@ -265,6 +265,20 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Builder (play-test batch 9, part 2)**: `ShipGrid.FIN_ROTATION` (4) /
+  `is_fin` / `fin_cells` — a long radiator's span collapses to its root
+  cell and the validator checks the cells out from its face
+  (`fin_blocked`); `ShipBlueprint` keeps rotation 4 when adding and
+  loading. `ShipStats._room_factors` (`size_gain`: 1 + gain·(1 − e^(−extra /
+  scale))) → `engine_room_factor` (main thrust in the stats and
+  `ShipSystems.effective_config`), `reactor_room_factor`
+  (`ShipSystems.reactor_output`), `hangar_factor` (`AirWing` service).
+  `ShipStats.pd_rounds_capacity` (`PD_MAGAZINE_SHARE` of the magazine) →
+  `ShipConfig.pd_magazine_rounds` → `ShipState.pd_rounds` /
+  `pd_rounds_capacity` (one store; stores `pd_rounds`; `ServiceYard`
+  restocks). Grappling arm: `length_cells` 4; `ShipModelBuilder` arm
+  segments (`place_arm`), `ShipView.grapple_holds` set by `Main` from
+  `Grapple.grip_point`, eased over `ARM_UNFOLD_S`.
 - **Work drones (Milestone 15)**: `ShipConfig.craft_role` `repair` /
   `salvage` (`AirWing.WORK_ROLES`, `Craft.is_worker`). In `AirWing._fly`, on
   any directive but RETURN, `_work_job` picks the job (repair: external,

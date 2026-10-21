@@ -251,6 +251,29 @@ func equipment_cells(index: int) -> Array[Vector3i]:
 	return cells
 
 
+## A long radiator's rotation that stands it straight out from the face as
+## a fin (play-test batch 9): one hull cell, its length outwards. 0–3 lie
+## along or across the hull as before (rotation mod 2).
+const FIN_ROTATION := 4
+
+
+static func is_fin(def: EquipmentDefinition, rotation: int) -> bool:
+	return rotation == FIN_ROTATION and def != null and def.kind == EquipmentDefinition.Kind.RADIATOR and def.length_cells > 1
+
+
+## The space a fin stands in: the cells straight out from its face.
+func fin_cells(index: int) -> Array[Vector3i]:
+	var e := blueprint.equipment[index]
+	var def := equipment_def(index)
+	var out: Array[Vector3i] = []
+	if not is_fin(def, e.rotation):
+		return out
+	var n: Vector3i = FACE_NORMALS.get(e.face, Vector3i.ZERO)
+	for k in range(1, def.length_cells + 1):
+		out.append(e.cell + n * k)
+	return out
+
+
 ## Step from one cell of a long external system to the next: aft, or
 ## (turned) across the ship; never along the face normal (then sideways or up).
 static func external_step(face: StringName, rotation: int) -> Vector3i:
@@ -265,7 +288,7 @@ func external_cells(index: int) -> Array[Vector3i]:
 	var e := blueprint.equipment[index]
 	var def := equipment_def(index)
 	var out: Array[Vector3i] = [e.cell]
-	if def == null:
+	if def == null or is_fin(def, e.rotation):
 		return out
 	var step := external_step(e.face, e.rotation)
 	for k in range(1, maxi(def.length_cells, 1)):

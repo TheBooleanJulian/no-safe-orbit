@@ -217,7 +217,8 @@ func test_engines_on_any_face_with_an_engine_room_inside() -> void:
 			var push: Vector3i = -ShipGrid.FACE_NORMALS[face]
 			var axis := 0 if push.x != 0 else (1 if push.y != 0 else 2)
 			var positive: bool = push[axis] > 0
-			var thrust: float = cat.equipment[&"main_engine"].thrust_n
+			# Bigger engine rooms add thrust (play-test batch 9).
+			var thrust: float = cat.equipment[&"main_engine"].thrust_n * ShipStats.compute(t, ShipGrid.build(t, cat)).engine_room_factor
 			assert_near(after.max_thrust(axis, positive) - before.max_thrust(axis, positive), thrust, 1.0,
 				"an engine on the %s face pushes the other way" % face)
 			assert_near(after.max_thrust(axis, not positive), before.max_thrust(axis, not positive), 1.0, "and only that way")

@@ -18,6 +18,13 @@ var _plumes: Array[Node3D] = []
 var _plume_material: StandardMaterial3D
 var _parts: Dictionary = {}
 var _missile_cones: Dictionary = {}  # launcher id -> Array[Node3D]
+var _arms: Dictionary = {}  # grappling arm id -> ShipModelBuilder arm
+## What each arm holds: arm id -> the point it grips (body frame); Main sets
+## it every frame (empty: folded). How far out each arm is (0 folded, 1 out).
+var grapple_holds: Dictionary = {}
+var _arm_out: Dictionary = {}
+## Seconds an arm takes to unfold onto its target, or to fold back.
+const ARM_UNFOLD_S := 1.8
 var _cones_shown: Dictionary = {}  # launcher id -> how many are shown
 var _wreck_material: StandardMaterial3D
 var _jets: Array[Dictionary] = []  # {pivot, id, position, normal}
@@ -55,6 +62,7 @@ func _ready() -> void:
 	add_child(model.root)
 	_parts = model.parts
 	_missile_cones = model.missile_cones
+	_arms = model.grapple_arms
 	_beacons = model.beacons
 	_turrets = model.turrets
 	_docked_craft = model.docked_craft
@@ -93,6 +101,7 @@ func sync_from(state: ShipState, alpha: float, render_origin: Vector3) -> void:
 		_update_lights_and_radar(state.systems, get_process_delta_time())
 	_drift_pieces(get_process_delta_time())
 	_train_turrets(state)
+	_move_arms(get_process_delta_time())
 	_update_jets(state)
 	_clock += get_process_delta_time()
 	var on := fmod(_clock, BEACON_PERIOD_S) < 0.25
@@ -209,6 +218,32 @@ static func _snap_exhaust(dir: Vector3, normal: Vector3) -> Vector3:
 
 
 ## Each turret's house and barrel point along its mount's barrel direction.
+## Grappling arms: unfold and telescope out to the point each holds, or fold
+## back along the hull (the joints ease between the two poses).
+func _move_arms(delta: float) -> void:
+	for id: String in _arms:
+		var arm: Dictionary = _arms[id]
+		var folded: Array = arm.folded
+		var holding := grapple_holds.has(id)
+		var was := float(_arm_out.get(id, 0.0))
+		var out := clampf(was + (delta if holding else -delta) / ARM_UNFOLD_S, 0.0, 1.0)
+		if is_equal_approx(out, was) and not holding:
+			continue
+		_arm_out[id] = out
+		if holding:
+			arm["target"] = grapple_holds[id]
+		var p0: Vector3 = folded[0]
+		var goal: Vector3 = arm.get("target", folded[3])
+		var reach := minf(p0.distance_to(goal), Grapple.REACH_M)
+		var dir := (goal - p0).normalized() if p0.distance_to(goal) > 1e-3 else (arm.normal as Vector3)
+		var s := smoothstep(0.0, 1.0, out)
+		var joints := []
+		for k in 4:
+			var straight := p0 + dir * reach * k / 3.0
+			joints.append((folded[k] as Vector3).lerp(straight, s))
+		ShipModelBuilder.place_arm(arm, joints)
+
+
 func _train_turrets(state: ShipState) -> void:
 	var ids := state.config.cannon_mount_ids
 	for t in _turrets:

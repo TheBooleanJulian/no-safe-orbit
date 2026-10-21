@@ -843,8 +843,9 @@ func _refresh_stats() -> void:
 		"HEAT       %.0f / %.0f kW rejected" % [s.heat_generation_kw, s.heat_rejection_kw],
 		"CREW       %d berths · standard %s" % [s.crew_capacity, _complement_text(CrewRoster.complement_for(editor.blueprint, editor.grid, s))],
 		_defence_text(PdCoverage.of(editor.grid)),
+		_rooms_text(s),
 		_craft_text(),
-		"MAGAZINE   %.1f t · %d rounds" % [s.magazine_kg / 1000.0, s.rounds_capacity],
+		"MAGAZINE   %.1f t · %d rounds%s" % [s.magazine_kg / 1000.0, s.rounds_capacity, " · %d PD rounds" % s.pd_rounds_capacity if s.pd_gun != null else ""],
 		"CARGO      %.0f m³" % s.cargo_m3,
 		"HULL       %.0f × %.0f × %.0f m" % [s.hull_bounds_m.size.x, s.hull_bounds_m.size.y, s.hull_bounds_m.size.z],
 	])
@@ -856,6 +857,42 @@ static func _complement_text(want: Array[int]) -> String:
 	for r in CrewRoster.Role.GENERAL:
 		parts.append("%s %d" % [CrewRoster.ROLE_SHORT[r], want[r]])
 	return " ".join(parts)
+
+
+## What a bigger room of `d` does (play-test batch 9), for the room card.
+static func room_size_text(d: RoomDefinition) -> String:
+	var step := ShipSystems.ROOM_BONUS_PER_CELL
+	match d.id:
+		&"engine_room":
+			return "BIGGER IS BETTER  every cell beyond the first adds main thrust — +%d %% for the first, up to +%d %% (all engine rooms together)" % [
+				roundi((ShipStats.size_gain(1, ShipStats.ROOM_SIZE_GAIN, ShipStats.ROOM_SIZE_SCALE) - 1.0) * 100.0), roundi(ShipStats.ROOM_SIZE_GAIN * 100.0)]
+		&"reactor_room":
+			return "BIGGER IS BETTER  every cell beyond the first adds reactor output — +%d %% for the first, up to +%d %% (all reactor rooms together)" % [
+				roundi((ShipStats.size_gain(1, ShipStats.ROOM_SIZE_GAIN, ShipStats.ROOM_SIZE_SCALE) - 1.0) * 100.0), roundi(ShipStats.ROOM_SIZE_GAIN * 100.0)]
+		&"hangar":
+			return "BIGGER IS BETTER  every free deck cell (no bay on it) turns craft round faster — up to ×%.0f" % (1.0 + ShipStats.HANGAR_DECK_GAIN)
+	match d.role:
+		&"workshop":
+			return "BIGGER IS BETTER  +%d %% faster repairs and hull sealing per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+		&"life_support":
+			return "BIGGER IS BETTER  +%d %% faster treatment of the wounded per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+		&"command":
+			return "BIGGER IS BETTER  +%d %% faster scans per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+		&"quarters", &"cargo", &"magazine":
+			return "Holds more with every cell"
+	return "Size doesn't matter: it only connects rooms"
+
+
+## What the design's rooms add by their size, for the stats panel.
+func _rooms_text(s: ShipStats) -> String:
+	var parts := PackedStringArray()
+	if s.engine_room_factor > 1.0:
+		parts.append("engine rooms +%d %% thrust" % roundi((s.engine_room_factor - 1.0) * 100.0))
+	if s.reactor_room_factor > 1.0:
+		parts.append("reactor rooms +%d %% output" % roundi((s.reactor_room_factor - 1.0) * 100.0))
+	if s.hangar_factor > 1.0:
+		parts.append("hangar ×%.1f turnaround" % s.hangar_factor)
+	return "ROOMS      %s" % (" · ".join(parts) if not parts.is_empty() else "all 1 cell or no size bonus — bigger engine and reactor rooms, workshops, medbays, bridges and hangars do more")
 
 
 ## Point defence against what the hull wants (Milestone 15).
@@ -1090,7 +1127,7 @@ func _fill_palette_list() -> void:
 				# Long radiators: both ways round, as their own entries.
 				var n: int = (def as EquipmentDefinition).length_cells
 				rows.append([place[0], place[1], key + "|a", "%s 1×%d — along the hull%s" % [text, n, suffix], [entry[0], id, 0], color, tip])
-				rows.append([place[0], place[1], key + "|b", "%s %d×1 — across the hull%s" % [text, n, suffix], [entry[0], id, 1], color, tip])
+				rows.append([place[0], place[1], key + "|b", "%s %d×1 — fin, %d out from the hull%s" % [text, n, n, suffix], [entry[0], id, ShipGrid.FIN_ROTATION], color, tip])
 				continue
 			rows.append([place[0], place[1], key, text + suffix, [entry[0], id], color, tip])
 	var cat_order: Array = CATEGORIES.slice(1)
@@ -1840,7 +1877,7 @@ func _update_ghost() -> void:
 				var def: EquipmentDefinition = editor.catalog.equipment[place_def]
 				if def.is_external():
 					var step := ShipGrid.external_step(_hover_face, place_rotation)
-					for k in maxi(def.length_cells, 1):
+					for k in (1 if ShipGrid.is_fin(def, place_rotation) else maxi(def.length_cells, 1)):
 						deck_editor.ghost_cells.append(cell + step * k)
 					deck_editor.ghost_face = _hover_face
 					hint = "%s — %s face (near an edge: that side; middle: %s — [V] switches, Shift: the other)" % [
@@ -1954,6 +1991,7 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 			return "\n".join(PackedStringArray([
 				"%s — role: %s" % [d.display_name, d.role],
 				"PER CELL  " + " · ".join(per),
+				room_size_text(d),
 				"COST %d spare parts per cell" % ServiceYard.room_cost(d, 1),
 				"Drag on the deck to place",
 			]))
@@ -1980,8 +2018,8 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 				0.5 * g.round_mass_kg * g.muzzle_velocity_mps * g.muzzle_velocity_mps / 1.0e6])
 		EquipmentDefinition.Kind.POINT_DEFENCE:
 			var pg := e.cannon
-			lines.append("POINT DEFENCE engages hostile craft within %.1f km on its own · %.0f rpm · %d rounds of its own · trains %.0f°/s · works with a gangway attached" % [
-				WorldSimulation.PD_RANGE_M / 1000.0, pg.rate_of_fire_rpm, pg.magazine_rounds, pg.traverse_deg_s])
+			lines.append("POINT DEFENCE engages hostile craft within %.1f km on its own · %.0f rpm · fed from the magazine (%d %% of it beside guns; %.1f kg rounds) · trains %.0f°/s · works with a gangway attached" % [
+				WorldSimulation.PD_RANGE_M / 1000.0, pg.rate_of_fire_rpm, roundi(ShipStats.PD_MAGAZINE_SHARE * 100.0), pg.round_mass_kg, pg.traverse_deg_s])
 		EquipmentDefinition.Kind.MAIN_ENGINE:
 			lines.append("THRUST %.0f kN · Isp %.0f s · burns %.1f kg/s · any aft face; other faces with an engine room on the inside (pushes away from that face)" % [e.thrust_n / 1000.0, e.isp_s, e.thrust_n / (e.isp_s * ShipDynamics.G0)])
 		EquipmentDefinition.Kind.RCS:

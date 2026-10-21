@@ -118,10 +118,8 @@ func test_point_defence_shoots_down_an_incoming_missile() -> void:
 	var events := _fly_out(world, 40.0)
 	assert_true(Array(events).any(func(l: String) -> bool: return l.contains("shot down")), "point defence shot it down (%s)" % "; ".join(events))
 	assert_true(target.hits_taken == 0, "before it reached the hull")
-	var spent := 0
-	for k in target.pd_rounds.size():
-		spent += target.config.pd_gun.magazine_rounds - target.pd_rounds[k]
-	assert_true(spent > 0, "spending its own rounds (%d)" % spent)
+	var spent := target.pd_rounds_capacity - target.pd_rounds
+	assert_true(spent > 0, "spending rounds from its magazine (%d)" % spent)
 
 
 func test_own_point_defence_and_guns_ignore_our_missiles() -> void:
@@ -131,9 +129,7 @@ func test_own_point_defence_and_guns_ignore_our_missiles() -> void:
 	for i in 120:
 		world.step()
 	assert_true(world.missiles.size() == 1 and world.missiles[0].is_active(), "our missile flies on past our own point defence")
-	var spent := 0
-	for k in shooter.pd_rounds.size():
-		spent += shooter.config.pd_gun.magazine_rounds - shooter.pd_rounds[k]
+	var spent := shooter.pd_rounds_capacity - shooter.pd_rounds
 	assert_true(spent == 0, "our turrets held fire")
 
 

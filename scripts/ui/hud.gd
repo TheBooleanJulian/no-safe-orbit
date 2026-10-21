@@ -1310,9 +1310,8 @@ static func pd_text(ship: ShipState) -> String:
 	if cfg.pd_gun == null or cfg.pd_mounts_body.is_empty():
 		return "PD  %s none fitted" % CyberTheme.GLYPH_OFFLINE
 	var engaging := 0
-	var rounds := 0
+	var rounds := ship.pd_rounds
 	for k in cfg.pd_mounts_body.size():
-		rounds += ship.pd_rounds[k]
 		if ship.pd_targets[k] != "":
 			engaging += 1
 	return "PD  %s ×%d %s · %d rds" % [CyberTheme.GLYPH_CREW if engaging > 0 else CyberTheme.GLYPH_OK, cfg.pd_mounts_body.size(),

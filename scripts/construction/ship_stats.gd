@@ -54,6 +54,10 @@ var heat_generation_kw: float = 0.0
 var heat_rejection_kw: float = 0.0
 var crew_capacity: int = 0
 var rounds_capacity: int = 0
+## Point-defence rounds the magazine holds (shared by every PD mount).
+var pd_rounds_capacity: int = 0
+## The magazine mass point defence takes beside guns.
+const PD_MAGAZINE_SHARE := 0.15
 ## Ammunition stowage in the magazines (kg); rounds_capacity follows from it.
 var magazine_kg: float = 0.0
 var cargo_m3: float = 0.0
@@ -171,7 +175,14 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 			EquipmentDefinition.Kind.PROPELLANT_TANK:
 				s.propellant_capacity_kg += def.propellant_capacity_kg
 				propellant.append({"mass": def.propellant_capacity_kg, "center": pos, "size": size_m})
-	s.rounds_capacity += rounds_from_mass(s.magazine_kg, s.cannon_configs)
+	# Point defence draws from the magazine too (play-test batch 9: "PD
+	# draws ammo from magazine (and therefore expandable)"): PD_MAGAZINE_SHARE
+	# of its mass when there are guns besides, all of it when there aren't.
+	var pd_kg := 0.0
+	if s.pd_gun != null and s.magazine_kg > 0.0:
+		pd_kg = s.magazine_kg * (PD_MAGAZINE_SHARE if not s.cannon_configs.is_empty() else 1.0)
+		s.pd_rounds_capacity = floori(pd_kg / s.pd_gun.round_mass_kg + 1e-6)
+	s.rounds_capacity += rounds_from_mass(s.magazine_kg - pd_kg, s.cannon_configs)
 	if CoolantLoop.routed(bp):
 		# Only radiators piped to a reactor reject heat.
 		var cooled := CoolantLoop.cooled_radiators(bp, grid)
@@ -209,8 +220,52 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 	for k in engines.size():
 		s.thrust_torque_body += (engines[k] - s.center_of_mass_m).cross(Vector3(0, 0, -engine_thrust[k]))
 	s.thrust_misalignment_torque_nm = s.thrust_torque_body.abs()
+	_room_factors(s, bp, grid)
 	s.hull_bounds_m = grid.hull_bounds_m()
 	return s
+
+
+## Bigger rooms are better (play-test batch 9: "incentivise room cells to
+## go beyond 1×1"): every cell beyond a room's first adds to what it does,
+## with diminishing returns (size_gain) — engine rooms main thrust and
+## reactor rooms reactor output, up to ROOM_SIZE_GAIN more (about +11 % for
+## a frigate's, +24 % for a destroyer's); a hangar's free deck (cells no bay
+## stands on) a faster turnaround of its craft, up to HANGAR_DECK_GAIN more.
+## (Bridges, workshops and life support already scale: ShipSystems.room_bonus.)
+const ROOM_SIZE_GAIN := 0.25
+const ROOM_SIZE_SCALE := 12.0
+const HANGAR_DECK_GAIN := 1.0
+const HANGAR_DECK_SCALE := 8.0
+
+
+## 1 + gain · (1 − e^(−cells / scale)): the first extra cells count most.
+static func size_gain(extra_cells: int, gain: float, scale: float) -> float:
+	return 1.0 + gain * (1.0 - exp(-maxf(extra_cells, 0) / scale))
+var engine_room_factor: float = 1.0
+var reactor_room_factor: float = 1.0
+var hangar_factor: float = 1.0
+
+
+static func _room_factors(s: ShipStats, bp: ShipBlueprint, grid: ShipGrid) -> void:
+	var extra := {}
+	var deck := 0
+	for r in bp.rooms:
+		var cells := r.rect.size.x * r.rect.size.y
+		extra[r.def_id] = int(extra.get(r.def_id, 0)) + cells - 1
+		var def: RoomDefinition = grid.catalog.rooms.get(r.def_id)
+		if def != null and def.role == &"hangar":
+			for cell in ShipGrid.room_cells(r):
+				if not grid.equipment_at.has(cell):
+					deck += 1
+	s.engine_room_factor = size_gain(int(extra.get(&"engine_room", 0)), ROOM_SIZE_GAIN, ROOM_SIZE_SCALE)
+	s.reactor_room_factor = size_gain(int(extra.get(&"reactor_room", 0)), ROOM_SIZE_GAIN, ROOM_SIZE_SCALE)
+	s.hangar_factor = size_gain(deck, HANGAR_DECK_GAIN, HANGAR_DECK_SCALE)
+	s.thrust_forward_n *= s.engine_room_factor
+	for k in s.engine_thrust_n.size():
+		s.engine_thrust_n[k] *= s.engine_room_factor
+	s.thrust_torque_body *= s.engine_room_factor
+	s.thrust_misalignment_torque_nm = s.thrust_torque_body.abs()
+	s.power_generation_kw *= s.reactor_room_factor
 
 
 static func _add_power(s: ShipStats, kw: float) -> void:
@@ -278,6 +333,7 @@ func to_ship_config(display_name: String) -> ShipConfig:
 		cfg.cannon_muzzles_body = PackedVector3Array()
 	if pd_gun != null:
 		cfg.pd_gun = pd_gun
+		cfg.pd_magazine_rounds = pd_rounds_capacity
 		var mounts := PackedVector3Array()
 		for p in pd_positions_m:
 			mounts.append(p - center_of_mass_m)

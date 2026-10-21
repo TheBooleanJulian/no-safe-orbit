@@ -769,10 +769,10 @@ func cut_bus(cell: Vector3i) -> bool:
 func reactor_output() -> float:
 	match reactor_state:
 		Reactor.THROTTLED:
-			return THROTTLE_OUTPUT * tech_factor("reactor")
+			return THROTTLE_OUTPUT * tech_factor("reactor") * stats.reactor_room_factor
 		Reactor.SCRAM:
 			return 0.0
-	return tech_factor("reactor")
+	return tech_factor("reactor") * stats.reactor_room_factor
 
 
 ## Multiplier from an Earth Shipyard upgrade (1 without it).
@@ -1301,13 +1301,14 @@ func effective_config() -> ShipConfig:
 			cfg.assist_max_rate_rad_s[axis] = 0.0
 	var eng := channel_factor(Channel.ENG)
 	var sys := channel_factor(Channel.SYS)
-	eng *= tech_factor("thrusters")
+	var rcs_eng := eng * tech_factor("thrusters")
+	eng *= tech_factor("thrusters") * stats.engine_room_factor  # bigger engine rooms: main engines only
 	cfg.thrust_forward_n *= eng
 	for k in 6:
 		cfg.engine_thrust_n[k] *= eng * (SHIP_AI_FACTOR if not has_command() else 1.0)
-	cfg.thrust_reverse_n *= eng
-	cfg.thrust_lateral_n *= eng
-	cfg.thrust_vertical_n *= eng
+	cfg.thrust_reverse_n *= rcs_eng
+	cfg.thrust_lateral_n *= rcs_eng
+	cfg.thrust_vertical_n *= rcs_eng
 	cfg.thrust_torque_body *= eng
 	cfg.max_torque_nm *= sys
 	cfg.assist_max_rate_rad_s *= sys

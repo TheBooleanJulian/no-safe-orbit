@@ -260,14 +260,18 @@ the rate of fire and with extra spread. With a gangway attached, both
 ships' primary weapons are locked; craft still fight.
 
 **Point defence:** PD turrets engage hostile missiles, craft and big slow
-rounds on their own (their own rounds, gangway or not), never your side's.
+rounds on their own (gangway or not), never your side's.
 Your **ship policy** (Tab › POLICY) sets the order (default missiles ›
 craft › rounds), the engagement range (2 km) and an ammunition reserve
 (below 15 % of its magazine a mount keeps the rest for its first priority).
 Flak can only track heavy slugs (≥ 2 kg, closing under 1.5 km/s — the heavy
 cannon's rounds); autocannon rounds are too small and railgun slugs too fast.
 Each PD gun fires 300 heavy flak rounds a minute (0.3 kg, 18 mm; a slug
-within 2.6 m of one is destroyed), 200 to a magazine.
+within 2.6 m of one is destroyed). **PD draws from the magazine**: 15 % of
+its mass beside guns (all of it with no guns), one store for every mount —
+a bigger magazine, more PD rounds (the Frigate: 600, and 1,020 gun rounds).
+They are kept between sorties and restocked at the yard; with no magazine
+the shipyard warns that PD can't fire.
 
 **Encounters:** pick 1, 2 or 3 ships on the shipyard map. Only the lead
 starts close; the others come in from about 30 km and must be found
@@ -663,7 +667,11 @@ exit holes on the hull.
 - **Bigger rooms work harder**: each cell past the first adds 25 % (up to
   2×) — a bigger bridge scans faster, a bigger workshop repairs and seals
   faster, a bigger life support (the medbay) treats the wounded faster.
-- **Grappling arm** (Y, within 60 m of the arm, under 5 m/s): takes out a
+- **Grappling arm** (Y, within 60 m of the arm, under 5 m/s): it lies
+  folded along four cells of the hull (a 4 × 1 mount — hits anywhere on it
+  count) and, when it grabs, unfolds its three hydraulic segments and
+  telescopes them out to the target's hull, up to 60 m; it folds back when
+  it lets go. It takes out a
   ship's tumble, matches its velocity, and — with collars on both — turns
   it so its collar faces yours and reels it in for V. It siphons a
   disabled or captured hulk's propellant and rounds while it holds.
@@ -917,8 +925,18 @@ engineering, stores & hangars), Propulsion (main engines, RCS, tanks),
 Power & thermal (reactors, radiators, distribution, power bus), Weapons
 (guns, point defence, missile launchers, countermeasures & EW), Hangars &
 craft (fighters, drones), Sensors & utility — rarest first within a
-section; search narrows it. The 3-cell radiator is listed both ways round:
-**1×3 along the hull** and **3×1 across it** (R turns any long part too).
+section; search narrows it. The 3-cell radiators are listed two ways:
+**1×3 along the hull**, and **3×1 — a fin**: one cell on the hull, standing
+three cells straight out (refused where hull is in the way). R turns a long
+part along or across the hull.
+
+**Bigger rooms do more** (the room card says what): engine rooms add main
+thrust and reactor rooms reactor output for every cell beyond a room's
+first (+2 % for the first, up to +25 % — a frigate's +11 %), a hangar's free
+deck turns its craft round faster (up to ×2), and bigger workshops,
+medbays and bridges repair, treat and scan faster (up to ×2). Quarters,
+holds and magazines hold more with every cell. The stats panel's ROOMS line
+sums it up.
 
 **Armour** (palette → Armour): drag across cells to fit 40 mm (thin, gunmetal)
 or 80 mm (thick, darker) slabs on their exposed faces — glossier and less
