@@ -130,7 +130,7 @@ func test_the_mission_board() -> void:
 			"%s pays, has 1–3 ships at a known location" % c.title)
 	var pick: Dictionary = p.board[0]
 	assert_true(ContractBoard.accept(p, str(pick.id)) == "", "accepted")
-	assert_true(p.active_contract.id == pick.id and p.location == pick.location and p.encounter_size == int(pick.ships)
+	assert_true(p.active_contract.id == pick.id and p.launch_point() == pick.location and p.encounter_size == int(pick.ships)
 		and p.board.size() == ContractBoard.OFFERS - 1, "it sets where and how many, and leaves the board")
 	assert_true(ContractBoard.accept(p, str(p.board[0].id)) != "", "one contract at a time")
 	var m := MissionChain.from_dict(p.campaign)

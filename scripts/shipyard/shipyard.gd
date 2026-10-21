@@ -617,15 +617,27 @@ func launch() -> bool:
 	var supplied := ServiceYard.resupply(profile.vessel, profile, editor.catalog)
 	if supplied != "":
 		GameLog.info("shipyard", supplied)
+	# The course (nav chart, or the contract's): the jump happens now, paid
+	# from the tanks just topped up (play-test batch 7).
+	var point := profile.launch_point()
+	if point != profile.location:
+		var jumped := Location.by_id(point)
+		var dv := profile.jump_dv(point)
+		var why_jump := profile.relocate(point, editor.catalog)
+		if why_jump != "":
+			_save_profile()
+			_set_status(why_jump + " — or change course on the nav chart", true)
+			return false
+		GameLog.info("shipyard", "Jumped to %s at launch: %s" % [jumped.station_name, JumpDrive.dv_text(dv)])
 	# A deep-space survey's round trip is paid from what is aboard now.
 	var survey := Artifact.by_id(profile.survey_target)
 	if survey != null and survey.is_deep_space():
 		var t := profile.vessel_tanks(editor.catalog)
-		var need := profile.survey_cost_kg(survey, editor.catalog)
-		if need > float(t.main_kg) + float(t.reserve_kg):
+		var need := profile.survey_dv(survey)
+		if need > float(t.dv_mps):
 			_save_profile()
-			_set_status("The round trip to %s burns %s; %s aboard (credits short for the refuel?) — or cancel the survey on the MAP" % [
-				survey.display_name, JumpDrive.tonnes(need), JumpDrive.tonnes(float(t.main_kg) + float(t.reserve_kg))], true)
+			_set_status("The round trip to %s needs %s; the tanks aboard give %s (credits short for the refuel?) — or cancel the survey on the nav chart" % [
+				survey.display_name, JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_mps)], true)
 			return false
 	if not profile.vessel.cargo_is_empty():
 		GameLog.info("shipyard", "Launching with cargo still in the hold: %s" % profile.vessel.cargo_summary())
@@ -1329,17 +1341,28 @@ func _build_map_tab(tabs: TabContainer) -> void:
 
 ## Jump the vessel to a known location's station (the next launch starts in
 ## its orbit), paying the propellant (PlayerProfile.relocate).
+## The nav chart: lay in a course for the next sortie (play-test batch 7).
+## Nothing is paid or moved until LAUNCH, which jumps there first; picking
+## where the vessel is docked stays put. False (with why) for a jump beyond
+## what the ship can carry even with full tanks.
 func pick_location(location_id: String) -> bool:
-	var cost := profile.jump_cost_kg(location_id, editor.catalog)
-	var why := profile.relocate(location_id, editor.catalog)
-	if why != "":
-		_set_status(why, true)
+	if location_id not in profile.known_locations:
+		_set_status("That location is not on your map", true)
 		return false
-	_save_profile()
+	var there := Location.by_id(location_id)
+	var need := profile.jump_dv(location_id)
+	var t := profile.vessel_tanks(editor.catalog)
+	if need > float(t.dv_full_mps):
+		_set_status("The jump to %s needs %s; full tanks and the reserve give this ship %s" % [there.station_name,
+			JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_full_mps)], true)
+		return false
+	profile.jump_target = location_id
 	_refresh_map()
-	_refresh_station_tabs()
-	_set_status("Docked at %s — the jump burned %s; the next launch starts in %s" % [Location.by_id(location_id).station_name,
-		JumpDrive.tonnes(cost), Location.by_id(location_id).display_name.to_lower()])
+	if location_id == profile.location:
+		_set_status("Course: stay at %s — the next launch starts in %s" % [there.station_name, there.display_name.to_lower()])
+	else:
+		_set_status("Course laid in for %s: %s of this ship's %s (%s aboard) — the jump happens when you LAUNCH" % [there.station_name,
+			JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_full_mps), JumpDrive.dv_text(t.dv_mps)])
 	return true
 
 
@@ -1351,8 +1374,8 @@ func buy_charts(location_id: String) -> bool:
 		return false
 	_save_profile()
 	_refresh_map()
-	_set_status("%s is on your map — jump there from it (%s of propellant)" % [Location.by_id(location_id).display_name,
-		JumpDrive.tonnes(profile.jump_cost_kg(location_id, editor.catalog))])
+	_set_status("%s is on your map — set a course there on the nav chart (%s)" % [Location.by_id(location_id).display_name,
+		JumpDrive.dv_text(profile.jump_dv(location_id))])
 	return true
 
 
@@ -1366,11 +1389,12 @@ func _refresh_map() -> void:
 	if system_map == null:
 		return
 	var here := Location.by_id(profile.location)
+	var course := Location.by_id(profile.launch_point())
 	var costs := {}
 	for id: String in profile.known_locations:
 		if id != here.id:
-			costs[id] = "jump %s" % JumpDrive.tonnes(profile.jump_cost_kg(id, editor.catalog))
-	system_map.set_state(profile.known_locations, here.id, costs)
+			costs[id] = "jump %s" % JumpDrive.dv_text(profile.jump_dv(id))
+	system_map.set_state(profile.known_locations, here.id, costs, course.id)
 	var title := get_node_or_null("Margin/VBox/TopBar/Title") as Label
 	if title != null:
 		title.text = here.station_name.to_upper()
@@ -1378,17 +1402,21 @@ func _refresh_map() -> void:
 		size_buttons[i].set_pressed_no_signal(i + 1 == profile.encounter_size)
 	var n := profile.encounter_size
 	route_button.text = "◎ %s · %d SHIP%s" % [here.display_name.to_upper(), n, "" if n == 1 else "S"]
+	if course != here:
+		route_button.text = "◎ → %s · %s · %d SHIP%s" % [course.display_name.to_upper(), JumpDrive.dv_text(profile.jump_dv(course.id)),
+			n, "" if n == 1 else "S"]
 	var surveying := Artifact.by_id(profile.survey_target)
 	if surveying != null:
 		route_button.text = "◎ SURVEY %s" % surveying.display_name.to_upper()
 	_refresh_brokers()
 	_refresh_artifacts()
 	var b := here.body
-	_map_info.text = "[b]%s[/b] · docked
+	_map_info.text = "[b]%s[/b] · docked%s
 %s
 %s μ %.1f km³/s² · radius %.0f km · %s %.0f km
 %s" % [
-		here.station_name, here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
+		here.station_name, CyberTheme.tint("  ·  COURSE → %s, %s at launch" % [course.station_name.to_upper(), JumpDrive.dv_text(profile.jump_dv(course.id))],
+			CyberTheme.CYAN) if course != here else "", here.blurb, b.display_name.to_upper(), b.mu_m3_s2 / 1e9, b.radius_m / 1000.0,
 		"entry interface" if b.has_atmosphere else "terrain floor", b.entry_interface_altitude_m / 1000.0,
 		CyberTheme.tint(_jump_note(), CyberTheme.TEXT_DIM)]
 
@@ -1428,8 +1456,10 @@ func _refresh_artifacts() -> void:
 		var cost := ""
 		if a.is_deep_space():
 			var t := profile.vessel_tanks(editor.catalog)
-			cost = " · round trip %s of %s" % [JumpDrive.tonnes(profile.survey_cost_kg(a, editor.catalog)),
-				JumpDrive.tonnes(float(t.capacity_kg) + float(t.reserve_capacity_kg))]
+			var need := profile.survey_dv(a)
+			cost = " · round trip %s of this ship's %s" % [JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_full_mps)]
+			if need > float(t.dv_full_mps):
+				cost = CyberTheme.tint(cost + " — out of reach", CyberTheme.AMBER)
 		var done := profile.codex.has(a.id)
 		var status := CyberTheme.tint("✔ surveyed", CyberTheme.CYAN) if done else "%d cr" % a.survey_credits
 		var line := "%s — %s · %s%s" % [a.display_name, where, status, cost]
@@ -1476,9 +1506,9 @@ func _refresh_brokers() -> void:
 func _jump_note() -> String:
 	var t := profile.vessel_tanks(editor.catalog)
 	var here := Location.by_id(profile.location)
-	return "Click a body to jump to its station: propellant from the tanks (%s) first, then the jump reserve (%s)
+	return "Click a body to set the next sortie's course; LAUNCH jumps there. Jumps cost Δv — the same for every ship; this one carries %s (%s with full tanks and the reserve), paid from the tanks first, then the jump reserve
 %s: shelves ×%.2f, %d items up to %s · local traffic %s" % [
-		JumpDrive.tonnes(t.main_kg), JumpDrive.tonnes(t.reserve_kg), here.station_name, here.price_factor, here.vendor_stock_size,
+		JumpDrive.dv_text(t.dv_mps), JumpDrive.dv_text(t.dv_full_mps), here.station_name, here.price_factor, here.vendor_stock_size,
 		Rarity.NAMES[here.vendor_max_rarity].to_lower(), ", ".join(Array(here.enemy_templates).map(func(f: String) -> String: return f.get_basename().split("_")[0]))]
 
 

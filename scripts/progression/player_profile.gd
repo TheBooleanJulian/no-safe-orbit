@@ -703,7 +703,9 @@ static func _read_v8_board(p: PlayerProfile, d: Dictionary) -> void:
 
 
 ## The docked vessel's tanks: {mass_kg (with what is aboard), main_kg,
-## capacity_kg, reserve_kg, reserve_capacity_kg}. No stores = full.
+## capacity_kg, reserve_kg, reserve_capacity_kg, isp_s, dv_mps (what the
+## tanks and the reserve aboard buy), dv_full_mps (with both full)}.
+## No stores = full.
 func vessel_tanks(catalog: ConstructionCatalog) -> Dictionary:
 	var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
 	var stores: Dictionary = vessel.condition.get("stores", {})
@@ -711,30 +713,61 @@ func vessel_tanks(catalog: ConstructionCatalog) -> Dictionary:
 	var reserve_cap := drive.reserve_capacity_kg(stats.propellant_capacity_kg)
 	var main := minf(float(stores.get("propellant_kg", stats.propellant_capacity_kg)), stats.propellant_capacity_kg)
 	var reserve := minf(float(stores.get("jump_reserve_kg", reserve_cap)), reserve_cap)
+	var full_mass := stats.mass_kg + stats.propellant_capacity_kg + reserve_cap
 	return {"mass_kg": stats.mass_kg + main + reserve, "main_kg": main, "capacity_kg": stats.propellant_capacity_kg,
-		"reserve_kg": reserve, "reserve_capacity_kg": reserve_cap}
+		"reserve_kg": reserve, "reserve_capacity_kg": reserve_cap, "isp_s": stats.main_isp_s,
+		"dv_mps": JumpDrive.delta_v_of(stats.mass_kg + main + reserve, main + reserve, stats.main_isp_s),
+		"dv_full_mps": JumpDrive.delta_v_of(full_mass, stats.propellant_capacity_kg + reserve_cap, stats.main_isp_s)}
 
 
-## Propellant (kg) the docked vessel's jump to `location_id` would burn.
-func jump_cost_kg(location_id: String, catalog: ConstructionCatalog) -> float:
+## Δv (m/s) the jump from the dock to `location_id` costs (0 to stay).
+func jump_dv(location_id: String) -> float:
 	var here := Location.by_id(location)
 	var there := Location.by_id(location_id)
 	if here.id == there.id:
 		return 0.0
-	return JumpDrive.standard().cost_kg(float(vessel_tanks(catalog).mass_kg), Location.distance_m(here, there))
+	return JumpDrive.standard().delta_v(Location.distance_m(here, there))
+
+
+## Propellant (kg) the docked vessel's jump to `location_id` would burn.
+func jump_cost_kg(location_id: String, catalog: ConstructionCatalog) -> float:
+	var t := vessel_tanks(catalog)
+	return JumpDrive.propellant_for(float(t.mass_kg), jump_dv(location_id), float(t.isp_s))
+
+
+## The nav chart's course (play-test batch 7): where the next LAUNCH jumps
+## to before the sortie. Not saved — "" is no choice, and then an accepted
+## contract's location is the course.
+var jump_target: String = ""
+
+
+## Where the next sortie launches from: the course laid in, else the active
+## contract's location, else where the vessel is docked.
+func launch_point() -> String:
+	if jump_target != "":
+		return jump_target
+	var c := str(active_contract.get("location", ""))
+	if c != "" and c in known_locations:
+		return c
+	return location
 
 
 # --- Artifact surveys (Milestone 14) ------------------------------------------------
 
-## Propellant (kg) a survey of `a` burns beyond an ordinary sortie: for a
-## deep-space object, the jump out and back, paid at launch with the tanks
-## full; 0 for one in a location's orbit.
-func survey_cost_kg(a: Artifact, catalog: ConstructionCatalog) -> float:
+## Δv (m/s) a survey of `a` costs beyond an ordinary sortie: for a
+## deep-space object, the jump out and back from the launch point; 0 for
+## one in a location's orbit.
+func survey_dv(a: Artifact) -> float:
 	if not a.is_deep_space():
 		return 0.0
+	return 2.0 * JumpDrive.standard().delta_v(a.distance_from(Location.by_id(launch_point())))
+
+
+## Propellant (kg) that survey burns, paid at launch with the tanks full.
+func survey_cost_kg(a: Artifact, catalog: ConstructionCatalog) -> float:
 	var t := vessel_tanks(catalog)
 	var full_mass := float(t.mass_kg) - float(t.main_kg) - float(t.reserve_kg) + float(t.capacity_kg) + float(t.reserve_capacity_kg)
-	return 2.0 * JumpDrive.standard().cost_kg(full_mass, a.distance_from(Location.by_id(location)))
+	return JumpDrive.propellant_for(full_mass, survey_dv(a), float(t.isp_s))
 
 
 ## Make `artifact_id` the next sortie's survey ("" cancels). "" or why not:
@@ -747,14 +780,13 @@ func choose_survey(artifact_id: String, catalog: ConstructionCatalog) -> String:
 	var a := Artifact.by_id(artifact_id)
 	if a == null:
 		return "No record of that object"
-	if not a.is_deep_space() and (a.location() == null or a.location().id != location):
-		return "%s is surveyed from the %s — jump there first" % [a.display_name, a.location().station_name if a.location() != null else "?"]
+	if not a.is_deep_space() and (a.location() == null or a.location().id != launch_point()):
+		return "%s is surveyed from the %s — set a course there on the nav chart first" % [a.display_name, a.location().station_name if a.location() != null else "?"]
 	var t := vessel_tanks(catalog)
-	var need := survey_cost_kg(a, catalog)
-	var room := float(t.capacity_kg) + float(t.reserve_capacity_kg)
-	if need > room:
-		return "The round trip to %s burns %s; full tanks and the jump reserve hold %s — it needs a ship with more tankage for its mass" % [
-			a.display_name, JumpDrive.tonnes(need), JumpDrive.tonnes(room)]
+	var need := survey_dv(a)
+	if need > float(t.dv_full_mps):
+		return "The round trip to %s needs %s; full tanks and the jump reserve give this ship %s — it needs more Δv (tankage or Isp)" % [
+			a.display_name, JumpDrive.dv_text(need), JumpDrive.dv_text(t.dv_full_mps)]
 	survey_target = a.id
 	return ""
 
@@ -812,9 +844,8 @@ func relocate(location_id: String, catalog: ConstructionCatalog = null) -> Strin
 	var paid := JumpDrive.pay(float(tanks.main_kg), float(tanks.reserve_kg), cost)
 	if not paid.ok:
 		var short := ServiceYard.resupply_needs(vessel, catalog)
-		return "The jump to %s burns %s; the tanks hold %s and the reserve %s — refuel in the ARMOURY (%d cr)" % [
-			there.station_name, JumpDrive.tonnes(cost), JumpDrive.tonnes(tanks.main_kg), JumpDrive.tonnes(tanks.reserve_kg),
-			int(short.credits)]
+		return "The jump to %s needs %s; the tanks and the reserve aboard give %s — refuel in the ARMOURY (%d cr)" % [
+			there.station_name, JumpDrive.dv_text(jump_dv(there.id)), JumpDrive.dv_text(tanks.dv_mps), int(short.credits)]
 	var stores: Dictionary = vessel.condition.get("stores", {})
 	if stores.is_empty():
 		var stats := ShipStats.compute(vessel.blueprint, ShipGrid.build(vessel.blueprint, catalog))
@@ -822,8 +853,9 @@ func relocate(location_id: String, catalog: ConstructionCatalog = null) -> Strin
 	stores["propellant_kg"] = paid.main_kg
 	stores["jump_reserve_kg"] = paid.reserve_kg
 	vessel.condition["stores"] = stores
-	vessel.record("Jumped to %s: %s of propellant" % [there.station_name, JumpDrive.tonnes(cost)])
+	vessel.record("Jumped to %s: %s" % [there.station_name, JumpDrive.dv_text(jump_dv(there.id))])
 	location = there.id
+	jump_target = ""
 	refresh_station(catalog)
 	return ""
 

@@ -686,9 +686,10 @@ date (sources and uncertainty in `data/ATTRIBUTION.md`):
   codex, shown on the MAP.
 - **Deep space** flies about the Sun itself: its gravity, its light from
   the right direction, its disc shrinking to a point at 172 AU. The jump
-  out and back is paid at launch and must fit in your full tanks and jump
-  reserve: the Roadster needs 20 % of the ship's mass in propellant,
-  Voyager 1 28 %. The Frigate Mk I carries 16 % — design a long-range ship.
+  out and back is paid at launch and must fit in the Δv your full tanks and
+  jump reserve give: the Roadster needs Δv 1,741 m/s round trip, Voyager 1
+  2,512 m/s. The Frigate Mk I carries 1,557 m/s; the Corvette, Destroyer and
+  Cruiser can reach every object — or design a long-range ship.
 - **Look, don't touch:** real objects can't be damaged, grappled or
   salvaged. JWST is left out: it sits at the Sun–Earth L2 point, which
   needs a rotating frame the game doesn't have.
@@ -852,20 +853,28 @@ bigger the ship.
 In REFIT you start from the ship you were flying (the Frigate Mk I template
 by default).
 
-**Map** (HANGAR › MAP, or the ◎ route button beside LAUNCH): click a body to
-jump the vessel to its station; the next launch starts in its orbit. Pick
+**Nav chart** (OPERATIONS › Nav chart, or the ◎ route button beside
+LAUNCH): click a body to **set the next sortie's course** — nothing moves
+until you press **LAUNCH**, which jumps there first and starts the sortie in
+its orbit. The course is ringed in cyan with a line from your berth; the
+route button reads "◎ → LUNAR ORBIT · Δv 487 m/s"; click your own berth to
+stay. Accepting a contract elsewhere sets its location as the course. Pick
 the encounter: **1, 2 or 3 ships**. Earth and the Moon are charted from the
 start; an **information broker** on the same page sells the charts for Mars
 (1,500 cr).
 
-- **Jumps cost propellant**: ship mass × (8 kg/t + 18 kg/t for every
-  tenfold of distance in 1,000 km). Frigate Mk I: 4.9 t home within a
-  location, 33.9 t Earth ↔ Moon, 64.6 t Earth → Mars (the real distances
-  on the scenario date). The map shows each jump's cost.
+- **Jumps cost Δv — the same for every ship**: 70 m/s plus 160 m/s for
+  every tenfold of distance in 1,000 km — 70 m/s home within a location,
+  487 m/s Earth ↔ Moon, 928 m/s Earth → Mars (the real distances on the
+  scenario date). Each ship pays it in propellant by the rocket equation at
+  its own main-engine Isp: the Frigate Mk I burns 33 t for the Moon, the
+  Cutter 8.5 t. The chart, the artifacts list and the ARMOURY show the Δv
+  your tanks give (Frigate: 1,557 m/s with full tanks and the reserve).
 - **Jump reserve**: a quarter of your tankage that only the jump drive can
   burn, used after the main tank. The ARMOURY shows and refills it.
-- **Not enough?** The map refuses with what's missing and the refuel price;
-  a contract elsewhere can't be accepted until you can make the jump.
+- **Not enough?** A course beyond what the ship can carry even full is
+  refused; LAUNCH tops the tanks up first (credits allowing) and refuses a
+  jump the tanks still can't pay, with the Δv missing and the refuel price.
 - **Each station is different**: the Lunar Shipyard stocks four parts up to
   rare at 1.2× prices (crew fees too), and its traffic mixes corvettes with
   frigates and is one threat level tougher. The Martian Shipyard stocks five

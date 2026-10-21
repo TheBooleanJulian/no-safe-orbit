@@ -68,16 +68,22 @@ static func giver(c: Dictionary) -> Dictionary:
 
 
 ## Accept offer `id` from the board: it becomes the active contract and sets
-## the next sortie's location (jumping there, paid in propellant) and
-## encounter size. "" or why not (an unaffordable jump leaves the offer up).
+## the next sortie's encounter size and its launch point — the course
+## (PlayerProfile.launch_point): the jump there happens at LAUNCH, paid then
+## (play-test batch 7). "" or why not: a jump beyond what the ship can
+## carry, even with full tanks, leaves the offer up.
 static func accept(profile: PlayerProfile, id: String) -> String:
 	if not profile.active_contract.is_empty():
 		return "Finish or abandon %s first" % profile.active_contract.title
 	for c in profile.board:
 		if str(c.id) == id:
-			var why := profile.relocate(str(c.location))
-			if why != "":
-				return why
+			var loc := Location.by_id(str(c.location))
+			var need := profile.jump_dv(loc.id)
+			var full := float(profile.vessel_tanks(ConstructionCatalog.default_catalog()).dv_full_mps)
+			if need > full:
+				return "The jump to %s needs %s; full tanks and the reserve give this ship %s" % [loc.station_name,
+					JumpDrive.dv_text(need), JumpDrive.dv_text(full)]
+			profile.jump_target = ""
 			profile.active_contract = (c as Dictionary).duplicate()
 			profile.board.erase(c)
 			profile.encounter_size = int(c.ships)

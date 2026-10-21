@@ -1,8 +1,9 @@
 class_name SystemMap
 extends Control
 ## The shipyard's map: every known location as its body's disc, the one the
-## vessel is docked at ringed in gold and the one under the pointer in cyan.
-## Clicking a location emits `picked`. Distances are not to scale; the line
+## vessel is docked at ringed in gold, the course for the next launch ringed
+## in cyan with a line to it, the one under the pointer in faint cyan.
+## Clicking a location emits `picked` (it sets the course; LAUNCH jumps). Distances are not to scale; the line
 ## from Earth to each other body is labelled with the real figure at the
 ## scenario date (Location.distance_m).
 
@@ -14,6 +15,8 @@ var known: Array = []
 var docked: String = ""
 ## Location id -> a short line under its name (the jump's cost).
 var notes: Dictionary = {}
+## The course: where the next launch jumps to ("" or `docked` = stay).
+var target: String = ""
 
 var _hover: String = ""
 
@@ -23,13 +26,14 @@ const REFERENCE_WIDTH := 360.0
 func _ready() -> void:
 	custom_minimum_size = Vector2(0, 320)  # discs plus three label lines
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	tooltip_text = "Click a location to move the vessel to its station"
+	tooltip_text = "Click a location to set the next sortie's course — LAUNCH jumps there"
 
 
-func set_state(known_ids: Array, docked_id: String, note_by_id: Dictionary = {}) -> void:
+func set_state(known_ids: Array, docked_id: String, note_by_id: Dictionary = {}, target_id: String = "") -> void:
 	known = known_ids
 	docked = docked_id
 	notes = note_by_id
+	target = target_id
 	queue_redraw()
 
 
@@ -85,6 +89,11 @@ func _draw() -> void:
 			draw_dashed_line(a, b, CyberTheme.TEXT_FAINT, 1.0, 6.0)
 			draw_string(font, (a + b) * 0.5 + Vector2(-40, -8), distance_text(Location.distance_m(earth, loc)),
 				HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, CyberTheme.TEXT_DIM)
+	# The course: a line from the berth to where the next launch jumps.
+	var dock := Location.by_id(docked)
+	var course := Location.by_id(target) if target != "" else dock
+	if course != dock and dock in locs and course in locs:
+		draw_line(disc(dock)[0], disc(course)[0], CyberTheme.CYAN, 2.0, true)
 	for loc in locs:
 		var d: Array = disc(loc)
 		var c: Vector2 = d[0]
@@ -94,7 +103,10 @@ func _draw() -> void:
 		draw_arc(c, r * 0.5, -PI * 0.5, PI * 0.5, 24, loc.map_color.darkened(0.45), r, true)
 		if loc.id == docked:
 			draw_arc(c, r + 6.0, 0.0, TAU, 48, CyberTheme.AMBER, 2.0, true)
-		elif loc.id == _hover:
+		if loc == course and course != dock:
+			draw_arc(c, r + 10.0, 0.0, TAU, 48, CyberTheme.CYAN, 2.5, true)
+			draw_string(font, c + Vector2(-r, -r - 14.0), "COURSE", HORIZONTAL_ALIGNMENT_LEFT, -1, CyberTheme.SIZE_SMALL, CyberTheme.CYAN)
+		elif loc.id == _hover and loc.id != docked:
 			draw_arc(c, r + 6.0, 0.0, TAU, 48, CyberTheme.CYAN, 1.5, true)
 		var label := loc.station_name.to_upper()
 		var col := CyberTheme.AMBER if loc.id == docked else CyberTheme.TEXT
