@@ -4,6 +4,35 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 6, part 7 — the shipyard as a place (2026-10-21)
+
+"More gameplay and immersive, and less spreadsheet tabs like."
+
+#### Changed
+- **A station directory replaces the row of tabs**: the shipyard's places
+  down the left, by district — DRYDOCK (Berth, Refit bay, Repair crews,
+  Armoury), CONCOURSE (Mission board, Crew quarters, Ship dealer),
+  OPERATIONS (Hangar & bank, Station tech, Nav chart, Salvage odds) — each
+  with a live line: amber when it needs you (repair jobs, a restock due,
+  offers posted, an empty berth, cargo not banked, an affordable upgrade),
+  teal when fine; credits and parts on top. It narrows beside the builder.
+  Page headings name the district and place.
+- **The berth** (STATION): your ship in a docking bay — deck plate, guide
+  lines, gantry towers with clamp arms, work lights — filling the page, with
+  its name plate, the service tags and the **dockmaster's log** (dockmaster,
+  repair crews, quartermaster, brokers, crew quarters) over the view.
+- **Crew quarters**: a roster board — a card per department, who serves
+  there against the standard complement (amber when short), their post and
+  ✕ to dismiss — and a hiring hall of cards, one per spacer.
+
+#### Fixed
+- README: the capital ships were listed as a row of the shipyard's
+  sections table; they are a paragraph under it now.
+
+#### Tests changed (and why)
+- `smoke_shipyard`: the directory has an entry per section, each with a
+  live line, and the berth shows the dockmaster's log (new checks).
+
 ### Play-test batch 6, part 6 — beam weapons (2026-10-21)
 
 #### Added

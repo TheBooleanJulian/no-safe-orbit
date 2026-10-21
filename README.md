@@ -816,23 +816,38 @@ no usable backup. Loading an older save version first keeps a copy
 ## Shipyard
 
 **Earth Shipyard** (or the **Lunar Shipyard**) opens after a jump (hold B in
-flight). It is a station with sections along the top; the builder is one of
-them:
+flight). It is a station: the **station directory** down the left lists its
+places by district — DRYDOCK (Berth, Refit bay, Repair crews, Armoury),
+CONCOURSE (Mission board, Crew quarters, Ship dealer), OPERATIONS (Hangar &
+bank, Station tech, Nav chart, Salvage odds) — with your credits and spare
+parts on top. Each place has a live line under its name: amber when it
+needs you (repair jobs waiting, a restock due, offers posted, an empty
+berth, cargo not banked, an upgrade you can afford), teal when it is fine.
+Beside the builder the directory narrows to the names.
 
-| Section | What's there |
+| Place (section) | What's there |
 |---|---|
-| **STATION** (opens here) | Your ship in 3D; cards for repairs, rearm, crew and the next sortie, each with a button to its section |
+| **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights), turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
 | **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage. Accepting one sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
 | **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the hold and the bank, the service record |
 | **REFIT** | The builder below |
-| **CREW** | The roster by post, who is for hire |
+| **CREW** (Crew quarters) | The roster board: a card per department with who serves there against the standard complement (amber when short), each with their post and a ✕ to dismiss; the **hiring hall** below, a card per spacer for hire |
 | **ARMOURY** | Rearm and refuel now (or leave it to the launch), the quartermaster's parts |
 | **REPAIRS** | Damage and what fixing it costs |
 | **UPGRADES** | Station technology |
 | **MAP** | Where you launch from, how many you meet |
-| **Capital ships** | Built like battleships: a long armoured hull (80 mm down the flanks, 40 mm on top and the bow) that narrows to a stepped prow, a two-deck superstructure amidships with the bridge on top, a main battery on the centreline — heavy kinetic cannons ahead of the superstructure and superfiring on its roof (the Cruiser adds railguns) — autocannon secondaries down the flanks, point defence, missile racks. Destroyer 3,002 t (3 heavy guns), Cruiser 4,987 t (4 heavy guns, 2 railguns), Carrier 6,512 t (16 craft). The camera sits back further the bigger the ship |
 | **LOOT** | Every crate drop and its odds |
+
+**Capital ships** (at the dealer) are built like battleships: a long
+armoured hull (80 mm down the flanks, 40 mm on top and the bow) that
+narrows to a stepped prow, a two-deck superstructure amidships with the
+bridge on top, a main battery on the centreline — heavy kinetic cannons
+ahead of the superstructure and superfiring on its roof (the Cruiser adds
+railguns) — autocannon secondaries down the flanks, point defence, missile
+racks. Destroyer 3,002 t (3 heavy guns), Cruiser 4,987 t (4 heavy guns, 2
+railguns), Carrier 6,512 t (16 craft). The camera sits back further the
+bigger the ship.
 
 In REFIT you start from the ship you were flying (the Frigate Mk I template
 by default).
