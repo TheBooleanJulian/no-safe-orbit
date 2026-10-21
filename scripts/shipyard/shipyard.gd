@@ -980,7 +980,7 @@ static func palette_place(kind: String, def: Resource) -> Array:
 		EquipmentDefinition.Kind.DECOY_LAUNCHER, EquipmentDefinition.Kind.JAMMER:
 			return ["Weapons", "Countermeasures & EW"]
 		EquipmentDefinition.Kind.CRAFT_MOUNT:
-			return ["Hangars & craft", "Fighters" if e.craft != null and e.craft.cannon != null else "Drones"]
+			return ["Hangars & craft", "Drones" if String(e.id).contains("drone") else "Fighters"]
 		EquipmentDefinition.Kind.SENSOR:
 			return ["Sensors & utility", "Sensors"]
 	return ["Sensors & utility", "Docking & salvage"]
@@ -1882,6 +1882,11 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 		"COST %d spare parts%s" % [ServiceYard.equipment_cost(e), " (fitting an owned unit)" if e.rarity != Rarity.Tier.COMMON else ""],
 	])
 	match e.kind:
+		EquipmentDefinition.Kind.CANNON when e.cannon != null and e.cannon.is_beam():
+			var b := e.cannon
+			lines.append("BEAM %.0f pulses a minute · reaches %.1f km at once (no travel time, no recoil) · %.0f mm penetration close in, %.0f mm at full reach" % [
+				b.rate_of_fire_rpm, b.beam_range_m / 1000.0, b.penetration_mm, b.penetration_mm * KineticCannonConfig.BEAM_FALLOFF])
+			lines.append("TURRET trains %.0f°/s · no magazine: draws %.0f kW and makes %.0f kW of heat while firing" % [b.traverse_deg_s, -e.power_kw, e.heat_kw])
 		EquipmentDefinition.Kind.CANNON:
 			var g := e.cannon
 			lines.append("GUN %.0f rpm · %.0f m/s · %.1f kg rounds · %.0f mm penetration at any range (up to %.0f mm head-on)" % [

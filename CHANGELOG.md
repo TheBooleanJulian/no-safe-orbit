@@ -4,6 +4,47 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 6, part 6 — beam weapons (2026-10-21)
+
+#### Added
+- **Lasers for ships, fighters and drones**: a beam has no round — each
+  pulse reaches the first hull on its line at once (no travel time, no
+  recoil, nothing for point defence to shoot), with penetration falling to
+  half at full reach.
+
+  | Part | Carried by | Pulse | Reach | Penetration (close / full reach) | Cost |
+  |---|---|---|---|---|---|
+  | Pulse laser turret (epic) | ships, any outer face | 30 a minute | 5 km | 80 / 40 mm | draws 1,500 kW; 1,500 kW of heat while firing; no magazine |
+  | Fighter bay (Lancer laser) (rare) | hangar | 90 a minute | 1.5 km | 14 / 7 mm | 40 charges |
+  | Drone rack (laser) (rare) | outer face | 60 a minute | 2 km | 14 / 7 mm | 30 charges; flies as an interceptor (missiles first) |
+
+  A craft's charges are recharged aboard from the carrier's power, not its
+  magazine. Fire control holds a beam until its locked target is in reach.
+  A beam's steering mirror lays it on a craft or missile within 2° of the
+  barrel, so a laser drone can hit a missile its nose lags by metres. The
+  shipyard part info shows reach, falloff, power and heat; the HUD weapon
+  strip shows "on power" for an all-laser ship. Pulses are drawn as bright
+  lines that ride with both ships and fade in 0.18 s, with a capacitor
+  "zap" aboard.
+
+#### Changed
+- **Hangars & craft › Fighters / Drones** is decided by the rack (drone
+  racks are drones), so the armed laser drone sorts with the drones.
+- **Gun heat** counts only kinetic guns for rounds fired; beam pulses add
+  their own mount's heat.
+
+#### Tests changed (and why)
+- New `test_beams` (6 tests): a pulse strikes in the tick it fires (56.3 mm
+  at 3 km, expected 56.0), no round in flight, no rounds spent; held beyond
+  reach, stops at 5 km fired blind; +1,440 kW of power demand over the
+  autocannon, +180,000 kW of heat on the pulse's tick (1,500 kW × 2 s);
+  a Lancer spends a charge a pulse, passes through a friendly craft (IFF),
+  recharges 40/40 with the carrier's magazine untouched; a laser drone shoots
+  down a missile (fails with the steering mirror off — mutation-checked);
+  parts and palette sections; a pulse is drawn 589 m long and fades.
+- `smoke_shipyard` (palette): the Weapons list has 11 entries (the pulse
+  laser turret joins the guns).
+
 ### Play-test batch 6, part 5 — capital ships as battleships (2026-10-21)
 
 #### Changed

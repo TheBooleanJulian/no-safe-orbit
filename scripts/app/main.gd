@@ -31,12 +31,14 @@ const SUN_ENERGY := 1.4
 var sky_light: DirectionalLight3D
 ## Flares in flight (Milestone 11).
 var decoy_view: DecoyView
+var beam_view: BeamView
 @onready var stars: Starfield = $Starfield
 @onready var projectile_view: ProjectileView = $ProjectileView
 @onready var hit_flashes: HitFlashes = $HitFlashes
 var gangways := GangwayView.new()
 var audio := ShipAudio.new()
 var _rounds_heard := 0
+var _pulses_heard := 0
 
 ## Design the player flies; set by the shipyard before it switches to this
 ## scene. Null = the default template. Only used to commission the first
@@ -200,6 +202,9 @@ func _ready() -> void:
 	decoy_view = DecoyView.new()
 	decoy_view.name = "DecoyView"
 	add_child(decoy_view)
+	beam_view = BeamView.new()
+	beam_view.name = "BeamView"
+	add_child(beam_view)
 	sky_light = DirectionalLight3D.new()
 	sky_light.name = "SkyBodyLight"
 	sky_light.light_color = PlanetSky.NIGHT_LIGHT_COLOR
@@ -1241,7 +1246,7 @@ func _note_enemy_fire() -> void:
 		for id in shooters:
 			if not world.has_ship(id):
 				continue
-			var fired := world.get_ship(id).rounds_fired
+			var fired := world.get_ship(id).rounds_fired + world.get_ship(id).beam_pulses
 			if fired > int(_enemy_rounds_seen.get(id, 0)) and c.hostile:
 				_last_enemy_fire = world.sim_time
 			_enemy_rounds_seen[id] = fired
@@ -1985,6 +1990,7 @@ func _process(delta: float) -> void:
 			GameLog.info("main", "%s: %s" % [world.get_ship(id).display_name, "; ".join(blast.lines)])
 	for burst in world.take_bursts():
 		_show_burst(burst, player)
+	beam_view.add(world.take_beams())
 	hud.note_hits(hits, PLAYER_ID, world.sim_time)
 	var log_wings: Array[AirWing] = [player_wing]
 	for c in encounter.contacts:
@@ -2048,6 +2054,7 @@ func _process(delta: float) -> void:
 		location.sky_body.radius_m if location.sky_body != null else 0.0)
 	projectile_view.sync(world.projectiles(), alpha, render_origin, player.velocity, camera.global_position, _own_shooters())
 	decoy_view.sync(world.decoys, render_origin, camera.global_position, world.sim_time)
+	beam_view.sync(world, alpha, render_origin, camera.global_position, delta)
 	hit_flashes.update(world, alpha, render_origin, delta)
 	gangways.sync(world, alpha, render_origin)
 	hud.track = track
@@ -2112,6 +2119,9 @@ func _update_audio(player: ShipState) -> void:
 	if player.rounds_fired > _rounds_heard:
 		audio.play("gun")
 	_rounds_heard = player.rounds_fired
+	if player.beam_pulses > _pulses_heard:
+		audio.play("laser")
+	_pulses_heard = player.beam_pulses
 	var burn := ShipDynamics.thrust_fractions(player.config, player.last_thrust_body, player.last_torque_body) \
 		if player.is_active() else Vector2.ZERO
 	audio.set_engine(burn.x)

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+[ext_resource type="Resource" path="res://data/craft/laser_drone.tres" id="2_craft"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"laser_drone_rack"
+display_name = "Drone rack (laser)"
+kind = 7
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"dorsal", &"ventral", &"port", &"starboard"])
+mass_kg = 2200.0
+power_kw = -25.0
+heat_kw = 0.0
+heat_rejection_kw = 0.0
+thrust_n = 0.0
+color = Color(0.7, 0.55, 1.0, 1)
+craft = ExtResource("2_craft")
+rarity = 2
+drop_weight = 5.0

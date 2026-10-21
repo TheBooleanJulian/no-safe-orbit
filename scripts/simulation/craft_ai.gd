@@ -45,6 +45,9 @@ const DISENGAGE := [[0.6, 0.4, 0.3], [0.35, 0.25, 0.1], [0.15, 0.1, 0.0]]
 const STRIKE_RANGE_M := 600.0
 const INTERCEPT_RANGE_M := 300.0
 const RECON_RANGE_M := 1500.0
+## A beam holds fire until its line passes this close to the target's
+## centre at the least (m) — or within its hit box's narrower half-width.
+const BEAM_AIM_MIN_M := 0.3
 const ESCORT_OFFSET := Vector3(60, 25, 0)
 ## Formations: wingmen fan out by this angle around a target (radians) and
 ## escorts step out and back by this spacing (m) per rank.
@@ -197,8 +200,20 @@ static func attack(craft: ShipState, target: ShipState, standoff: float, priorit
 	point(craft, aim_dir, input)
 	var d := craft.orientation.inverse() * aim_dir.normalized()
 	var error_deg := rad_to_deg(acos(clampf(-d.z, -1.0, 1.0)))
-	input.fire = t > 0.0 and error_deg < GunneryAI.FIRE_CONE_DEG * 2.0 and rel_pos.length() < GunneryAI.MAX_RANGE_M \
-		and clear_shot(craft, aim_dir, rel_pos.length(), friends, target)
+	var in_reach := rel_pos.length() < GunneryAI.MAX_RANGE_M
+	var on_aim := error_deg < GunneryAI.FIRE_CONE_DEG * 2.0
+	if cannon.is_beam():
+		# A beam has few charges and no spread: it fires only in reach and
+		# with the line through the target's hit box (not near it).
+		var r := target.config.hit_box_half_extents
+		in_reach = rel_pos.length() < cannon.beam_range_m
+		on_aim = sin(deg_to_rad(minf(error_deg, 90.0))) * rel_pos.length() < maxf(minf(r.x, r.y), BEAM_AIM_MIN_M)
+		if target.systems == null:
+			# Its steering mirror lays it on a craft or missile within
+			# WorldSimulation.BEAM_STEER_DEG of the nose.
+			on_aim = error_deg < WorldSimulation.BEAM_STEER_DEG * 0.8
+		input.lead_target_id = target.id
+	input.fire = t > 0.0 and on_aim and in_reach and clear_shot(craft, aim_dir, rel_pos.length(), friends, target)
 
 
 ## Gun runs on a ship: run in to the role's range firing, then break away
