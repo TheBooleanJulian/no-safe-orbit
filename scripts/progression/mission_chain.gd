@@ -8,7 +8,9 @@ extends RefCounted
 
 ## DELIVER (play-test batch 9): a cargo contract — no fight; it is met on
 ## arriving at the destination with the freight aboard (ContractBoard.deliver).
-enum Goal { DISABLE, CAPTURE, ESCORT, WAVES, PATROL, DELIVER }
+## RETRIEVE (Milestone 13): recover a pod at the contract's location and
+## bring it back to the station that offered the work (ContractBoard.deliver).
+enum Goal { DISABLE, CAPTURE, ESCORT, WAVES, PATROL, DELIVER, RETRIEVE }
 
 const CHAIN := [
 	{"goal": Goal.DISABLE, "title": "First blood",

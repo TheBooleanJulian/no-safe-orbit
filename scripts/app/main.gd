@@ -333,6 +333,7 @@ func _start_scenario() -> void:
 	else:
 		_spawn_encounter()
 		_spawn_derelicts(player)
+		_spawn_pod(player)
 	_sortie_closed = false
 	combat_log = CombatLog.begin(player, world.sim_time)
 	if _jump_prepaid:
@@ -386,6 +387,65 @@ func _spawn_derelicts(player: ShipState) -> void:
 		_spawn_view(id, Color(0.62, 0.6, 0.58))
 		_field[id] = str(rec.id)
 	hud.derelict_ids.assign(_field.keys())
+
+
+## A retrieve contract's pod (Milestone 13): adrift POD_OFFSET out when the
+## sortie is at the contract's location and it isn't aboard yet; marked
+## like a derelict. G within the beacon's reach and POD_MATCH_MPS stows it.
+const POD_ID := &"contract_pod"
+const POD_OFFSET := Vector3(-3500, 400, -4800)
+const POD_MATCH_MPS := 5.0
+
+
+func _spawn_pod(player: ShipState) -> void:
+	var c := get_profile().active_contract
+	if c.is_empty() or str(c.get("kind", "")) != "retrieve" or str(c.location) != location.id \
+			or str(get_profile().vessel.cargo.get("freight", {}).get("contract", "")) == str(c.id):
+		return
+	var bp := ShipBlueprint.new()
+	bp.name = "Pod"
+	bp.add_module(&"hull_block", Vector3i.ZERO)
+	var grid := ShipGrid.build(bp, ConstructionCatalog.default_catalog())
+	var stats := ShipStats.compute(bp, grid)
+	_designs[POD_ID] = {"blueprint": bp, "grid": grid, "stats": stats, "config": stats.to_ship_config("Pod")}
+	var pod := ShipState.create(POD_ID, "POD %s" % str(c.freight).to_upper(), _designs[POD_ID].config, player.position + POD_OFFSET,
+		player.velocity + Vector3(0.4, 0.1, -0.3), Quaternion(Vector3(0.2, 1, 0.3).normalized(), 0.7))
+	pod.angular_velocity = Vector3(0.02, 0.05, -0.01)
+	pod.side = &"neutral"
+	pod.derelict = true
+	world.add_ship(pod)
+	world.set_input(POD_ID, ShipControlInput.neutral())
+	_spawn_view(POD_ID, Color(1.0, 0.8, 0.35))
+	hud.derelict_ids.append(POD_ID)
+	hud.notice("RETRIEVE — the %s's beacon: %.1f km out" % [c.freight, POD_OFFSET.length() / 1000.0], world.sim_time)
+
+
+## G by the pod: stow it as the contract's freight. Returns why not ("" if done).
+func recover_pod(player: ShipState) -> String:
+	var pod := world.get_ship(POD_ID) if world.has_ship(POD_ID) else null
+	var c := get_profile().active_contract
+	if pod == null or c.is_empty():
+		return "no pod"
+	var d := pod.position.distance_to(player.position)
+	if d > beacon_reach_m():
+		return "close to < %.1f km of the pod (now %.1f km)" % [beacon_reach_m() / 1000.0, d / 1000.0]
+	if (pod.velocity - player.velocity).length() > POD_MATCH_MPS:
+		return "match its speed (within %.0f m/s)" % POD_MATCH_MPS
+	var vessel := get_profile().vessel
+	var room := player.systems.stats.cargo_m3 - vessel.cargo_volume_m3(ConstructionCatalog.default_catalog()) if player.systems != null else 0.0
+	if room < float(c.freight_m3):
+		return "the hold needs %d m³ free (%.0f) — vent cargo [Tab › CARGO]" % [int(c.freight_m3), room]
+	vessel.cargo["freight"] = {"contract": str(c.id), "m3": int(c.freight_m3), "what": str(c.freight)}
+	world.remove_ship(POD_ID)
+	(_views[POD_ID] as Node).queue_free()
+	_views.erase(POD_ID)
+	hud.derelict_ids.erase(POD_ID)
+	var line := "RECOVERED the %s — bring it back to the %s" % [c.freight, Location.by_id(ContractBoard.deliver_to(c)).station_name]
+	hud.notice(line, world.sim_time)
+	if combat_log != null:
+		combat_log.record(world.sim_time, "salvage", line)
+	_save_profile()
+	return ""
 
 
 ## The nearest field derelict within beacon range not yet salvaged this
@@ -1032,6 +1092,11 @@ func close_sortie() -> void:
 		after["stores"] = {"propellant_kg": player.propellant_kg, "rounds": player.cannon_rounds, "pd_rounds": player.pd_rounds,
 			"missiles": player.systems.missile_count(), "jump_reserve_kg": jump_reserve_kg}
 		lines.append_array(p.dock(after, catalog))
+		# A retrieve contract's pod, brought back to the station that wanted it.
+		var delivered := ContractBoard.deliver(p)
+		if delivered != "":
+			lines.append(delivered)
+			mission.contract = {}
 		GameLog.info("main", "Docked %s after sortie %d%s" % [p.vessel.name, p.vessel.sorties, " (damaged)" if p.vessel.is_damaged() else ""])
 	lines.append_array(_update_derelict_field())
 	for line in lines:
@@ -1067,6 +1132,17 @@ func _on_salvage_pressed() -> void:
 	if hud.loot.visible:
 		hud.loot.close()
 		return
+	# A retrieve contract's pod first; if it can't be taken yet, a beacon or
+	# a derelict in reach instead, else why not the pod.
+	if world.has_ship(POD_ID):
+		var me := world.get_ship(PLAYER_ID)
+		var why_pod := recover_pod(me)
+		if why_pod == "":
+			return
+		var pod_targeted := target_ship() != null and target_ship().id == POD_ID
+		if pod_targeted or (Salvage.block_reason(me, target_ship(), beacon_reach_m()) != "" and derelict_in_reach(me) == &""):
+			hud.notice("POD: " + why_pod, world.sim_time)
+			return
 	var why := Salvage.block_reason(world.get_ship(PLAYER_ID), target_ship(), beacon_reach_m())
 	if why != "":
 		# Nothing to beacon in the fight: an old derelict close by, then.

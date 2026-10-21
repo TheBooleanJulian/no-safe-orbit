@@ -265,6 +265,15 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Retrieve contracts (Milestone 13, part 3)**: `ContractBoard._retrieve_offer`
+  (kind "retrieve", `MissionChain.Goal.RETRIEVE`, `deliver_to` the offering
+  station, guards as `ships`); `carries_freight` / `deliver_to` let
+  `deliver` serve cargo and retrieve (an unrecovered pod is not a failure).
+  `Main._spawn_pod` (a one-block design, `derelict`, marked in
+  `hud.derelict_ids`) when the sortie is at the contract's location;
+  `recover_pod` on G (beacon reach, `POD_MATCH_MPS`, hold space) stows it as
+  `vessel.cargo.freight`; `close_sortie` calls `ContractBoard.deliver` after
+  docking.
 - **Dealer (play-test batch 10, part 3)**: `tools/make_capital_templates.gd`
   describes the hull cell by cell (`_row_cols`: taper, "hammer" head and
   neck, "split" fork; swept "wing_*" blocks; `tower` levels; "rcs_mid"),

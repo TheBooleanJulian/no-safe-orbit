@@ -9,6 +9,9 @@ extends RefCounted
 ## Cargo contracts (play-test batch 9) are work without a fight: freight
 ## loaded into the hold on accepting, the destination set as the course,
 ## paid on arriving there with it aboard (`deliver`, at LAUNCH).
+## Retrieve contracts (Milestone 13): a pod lost at a charted location,
+## usually guarded; G near it in flight stows it as freight, and it pays
+## once docked at the station that offered the work (`deliver_to`).
 
 const OFFERS := 4
 
@@ -45,6 +48,14 @@ const FREIGHT_BASE_CREDITS := 120
 const FREIGHT_CREDITS_PER_M3 := 4.0
 ## One offer in this many is cargo (when another location is charted).
 const CARGO_ONE_IN := 3
+## Retrieve contracts: what is lost, its size (m³), how often it is offered
+## (one in this many of the rest), and its pay: a base, more per guard and
+## the further it is from the station that wants it.
+const RETRIEVABLES := ["flight-recorder pod", "survey capsule", "courier's cargo pod", "data core", "lifeboat beacon"]
+const RETRIEVE_M3 := 6
+const RETRIEVE_ONE_IN := 4
+const RETRIEVE_BASE_CREDITS := 220
+const RETRIEVE_CREDITS_PER_SHIP := 140
 
 
 ## Fresh offers for `profile` (deterministic for its seed and sortie count).
@@ -57,6 +68,9 @@ static func generate(profile: PlayerProfile) -> Array:
 		var elsewhere: Array = known.filter(func(id: String) -> bool: return id != profile.location)
 		if not elsewhere.is_empty() and rng.randi() % CARGO_ONE_IN == 0:
 			out.append(_cargo_offer(profile, rng, elsewhere, i))
+			continue
+		if rng.randi() % RETRIEVE_ONE_IN == 0:
+			out.append(_retrieve_offer(profile, rng, known, i))
 			continue
 		var k: Dictionary = KINDS[rng.randi() % KINDS.size()]
 		var ships := rng.randi_range(1, PlayerProfile.MAX_ENCOUNTER)
@@ -98,26 +112,59 @@ static func _cargo_offer(profile: PlayerProfile, rng: RandomNumberGenerator, els
 	}
 
 
+## A retrieve contract: a pod lost at a charted station (here or elsewhere),
+## to bring back here; guarded by 1–2 ships.
+static func _retrieve_offer(profile: PlayerProfile, rng: RandomNumberGenerator, known: Array, i: int) -> Dictionary:
+	var at := Location.by_id(str(known[rng.randi() % known.size()]))
+	var what: String = RETRIEVABLES[rng.randi() % RETRIEVABLES.size()]
+	var ships := rng.randi_range(1, 2)
+	var level := profile.missions_completed + ships + rng.randi_range(0, 1)
+	var dv := JumpDrive.standard().delta_v(Location.distance_m(Location.by_id(profile.location), at)) if at.id != profile.location else 0.0
+	var credits := roundi((RETRIEVE_BASE_CREDITS + RETRIEVE_CREDITS_PER_SHIP * ships) * (1.0 + 0.1 * (level - 1)) * (1.0 + dv / 1000.0) / 10.0) * 10
+	var home := Location.by_id(profile.location)
+	return {
+		"id": "c%d_%d" % [profile.sorties_flown(), i],
+		"kind": "retrieve", "goal": int(MissionChain.Goal.RETRIEVE), "title": "Recover the %s" % what,
+		"brief": "A %s is adrift %s, with %d ship%s about — G alongside it stows it; bring it back to the %s" % [what,
+			"near here" if at.id == profile.location else "off the %s" % at.station_name, ships, "" if ships == 1 else "s", home.station_name],
+		"giver": 3, "location": at.id, "deliver_to": home.id, "ships": ships, "threat": level, "waves": 0,
+		"freight_m3": RETRIEVE_M3, "freight": what, "credits": credits, "parts": 10 * ships,
+	}
+
+
+## Whether a contract is about freight: cargo carried out, or a pod recovered.
+static func carries_freight(c: Dictionary) -> bool:
+	return str(c.get("kind", "")) in ["cargo", "retrieve"]
+
+
+## Where a contract's freight is handed over.
+static func deliver_to(c: Dictionary) -> String:
+	return str(c.get("deliver_to", c.get("location", "")))
+
+
 ## Hand the freight over if the vessel is docked at the cargo contract's
 ## destination with it aboard: paid, the contract met. Freight no longer
 ## aboard (jettisoned) fails the contract. Returns the line ("" if there is
 ## nothing to deliver here).
 static func deliver(profile: PlayerProfile) -> String:
 	var c := profile.active_contract
-	if c.is_empty() or str(c.get("kind", "")) != "cargo":
+	if c.is_empty() or not carries_freight(c):
 		return ""
 	var freight: Dictionary = profile.vessel.cargo.get("freight", {})
 	if str(freight.get("contract", "")) != str(c.id):
+		if str(c.kind) == "retrieve":
+			return ""  # not recovered yet
 		profile.active_contract = {}
 		profile.vessel.record("Contract failed: %s — the freight is gone" % c.title)
 		return "CONTRACT FAILED — %s: the freight is no longer aboard" % c.title
-	if profile.location != str(c.location):
+	if profile.location != deliver_to(c):
 		return ""
 	profile.vessel.cargo.erase("freight")
 	var m := MissionChain.from_dict(profile.campaign)
 	m.contract = c.duplicate()
 	var line := m.complete(profile)
-	profile.vessel.record("Delivered %d m³ of %s to the %s" % [int(freight.m3), freight.what, Location.by_id(profile.location).station_name])
+	profile.vessel.record("%s %d m³ of %s to the %s" % ["Brought back" if str(c.kind) == "retrieve" else "Delivered", int(freight.m3),
+		freight.what, Location.by_id(profile.location).station_name])
 	return line
 
 
