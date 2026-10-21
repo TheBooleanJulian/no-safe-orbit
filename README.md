@@ -893,7 +893,7 @@ Beside the builder the directory narrows to the names.
 |---|---|
 | **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights) inside the station's docking hall — ribbed walls, catwalks with amber lamps, a gridded deck, light strips overhead — turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
 | **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage — and **cargo** (about one offer in three once a second station is charted): no fight, 20–90 m³ of freight to another station, loaded into your hold on accepting (refused if it won't fit), paid on arriving there with it aboard (120 cr + 4 cr a m³, more the further the jump). Banking leaves the freight aboard; jettisoning it, abandoning the contract or losing the ship fails it. Accepting a combat contract sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
-| **DEALER** | Every template for credits, with its standard crew hired: Cutter, Corvette, Frigate, and capital ships (Destroyer, Cruiser, Carrier). The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
+| **DEALER** | Every template for credits, with its standard crew hired — twelve hulls, cheapest first: Cutter, Corvette, Frigate, and capital ships (Halberd Frigate, Destroyer, Carrier, Cruiser, Wyvern Battlecruiser, Anvil Heavy Cruiser) up to the super-heavies (Sovereign Supercarrier, Colossus Battleship, Leviathan Dreadnought). The cards fill in as the dealer opens; each card's 3D view is drawn once it scrolls into sight. The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
 | **HANGAR** (Hangar & bank) | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the service record — and the **station bank**: a deposit (1 % a sortie, compounding) and three loans, one of each at a time — Dockyard credit 1,000 cr at 5 % over 5 sorties, Guild loan 5,000 cr at 4 % over 10, Shipbuilder's mortgage 25,000 cr at 3 % over 20 — paid off in instalments on docking (a shortfall adds 10 % of it) or repaid early |
 | **REFIT** | The builder below |
 | **CREW** (Crew quarters) | The roster board: all eight departments (pilots too), each against the standard complement (amber when short), its crew as badges with a placeholder portrait, level and wage — **drag a badge onto another department** to post them there, ▲ to train, ✕ to dismiss; the **hiring hall** below, a card and portrait per spacer for hire |
@@ -912,6 +912,17 @@ railguns) — autocannon secondaries down the flanks, point defence, missile
 racks. Destroyer 3,002 t (3 heavy guns), Cruiser 4,987 t (4 heavy guns, 2
 railguns), Carrier 6,512 t (16 craft). The camera sits back further the
 bigger the ship.
+
+Play-test batch 10 added six more, with science-fiction lines:
+
+| Hull | Shape | Mass · g | Armament | Price |
+|---|---|---|---|---|
+| Halberd Frigate | hammerhead prow on a narrow neck | 2,694 t · 0.34 g | 2 heavy guns, 8 PD | 18,153 cr |
+| Wyvern Battlecruiser | long tapered bow, swept wings aft with engines across them | 6,309 t · 0.32 g | 3 heavy guns, 2 railguns, 16 PD | 43,693 cr |
+| Anvil Heavy Cruiser | hammerhead prow, short wings | 6,656 t · 0.28 g | 4 heavy guns, 2 railguns, 18 PD | 45,067 cr |
+| Sovereign Supercarrier | forked prow, three-level bridge tower | 12,414 t · 0.23 g | 3 heavy guns, 26 PD, 30 craft | 70,836 cr |
+| Colossus Battleship | hammerhead prow, two-deck wings, three-level tower | 10,810 t · 0.28 g | 4 heavy guns, 4 railguns, 24 PD | 77,067 cr |
+| Leviathan Dreadnought | tapered bow, broad two-deck wings, three-level tower, RCS amidships | 12,460 t · 0.33 g | 2 heavy guns, 6 railguns, 28 PD | 92,859 cr |
 
 In REFIT you start from the ship you were flying (the Frigate Mk I template
 by default).

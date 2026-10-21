@@ -152,6 +152,10 @@ rare part · Earth texture 5400 × 2700.
   2026-10-19). Crossing it removes the vessel or round (with a re-entry
   cutscene for the player since play-test batch 10); skimming above it costs
   nothing.
+- **The dealer's first opening in a session takes a few seconds**
+  (play-test batch 10): the cards come one a frame (4.2 s for all twelve in
+  a windowed review, frames of up to ~0.75 s while a super-heavy is loaded,
+  checked and priced); later openings reuse what was worked out.
 - **The Moon's ground** (play-test batch 10): ships settle on their hit
   box's smallest half-extent whatever their attitude, and rest without
   sliding or tipping; the drawn ground reaches 115 km at most (the camera's

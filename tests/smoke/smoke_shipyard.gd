@@ -268,7 +268,12 @@ func _run() -> void:
 func _dealer_and_services(yard: Shipyard) -> void:
 	var p := yard.profile
 	yard.show_section("DEALER")
-	await _frames(2)
+	# The cards come one a frame (play-test batch 10: twelve hulls).
+	var waited := 0
+	while yard.sections.dealer_rows.size() < BlueprintIO.list_templates().size() and waited < 600:
+		await process_frame
+		waited += 1
+	_check(yard.sections.dealer_rows.size() == BlueprintIO.list_templates().size(), "the dealer shows all %d hulls" % yard.sections.dealer_rows.size())
 	var cutter_path := ""
 	for path: String in yard.sections.dealer_rows:
 		if path.contains("cutter"):

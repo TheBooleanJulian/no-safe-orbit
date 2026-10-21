@@ -518,6 +518,12 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Play-test batch 10 — part 3: more hulls, super-heavies ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| More ship variants at the dealer, especially super-heavies, with sci-fi shapes (Elite Dangerous, Halo) | `test_batch10_dealer`, `smoke_shipyard`, windowed render | 12 hulls (was 6); 3 super-heavies 10.8–12.5 kt; hammerhead, forked and winged hulls |
+
 ### Play-test batch 10 — part 2: the Moon's ground, landing, Earth re-entry ✅ (2026-10-21)
 
 | Requirement | Test | Measured |

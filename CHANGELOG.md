@@ -4,6 +4,34 @@ All notable changes to this project. Format: [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+### Play-test batch 10, part 3 — more hulls at the dealer, super-heavies (2026-10-22)
+
+#### Added
+- **Six new hulls** (tools/make_capital_templates.gd), after Elite Dangerous
+  and Halo lines: Halberd Frigate (hammerhead prow), Wyvern Battlecruiser
+  (tapered bow, swept wings with engines), Anvil Heavy Cruiser (hammerhead,
+  short wings), and three super-heavies — Sovereign Supercarrier (forked
+  prow, 30 craft), Colossus Battleship (hammerhead, two-deck wings) and
+  Leviathan Dreadnought (broad wings, 6 railguns) — the three with a
+  three-level bridge tower. 2.7 kt to 12.5 kt, 18,153 to 92,859 cr.
+
+#### Changed
+- **The template tool works cell by cell** (prow shapes, wings, tower
+  height, extra RCS rows); it still writes the Destroyer, Cruiser and
+  Carrier byte for byte as before.
+- **The dealer fills in as it opens**: what it knows of each template is
+  worked out once a session, cards come one a frame in price order, and a
+  card's 3D view (drawn once, closer and from higher up so the shape reads)
+  is only built when it scrolls into sight. Before, every card was built at
+  once when the shipyard opened.
+
+#### Tests changed (and why)
+- New `test_batch10_dealer` (2): the six hulls valid and for sale (compiled
+  in 14–78 ms), the super-heavies over 10 kt with the bridge three levels
+  up; their shapes (heads 8/10/12 cells over necks 4/6/8; a 4-cell fork;
+  wings 18 and 24 cells across against 10 and 12 amidships).
+- `smoke_shipyard`: waits for the dealer's twelve cards (one a frame).
+
 ### Play-test batch 10, part 2 — the Moon's ground, landing, Earth re-entry (2026-10-21)
 
 #### Added
