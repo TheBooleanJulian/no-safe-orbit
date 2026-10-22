@@ -278,7 +278,11 @@ func _start_scenario() -> void:
 	world = WorldSimulation.new()
 	var body := location.body
 	var r0 := location.start_radius_m()
-	var anchor_r := Vec3d.new(0, r0, 0)
+	# Prograde along −Z. An inclined start (Saturn) begins at the top of its
+	# orbit, `incl` towards the north pole (−X), so the equator's rings are
+	# seen from above rather than edge-on.
+	var incl := deg_to_rad(location.start_inclination_deg)
+	var anchor_r := Vec3d.new(-sin(incl), cos(incl), 0).times(r0)
 	var anchor_v := Vec3d.new(0, 0, -body.circular_speed(r0))
 	var artifact_offset := Vector3.ZERO
 	if artifact != null:

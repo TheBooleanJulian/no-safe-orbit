@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
+[ext_resource type="Resource" path="res://data/bodies/saturn.tres" id="2_body"]
+
+[resource]
+script = ExtResource("1_loc")
+id = "saturn"
+display_name = "Saturn orbit"
+station_name = "Cassini Ring Station"
+short_name = "Saturn"
+body = ExtResource("2_body")
+charts_after = "jupiter"
+start_altitude_m = 3000000.0
+start_inclination_deg = 20.0
+map_position = Vector2(0.71, 0.64)
+map_radius_px = 22.0
+map_color = Color(0.88, 0.8, 0.6, 1)
+blurb = "3,000 km above Saturn’s clouds, below the rings, inclined 20° · 24.5 km/s · 4.5 h period — Cassini’s Grand Finale orbit. The entry interface is 1,000 km."
+broker_price = 6000
+broker_name = "Ring-Pilot Bianchi"
+broker_pitch = "Charts for Saturn and the Cassini Ring Station, threaded between the rings and the clouds."
+vendor_stock_size = 6
+vendor_max_rarity = 4
+price_factor = 2.0
+enemy_templates = PackedStringArray("destroyer_mk1.json", "cruiser_mk1.json", "wyvern_battlecruiser.json", "carrier_mk1.json")
+enemy_weights = PackedFloat32Array(2, 2, 1, 1)
+threat_bonus = 5

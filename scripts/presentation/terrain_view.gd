@@ -60,7 +60,10 @@ func rebuild(world: WorldSimulation, player_pci: Vector3, altitude: float, plane
 	var up := player_pci.normalized()
 	var t1 := up.cross(Vector3.UP if absf(up.y) < 0.9 else Vector3.RIGHT).normalized()
 	var t2 := up.cross(t1)
-	var reach := minf(sqrt(2.0 * r * maxf(altitude, 500.0)) * 1.1, REACH_MAX_M)
+	# Out to the horizon (the exact angle: on Phobos, 11 km across, the
+	# small-angle sqrt(2rh) overshoots), at most a right angle round.
+	var horizon := acos(r / (r + maxf(altitude, 500.0)))
+	var reach := minf(minf(r * horizon * 1.1, REACH_MAX_M), r * PI * 0.5)
 	var centre_fixed := world.pci_to_fixed * up
 	var centre_lon := rad_to_deg(atan2(centre_fixed.y, centre_fixed.x))
 	if _material == null:

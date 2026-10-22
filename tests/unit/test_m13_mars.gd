@@ -91,12 +91,12 @@ func test_brokers_sell_the_charts() -> void:
 	var mars := Location.by_id("mars")
 	for loc in Location.all():
 		assert_true(loc.id in PlayerProfile.STARTING_LOCATIONS or loc.broker_price > 0, "%s is known or sold" % loc.id)
-	assert_true(p.brokers().size() == 1 and p.brokers()[0] == mars, "a new player can buy Mars")
+	assert_true(mars in p.brokers() and p.brokers().all(func(l: Location) -> bool: return l.charts_after == ""), "a new player can buy Mars (and Mercury, Venus: no charts needed first)")
 	p.credits = mars.broker_price - 1
 	assert_true(p.buy_location("mars") != "" and "mars" not in p.known_locations, "too few credits: refused")
 	p.credits = mars.broker_price + 100
 	assert_true(p.buy_location("mars") == "" and "mars" in p.known_locations and p.credits == 100, "bought: on the map")
-	assert_true(p.brokers().is_empty() and p.buy_location("mars") != "", "nothing more to sell")
+	assert_true(mars not in p.brokers() and p.buy_location("mars") != "", "Mars isn't sold twice")
 	var cost := p.jump_cost_kg("mars", ConstructionCatalog.default_catalog())
 	var t := p.vessel_tanks(ConstructionCatalog.default_catalog())
 	print("    measured: Earth→Mars %.0f M km: the Frigate burns %.1f t (tanks %.0f t + reserve %.0f t); the Moon %.1f t" % [

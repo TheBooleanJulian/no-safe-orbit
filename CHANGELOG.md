@@ -10,6 +10,52 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
 
 ## [Unreleased]
 
+### Milestone 16 — the solar system (2026-10-23)
+
+#### Added
+- **Eight new stations**: Mercury (Caloris Foundry), Venus (Aphrodite
+  Cloud Station), Phobos (Stickney Station), Deimos (Voltaire Outpost),
+  Jupiter (Galilean Yards), Saturn (Cassini Ring Station), Uranus
+  (Herschel Station) and Neptune (Le Verrier Station), each with its own
+  shelves, prices, traffic and broker.
+- **Real positions**: the planets from JPL's Keplerian elements (within
+  0.08° of Horizons on the scenario date), Phobos and Deimos from Horizons
+  states about Mars, carried on as two-body orbits; both moons keep one face
+  to Mars.
+- **Real maps**: Mercury (MESSENGER), Jupiter (Cassini), Phobos (Viking,
+  USGS), Deimos (Viking, Stooke); Venus, Saturn, Uranus and Neptune get
+  cloud-top maps made for the game in their real colours (no global map
+  exists).
+- **Saturn's rings**, with their real divisions, lit by the Sun and
+  shadowed by the planet; the station orbits below them, inclined 20°.
+- **Land on Mercury, Phobos and Deimos** (no elevation maps: smooth ground
+  with fine relief).
+- **Phobos in Mars's sky; Mars in Phobos's and Deimos's.**
+- **Chart chains**: Phobos, Deimos and Jupiter's charts need Mars's; Saturn,
+  Uranus and Neptune each need the one before.
+- `tools/make_planet_maps.gd`; `smoke_solar_system` in the checks.
+
+#### Changed
+- **The nav chart** shows the planets in a row out from the Sun with their
+  moons above, a name under each disc, and the station, orbit, jump and
+  distance of the docked, course and pointed-at places in the corner.
+- The ground view's reach is the true horizon (on an 11 km moon the old
+  formula reached round the back).
+
+#### Tests changed (and why)
+- New `test_m16_solar_system` (5): the planets against Horizons (worst
+  0.074°, Saturn); Phobos 9,391 km out, 7.66 h, back after one orbit, Mars
+  within 5° of its prime meridian for 5 h (tidal lock); eleven locations,
+  the chart chains, Neptune in a Frigate's reach (74.5 t); ground on the
+  small airless bodies, air on the rest; Saturn's ring gaps.
+- New `smoke_solar_system`: a sortie at each new place and Mars — the body,
+  the altitude, Saturn's 20°, the ship and traffic still flying after 12 s,
+  ground, sky bodies, rings.
+- `test_locations`: eleven locations, Earth, Moon, Mars first; the
+  unknown-id example is now Pluto. `test_m13_mars`: a new player's brokers
+  include Mercury and Venus besides Mars. `test_release`: the new
+  attribution rows are credited.
+
 ## [0.17.0] — 2026-10-23 — Settings menu (Esc); SemVer releases
 
 ### Settings menu (2026-10-22)

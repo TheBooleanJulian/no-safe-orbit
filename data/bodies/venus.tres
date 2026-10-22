@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="OrbitalBody" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/orbital_body.gd" id="1_body"]
+[ext_resource type="Texture2D" path="res://data/venus/venus_clouds_procedural.jpg" id="2_map"]
+
+[resource]
+script = ExtResource("1_body")
+display_name = "Venus"
+mu_m3_s2 = 3.24858592e14
+radius_m = 6051800.0
+entry_interface_altitude_m = 250000.0
+has_atmosphere = true
+pole_ra_deg = 272.76
+pole_dec_deg = 67.16
+prime_meridian_deg = 160.2
+rotation_deg_per_day = -1.4813688
+geometric_albedo = 0.689
+ephemeris = &"venus"
+air_color = Color(0.98, 0.86, 0.55, 1)
+clouds_and_seas = false
+air_scale_height_m = 15000.0
+surface_detail = 0.1
+surface_map = ExtResource("2_map")

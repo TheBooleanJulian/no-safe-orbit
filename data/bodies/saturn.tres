@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="OrbitalBody" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/orbital_body.gd" id="1_body"]
+[ext_resource type="Texture2D" path="res://data/saturn/saturn_clouds_procedural.jpg" id="2_map"]
+
+[resource]
+script = ExtResource("1_body")
+display_name = "Saturn"
+mu_m3_s2 = 3.7931187e16
+radius_m = 60268000.0
+entry_interface_altitude_m = 1000000.0
+has_atmosphere = true
+pole_ra_deg = 40.589
+pole_dec_deg = 83.537
+prime_meridian_deg = 38.9
+rotation_deg_per_day = 810.7939024
+geometric_albedo = 0.499
+ephemeris = &"saturn"
+air_color = Color(0.92, 0.84, 0.62, 1)
+clouds_and_seas = false
+air_scale_height_m = 59500.0
+surface_detail = 0.1
+ring_bands_km = PackedFloat32Array(66900, 74510, 0.04, 74658, 92000, 0.16, 92000, 99000, 0.7, 99000, 117580, 0.92, 117580, 122170, 0.06, 122170, 133589, 0.55, 133589, 133915, 0.0, 133915, 136775, 0.45, 140130, 140230, 0.5)
+ring_color = Color(0.84, 0.76, 0.62, 1)
+surface_map = ExtResource("2_map")

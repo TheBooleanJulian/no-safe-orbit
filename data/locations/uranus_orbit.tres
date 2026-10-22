@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
+[ext_resource type="Resource" path="res://data/bodies/uranus.tres" id="2_body"]
+
+[resource]
+script = ExtResource("1_loc")
+id = "uranus"
+display_name = "Uranus orbit"
+station_name = "Herschel Station"
+short_name = "Uranus"
+body = ExtResource("2_body")
+charts_after = "saturn"
+start_altitude_m = 3000000.0
+map_position = Vector2(0.84, 0.66)
+map_radius_px = 15.0
+map_color = Color(0.64, 0.84, 0.88, 1)
+blurb = "3,000 km above Uranus · 14.2 km/s · 3.5 h period. A planet tipped on its side; the entry interface is 500 km. Far out, few visitors, deep shelves."
+broker_price = 8000
+broker_name = "Archivist Rahimi"
+broker_pitch = "Charts for Uranus and Herschel Station. Nineteen times as far from the Sun as home."
+vendor_stock_size = 6
+vendor_max_rarity = 4
+price_factor = 2.2
+enemy_templates = PackedStringArray("cruiser_mk1.json", "anvil_heavy_cruiser.json", "wyvern_battlecruiser.json")
+enemy_weights = PackedFloat32Array(2, 1, 1)
+threat_bonus = 6
