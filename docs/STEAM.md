@@ -12,7 +12,7 @@ below were right as of mid-2026; check them on the Steamworks partner site
 
 | Item | Where |
 |---|---|
-| Version `0.16.0` (the latest release; see CHANGELOG for the scheme) | `project.godot` → `application/config/version`; shown in the credits |
+| Version `0.17.0` (the latest release; see CHANGELOG for the scheme) | `project.godot` → `application/config/version`; shown in the credits |
 | Executable metadata: company **TheBooleanJulian**, product **No Safe Orbit**, © 2026 TheBooleanJulian | `export_presets.cfg` (Windows) |
 | Windows and Linux (x86_64) export presets | `export_presets.cfg` |
 | Credits and every licence in game: F1 → **Credits & licences** | `scripts/app/credits.gd`, `scripts/ui/controls_panel.gd` |

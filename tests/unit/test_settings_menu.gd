@@ -77,7 +77,7 @@ func test_save_stats_and_changelog() -> void:
 	var md := FileAccess.get_file_as_string(SettingsMenu.CHANGELOG_PATH)
 	var bb := SettingsMenu.changelog_bbcode(md)
 	print("    measured: changelog %d characters of markdown → %d of BBCode" % [md.length(), bb.length()])
-	assert_true(bb.contains("[lb]0.16.0]") and bb.contains("[lb]Unreleased]") and not bb.contains("\n## ") and bb.contains("[b]"), "versions shown, brackets escaped, bold kept")
+	assert_true(bb.contains("[lb]%s]" % Credits.version()) and bb.contains("[lb]Unreleased]") and not bb.contains("\n## ") and bb.contains("[b]"), "versions shown, brackets escaped, bold kept")
 	assert_true(SettingsMenu.changelog_bbcode("- a **b** `c`\n  wrapped").contains("• a [b]b[/b]") and SettingsMenu.changelog_bbcode("- x\n  wrapped").contains("x wrapped")
 		and SettingsMenu.changelog_bbcode("A paragraph\nwrapped on.").contains("A paragraph wrapped on."),
 		"bullets, bold, soft-wrapped lines joined")

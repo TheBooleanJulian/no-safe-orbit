@@ -174,7 +174,7 @@ remembered in `user://settings.cfg`.
 ## Releases (Steam)
 
 Published by **TheBooleanJulian**. Windows and Linux export presets carry
-the publisher and the version (`0.16.0`, see [CHANGELOG](CHANGELOG.md) for the scheme); `tools/steam_export.sh` builds
+the publisher and the version (`0.17.0`, see [CHANGELOG](CHANGELOG.md) for the scheme); `tools/steam_export.sh` builds
 both Steam depots with `THIRD_PARTY_NOTICES.txt` (credits and the Godot
 licences, also in game under F1 → Credits & licences). The Steamworks
 steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).

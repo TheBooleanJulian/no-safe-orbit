@@ -10,6 +10,8 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-10-23 — Settings menu (Esc); SemVer releases
+
 ### Settings menu (2026-10-22)
 
 #### Added
@@ -36,7 +38,7 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
 - `smoke_encounter`: Esc opens the menu (8 tabs), the sortie pauses, the
   CONTROLS and STATS tabs fill, Esc closes it and the sortie runs on.
 - `smoke_shipyard`: Esc drops the hatch tool, then opens the menu (the
-  changelog shows 0.16.0), then closes it.
+  changelog has a section for the game's own version), then closes it.
 - `test_pass_a`: ducking is measured from the effects volume setting.
 
 ## [0.16.0] — 2026-10-22 — Play-test batch 11: combat rules, crew manifest, refit bay, flight and shipyard
