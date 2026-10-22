@@ -95,10 +95,10 @@ func _run() -> void:
 	var opened := yard.settings.visible and not paused
 	yard.settings.show_tab("CHANGELOG")
 	await _frames(2)
-	var log_shown := yard.settings._changelog.get_parsed_text().contains("0.16.0")
+	var log_shown := yard.settings._changelog.get_parsed_text().contains("[%s]" % Credits.version())
 	await _key(KEY_ESCAPE)
 	_check(tool_dropped and opened and log_shown and not yard.settings.visible,
-		"Esc drops the hatch tool, then opens the settings menu (changelog shown), then closes it")
+		"Esc drops the hatch tool, then opens the settings menu (the changelog shows this version, %s), then closes it" % Credits.version())
 
 	var ed := yard.editor
 	_check(ed.blueprint.name == "Frigate Mk I" and ed.report.issues.is_empty(), "shipyard opens on the Frigate Mk I template with no issues")
