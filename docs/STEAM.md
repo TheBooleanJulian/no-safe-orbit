@@ -12,7 +12,7 @@ below were right as of mid-2026; check them on the Steamworks partner site
 
 | Item | Where |
 |---|---|
-| Version `0.12.0` (the last finished milestone, M12) | `project.godot` → `application/config/version`; shown in the credits |
+| Version `0.17.0` (the latest release; see CHANGELOG for the scheme) | `project.godot` → `application/config/version`; shown in the credits |
 | Executable metadata: company **TheBooleanJulian**, product **No Safe Orbit**, © 2026 TheBooleanJulian | `export_presets.cfg` (Windows) |
 | Windows and Linux (x86_64) export presets | `export_presets.cfg` |
 | Credits and every licence in game: F1 → **Credits & licences** | `scripts/app/credits.gd`, `scripts/ui/controls_panel.gd` |
@@ -195,8 +195,9 @@ award text.
   `icon.svg` in the working folder is yours and was not used). Once
   chosen, set `config/icon` in `project.godot` and an `.ico` in the
   Windows preset's `application/icon`.
-- **Version scheme**: `0.12.0` follows the milestones; there is no release
-  or tagging policy yet.
+- **Version scheme**: SemVer, 0.x.0 until the game is declared ready for
+  1.0; each promotion of `dev` to `main` raises the minor number (see the
+  top of `CHANGELOG.md`). No git tags yet.
 - **Early Access or full release**, price and regional pricing, release
   date.
 - **Steamworks SDK** (achievements etc.): needs approval for the

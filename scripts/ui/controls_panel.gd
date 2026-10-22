@@ -4,8 +4,11 @@ extends PanelContainer
 ## press the new key, mouse button, gamepad button or stick direction.
 ## Esc cancels a pending rebind. Changes save immediately. "Credits &
 ## licences" swaps the bindings for the credits (Credits.full_text).
+## `embedded` (the settings menu's CONTROLS tab): always shown, no Close.
 
 signal closed
+
+var embedded := false
 
 var _rows: Dictionary = {}  # action -> [keyboard Button, gamepad Button]
 var _waiting_action: StringName = &""
@@ -21,7 +24,7 @@ const BINDINGS_TITLE := "CONTROLS — click a binding, then press the new input"
 
 
 func _ready() -> void:
-	visible = false
+	visible = embedded
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
@@ -36,7 +39,7 @@ func _ready() -> void:
 	grid.add_theme_constant_override("h_separation", 12)
 	# The list scrolls (play-test batch 6: it ran off the bottom of the screen).
 	_grid_scroll = ScrollContainer.new()
-	_grid_scroll.custom_minimum_size = Vector2(0, 560)
+	_grid_scroll.custom_minimum_size = Vector2(0, 380 if embedded else 560)
 	_grid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_grid_scroll.add_child(grid)
 	box.add_child(_grid_scroll)
@@ -94,6 +97,7 @@ func _ready() -> void:
 	close.text = "Close [F1]"
 	close.focus_mode = Control.FOCUS_NONE
 	close.pressed.connect(hide_panel)
+	close.visible = not embedded
 	bar.add_child(close)
 	refresh()
 

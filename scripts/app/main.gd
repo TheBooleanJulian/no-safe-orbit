@@ -53,6 +53,8 @@ static var launch_blueprint: ShipBlueprint
 ## Persistent player state (spare parts, loot, hangar vessel); loaded on
 ## first use from PlayerProfile.path.
 static var profile: PlayerProfile
+## The settings menu (Esc).
+var settings: SettingsMenu
 ## The station shows the last debrief when it opens after a sortie.
 static var debrief_pending: bool = false
 
@@ -209,6 +211,8 @@ func _ready() -> void:
 	GameLog.hold(true)
 	InputBindings.apply_saved()
 	DisplaySettings.apply_saved()
+	GameSettings.apply(get_tree())
+	settings = SettingsMenu.attach(self, true)
 	gangways.name = "Gangways"
 	add_child(gangways)
 	add_child(terrain_view)
@@ -726,7 +730,7 @@ func _spawn_view(id: StringName, tint: Color) -> void:
 ## clicks are for it, and the cursor stays free.
 func menu_open() -> bool:
 	return hud.overview.visible or hud.controls.visible or (hud.loot != null and hud.loot.visible) \
-		or (hud.debrief != null and hud.debrief.visible)
+		or (hud.debrief != null and hud.debrief.visible) or (settings != null and settings.visible)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -735,7 +739,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		player_input.suppress_fire = true  # the capture click is not a shot
 	elif event.is_action_pressed("release_mouse"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		# Esc: the settings menu (the game pauses; the mouse is free).
+		settings.profile = get_profile()
+		settings.open()
 	elif event.is_action_pressed("restart_scenario"):
 		GameLog.info("main", "Scenario restarted")
 		# Docking first is a jump home: it is paid for like one.

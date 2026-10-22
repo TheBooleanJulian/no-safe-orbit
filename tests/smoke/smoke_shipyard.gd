@@ -86,6 +86,19 @@ func _run() -> void:
 	yard.show_section("REFIT")
 	await _frames(2)
 	_check(yard.deck_editor.is_visible_in_tree() and not yard.sections.pages["STATION"].visible, "REFIT shows the builder")
+	# Esc in the builder drops the tool in hand first; then it opens the
+	# settings menu (the station doesn't pause); Esc closes it.
+	yard.set_tool(Shipyard.Tool.HATCH)
+	await _key(KEY_ESCAPE)
+	var tool_dropped := yard.tool == Shipyard.Tool.SELECT and not yard.settings.visible
+	await _key(KEY_ESCAPE)
+	var opened := yard.settings.visible and not paused
+	yard.settings.show_tab("CHANGELOG")
+	await _frames(2)
+	var log_shown := yard.settings._changelog.get_parsed_text().contains("[%s]" % Credits.version())
+	await _key(KEY_ESCAPE)
+	_check(tool_dropped and opened and log_shown and not yard.settings.visible,
+		"Esc drops the hatch tool, then opens the settings menu (the changelog shows this version, %s), then closes it" % Credits.version())
 
 	var ed := yard.editor
 	_check(ed.blueprint.name == "Frigate Mk I" and ed.report.issues.is_empty(), "shipyard opens on the Frigate Mk I template with no issues")

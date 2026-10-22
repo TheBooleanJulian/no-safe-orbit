@@ -1289,6 +1289,28 @@ func grant_used(ids: Array, designs: Array[ShipBlueprint]) -> void:
 ## (`.bak`, the last good save) and the new file take its place. A crash at
 ## any point leaves a whole profile or a whole backup, never a half-written
 ## file.
+## Where Back up now (the settings menu) puts its copies: beside the save.
+static func backup_dir(file_path: String = "") -> String:
+	return (file_path if file_path != "" else path).get_base_dir().path_join("backups")
+
+
+## Copy the last save into backup_dir as <name>-<date>-<time>.json, never
+## overwriting one; its path ("" if nothing is saved yet or it failed).
+static func backup_copy(file_path: String = "") -> String:
+	var src := file_path if file_path != "" else path
+	if not FileAccess.file_exists(src):
+		return ""
+	var dir := backup_dir(src)
+	DirAccess.make_dir_recursive_absolute(dir)
+	var stamp := Time.get_datetime_string_from_system().replace(":", "").replace("T", "-")
+	var dst := dir.path_join("%s-%s.json" % [src.get_file().get_basename(), stamp])
+	var n := 2
+	while FileAccess.file_exists(dst):
+		dst = dir.path_join("%s-%s-%d.json" % [src.get_file().get_basename(), stamp, n])
+		n += 1
+	return dst if DirAccess.copy_absolute(src, dst) == OK else ""
+
+
 func save(file_path: String = "") -> Error:
 	var target := file_path if file_path != "" else path
 	DirAccess.make_dir_recursive_absolute(target.get_base_dir())

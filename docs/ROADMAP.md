@@ -518,6 +518,15 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | Fullscreen, remembered | `test_release` | F11, `user://settings.cfg` |
 | Depot build | `tools/steam_export.sh` (run: stops with a clear message without export templates) | release export not yet run — templates missing |
 
+### Settings menu and SemVer ✅ (2026-10-22)
+
+| Requirement | Test | Measured |
+|---|---|---|
+| SemVer changelog, 0.x.0 until 1.0 | — (docs) | 0.11.0–0.16.0 split by promotion; game 0.16.0 |
+| Esc opens a settings menu | `smoke_encounter`, `smoke_shipyard` | 8 tabs; the sortie pauses; Esc closes |
+| UI scale, graphics, volume | `test_settings_menu`, render review | UI ×1.25, MSAA 4×, 3D ×0.75, −6 dB at half |
+| Save data, stats, changelog, game info, dev support | `test_settings_menu`, render review | backups never overwrite; changelog tab shows 0.16.0 |
+
 ### Next — to be decided (2026-10-22)
 
 The agreed roadmap (M10 → M15) and play-test batches up to 11 are done.

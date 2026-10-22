@@ -174,7 +174,7 @@ remembered in `user://settings.cfg`.
 ## Releases (Steam)
 
 Published by **TheBooleanJulian**. Windows and Linux export presets carry
-the publisher and the version (`0.12.0`); `tools/steam_export.sh` builds
+the publisher and the version (`0.17.0`, see [CHANGELOG](CHANGELOG.md) for the scheme); `tools/steam_export.sh` builds
 both Steam depots with `THIRD_PARTY_NOTICES.txt` (credits and the Godot
 licences, also in game under F1 → Credits & licences). The Steamworks
 steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
@@ -189,7 +189,7 @@ steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
 | Main engine / reverse thrusters | R / F | left stick up / down |
 | Strafe left / right | J / L | left stick left / right |
 | Strafe up / down | I / K | RT / LT |
-| Aim the turrets (aim cursor) | mouse — click to capture, Esc to release | screen centre |
+| Aim the turrets (aim cursor) | mouse — click to capture; Esc frees it (and opens the settings menu) | screen centre |
 | Orbit the camera around the ship / put it back behind | hold right mouse and move / right click | — |
 | Toggle flight assist | Z | Y |
 | Velocity hold: orbit → match target → target markers | X | X |
@@ -212,9 +212,23 @@ steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
 | Launch craft / recall craft | [ / ] | paddle / Misc |
 | Restart scenario (docks first: damage carries over) | Backspace | Back |
 | Dimensional jump drive to the location's station (hold 5 s, not while under fire — rings of light spool up round the hull) | hold B | hold Start |
+| Settings menu (pauses the sortie) | Esc | — |
 | Controls panel (rebinding), credits and licences | F1 | Guide |
 | Fullscreen / window (remembered) | F11 | — |
 | Guided first sortie: start / skip | F2 | — |
+
+**Settings menu (Esc)**, in flight (the sortie pauses while it is open) and
+at the station (in the refit bay Esc first puts down the tool in hand):
+**Display** (fullscreen, UI scale 75–150 %), **Graphics** (V-Sync, frame-rate
+cap, MSAA, 3D resolution), **Audio** (master, effects, ambience and alarm
+volumes), **Controls** (the key bindings, as F1), **Save data** (where the
+profile, designs and settings are, when it was last saved; open the folder,
+**Back up now** — a dated copy in `backups/` beside the save), **Stats**
+(career, fleet and crew, money), **Changelog**, **About** (version, credits,
+licences) and **Dev support** — a form for feedback and bug reports
+(https://forms.gle/XfDSXQJx8z6pi3zXA). **Quit to desktop** is the same as
+closing the window: a sortie in progress docks as it is. Settings are saved
+per user in `settings.cfg`, not in the profile.
 
 **Propellant:** the Frigate Mk I carries 80 t — about 1.6 km/s of main-engine
 Δv; the RCS shares the main engines' propellant feed and exhaust velocity

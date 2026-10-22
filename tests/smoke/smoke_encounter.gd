@@ -124,6 +124,27 @@ func _run() -> void:
 		"Tab › POLICY switches to Standard; it is the vessel's (auto-fire on)")
 	await _press("tactical_overview")
 
+	# Esc: the settings menu, its eight tabs; the game pauses while it is open.
+	await _press("release_mouse")
+	var frozen := main.world.sim_time
+	await process_frame
+	await process_frame
+	var settings := main.settings
+	_check(settings.visible and paused and main.world.sim_time == frozen and settings.tabs.get_tab_count() == SettingsMenu.TABS.size()
+		and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Esc opens the settings menu (%d tabs); the sortie pauses" % settings.tabs.get_tab_count())
+	settings.show_tab("CONTROLS")
+	await process_frame
+	_check(settings.controls.is_visible_in_tree() and settings.controls.embedded,
+		"its CONTROLS tab holds the key bindings")
+	settings.show_tab("STATS")
+	await process_frame
+	_check(settings._stats_label.get_parsed_text().contains("Missions completed"), "its STATS tab reads the profile")
+	await _press("release_mouse")
+	await process_frame
+	await process_frame
+	_check(not settings.visible and not paused and main.world.sim_time > frozen, "Esc again closes it; the sortie runs on (visible %s, paused %s, +%.2f s)" % [
+		settings.visible, paused, main.world.sim_time - frozen])
+
 	# Hostile: all three fight, by role, and fire salvos.
 	main.set_target_hostile(true, "smoke")
 	var fired := func() -> bool:

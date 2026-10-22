@@ -265,6 +265,18 @@ and the location's central body:
   `PdCoverage.of(grid)` → {mounts, recommended (area / 1,500 m²), coverage
   (48 Fibonacci directions: arc ≥ `WorldSimulation.TURRET_ARC_MIN_DOT`, a
   grid ray clear of hull), area_m2} for the stats panel.
+- **Settings menu (2026-10-22)**: `SettingsMenu.attach(scene, pauses)` puts
+  the menu on its own `CanvasLayer` (layer 100, `PROCESS_MODE_ALWAYS`); Main
+  opens it on `release_mouse` (Esc) and pauses the tree, the shipyard opens
+  it when no builder tool is in hand. Values: `GameSettings` (`SPECS`: key →
+  section, default, range; clamped on read; `apply(tree)` sets the root
+  window's `content_scale_factor`, `msaa_3d`, `scaling_3d_scale`, the
+  frame-rate cap, V-Sync and the bus volumes) in `user://settings.cfg` with
+  `DisplaySettings`' window mode. `ShipAudio._apply_duck` ducks below
+  `GameSettings.volume_db`. `ControlsPanel.embedded` for the CONTROLS tab.
+  `PlayerProfile.backup_copy` / `backup_dir`. The CHANGELOG tab reads
+  `res://CHANGELOG.md` (exported via `include_filter`) through
+  `SettingsMenu.changelog_bbcode`.
 - **Flight and shipyard (play-test batch 11, part 4)**: `Hud.drawer_open`
   shuts the hit cam while the Tab drawer is open. `ShipInstance.cargo_summary`
   names the contract freight. `PlayerProfile.sell_price` / `sell_cargo_equipment`
