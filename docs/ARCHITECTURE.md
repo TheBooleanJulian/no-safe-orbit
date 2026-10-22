@@ -185,6 +185,23 @@ and the location's central body:
 - Shipyard HANGAR › MAP (`SystemMap`): click a body → `relocate`, save; three
   toggle buttons set the encounter size. The route button beside LAUNCH
   shows both and opens the tab.
+- **The solar system (Milestone 16)**: `CelestialFrame.KEPLER_ELEMENTS`
+  gains Mercury, Venus and the giants (Standish); `SATELLITES` holds Phobos
+  and Deimos as Horizons states about Mars, carried by
+  `OrbitElements.propagate` (`satellite_icrs`); `heliocentric_icrs`,
+  `sun_direction_from` and `position_of` (in doubles when a moon is
+  involved) take them. `OrbitalBody` adds `landable` (`TerrainMap.bare`: the
+  sphere plus seeded detail, no map), `air_scale_height_m`,
+  `surface_detail` (the shader's rocky detail; low for cloud tops) and
+  rings (`ring_bands_km`, `ring_opacity`, `ring_span_m`); `PlanetSky` sends
+  a ring strip (`ring_strip`) and the ring normal, and the shader's
+  `rings()` blends them over the planet or the sky, dark in the planet's
+  shadow. `Location` adds `short_name`, `charts_after` (brokers sell in
+  chains: `PlayerProfile.brokers`/`buy_location`) and
+  `start_inclination_deg` (Main starts an inclined orbit at its top).
+  `TerrainView` reaches to the exact horizon angle. `SystemMap` lays the
+  planets out in a row from the Sun with moons above, names under the
+  discs and details in the corner. Procedural maps: `tools/make_planet_maps.gd`.
 - **Jumps (Milestone 13; Δv in play-test batch 7)**: `JumpDrive` (data
   `data/jump/jump_drive.tres`): `delta_v(distance)` = base + per-decade ×
   log10(1 + d / 1000 km), the same for every ship; `propellant_for(mass, Δv,

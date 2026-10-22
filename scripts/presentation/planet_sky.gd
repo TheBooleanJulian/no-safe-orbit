@@ -69,12 +69,41 @@ func configure(body: OrbitalBody, other: OrbitalBody = null) -> void:
 		_material.set_shader_parameter("far_map", other.surface_map)
 		_material.set_shader_parameter("far_has_air", 1.0 if other.has_atmosphere else 0.0)
 		_material.set_shader_parameter("far_has_clouds", 1.0 if other.clouds_and_seas else 0.0)
+		_material.set_shader_parameter("far_detail", other.surface_detail)
 	_material.set_shader_parameter("planet_radius", body.disc_radius_m())
 	_material.set_shader_parameter("entry_radius", body.entry_radius_m() if not body.is_star else 0.0)
 	_material.set_shader_parameter("has_air", 1.0 if body.has_atmosphere else 0.0)
 	_material.set_shader_parameter("has_clouds", 1.0 if body.clouds_and_seas else 0.0)
 	_material.set_shader_parameter("air_color", body.air_color)
 	_material.set_shader_parameter("surface_map", body.surface_map)
+	_material.set_shader_parameter("surface_detail", body.surface_detail)
+	_material.set_shader_parameter("air_scale_height", body.air_scale_height_m)
+	_central_rings(body)
+
+
+## Saturn's rings (OrbitalBody.ring_bands_km) as an opacity strip across
+## their span; none for a body without.
+func _central_rings(body: OrbitalBody) -> void:
+	var span := body.ring_span_m()
+	_material.set_shader_parameter("ring_inner", span.x)
+	_material.set_shader_parameter("ring_outer", span.y)
+	if not body.has_rings():
+		return
+	_material.set_shader_parameter("ring_color", body.ring_color)
+	_material.set_shader_parameter("ring_opacity", ring_strip(body))
+
+
+## The ring opacity strip: RING_STRIP_PX across, red = opacity.
+const RING_STRIP_PX := 2048
+
+
+static func ring_strip(body: OrbitalBody) -> ImageTexture:
+	var span := body.ring_span_m()
+	var img := Image.create(RING_STRIP_PX, 1, false, Image.FORMAT_L8)
+	for x in RING_STRIP_PX:
+		var r := lerpf(span.x, span.y, (x + 0.5) / RING_STRIP_PX)
+		img.set_pixel(x, 0, Color(body.ring_opacity(r), 0, 0))
+	return ImageTexture.create_from_image(img)
 
 
 ## `planet_center_render`: body centre relative to the render origin (m).
@@ -83,7 +112,10 @@ func update_view(planet_center_render: Vector3, camera: Camera3D, frame: Celesti
 	_material.set_shader_parameter("planet_center", planet_center_render)
 	var height := maxf(camera.get_viewport().get_visible_rect().size.y, 1.0)
 	_material.set_shader_parameter("pixel_angle", deg_to_rad(camera.fov) / height)
-	_material.set_shader_parameter("pci_to_body", frame.pci_to_body_fixed(sim_time))
+	var to_body := frame.pci_to_body_fixed(sim_time)
+	_material.set_shader_parameter("pci_to_body", to_body)
+	if _central.has_rings():
+		_material.set_shader_parameter("ring_normal", (to_body.transposed() * Vector3(0, 0, 1)).normalized())
 	_material.set_shader_parameter("cloud_time", sim_time)
 	# The Sun's disc shrinks with distance (Mars 0.6×, Voyager 1 a point).
 	_material.set_shader_parameter("sun_angular_radius", SUN_DISC_RADIUS_1AU * CelestialFrame.AU_M / maxf(frame.sun_distance_m, 1.0))

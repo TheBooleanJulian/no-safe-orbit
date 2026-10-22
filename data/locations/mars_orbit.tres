@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="Location" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
 [ext_resource type="Resource" path="res://data/bodies/mars.tres" id="2_body"]
+[ext_resource type="Resource" path="res://data/bodies/phobos.tres" id="3_sky"]
 
 [resource]
 script = ExtResource("1_loc")
@@ -9,9 +10,11 @@ id = "mars"
 display_name = "Mars orbit"
 station_name = "Martian Shipyard"
 body = ExtResource("2_body")
+sky_body = ExtResource("3_sky")
+short_name = "Mars"
 start_altitude_m = 300000.0
-map_position = Vector2(0.88, 0.7)
-map_radius_px = 20.0
+map_position = Vector2(0.38, 0.66)
+map_radius_px = 12.0
 map_color = Color(0.74, 0.4, 0.24, 1)
 blurb = "Low Mars orbit, 300 km · 3.41 km/s · 113 min period. Thin, dusty air: the entry interface is 125 km. A frontier yard with deep shelves and heavy traffic."
 vendor_stock_size = 5

@@ -52,6 +52,17 @@ uniform vec3 cloud_color : source_color = vec3(0.93, 0.95, 0.98);
 uniform vec3 air_color : source_color = vec3(0.32, 0.56, 1.0);
 // Scale height of the visible limb glow (m).
 uniform float air_scale_height = 9000.0;
+// Fine rocky detail over the map (1 rock, ~0 cloud tops), central and far.
+uniform float surface_detail = 1.0;
+uniform float far_detail = 1.0;
+// Rings in the central body's equatorial plane (Saturn): radii (m), the
+// plane's normal (PCI, the body's north), opacity by radius across
+// ring_inner → ring_outer (red channel) and their colour. No rings: 0.
+uniform float ring_inner = 0.0;
+uniform float ring_outer = 0.0;
+uniform vec3 ring_normal = vec3(-1.0, 0.0, 0.0);
+uniform sampler2D ring_opacity : filter_linear, repeat_disable;
+uniform vec3 ring_color : source_color = vec3(0.84, 0.76, 0.62);
 
 // PCG3D integer hash. Lattice gradients must be bit-identical whichever
 // neighbouring cell evaluates them; a float hash is not (the compiler may
@@ -112,7 +123,7 @@ float fbm(vec3 p, int octaves, float wavelength_m, float footprint_m) {
 // `map` sampled through `to_body` (PCI → body-fixed), `radius` (m), `air`
 // 1 for clouds, sea glint and haze. Shared by the central and far body.
 vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m, sampler2D map_tex, mat3 to_body, float radius, float air,
-		float clouds_on, vec3 fill_dir, float fill) {
+		float clouds_on, vec3 fill_dir, float fill, float rock) {
 	vec3 e = to_body * n;  // body-fixed: z = north pole, x = prime meridian
 	vec2 uv = vec2(atan(e.y, e.x) / TAU + 0.5, 0.5 - asin(clamp(e.z, -1.0, 1.0)) / PI);
 	// Explicit LOD from the pixel footprint: no mip seam at the date line.
@@ -122,7 +133,7 @@ vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m, sampler2D map_tex, 
 	float water = smoothstep(0.06, 0.14, srgb.b - srgb.r) * step(srgb.g, srgb.b + 0.02) * air * clouds_on;
 	// Fine detail below the map's ~20 km texels (modulates brightness only).
 	float detail = fbm(e * (radius / 40000.0), 5, 40000.0, footprint_m);
-	vec3 albedo = map * mix(0.8 + 0.4 * detail, 1.0, water);
+	vec3 albedo = map * mix(1.0 + rock * (0.4 * detail - 0.2), 1.0, water);
 	// Clouds: body-fixed noise that slowly drifts.
 	vec3 cp = e * vec3(4.0, 4.0, 7.0) + vec3(37.0 + cloud_time * 2.0e-5, 11.0, cloud_time * 1.0e-5);
 	float cloud = 0.0;
@@ -153,6 +164,42 @@ vec3 surface(vec3 n, vec3 view, vec3 sun, float footprint_m, sampler2D map_tex, 
 	return col + albedo * 0.002;  // faint night side
 }
 
+// The rings along `dir` from `o` (the eye relative to the body's centre,
+// in body radii): rgb lit colour, a opacity; `t` how far (radii), −1 if
+// missed. Lit face full, the far face by what filters through; in the
+// planet's shadow, dark.
+vec4 rings(vec3 o, vec3 dir, vec3 sun, out float t) {
+	t = -1.0;
+	if (ring_outer <= 0.0) {
+		return vec4(0.0);
+	}
+	float dn = dot(dir, ring_normal);
+	if (abs(dn) < 1e-7) {
+		return vec4(0.0);
+	}
+	float th = -dot(o, ring_normal) / dn;
+	if (th <= 0.0) {
+		return vec4(0.0);
+	}
+	vec3 p = o + dir * th;
+	float rr = length(p);
+	float inner = ring_inner / planet_radius;
+	float outer = ring_outer / planet_radius;
+	if (rr < inner || rr > outer) {
+		return vec4(0.0);
+	}
+	float a = texture(ring_opacity, vec2((rr - inner) / (outer - inner), 0.5)).r;
+	float sun_side = dot(sun, ring_normal);
+	bool same = sign(sun_side) == sign(dot(o, ring_normal));
+	float lit = (0.3 + 1.1 * abs(sun_side)) * (same ? 1.0 : 0.15 + 0.6 * (1.0 - a));
+	float pb = dot(p, sun);
+	if (pb < 0.0 && pb * pb - (dot(p, p) - 1.0) > 0.0) {
+		lit *= 0.06;  // Saturn's shadow across the rings
+	}
+	t = th;
+	return vec4(ring_color * lit, a);
+}
+
 void sky() {
 	if (AT_CUBEMAP_PASS) {
 		COLOR = vec3(0.0);  // the sky is not used for lighting
@@ -167,7 +214,13 @@ void sky() {
 			float t = -b - sqrt(disc);
 			vec3 n = normalize(oc + dir * t);
 			float footprint = t * pixel_angle / max(dot(n, -dir), 0.05);
-			COLOR = surface(n, -dir, sun, footprint, surface_map, pci_to_body, planet_radius, has_air, has_clouds, near_fill_dir, near_fill);
+			vec3 col = surface(n, -dir, sun, footprint, surface_map, pci_to_body, planet_radius, has_air, has_clouds, near_fill_dir, near_fill, surface_detail);
+			float tr;
+			vec4 ring = rings(oc / planet_radius, dir, sun, tr);
+			if (tr > 0.0 && tr * planet_radius < t) {
+				col = mix(col, ring.rgb, ring.a);
+			}
+			COLOR = col;
 		} else {
 			vec3 col = vec3(0.0);
 			// Limb glow: brightness from the ray's closest approach altitude.
@@ -193,7 +246,7 @@ void sky() {
 					float ft = -fb - sqrt(fd);
 					vec3 fn = normalize(fo + dir * ft);
 					float ffoot = ft * far_radius * pixel_angle / max(dot(fn, -dir), 0.05);
-					col += surface(fn, -dir, sun, ffoot, far_map, far_to_body, far_radius, far_has_air, far_has_clouds, far_fill_dir, far_fill);
+					col += surface(fn, -dir, sun, ffoot, far_map, far_to_body, far_radius, far_has_air, far_has_clouds, far_fill_dir, far_fill, far_detail);
 					far_hit = true;
 				}
 			}
@@ -203,6 +256,11 @@ void sky() {
 				float k = 0.5 * sr * sr;  // 1 − cos(radius)
 				float glow = clamp(sun_angular_radius / 0.00506, 0.15, 1.0);
 				col += vec3(1.0, 0.97, 0.9) * (smoothstep(1.0 - 1.25 * k, 1.0 - 0.78 * k, d) * 30.0 + pow(max(d, 0.0), 900.0) * 0.8 * glow);
+			}
+			float tr;
+			vec4 ring = rings(oc / planet_radius, dir, sun, tr);
+			if (tr > 0.0) {
+				col = mix(col, ring.rgb, ring.a);
 			}
 			COLOR = col;
 		}

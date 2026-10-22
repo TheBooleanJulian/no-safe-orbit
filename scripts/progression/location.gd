@@ -13,6 +13,14 @@ const FILES := [
 	"res://data/locations/earth_orbit.tres",
 	"res://data/locations/moon_orbit.tres",
 	"res://data/locations/mars_orbit.tres",
+	"res://data/locations/phobos_orbit.tres",
+	"res://data/locations/deimos_orbit.tres",
+	"res://data/locations/mercury_orbit.tres",
+	"res://data/locations/venus_orbit.tres",
+	"res://data/locations/jupiter_orbit.tres",
+	"res://data/locations/saturn_orbit.tres",
+	"res://data/locations/uranus_orbit.tres",
+	"res://data/locations/neptune_orbit.tres",
 ]
 const DEFAULT_ID := "earth"
 
@@ -21,14 +29,18 @@ static var _all: Array[Location] = []
 @export var id: String = DEFAULT_ID
 ## Map label, e.g. "Earth orbit".
 @export var display_name: String = ""
+## The body's name under its disc on the map, e.g. "Earth".
+@export var short_name: String = ""
 ## The station's name, e.g. "Earth Shipyard".
 @export var station_name: String = ""
 @export var body: OrbitalBody
 ## The other body drawn in this location's sky (Earth's Moon, the Moon's
 ## Earth; none at Mars, where Earth is a point of light).
 @export var sky_body: OrbitalBody
-## Circular, prograde, equatorial start orbit (m above the mean radius).
+## Circular, prograde start orbit (m above the mean radius), equatorial
+## unless inclined (Saturn's 20°, to see its rings from above).
 @export var start_altitude_m: float = 400_000.0
+@export var start_inclination_deg: float = 0.0
 ## Where it sits on the map (0–1 across, 0–1 down).
 @export var map_position := Vector2(0.5, 0.5)
 ## Map size of the body's disc (px at the map's reference width) and colour.
@@ -41,6 +53,9 @@ static var _all: Array[Location] = []
 ## What an information broker charges for the charts (credits); 0 for a
 ## location known from the start (PlayerProfile.STARTING_LOCATIONS).
 @export var broker_price: int = 0
+## The location whose charts a broker needs you to have first (Milestone
+## 16: the outer planets one by one; "" for none).
+@export var charts_after: String = ""
 @export var broker_name: String = ""
 @export_multiline var broker_pitch: String = ""
 
@@ -85,7 +100,15 @@ static func by_id(location_id: String) -> Location:
 	for loc in all():
 		if loc.id == location_id:
 			return loc
+	for loc in all():
+		if loc.id == DEFAULT_ID:
+			return loc
 	return all()[0]
+
+
+## The map label under the disc.
+func map_name() -> String:
+	return short_name if short_name != "" else display_name
 
 
 ## Jump distance between two locations (m): their bodies' real separation
@@ -135,4 +158,6 @@ func validate() -> PackedStringArray:
 			problems.append("%s: enemy template %s missing" % [id, f])
 	if vendor_stock_size < 0 or price_factor <= 0.0:
 		problems.append("%s: bad quartermaster settings" % id)
+	if charts_after != "" and by_id(charts_after).id != charts_after:
+		problems.append("%s: its charts come after an unknown location %s" % [id, charts_after])
 	return problems

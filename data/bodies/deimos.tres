@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="OrbitalBody" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/simulation/orbital_body.gd" id="1_body"]
+[ext_resource type="Texture2D" path="res://data/deimos/stooke_deimos_2048.jpg" id="2_map"]
+
+[resource]
+script = ExtResource("1_body")
+display_name = "Deimos"
+mu_m3_s2 = 96200.0
+radius_m = 6200.0
+entry_interface_altitude_m = 2000.0
+has_atmosphere = false
+pole_ra_deg = 316.65
+pole_dec_deg = 53.52
+prime_meridian_deg = 79.41
+rotation_deg_per_day = 285.161897
+term_amplitudes_deg = Vector3(2.98, -1.78, -2.58)
+term_e0_deg = 53.47
+term_deg_per_day = -0.018151
+geometric_albedo = 0.068
+phase_law = &"lunar"
+ephemeris = &"deimos"
+clouds_and_seas = false
+landable = true
+safe_landing_mps = 3.0
+surface_map = ExtResource("2_map")

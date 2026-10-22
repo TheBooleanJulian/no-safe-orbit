@@ -24,6 +24,29 @@ var _rows: Dictionary = {}  # row -> PackedFloat32Array
 var _noise: FastNoiseLite
 
 
+## A body with no elevation map (Mercury, Phobos, Deimos): the mean-radius
+## sphere and the fine seeded detail alone.
+static func bare(p_radius_m: float) -> TerrainMap:
+	var key := "bare:%f" % p_radius_m
+	if _cache.has(key):
+		return _cache[key]
+	var map := TerrainMap.new()
+	map.radius_m = p_radius_m
+	map._noise = _detail_noise()
+	_cache[key] = map
+	return map
+
+
+static func _detail_noise() -> FastNoiseLite:
+	var n := FastNoiseLite.new()
+	n.seed = 1969
+	n.noise_type = FastNoiseLite.TYPE_PERLIN
+	n.fractal_type = FastNoiseLite.FRACTAL_FBM
+	n.fractal_octaves = 3
+	n.frequency = 1.0
+	return n
+
+
 ## The map at `path` (cached), or null if it can't be read.
 static func load_map(path: String) -> TerrainMap:
 	if path == "":
@@ -46,12 +69,7 @@ static func load_map(path: String) -> TerrainMap:
 	if map._packed.size() != map.width * map.height * 2:
 		GameLog.warn("terrain", "%s: expected %d × %d heights" % [path, map.width, map.height])
 		return null
-	map._noise = FastNoiseLite.new()
-	map._noise.seed = 1969
-	map._noise.noise_type = FastNoiseLite.TYPE_PERLIN
-	map._noise.fractal_type = FastNoiseLite.FRACTAL_FBM
-	map._noise.fractal_octaves = 3
-	map._noise.frequency = 1.0
+	map._noise = _detail_noise()
 	_cache[path] = map
 	return map
 
@@ -78,6 +96,8 @@ func _decode_row(y: int) -> PackedFloat32Array:
 
 ## Height (m) of the map alone at latitude / longitude (degrees).
 func mapped_height(lat_deg: float, lon_deg: float) -> float:
+	if width == 0:
+		return 0.0  # bare: no map
 	var fx := (lon_deg + 180.0) / 360.0 * width - 0.5
 	var fy := (90.0 - lat_deg) / 180.0 * height - 0.5
 	var x0 := floori(fx)

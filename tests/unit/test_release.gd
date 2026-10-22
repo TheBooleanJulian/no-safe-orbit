@@ -34,7 +34,8 @@ func test_credits_and_licences() -> void:
 	# Every data source in data/ATTRIBUTION.md has a credit line.
 	var rows := 0
 	var keys := {"stars/": "Yale Bright Star", "earth/": "Blue Marble", "moon/": "Moon Kit", "moon/lola": "LOLA (Lunar Orbiter", "mars/": "Viking Colorized",
-		"artifacts/": "Horizons", "audio/": "Kenney"}
+		"artifacts/": "Horizons", "audio/": "Kenney", "mercury/": "MESSENGER", "jupiter/": "PIA07782", "phobos/": "Phobos Viking",
+		"deimos/": "Stooke", "venus/": "made for the game"}
 	for line in FileAccess.get_file_as_string("res://data/ATTRIBUTION.md").split("\n"):
 		if not line.begins_with("| `"):
 			continue
