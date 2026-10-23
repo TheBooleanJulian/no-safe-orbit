@@ -90,6 +90,16 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 - **"Banking cargo fully repairs the ship" was not reproduced** (play-test
   batch 11): banking leaves the damage and the repair jobs as they were
   (`smoke_campaign` checks it). Steps to reproduce are welcome.
+- **Milestone 16 is new** (2026-10-23): the new stations' prices, shelves,
+  traffic and broker prices are first guesses. Phobos and Deimos have their
+  real shapes up close, but seen from far off (Phobos in Mars's sky) and
+  for shadows they are still spheres; their shape models are 2° and 5°
+  grids (a few hundred metres uncertain). Mercury has no elevation map. In
+  the default chase view an 11 km moon 20 km below is out of frame: look
+  down (right-drag).
+  Deimos's map orientation is approximate (its source gives no longitude
+  convention). Saturn's rings cast no shadow on the planet. No moons of the
+  giants yet (Io, Europa, Titan…).
 - **The settings menu has no gamepad default** (Esc; every pad button is
   taken) — bind one under Controls.
 - **Older designs with odd-length sections:** "Convert to blocks" rebuilds the
@@ -179,6 +189,9 @@ rare part · Earth texture 5400 × 2700.
   through 11 → 9 km its drawn heights are still growing in, so near the
   highest summits the ground drawn can sit below the ground flown into.
 - **The station is reached by jump drive**, not flown to (decided 2026-10-20).
+- **One central body per place, still** (Milestone 16): at Phobos and
+  Deimos, Mars's pull is ignored (in reality it dominates a few km above
+  Phobos); the giants' radiation belts aren't modelled.
 - **The settings menu pauses a sortie** (2026-10-22): Esc stops the
   simulation until the menu closes.
 - **Crew are named, with a role and a skill (0–2 stars)** — no morale or

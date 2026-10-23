@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
+[ext_resource type="Resource" path="res://data/bodies/neptune.tres" id="2_body"]
+
+[resource]
+script = ExtResource("1_loc")
+id = "neptune"
+display_name = "Neptune orbit"
+station_name = "Le Verrier Station"
+short_name = "Neptune"
+body = ExtResource("2_body")
+charts_after = "uranus"
+start_altitude_m = 3000000.0
+map_position = Vector2(0.95, 0.66)
+map_radius_px = 15.0
+map_color = Color(0.32, 0.48, 0.86, 1)
+blurb = "3,000 km above Neptune · 15.7 km/s · 3.1 h period. The last planet: the Sun is a bright star. The entry interface is 500 km. The edge of charted space; the worst traffic."
+broker_price = 10000
+broker_name = "Cartographer Le Gall"
+broker_pitch = "Charts for Neptune and Le Verrier Station, at the edge of charted space."
+vendor_stock_size = 7
+vendor_max_rarity = 4
+price_factor = 2.5
+enemy_templates = PackedStringArray("cruiser_mk1.json", "anvil_heavy_cruiser.json", "colossus_battleship.json", "sovereign_supercarrier.json")
+enemy_weights = PackedFloat32Array(2, 2, 1, 1)
+threat_bonus = 7

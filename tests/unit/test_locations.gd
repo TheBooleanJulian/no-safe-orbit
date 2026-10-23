@@ -25,8 +25,9 @@ func test_locations_are_valid_data() -> void:
 		assert_true(loc.id not in ids, "ids are unique (%s)" % loc.id)
 		assert_true(loc.body.surface_map != null, "%s has a surface map" % loc.id)
 		ids.append(loc.id)
-	assert_true(ids == ["earth", "moon", "mars"], "Earth, the Moon and Mars, in map order (%s)" % [ids])
-	assert_true(Location.by_id("jupiter").id == "earth", "an unknown id falls back to Earth")
+	assert_true(ids.slice(0, 3) == ["earth", "moon", "mars"] and ids.size() == 11,
+		"Earth, the Moon and Mars first, then Milestone 16's eight (%s)" % [ids])
+	assert_true(Location.by_id("pluto").id == "earth", "an unknown id falls back to Earth")
 	var earth := Location.by_id("earth")
 	assert_true(earth.station_name == "Earth Shipyard" and earth.start_altitude_m == 400_000.0 and earth.body.has_atmosphere,
 		"Earth: the shipyard, 400 km, air")

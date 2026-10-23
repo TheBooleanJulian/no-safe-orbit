@@ -7,7 +7,7 @@ Your ship's construction determines how it flies, how it fights, how it fails,
 and whether it survives.
 
 **Status:** Milestones 0–10 complete — design a ship in the shipyard, then fly
-and fight it in a real-scale 400 km Earth orbit, 100 km lunar orbit or 300 km Mars orbit (pick
+and fight it in real-scale orbits round every planet of the solar system and the Moon, Phobos and Deimos (pick
 the station and the encounter's size, 1–3 ships, on the shipyard map) under
 the real sky. Rounds
 penetrate armour and wreck the systems in their path, and keep flying on their
@@ -174,7 +174,7 @@ remembered in `user://settings.cfg`.
 ## Releases (Steam)
 
 Published by **TheBooleanJulian**. Windows and Linux export presets carry
-the publisher and the version (`0.17.0`, see [CHANGELOG](CHANGELOG.md) for the scheme); `tools/steam_export.sh` builds
+the publisher and the version (`0.18.0`, see [CHANGELOG](CHANGELOG.md) for the scheme); `tools/steam_export.sh` builds
 both Steam depots with `THIRD_PARTY_NOTICES.txt` (credits and the Godot
 licences, also in game under F1 → Credits & licences). The Steamworks
 steps, store-page text and art sizes are in [`docs/STEAM.md`](docs/STEAM.md).
@@ -476,6 +476,27 @@ speed and speed over the turning surface. **Land** by touching down slower
 than 4 m/s — the ship rests there, moving with the Moon, until you thrust
 away; faster is a crash. A GROUND alert warns below 3 km when you are
 coming down too fast to land.
+
+**The solar system** (Milestone 16) — eleven stations, each in a real-scale
+orbit about its body, where JPL puts it on the scenario date:
+
+| Place | Station | Start orbit | What's there |
+|---|---|---|---|
+| Mercury | Caloris Foundry | 200 km, 2.89 km/s | No air, the Sun 2.5× as wide; land under 4 m/s (ground 8 km up at most) |
+| Venus | Aphrodite Cloud Station | 400 km, 7.10 km/s | Featureless cloud; entry interface 250 km |
+| Earth, Moon, Mars | (as above) | | Phobos now crosses Mars's sky |
+| Phobos | Stickney Station | 20 km, 4.8 m/s | Its real lumpy shape (27 × 22 × 18 km, Stickney crater); Mars 42° wide; escape at 6.8 m/s; land under 3 m/s |
+| Deimos | Voltaire Outpost | 15 km, 2.1 m/s | Its real lumpy shape; Mars 17° wide; escape at 3 m/s; land under 3 m/s |
+| Jupiter | Galilean Yards | 10,000 km, 39.4 km/s | Cassini's map; entry 1,000 km above the 1-bar level |
+| Saturn | Cassini Ring Station | 3,000 km, 24.5 km/s, inclined 20° | Below the rings, which arch across the sky (dim in 2026: the Sun is near their plane) |
+| Uranus | Herschel Station | 3,000 km, 14.2 km/s | Tipped on its side; entry 500 km |
+| Neptune | Le Verrier Station | 3,000 km, 15.7 km/s | The Sun a bright star; entry 500 km |
+
+The farther out, the deeper the shelves (legendary parts from Jupiter on),
+the higher the prices (up to 2.5×) and the tougher the traffic (cruisers,
+battlecruisers, up to battleships and supercarriers at Neptune). On the
+gas giants and Venus, crossing the entry interface is a re-entry, as at
+Earth.
 
 HUD markers: white reticle = where the nose points; green ring = orbital
 prograde (where you're actually going), green ⊗ = retrograde; thin green line =
@@ -969,13 +990,15 @@ its orbit. The course is ringed in cyan with a line from your berth; the
 route button reads "◎ → LUNAR ORBIT · Δv 487 m/s"; click your own berth to
 stay. Accepting a contract elsewhere sets its location as the course. Pick
 the encounter: **1, 2 or 3 ships**. Earth and the Moon are charted from the
-start; an **information broker** on the same page sells the charts for Mars
-(1,500 cr).
+start; **information brokers** on the same page sell the rest: Mars
+(1,500 cr), Mercury and Venus at once; Phobos and Deimos (500 cr each) and
+Jupiter (4,000 cr) once you have Mars's; then Saturn, Uranus and Neptune,
+each after the one before (6,000, 8,000, 10,000 cr).
 
 - **Jumps cost Δv — the same for every ship**: 70 m/s plus 160 m/s for
   every tenfold of distance in 1,000 km — 70 m/s home within a location,
-  487 m/s Earth ↔ Moon, 928 m/s Earth → Mars (the real distances on the
-  scenario date). Each ship pays it in propellant by the rocket equation at
+  487 m/s Earth ↔ Moon, 928 m/s Earth → Mars, 1132 m/s Earth → Neptune
+  (the real distances on the scenario date). Each ship pays it in propellant by the rocket equation at
   its own main-engine Isp: the Frigate Mk I burns 33 t for the Moon, the
   Cutter 8.5 t. The chart, the artifacts list and the SERVICE BAY show the Δv
   your tanks give (Frigate: 1,557 m/s with full tanks and the reserve).

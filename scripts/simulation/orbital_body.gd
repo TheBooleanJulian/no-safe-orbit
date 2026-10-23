@@ -38,8 +38,9 @@ extends Resource
 ## measured curve, with its opposition surge).
 @export var geometric_albedo: float = 0.3
 @export var phase_law: StringName = &"lambert"
-## Where it is (CelestialFrame.heliocentric_icrs): &"earth", &"moon" or a
-## planet with Keplerian elements (&"mars").
+## Where it is (CelestialFrame.heliocentric_icrs): &"earth", &"moon", a
+## planet with Keplerian elements (&"mars", &"jupiter"…) or a moon on a
+## two-body orbit about one (&"phobos", &"deimos").
 @export var ephemeris: StringName = &"earth"
 ## The air's colour (limb glow and haze) and whether it carries Earth-like
 ## clouds over seas (sea glint); Mars has thin, dusty air and neither.
@@ -56,14 +57,55 @@ extends Resource
 ## interface is the end, as before (Earth's atmosphere).
 @export_file var elevation_map: String = ""
 @export var safe_landing_mps: float = 4.0
+## Airless, with no elevation map, but still ground to land on (Milestone
+## 16: Mercury, Phobos, Deimos): the mean-radius sphere with fine seeded
+## relief (TerrainMap.bare). Without it, the entry interface is a crash.
+@export var landable: bool = false
+## A small, lumpy body (Phobos, Deimos): drawn as a mesh of its elevation
+## map (SmallBodyView), not as the sky's sphere.
+@export var shape_mesh: bool = false
+## How fast the air thins (m): the limb glow's height.
+@export var air_scale_height_m: float = 9000.0
+## How much fine rocky detail the sky shader adds over the map (1 for rock;
+## low for cloud tops, which have none).
+@export var surface_detail: float = 1.0
+## Rings (Saturn): [inner km, outer km, opacity] per band, in the
+## equatorial plane; empty for none.
+@export var ring_bands_km: PackedFloat32Array = PackedFloat32Array()
+@export var ring_color := Color(0.84, 0.76, 0.62)
 
 
 ## The surface heights, or null for a body without an elevation map.
 func terrain() -> TerrainMap:
-	var map := TerrainMap.load_map(elevation_map)
+	var map := TerrainMap.load_map(elevation_map) if elevation_map != "" else (TerrainMap.bare(radius_m) if landable else null)
 	if map != null:
 		map.radius_m = radius_m
 	return map
+
+
+func has_rings() -> bool:
+	return ring_bands_km.size() >= 3
+
+
+## Inner and outer ring radii (m).
+func ring_span_m() -> Vector2:
+	if not has_rings():
+		return Vector2.ZERO
+	var inner := INF
+	var outer := 0.0
+	for i in range(0, ring_bands_km.size() - 2, 3):
+		inner = minf(inner, ring_bands_km[i])
+		outer = maxf(outer, ring_bands_km[i + 1])
+	return Vector2(inner, outer) * 1000.0
+
+
+## Ring opacity at `radius_m` (0 outside the bands).
+func ring_opacity(at_radius_m: float) -> float:
+	var km := at_radius_m / 1000.0
+	for i in range(0, ring_bands_km.size() - 2, 3):
+		if km >= ring_bands_km[i] and km < ring_bands_km[i + 1]:
+			return ring_bands_km[i + 2]
+	return 0.0
 
 
 func entry_radius_m() -> float:

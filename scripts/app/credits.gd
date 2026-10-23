@@ -13,7 +13,14 @@ const DATA_CREDITS := [
 	"Moon: NASA CGI Moon Kit (Ernie Wright, USRA; Noah Petro, NASA/GSFC), from LRO LROC WAC (Arizona State University) and LOLA data, via NASA's Scientific Visualization Studio. Public domain.",
 	"Moon elevation: LRO LOLA (Lunar Orbiter Laser Altimeter) heights from the same CGI Moon Kit, 8 pixels a degree. Public domain.",
 	"Mars: Mars Viking Colorized Global Mosaic (MDIM 2.1), USGS Astrogeology Science Center and NASA Ames. Public domain.",
-	"Artifact positions (ISS, Hubble, LRO, MRO, Mars Odyssey, the Tesla Roadster, New Horizons, the Voyagers and the Pioneers): NASA/JPL Horizons On-Line Ephemeris System.",
+	"Mercury: MESSENGER MDIS global mosaic (PIA16298), NASA/Johns Hopkins University Applied Physics Laboratory/Carnegie Institution of Washington. Public domain.",
+	"Jupiter: Cassini's best maps of Jupiter (PIA07782), NASA/JPL/Space Science Institute. Public domain.",
+	"Phobos: Phobos Viking Global Mosaic (DLR control), USGS Astrogeology Science Center. Public domain.",
+	"Deimos: Viking Orbiter mosaic map by Philip J. Stooke, via NASA's Planetary Data System Small Bodies Node.",
+	"Phobos and Deimos shapes: P. C. Thomas's shape models from Viking Orbiter images, via NASA's Planetary Data System Small Bodies Node.",
+	"Venus, Saturn, Uranus and Neptune: cloud-top maps made for the game from their colours in Voyager, Cassini and Hubble images (procedural, not imagery).",
+	"Planet positions: E. M. Standish (JPL), Keplerian elements for the approximate positions of the major planets.",
+	"Artifact positions (ISS, Hubble, LRO, MRO, Mars Odyssey, the Tesla Roadster, New Horizons, the Voyagers and the Pioneers) and the orbits of Phobos and Deimos: NASA/JPL Horizons On-Line Ephemeris System.",
 	"Sound effects: Kenney (www.kenney.nl) — Sci-Fi Sounds, Impact Sounds, Interface Sounds. CC0 1.0.",
 ]
 

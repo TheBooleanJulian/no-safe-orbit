@@ -1216,7 +1216,7 @@ func complete_survey(artifact_id: String) -> int:
 func brokers() -> Array[Location]:
 	var out: Array[Location] = []
 	for loc in Location.all():
-		if loc.id not in known_locations and loc.broker_price > 0:
+		if loc.id not in known_locations and loc.broker_price > 0 and (loc.charts_after == "" or loc.charts_after in known_locations):
 			out.append(loc)
 	return out
 
@@ -1228,6 +1228,8 @@ func buy_location(location_id: String) -> String:
 		return "No broker sells charts for that"
 	if location_id in known_locations:
 		return "%s is already on your map" % loc.display_name
+	if loc.charts_after != "" and loc.charts_after not in known_locations:
+		return "The charts for %s build on %s's: buy those first" % [loc.display_name, Location.by_id(loc.charts_after).display_name]
 	if credits < loc.broker_price:
 		return "%s wants %d credits for the charts; you have %d" % [loc.broker_name, loc.broker_price, credits]
 	credits -= loc.broker_price

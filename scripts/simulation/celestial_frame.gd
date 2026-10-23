@@ -16,10 +16,12 @@ extends RefCounted
 ## The Moon: the IAU pole and rotation with only their largest periodic
 ## term (E1; the rest add up to ~0.3°), and the Sun's direction is Earth's
 ## (≤ 0.15° off at the Moon's distance).
-## Sun-centred positions (Mars, and the distances jumps pay for): Standish's
-## Keplerian elements for 1800–2050 (JPL, "Approximate Positions of the
-## Planets", table 1), arcminute-level, solved in Vec3d doubles — at
-## 2e11 m from the Sun a float32 Vector3 is only good to ~16 km.
+## Sun-centred positions (the planets, and the distances jumps pay for):
+## Standish's Keplerian elements for 1800–2050 (JPL, "Approximate Positions
+## of the Planets", table 1), arcminute-level, solved in Vec3d doubles — at
+## 2e11 m from the Sun a float32 Vector3 is only good to ~16 km. Mars's
+## moons (Milestone 16): their state about Mars at the scenario epoch (JPL
+## Horizons, mar099), carried on as two-body orbits (SATELLITES).
 
 const EARTH_ROTATION_RAD_S := 7.2921159e-5  # sidereal
 ## The Almanac's lunar parallax is against this radius.
@@ -38,7 +40,31 @@ const KEPLER_ELEMENTS := {
 		[0.00000562, -0.00004392, -0.01294668, 35999.37244981, 0.32327364, 0.0]],
 	&"mars": [[1.52371034, 0.09339410, 1.84969142, -4.55343205, -23.94362959, 49.55953891],
 		[0.00001847, 0.00007882, -0.00813131, 19140.30268499, 0.44441088, -0.29257343]],
+	&"mercury": [[0.38709927, 0.20563593, 7.00497902, 252.25032350, 77.45779628, 48.33076593],
+		[0.00000037, 0.00001906, -0.00594749, 149472.67411175, 0.16047689, -0.12534081]],
+	&"venus": [[0.72333566, 0.00677672, 3.39467605, 181.97909950, 131.60246718, 76.67984255],
+		[0.00000390, -0.00004107, -0.00078890, 58517.81538729, 0.00268329, -0.27769418]],
+	&"jupiter": [[5.20288700, 0.04838624, 1.30439695, 34.39644051, 14.72847983, 100.47390909],
+		[-0.00011607, -0.00013253, -0.00183714, 3034.74612775, 0.21252668, 0.20469106]],
+	&"saturn": [[9.53667594, 0.05386179, 2.48599187, 49.95424423, 92.59887831, 113.66242448],
+		[-0.00125060, -0.00050991, 0.00193609, 1222.49362201, -0.41897216, -0.28867794]],
+	&"uranus": [[19.18916464, 0.04725744, 0.77263783, 313.23810451, 170.95427630, 74.01692503],
+		[-0.00196176, -0.00004397, -0.00242939, 428.48202785, 0.40805281, 0.04240589]],
+	&"neptune": [[30.06992276, 0.00859048, 1.77004347, -55.12002969, 44.96476227, 131.78422574],
+		[0.00026291, 0.00005105, 0.00035372, 218.45945325, -0.32241464, -0.00508664]],
 }
+## Moons on two-body orbits about a planet: [parent ephemeris, the parent's
+## GM (m³/s²), position (km) and velocity (km/s) about it, ICRF axes, at
+## the scenario epoch 2026-10-19 12:00 UT] — JPL Horizons, satellite
+## ephemeris mar099, queried 2026-10-23. Two-body drift is tiny over a
+## sortie (Phobos's real orbit precesses ~0.4° a day).
+const SATELLITES := {
+	&"phobos": [&"mars", 4.282837e13, [-148.2350209018853, -8404.221206198403, -4188.671317318919],
+		[1.927593870306145, 0.4097670361244421, -0.8190604360133578]],
+	&"deimos": [&"mars", 4.282837e13, [19522.97192792457, 12598.37463034292, -3225.530291627171],
+		[-0.5129939141601660, 0.9897676860103886, 0.7635619235191429]],
+}
+const SATELLITE_EPOCH_UTC := "2026-10-19T12:00:00"
 
 var epoch_jd: float
 ## Rotation about PCI +X applied after the fixed axis mapping (rad).
@@ -146,7 +172,7 @@ static func geocentric_icrs(ephemeris: StringName, jd: float) -> Vector3:
 			return moon_geocentric_icrs(jd)
 		&"earth":
 			return Vector3.ZERO
-	if KEPLER_ELEMENTS.has(ephemeris) or ephemeris == &"sun":
+	if KEPLER_ELEMENTS.has(ephemeris) or SATELLITES.has(ephemeris) or ephemeris == &"sun":
 		return heliocentric_icrs(ephemeris, jd).minus(heliocentric_icrs(&"earth", jd)).to_vector3()
 	return Vector3.ZERO  # anything unknown at the geocentre
 
@@ -171,7 +197,19 @@ static func heliocentric_icrs(ephemeris: StringName, jd: float) -> Vec3d:
 			return heliocentric_icrs(&"earth", jd).plus(Vec3d.from_vector3(moon_geocentric_icrs(jd)))
 		&"sun":
 			return Vec3d.new()
+	if SATELLITES.has(ephemeris):
+		return satellite_icrs(ephemeris, jd).plus(heliocentric_icrs(SATELLITES[ephemeris][0], jd))
 	return _kepler_icrs(ephemeris, jd)
+
+
+## A moon's position about its planet at `jd` (ICRS axes, m, double
+## precision): its epoch state carried along a two-body orbit.
+static func satellite_icrs(ephemeris: StringName, jd: float) -> Vec3d:
+	var s: Array = SATELLITES[ephemeris]
+	var r0 := Vec3d.new(s[2][0], s[2][1], s[2][2]).times(1000.0)
+	var v0 := Vec3d.new(s[3][0], s[3][1], s[3][2]).times(1000.0)
+	var dt := (jd - julian_date_from_iso(SATELLITE_EPOCH_UTC)) * 86400.0
+	return OrbitElements.propagate(float(s[1]), r0, v0, dt)[0]
 
 
 ## Distance (m) between two bodies by ephemeris id, in double precision.
@@ -185,7 +223,7 @@ static func separation_m(a: StringName, b: StringName, jd: float) -> float:
 ## geocentric Sun for Earth and the Moon (as before), the elements for the
 ## others.
 static func sun_direction_from(ephemeris: StringName, jd: float) -> Vector3:
-	if ephemeris == &"earth" or ephemeris == &"moon" or not KEPLER_ELEMENTS.has(ephemeris):
+	if ephemeris == &"earth" or ephemeris == &"moon" or not (KEPLER_ELEMENTS.has(ephemeris) or SATELLITES.has(ephemeris)):
 		return sun_direction_icrs(jd)
 	return heliocentric_icrs(ephemeris, jd).times(-1.0).normalized().to_vector3()
 
@@ -351,6 +389,10 @@ func pci_to_body_fixed(sim_time: float) -> Basis:
 ## (PCI axes, m), e.g. the Moon from Earth orbit or Earth from lunar orbit.
 func position_of(body: OrbitalBody, sim_time: float) -> Vector3:
 	var jd := julian_date(sim_time)
+	if SATELLITES.has(body.ephemeris) or SATELLITES.has(central_ephemeris):
+		# Phobos and Mars: the difference in doubles (a float32 Vector3 at
+		# Mars's distance from Earth is only good to ~10 km).
+		return icrs_to_pci(heliocentric_icrs(body.ephemeris, jd).minus(heliocentric_icrs(central_ephemeris, jd)).to_vector3())
 	return icrs_to_pci(geocentric_icrs(body.ephemeris, jd) - geocentric_icrs(central_ephemeris, jd))
 
 

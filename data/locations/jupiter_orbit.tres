@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="Location" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/location.gd" id="1_loc"]
+[ext_resource type="Resource" path="res://data/bodies/jupiter.tres" id="2_body"]
+
+[resource]
+script = ExtResource("1_loc")
+id = "jupiter"
+display_name = "Jupiter orbit"
+station_name = "Galilean Yards"
+short_name = "Jupiter"
+body = ExtResource("2_body")
+charts_after = "mars"
+start_altitude_m = 10000000.0
+map_position = Vector2(0.56, 0.63)
+map_radius_px = 26.0
+map_color = Color(0.82, 0.7, 0.55, 1)
+blurb = "10,000 km above Jupiter’s clouds · 39.4 km/s · 3.6 h period. The entry interface is 1,000 km above the 1-bar level. The great yards: legendary shelves, heavy traffic, high prices."
+broker_price = 4000
+broker_name = "Navigator Haddad"
+broker_pitch = "Charts for Jupiter and the Galilean Yards. Mind the radiation belts — and the cruisers."
+vendor_stock_size = 6
+vendor_max_rarity = 4
+price_factor = 1.8
+enemy_templates = PackedStringArray("destroyer_mk1.json", "cruiser_mk1.json", "halberd_frigate.json", "carrier_mk1.json")
+enemy_weights = PackedFloat32Array(2, 1, 2, 1)
+threat_bonus = 4

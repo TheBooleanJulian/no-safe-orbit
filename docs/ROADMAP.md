@@ -527,14 +527,28 @@ and the store page need the account and are listed in `docs/STEAM.md`.
 | UI scale, graphics, volume | `test_settings_menu`, render review | UI ×1.25, MSAA 4×, 3D ×0.75, −6 dB at half |
 | Save data, stats, changelog, game info, dev support | `test_settings_menu`, render review | backups never overwrite; changelog tab shows 0.16.0 |
 
-### Next — to be decided (2026-10-22)
+### Milestone 16 — the solar system ✅ (2026-10-23)
 
-The agreed roadmap (M10 → M15) and play-test batches up to 11 are done.
-Candidates proposed on 2026-10-22, **not agreed yet**: a play-test of
-batch 11; a balance pass with `tools/balance_sim.gd` for the new lasers,
-craft and crew numbers; big-fight performance; Steam release preparation
-(export templates, application icon — `docs/STEAM.md`); new content (more
-locations, mission types, a campaign arc).
+Scope set by the user on 2026-10-23: "Mars moons, and other solar system
+planets".
+
+| Requirement | Test | Measured |
+|---|---|---|
+| Mercury, Venus, Jupiter, Saturn, Uranus, Neptune where they really are | `test_m16_solar_system` | within 0.074° and 0.04 % of Horizons |
+| Phobos and Deimos on their real orbits, tidally locked | `test_m16_solar_system` | 9,391 / 23,458 km; Mars within 5° of Phobos's meridian over 5 h |
+| A station at each, flyable | `smoke_solar_system` | 9 sorties; ship and traffic flying after 12 s; Saturn inclined 20.0° |
+| Real maps where they exist | render review | MESSENGER, Cassini, Viking (USGS, Stooke); procedural cloud tops otherwise |
+| Saturn's rings | `test_m16_solar_system`, render review | B 0.92, Cassini Division 0.06, Encke Gap 0 |
+| Land on the small airless bodies | `test_m16_solar_system`, `smoke_solar_system` | Mercury, Phobos, Deimos have ground |
+| Phobos and Deimos as their lumpy shapes | `test_m16_solar_system`, render review | Thomas shape models; Stickney 2.9 km deep; mesh = collision ground |
+| Progression | `test_m16_solar_system` | chart chains; Neptune in a Frigate's reach |
+
+### Next — to be decided (2026-10-23)
+
+Candidates, **not agreed yet**: a play-test of batch 11 and Milestone 16;
+a balance pass (`tools/balance_sim.gd`); big-fight performance; Steam
+release preparation (`docs/STEAM.md`); more content (the Galilean moons and
+Titan, mission types, a campaign arc).
 
 ### Play-test batch 11 — part 4: flight and shipyard ✅ (2026-10-22)
 
