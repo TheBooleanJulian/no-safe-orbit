@@ -10,6 +10,8 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-10-23 — Milestone 16: the solar system
+
 ### Milestone 16 — the solar system (2026-10-23)
 
 #### Added
