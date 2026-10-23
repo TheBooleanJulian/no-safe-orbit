@@ -70,7 +70,8 @@ func configure(body: OrbitalBody, other: OrbitalBody = null) -> void:
 		_material.set_shader_parameter("far_has_air", 1.0 if other.has_atmosphere else 0.0)
 		_material.set_shader_parameter("far_has_clouds", 1.0 if other.clouds_and_seas else 0.0)
 		_material.set_shader_parameter("far_detail", other.surface_detail)
-	_material.set_shader_parameter("planet_radius", body.disc_radius_m())
+	# A lumpy moon is drawn as a mesh (SmallBodyView), not as a sphere here.
+	_material.set_shader_parameter("planet_radius", body.disc_radius_m() if not body.shape_mesh else 0.0)
 	_material.set_shader_parameter("entry_radius", body.entry_radius_m() if not body.is_star else 0.0)
 	_material.set_shader_parameter("has_air", 1.0 if body.has_atmosphere else 0.0)
 	_material.set_shader_parameter("has_clouds", 1.0 if body.clouds_and_seas else 0.0)

@@ -38,6 +38,8 @@ var beam_view: BeamView
 var gangways := GangwayView.new()
 ## The ground close up (a body with an elevation map, below its terrain altitude).
 var terrain_view := TerrainView.new()
+## Phobos and Deimos as their real shapes.
+var small_body_view := SmallBodyView.new()
 ## Earth re-entry (play-test batch 10): the cutscene's clock once the player
 ## crosses an atmosphere's entry interface (-1 = not playing).
 const REENTRY_CUTSCENE_S := 7.0
@@ -216,6 +218,8 @@ func _ready() -> void:
 	gangways.name = "Gangways"
 	add_child(gangways)
 	add_child(terrain_view)
+	small_body_view.name = "SmallBody"
+	add_child(small_body_view)
 	audio.name = "Audio"
 	add_child(audio)
 	location = Location.by_id(get_profile().location)
@@ -302,6 +306,7 @@ func _start_scenario() -> void:
 	# A real surface to land on (the Moon: NASA's LOLA heights).
 	world.terrain = body.terrain() if not body.is_star else null
 	_update_surface_frame()
+	small_body_view.configure(body, world.terrain)
 	var player := ShipState.create(PLAYER_ID, "PLAYER", _designs[PLAYER_ID].config)
 	player.side = &"player"
 	player.policy = ShipPolicy.from_dict(vessel.policy)
@@ -2391,6 +2396,7 @@ func _process(delta: float) -> void:
 	_update_sun(player)
 	sky.update_view(planet_center, camera, celestial, world.sim_time)
 	terrain_view.update_view(world, player, planet_center, delta)
+	small_body_view.update_view(world, planet_center)
 	_update_sky_light()
 	stars.update_view(camera, planet_center, world.body, sky.sky_body_center,
 		location.sky_body.radius_m if location.sky_body != null else 0.0)

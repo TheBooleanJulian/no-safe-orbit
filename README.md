@@ -485,8 +485,8 @@ orbit about its body, where JPL puts it on the scenario date:
 | Mercury | Caloris Foundry | 200 km, 2.89 km/s | No air, the Sun 2.5× as wide; land under 4 m/s (ground 8 km up at most) |
 | Venus | Aphrodite Cloud Station | 400 km, 7.10 km/s | Featureless cloud; entry interface 250 km |
 | Earth, Moon, Mars | (as above) | | Phobos now crosses Mars's sky |
-| Phobos | Stickney Station | 20 km, 4.8 m/s | Mars 42° wide; escape at 6.8 m/s; land under 3 m/s |
-| Deimos | Voltaire Outpost | 15 km, 2.1 m/s | Mars 17° wide; escape at 3 m/s; land under 3 m/s |
+| Phobos | Stickney Station | 20 km, 4.8 m/s | Its real lumpy shape (27 × 22 × 18 km, Stickney crater); Mars 42° wide; escape at 6.8 m/s; land under 3 m/s |
+| Deimos | Voltaire Outpost | 15 km, 2.1 m/s | Its real lumpy shape; Mars 17° wide; escape at 3 m/s; land under 3 m/s |
 | Jupiter | Galilean Yards | 10,000 km, 39.4 km/s | Cassini's map; entry 1,000 km above the 1-bar level |
 | Saturn | Cassini Ring Station | 3,000 km, 24.5 km/s, inclined 20° | Below the rings, which arch across the sky (dim in 2026: the Sun is near their plane) |
 | Uranus | Herschel Station | 3,000 km, 14.2 km/s | Tipped on its side; entry 500 km |

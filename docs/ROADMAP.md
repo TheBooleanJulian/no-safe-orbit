@@ -540,6 +540,7 @@ planets".
 | Real maps where they exist | render review | MESSENGER, Cassini, Viking (USGS, Stooke); procedural cloud tops otherwise |
 | Saturn's rings | `test_m16_solar_system`, render review | B 0.92, Cassini Division 0.06, Encke Gap 0 |
 | Land on the small airless bodies | `test_m16_solar_system`, `smoke_solar_system` | Mercury, Phobos, Deimos have ground |
+| Phobos and Deimos as their lumpy shapes | `test_m16_solar_system`, render review | Thomas shape models; Stickney 2.9 km deep; mesh = collision ground |
 | Progression | `test_m16_solar_system` | chart chains; Neptune in a Frigate's reach |
 
 ### Next — to be decided (2026-10-23)

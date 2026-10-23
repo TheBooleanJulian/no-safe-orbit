@@ -3,8 +3,9 @@ extends TestCase
 ## Horizons puts them at the scenario epoch; Phobos and Deimos circle Mars
 ## on their real orbits and keep one face to it; eleven locations, the outer
 ## planets' charts sold one after another; Mercury, Phobos and Deimos have
-## ground to land on, the giants an entry interface; Saturn has rings; every
-## station is a jump a Frigate can pay for.
+## ground to land on — the moons their real lumpy shapes — the giants an
+## entry interface; Saturn has rings; every station is a jump a Frigate can
+## pay for.
 
 ## Horizons, Sun-centred (500@10), ICRF, 2026-10-19 12:00 UT (km),
 ## queried 2026-10-23.
@@ -112,7 +113,9 @@ func test_ground_and_air() -> void:
 		var b := Location.by_id(id).body
 		var map := b.terrain()
 		var h := map.height_at(Vector3(0.3, 0.5, 0.81).normalized()) if map != null else NAN
-		assert_true(map != null and not b.has_atmosphere and absf(h) <= TerrainMap.DETAIL_M, "%s: ground to land on (%.0f m)" % [id, h])
+		assert_true(map != null and not b.has_atmosphere and absf(h) < b.entry_interface_altitude_m, "%s: ground to land on (%.0f m)" % [id, h])
+	var mercury := Location.by_id("mercury").body.terrain()
+	assert_true(mercury.width == 0, "Mercury: smooth ground with fine relief (no map)")
 	for id in ["venus", "jupiter", "saturn", "uranus", "neptune"]:
 		var b := Location.by_id(id).body
 		assert_true(b.terrain() == null and b.has_atmosphere and b.entry_word() == "atmospheric entry", "%s: air, no ground" % id)
@@ -137,3 +140,57 @@ func test_saturns_rings() -> void:
 	var start := Location.by_id("saturn")
 	assert_true(start.start_radius_m() < span.x and start.start_inclination_deg > 10.0, "the station orbits below the rings, inclined to see them")
 	assert_true(not Location.by_id("jupiter").body.has_rings(), "Jupiter's faint rings are not drawn")
+
+
+func _height(map: TerrainMap, lat: float, lon_east: float) -> float:
+	return map.mapped_height(lat, lon_east)
+
+
+func test_the_moons_are_lumpy() -> void:
+	var phobos := Location.by_id("phobos").body
+	var map := phobos.terrain()
+	assert_true(map != null and map.width == 360 and phobos.shape_mesh, "Phobos: Thomas's shape model, drawn as a mesh")
+	# Its long axis points at Mars (0° and 180°), across it is narrower.
+	var along := (_height(map, 0, 0) + _height(map, 0, 180)) * 0.5
+	var across := (_height(map, 0, 90) + _height(map, 0, -90)) * 0.5
+	# Stickney, 9 km across at 1° S 49° W: a floor below its raised rim.
+	var floor_h := _height(map, -1, -54)
+	var rim := _height(map, -1, -30)
+	print("    measured: Phobos radius along the Mars line +%.0f m, across %+.0f m; Stickney floor %+.0f m, rim %+.0f m" % [along, across, floor_h, rim])
+	assert_true(along > across + 700.0, "the long axis points at Mars")
+	assert_true(rim > floor_h + 1500.0, "Stickney is a hollow in a raised rim (west longitudes read the right way)")
+	var mesh := SmallBodyView.build_mesh(phobos, map)
+	var arrays := mesh.surface_get_arrays(0)
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var n: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var outward := 0
+	var r_min := INF
+	var r_max := 0.0
+	for k in v.size():
+		if n[k].dot(v[k]) > 0.0:
+			outward += 1
+		r_min = minf(r_min, v[k].length())
+		r_max = maxf(r_max, v[k].length())
+	print("    measured: mesh %d vertices, radius %.1f–%.1f km, %.1f %% of normals outward" % [v.size(), r_min / 1000.0, r_max / 1000.0, 100.0 * outward / v.size()])
+	assert_true(r_min > 7000.0 and r_max < 15000.0 and r_max - r_min > 4000.0, "lumpy, not a sphere")
+	assert_true(outward > v.size() * 0.97, "faces out")
+	# The mesh is where the ground collision is.
+	var dir := Vector3(0.2, -0.6, 0.4).normalized()
+	var k := 0
+	var best := -1.0
+	for i in v.size():
+		var d := v[i].normalized().dot(dir)
+		if d > best:
+			best = d
+			k = i
+	assert_true(absf(v[k].length() - (phobos.radius_m + map.height_at(v[k].normalized()))) < 1.0, "the mesh is the collision ground")
+	var deimos := Location.by_id("deimos").body
+	var dm := deimos.terrain()
+	var lo := INF
+	var hi := -INF
+	for y in range(0, 180, 3):
+		for x in range(0, 360, 3):
+			lo = minf(lo, dm.pixel(x, y))
+			hi = maxf(hi, dm.pixel(x, y))
+	print("    measured: Deimos heights %+.0f … %+.0f m about 6.2 km" % [lo, hi])
+	assert_true(deimos.shape_mesh and hi - lo > 3000.0, "Deimos too")

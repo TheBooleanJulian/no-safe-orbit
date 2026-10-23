@@ -28,8 +28,11 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
   exists).
 - **Saturn's rings**, with their real divisions, lit by the Sun and
   shadowed by the planet; the station orbits below them, inclined 20°.
-- **Land on Mercury, Phobos and Deimos** (no elevation maps: smooth ground
-  with fine relief).
+- **Phobos and Deimos are their real lumpy shapes** (P. C. Thomas's shape
+  models): drawn as meshes, and the ground you land on is that shape —
+  Stickney's hollow and rim included.
+- **Land on Mercury, Phobos and Deimos** (Mercury has no elevation map:
+  smooth ground with fine relief).
 - **Phobos in Mars's sky; Mars in Phobos's and Deimos's.**
 - **Chart chains**: Phobos, Deimos and Jupiter's charts need Mars's; Saturn,
   Uranus and Neptune each need the one before.
@@ -47,7 +50,11 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
   0.074°, Saturn); Phobos 9,391 km out, 7.66 h, back after one orbit, Mars
   within 5° of its prime meridian for 5 h (tidal lock); eleven locations,
   the chart chains, Neptune in a Frigate's reach (74.5 t); ground on the
-  small airless bodies, air on the rest; Saturn's ring gaps.
+  small airless bodies, air on the rest; Saturn's ring gaps. Then a sixth:
+  the moons are lumpy — Phobos's long axis at Mars (+1,505 m along, +523 m
+  across), Stickney's floor 2.9 km below its rim (mutation-checked: fails
+  with the longitudes unflipped), the mesh 8.1–14.0 km, facing out, on the
+  collision ground; Deimos −2,610 … +2,469 m.
 - New `smoke_solar_system`: a sortie at each new place and Mars — the body,
   the altitude, Saturn's 20°, the ship and traffic still flying after 12 s,
   ground, sky bodies, rings.
