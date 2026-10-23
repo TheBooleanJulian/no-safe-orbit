@@ -61,6 +61,9 @@ extends Resource
 ## 16: Mercury, Phobos, Deimos): the mean-radius sphere with fine seeded
 ## relief (TerrainMap.bare). Without it, the entry interface is a crash.
 @export var landable: bool = false
+## A small, lumpy body (Phobos, Deimos): drawn as a mesh of its elevation
+## map (SmallBodyView), not as the sky's sphere.
+@export var shape_mesh: bool = false
 ## How fast the air thins (m): the limb glow's height.
 @export var air_scale_height_m: float = 9000.0
 ## How much fine rocky detail the sky shader adds over the map (1 for rock;

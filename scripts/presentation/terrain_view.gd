@@ -36,8 +36,8 @@ func _ready() -> void:
 ## `planet_center`: the body's centre relative to the render origin (m).
 func update_view(world: WorldSimulation, player: ShipState, planet_center: Vector3, delta: float) -> void:
 	var body := world.body
-	if world.terrain == null or world.frame == null or player == null:
-		visible = false
+	if world.terrain == null or world.frame == null or player == null or body.shape_mesh:
+		visible = false  # a lumpy moon is all mesh (SmallBodyView)
 		return
 	var altitude := world.altitude_of(player)
 	var top := body.entry_interface_altitude_m

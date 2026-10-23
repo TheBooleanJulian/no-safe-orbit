@@ -199,7 +199,12 @@ and the location's central body:
   shadow. `Location` adds `short_name`, `charts_after` (brokers sell in
   chains: `PlayerProfile.brokers`/`buy_location`) and
   `start_inclination_deg` (Main starts an inclined orbit at its top).
-  `TerrainView` reaches to the exact horizon angle. `SystemMap` lays the
+  `TerrainView` reaches to the exact horizon angle. Phobos and Deimos:
+  `OrbitalBody.shape_mesh` with an `elevation_map` from Thomas's shape
+  models (`tools/convert_shape.py`); `SmallBodyView` builds the whole
+  surface from `TerrainMap.height_at` (so it matches the collision) and
+  turns it with `world.pci_to_fixed`; the sky shader draws no sphere for
+  it (`planet_radius` 0) and `TerrainView` stands aside. `SystemMap` lays the
   planets out in a row from the Sun with moons above, names under the
   discs and details in the corner. Procedural maps: `tools/make_planet_maps.gd`.
 - **Jumps (Milestone 13; Δv in play-test batch 7)**: `JumpDrive` (data

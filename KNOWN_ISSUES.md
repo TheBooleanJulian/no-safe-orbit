@@ -91,10 +91,12 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   batch 11): banking leaves the damage and the repair jobs as they were
   (`smoke_campaign` checks it). Steps to reproduce are welcome.
 - **Milestone 16 is new** (2026-10-23): the new stations' prices, shelves,
-  traffic and broker prices are first guesses. Phobos and Deimos are drawn
-  as spheres (they are lumpy: 27 × 22 × 18 km and 15 × 12 × 10 km) with
-  smooth ground; Mercury has no elevation map either. In the default chase
-  view an 11 km moon 20 km below is out of frame: look down (right-drag).
+  traffic and broker prices are first guesses. Phobos and Deimos have their
+  real shapes up close, but seen from far off (Phobos in Mars's sky) and
+  for shadows they are still spheres; their shape models are 2° and 5°
+  grids (a few hundred metres uncertain). Mercury has no elevation map. In
+  the default chase view an 11 km moon 20 km below is out of frame: look
+  down (right-drag).
   Deimos's map orientation is approximate (its source gives no longitude
   convention). Saturn's rings cast no shadow on the planet. No moons of the
   giants yet (Io, Europa, Titan…).

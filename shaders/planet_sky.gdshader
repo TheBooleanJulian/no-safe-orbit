@@ -216,7 +216,7 @@ void sky() {
 			float footprint = t * pixel_angle / max(dot(n, -dir), 0.05);
 			vec3 col = surface(n, -dir, sun, footprint, surface_map, pci_to_body, planet_radius, has_air, has_clouds, near_fill_dir, near_fill, surface_detail);
 			float tr;
-			vec4 ring = rings(oc / planet_radius, dir, sun, tr);
+			vec4 ring = rings(oc / max(planet_radius, 1.0), dir, sun, tr);
 			if (tr > 0.0 && tr * planet_radius < t) {
 				col = mix(col, ring.rgb, ring.a);
 			}
@@ -258,7 +258,7 @@ void sky() {
 				col += vec3(1.0, 0.97, 0.9) * (smoothstep(1.0 - 1.25 * k, 1.0 - 0.78 * k, d) * 30.0 + pow(max(d, 0.0), 900.0) * 0.8 * glow);
 			}
 			float tr;
-			vec4 ring = rings(oc / planet_radius, dir, sun, tr);
+			vec4 ring = rings(oc / max(planet_radius, 1.0), dir, sun, tr);
 			if (tr > 0.0) {
 				col = mix(col, ring.rgb, ring.a);
 			}

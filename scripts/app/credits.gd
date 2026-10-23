@@ -17,6 +17,7 @@ const DATA_CREDITS := [
 	"Jupiter: Cassini's best maps of Jupiter (PIA07782), NASA/JPL/Space Science Institute. Public domain.",
 	"Phobos: Phobos Viking Global Mosaic (DLR control), USGS Astrogeology Science Center. Public domain.",
 	"Deimos: Viking Orbiter mosaic map by Philip J. Stooke, via NASA's Planetary Data System Small Bodies Node.",
+	"Phobos and Deimos shapes: P. C. Thomas's shape models from Viking Orbiter images, via NASA's Planetary Data System Small Bodies Node.",
 	"Venus, Saturn, Uranus and Neptune: cloud-top maps made for the game from their colours in Voyager, Cassini and Hubble images (procedural, not imagery).",
 	"Planet positions: E. M. Standish (JPL), Keplerian elements for the approximate positions of the major planets.",
 	"Artifact positions (ISS, Hubble, LRO, MRO, Mars Odyssey, the Tesla Roadster, New Horizons, the Voyagers and the Pioneers) and the orbits of Phobos and Deimos: NASA/JPL Horizons On-Line Ephemeris System.",
