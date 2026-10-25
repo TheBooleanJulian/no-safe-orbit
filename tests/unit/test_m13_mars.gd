@@ -127,7 +127,7 @@ func test_mars_traffic_and_shelves() -> void:
 	assert_true(seen.has("destroyer_mk1.json") and seen.has("frigate_mk1.json"), "destroyers among the frigates")
 	var cat := ConstructionCatalog.default_catalog()
 	var bp := EnemyFactory.design(8, BlueprintIO.load_file("res://data/blueprints/destroyer_mk1.json", PackedStringArray()), cat, 0)
-	assert_true(not ShipValidator.validate(bp, cat).has_errors() and bp.name.ends_with("-class destroyer"), "an armed destroyer (%s)" % bp.name)
+	assert_true(not ShipValidator.validate(bp, cat).has_errors() and bp.name.ends_with("-class gun destroyer"), "an armed destroyer (%s)" % bp.name)
 	var p := _profile()
 	p.location = "mars"
 	p.refresh_station(cat)

@@ -8,6 +8,21 @@ extends RefCounted
 const USER_DIR := "user://blueprints"
 const TEMPLATE_DIR := "res://data/blueprints"
 const DEFAULT_TEMPLATE := "res://data/blueprints/frigate_mk1.json"
+## Templates retired with the 2026-10-26 roster, and the hull now in their
+## place (saves name templates in their derelict records).
+const RENAMED_TEMPLATES := {
+	"halberd_frigate.json": "destroyer_mk1.json",
+	"wyvern_battlecruiser.json": "cruiser_mk1.json",
+	"anvil_heavy_cruiser.json": "cruiser_mk1.json",
+	"colossus_battleship.json": "battleship_mk1.json",
+	"leviathan_dreadnought.json": "battleship_mk1.json",
+	"sovereign_supercarrier.json": "carrier_mk1.json",
+}
+
+
+## A template file name as it is now (a retired one's replacement).
+static func current_template(file: String) -> String:
+	return RENAMED_TEMPLATES.get(file, file)
 
 
 static func to_json(bp: ShipBlueprint) -> String:

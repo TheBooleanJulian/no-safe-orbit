@@ -156,7 +156,7 @@ func test_local_traffic() -> void:
 	assert_true(seen.has("corvette_mk1.json") and seen.has("frigate_mk1.json"), "the Moon mixes corvettes and frigates")
 	var corvette := BlueprintIO.load_file("res://data/blueprints/corvette_mk1.json", PackedStringArray())
 	var bp := EnemyFactory.design(6, corvette, _cat(), 1)
-	assert_true(not ShipValidator.validate(bp, _cat()).has_errors() and bp.name.ends_with("-class corvette"), "an armed corvette (%s)" % bp.name)
+	assert_true(not ShipValidator.validate(bp, _cat()).has_errors() and bp.name.ends_with("-class missile corvette"), "an armed corvette (%s)" % bp.name)
 	assert_true(moon.threat_bonus > earth.threat_bonus, "and tougher")
 
 

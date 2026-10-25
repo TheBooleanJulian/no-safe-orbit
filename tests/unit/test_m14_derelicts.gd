@@ -11,7 +11,7 @@ func _cat() -> ConstructionCatalog:
 
 
 func _systems(seed_bp: int = 3) -> ShipSystems:
-	var template := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var template := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var bp := EnemyFactory.design(4, template, _cat(), seed_bp)
 	var grid := ShipGrid.build(bp, _cat())
 	var stats := ShipStats.compute(bp, grid)
@@ -77,7 +77,7 @@ func test_schema_11_migration() -> void:
 	for s in ["", ".bak", ".tmp", ".v10"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + s))
 	var p := PlayerProfile.new(5)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	var d := p.to_dict()
 	d.schema_version = 10
 	d.erase("derelicts")

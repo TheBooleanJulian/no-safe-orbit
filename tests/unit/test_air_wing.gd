@@ -14,7 +14,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _template() -> ShipBlueprint:
 	var errors := PackedStringArray()
-	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	return BlueprintIO.load_file(TestCase.FRIGATE, errors)
 
 
 ## `pd`: keep the template's point-defence turrets (off for a target the

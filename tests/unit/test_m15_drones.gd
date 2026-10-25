@@ -16,7 +16,7 @@ func _catalog() -> ConstructionCatalog:
 
 ## The stock frigate with its recon drone rack swapped for `rack`.
 func _carrier(id: StringName, pos: Vector3, side: StringName, rack: StringName = &"") -> ShipState:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	for e in bp.equipment:
 		if e.def_id == &"drone_rack" and rack != &"":
 			e.def_id = rack

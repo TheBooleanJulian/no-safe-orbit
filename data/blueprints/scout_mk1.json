@@ -1,0 +1,953 @@
+{
+	"schema_version": 2,
+	"name": "Herschel-class scout",
+	"designer": "Stickney Station",
+	"modules": [
+		{
+			"id": "m44",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m45",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m46",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m47",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m48",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m49",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m50",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m51",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m52",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m53",
+			"def": "truss_block",
+			"pos": [
+				3,
+				0,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m54",
+			"def": "truss_block",
+			"pos": [
+				4,
+				0,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m55",
+			"def": "truss_block",
+			"pos": [
+				5,
+				0,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m56",
+			"def": "truss_block",
+			"pos": [
+				6,
+				0,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m57",
+			"def": "truss_block",
+			"pos": [
+				7,
+				0,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m58",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m59",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m60",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m61",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m62",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m63",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m64",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m65",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m66",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m67",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m68",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m69",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m70",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				-1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m71",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				0,
+				-1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m72",
+			"def": "wedge_short",
+			"pos": [
+				2,
+				0,
+				-1
+			],
+			"rot": 0
+		}
+	],
+	"rooms": [
+		{
+			"id": "r1",
+			"def": "bridge",
+			"deck": 0,
+			"rect": [
+				0,
+				0,
+				3,
+				2
+			]
+		},
+		{
+			"id": "r2",
+			"def": "corridor",
+			"deck": 0,
+			"rect": [
+				2,
+				2,
+				1,
+				8
+			]
+		},
+		{
+			"id": "r3",
+			"def": "crew_quarters",
+			"deck": 0,
+			"rect": [
+				0,
+				2,
+				2,
+				2
+			]
+		},
+		{
+			"id": "r4",
+			"def": "life_support",
+			"deck": 0,
+			"rect": [
+				0,
+				4,
+				1,
+				1
+			]
+		},
+		{
+			"id": "r5",
+			"def": "magazine",
+			"deck": 0,
+			"rect": [
+				1,
+				4,
+				1,
+				1
+			]
+		},
+		{
+			"id": "r6",
+			"def": "reactor_room",
+			"deck": 0,
+			"rect": [
+				0,
+				5,
+				2,
+				3
+			]
+		},
+		{
+			"id": "r7",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				0,
+				8,
+				2,
+				2
+			]
+		},
+		{
+			"id": "r8",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				0,
+				10,
+				3,
+				4
+			]
+		}
+	],
+	"hatches": [
+		{
+			"id": "h9",
+			"a": [
+				2,
+				0,
+				1
+			],
+			"b": [
+				2,
+				0,
+				2
+			]
+		},
+		{
+			"id": "h10",
+			"a": [
+				2,
+				0,
+				2
+			],
+			"b": [
+				1,
+				0,
+				2
+			]
+		},
+		{
+			"id": "h11",
+			"a": [
+				2,
+				0,
+				4
+			],
+			"b": [
+				1,
+				0,
+				4
+			]
+		},
+		{
+			"id": "h12",
+			"a": [
+				1,
+				0,
+				4
+			],
+			"b": [
+				0,
+				0,
+				4
+			]
+		},
+		{
+			"id": "h13",
+			"a": [
+				2,
+				0,
+				5
+			],
+			"b": [
+				1,
+				0,
+				5
+			]
+		},
+		{
+			"id": "h14",
+			"a": [
+				2,
+				0,
+				9
+			],
+			"b": [
+				2,
+				0,
+				10
+			]
+		}
+	],
+	"equipment": [
+		{
+			"id": "e15",
+			"def": "fusion_reactor",
+			"cell": [
+				0,
+				0,
+				6
+			]
+		},
+		{
+			"id": "e16",
+			"def": "power_distribution_unit",
+			"cell": [
+				0,
+				0,
+				5
+			]
+		},
+		{
+			"id": "e17",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				0,
+				8
+			]
+		},
+		{
+			"id": "e18",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				0,
+				10
+			]
+		},
+		{
+			"id": "e19",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				0,
+				12
+			]
+		},
+		{
+			"id": "e20",
+			"def": "main_engine_high_isp",
+			"cell": [
+				0,
+				0,
+				13
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e21",
+			"def": "main_engine_high_isp",
+			"cell": [
+				1,
+				0,
+				13
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e22",
+			"def": "main_engine_high_isp",
+			"cell": [
+				2,
+				0,
+				13
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e23",
+			"def": "sensor_mast_hardened",
+			"cell": [
+				7,
+				0,
+				5
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e24",
+			"def": "sensor_mast_hardened",
+			"cell": [
+				7,
+				0,
+				6
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e25",
+			"def": "jammer",
+			"cell": [
+				7,
+				0,
+				5
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e26",
+			"def": "sensor_mast",
+			"cell": [
+				0,
+				0,
+				1
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e27",
+			"def": "drone_rack",
+			"cell": [
+				4,
+				0,
+				5
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e28",
+			"def": "ew_drone_rack",
+			"cell": [
+				4,
+				0,
+				6
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e29",
+			"def": "autocannon",
+			"cell": [
+				1,
+				0,
+				3
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e30",
+			"def": "point_defence",
+			"cell": [
+				0,
+				0,
+				9
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e31",
+			"def": "point_defence",
+			"cell": [
+				2,
+				0,
+				3
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e32",
+			"def": "flare_launcher",
+			"cell": [
+				1,
+				0,
+				12
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e33",
+			"def": "flare_launcher",
+			"cell": [
+				2,
+				0,
+				12
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e34",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				9
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e35",
+			"def": "radiator_long",
+			"cell": [
+				1,
+				0,
+				9
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e36",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				0
+			],
+			"face": "port"
+		},
+		{
+			"id": "e37",
+			"def": "rcs_block",
+			"cell": [
+				2,
+				0,
+				0
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e38",
+			"def": "rcs_block",
+			"cell": [
+				1,
+				0,
+				0
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e39",
+			"def": "rcs_block",
+			"cell": [
+				1,
+				0,
+				0
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e40",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				13
+			],
+			"face": "port"
+		},
+		{
+			"id": "e41",
+			"def": "rcs_block",
+			"cell": [
+				2,
+				0,
+				13
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e42",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				13
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e43",
+			"def": "rcs_block",
+			"cell": [
+				2,
+				0,
+				13
+			],
+			"face": "ventral"
+		}
+	],
+	"bus": [
+		[
+			0,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			1
+		],
+		[
+			0,
+			0,
+			10
+		],
+		[
+			0,
+			0,
+			11
+		],
+		[
+			0,
+			0,
+			12
+		],
+		[
+			0,
+			0,
+			13
+		],
+		[
+			0,
+			0,
+			2
+		],
+		[
+			0,
+			0,
+			3
+		],
+		[
+			0,
+			0,
+			4
+		],
+		[
+			0,
+			0,
+			5
+		],
+		[
+			0,
+			0,
+			6
+		],
+		[
+			0,
+			0,
+			7
+		],
+		[
+			0,
+			0,
+			8
+		],
+		[
+			0,
+			0,
+			9
+		],
+		[
+			1,
+			0,
+			0
+		],
+		[
+			1,
+			0,
+			12
+		],
+		[
+			1,
+			0,
+			13
+		],
+		[
+			1,
+			0,
+			3
+		],
+		[
+			1,
+			0,
+			5
+		],
+		[
+			2,
+			0,
+			0
+		],
+		[
+			2,
+			0,
+			12
+		],
+		[
+			2,
+			0,
+			13
+		],
+		[
+			2,
+			0,
+			3
+		],
+		[
+			2,
+			0,
+			5
+		],
+		[
+			3,
+			0,
+			5
+		],
+		[
+			4,
+			0,
+			5
+		],
+		[
+			4,
+			0,
+			6
+		],
+		[
+			5,
+			0,
+			5
+		],
+		[
+			6,
+			0,
+			5
+		],
+		[
+			7,
+			0,
+			5
+		],
+		[
+			7,
+			0,
+			6
+		]
+	],
+	"coolant": [
+		[
+			0,
+			0,
+			5
+		],
+		[
+			0,
+			0,
+			6
+		],
+		[
+			0,
+			0,
+			7
+		],
+		[
+			0,
+			0,
+			8
+		],
+		[
+			0,
+			0,
+			9
+		],
+		[
+			1,
+			0,
+			6
+		],
+		[
+			1,
+			0,
+			7
+		],
+		[
+			1,
+			0,
+			9
+		]
+	]
+}

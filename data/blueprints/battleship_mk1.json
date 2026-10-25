@@ -1,0 +1,20241 @@
+{
+	"schema_version": 2,
+	"name": "Newton-class battleship",
+	"designer": "Galilean Yards",
+	"modules": [
+		{
+			"id": "m276",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m277",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m278",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m279",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m280",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m281",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m282",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m283",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m284",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m285",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m286",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m287",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m288",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m289",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m290",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m291",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m292",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m293",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m294",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m295",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m296",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m297",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m298",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m299",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m300",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m301",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m302",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m303",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m304",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m305",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m306",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m307",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m308",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m309",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m310",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m311",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m312",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m313",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m314",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m315",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m316",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m317",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m318",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m319",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m320",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m321",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m322",
+			"def": "hull_block",
+			"pos": [
+				5,
+				0,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m323",
+			"def": "hull_block",
+			"pos": [
+				7,
+				0,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m324",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m325",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m326",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m327",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m328",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m329",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m330",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m331",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m332",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m333",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m334",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m335",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m336",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m337",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m338",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m339",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m340",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m341",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m342",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m343",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m344",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m345",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m346",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m347",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m348",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m349",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m350",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m351",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m352",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m353",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m354",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m355",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m356",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m357",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m358",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m359",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m360",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m361",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m362",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m363",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m364",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m365",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m366",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m367",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m368",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m369",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m370",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m371",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m372",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m373",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m374",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m375",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m376",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m377",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m378",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m379",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m380",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m381",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m382",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m383",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m384",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m385",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m386",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m387",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m388",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m389",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m390",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m391",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m392",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m393",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m394",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m395",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m396",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m397",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m398",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m399",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m400",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m401",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m402",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m403",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m404",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m405",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m406",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m407",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m408",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m409",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m410",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m411",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m412",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m413",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m414",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m415",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m416",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m417",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m418",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m419",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m420",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m421",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m422",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m423",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m424",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m425",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m426",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m427",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m428",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m429",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m430",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m431",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m432",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m433",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m434",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m435",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m436",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m437",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m438",
+			"def": "hull_block",
+			"pos": [
+				8,
+				1,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m439",
+			"def": "hull_block",
+			"pos": [
+				10,
+				1,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m440",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m441",
+			"def": "hull_block_1x1",
+			"pos": [
+				7,
+				2,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m442",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m443",
+			"def": "hull_block_1x1",
+			"pos": [
+				7,
+				2,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m444",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m445",
+			"def": "hull_block_1x1",
+			"pos": [
+				7,
+				2,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m446",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m447",
+			"def": "hull_block_1x1",
+			"pos": [
+				7,
+				2,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m448",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m449",
+			"def": "hull_block_1x1",
+			"pos": [
+				7,
+				2,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m450",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m451",
+			"def": "hull_block_1x1",
+			"pos": [
+				7,
+				2,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m452",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m453",
+			"def": "hull_block_1x1",
+			"pos": [
+				7,
+				2,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m454",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m455",
+			"def": "hull_block_1x1",
+			"pos": [
+				7,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m456",
+			"def": "hull_block",
+			"pos": [
+				3,
+				2,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m457",
+			"def": "hull_block",
+			"pos": [
+				5,
+				2,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m458",
+			"def": "hull_block",
+			"pos": [
+				7,
+				2,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m459",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m460",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m461",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m462",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m463",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m464",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m465",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m466",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m467",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m468",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m469",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m470",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m471",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m472",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m473",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m474",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m475",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m476",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m477",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m478",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m479",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m480",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m481",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m482",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m483",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m484",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m485",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m486",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m487",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m488",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m489",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m490",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m491",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m492",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m493",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m494",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m495",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m496",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m497",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m498",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m499",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m500",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m501",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m502",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m503",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m504",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m505",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m506",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m507",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m508",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m509",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m510",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m511",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m512",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m513",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m514",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m515",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m516",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m517",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m518",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m519",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m520",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m521",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m522",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m523",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m524",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m525",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m526",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m527",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m528",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m529",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m530",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m531",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m532",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m533",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m534",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m535",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m536",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m537",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m538",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m539",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m540",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m541",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m542",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m543",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m544",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m545",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m546",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m547",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m548",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m549",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m550",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m551",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m552",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m553",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m554",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m555",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m556",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m557",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m558",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m559",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m560",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m561",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m562",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m563",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m564",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m565",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m566",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m567",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m568",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m569",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m570",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m571",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m572",
+			"def": "hull_block",
+			"pos": [
+				6,
+				2,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m573",
+			"def": "hull_block",
+			"pos": [
+				8,
+				2,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m574",
+			"def": "hull_block",
+			"pos": [
+				10,
+				2,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m575",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m576",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m577",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m578",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m579",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m580",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m581",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m582",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m583",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m584",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m585",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m586",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m587",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m588",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m589",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m590",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m591",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m592",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m593",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m594",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m595",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m596",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m597",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m598",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m599",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m600",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m601",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m602",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m603",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m604",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m605",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m606",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m607",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m608",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m609",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m610",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m611",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m612",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m613",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m614",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m615",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m616",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m617",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m618",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m619",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m620",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m621",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m622",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m623",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m624",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m625",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m626",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m627",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m628",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m629",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m630",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m631",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m632",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m633",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m634",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m635",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m636",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m637",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m638",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m639",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m640",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m641",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m642",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m643",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m644",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m645",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m646",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m647",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m648",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m649",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m650",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m651",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m652",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m653",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m654",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m655",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m656",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m657",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m658",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m659",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m660",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m661",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m662",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m663",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m664",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m665",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m666",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m667",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m668",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m669",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m670",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m671",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m672",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m673",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m674",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m675",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m676",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m677",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m678",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m679",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m680",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m681",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m682",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m683",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m684",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m685",
+			"def": "hull_block",
+			"pos": [
+				0,
+				3,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m686",
+			"def": "hull_block",
+			"pos": [
+				2,
+				3,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m687",
+			"def": "hull_block",
+			"pos": [
+				4,
+				3,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m688",
+			"def": "hull_block",
+			"pos": [
+				6,
+				3,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m689",
+			"def": "hull_block",
+			"pos": [
+				8,
+				3,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m690",
+			"def": "hull_block",
+			"pos": [
+				10,
+				3,
+				48
+			],
+			"rot": 0
+		},
+		{
+			"id": "m691",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m692",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m693",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m694",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m695",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m696",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m697",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m698",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m699",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m700",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m701",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m702",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m703",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m704",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m705",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m706",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m707",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m708",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m709",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m710",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m711",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m712",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m713",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m714",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				30
+			],
+			"rot": 0
+		},
+		{
+			"id": "m715",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m716",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m717",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				32
+			],
+			"rot": 0
+		},
+		{
+			"id": "m718",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m719",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m720",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m721",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m722",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m723",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				36
+			],
+			"rot": 0
+		},
+		{
+			"id": "m724",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m725",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m726",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				38
+			],
+			"rot": 0
+		},
+		{
+			"id": "m727",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m728",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m729",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				40
+			],
+			"rot": 0
+		},
+		{
+			"id": "m730",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m731",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m732",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				42
+			],
+			"rot": 0
+		},
+		{
+			"id": "m733",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m734",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m735",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				44
+			],
+			"rot": 0
+		},
+		{
+			"id": "m736",
+			"def": "hull_block",
+			"pos": [
+				3,
+				4,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m737",
+			"def": "hull_block",
+			"pos": [
+				5,
+				4,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m738",
+			"def": "hull_block",
+			"pos": [
+				7,
+				4,
+				46
+			],
+			"rot": 0
+		},
+		{
+			"id": "m739",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				1,
+				13
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m740",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				3,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m741",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				1,
+				13
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m742",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				3,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m743",
+			"def": "wedge_short",
+			"pos": [
+				2,
+				1,
+				9
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m744",
+			"def": "wedge_short",
+			"pos": [
+				2,
+				3,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m745",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				0,
+				15
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m746",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				1,
+				9
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m747",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m748",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				3,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m749",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				4,
+				15
+			],
+			"rot": 0
+		},
+		{
+			"id": "m750",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				0,
+				15
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m751",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				1,
+				9
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m752",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				3,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m753",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				4,
+				15
+			],
+			"rot": 0
+		},
+		{
+			"id": "m754",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				0,
+				15
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m755",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				1,
+				9
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m756",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m757",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				3,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m758",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				4,
+				15
+			],
+			"rot": 0
+		},
+		{
+			"id": "m759",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				15
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m760",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				1,
+				9
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m761",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m762",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				3,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m763",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				4,
+				15
+			],
+			"rot": 0
+		},
+		{
+			"id": "m764",
+			"def": "wedge_short",
+			"pos": [
+				7,
+				0,
+				15
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m765",
+			"def": "wedge_short",
+			"pos": [
+				7,
+				1,
+				9
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m766",
+			"def": "wedge_short",
+			"pos": [
+				7,
+				3,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m767",
+			"def": "wedge_short",
+			"pos": [
+				7,
+				4,
+				15
+			],
+			"rot": 0
+		},
+		{
+			"id": "m768",
+			"def": "wedge_short",
+			"pos": [
+				8,
+				0,
+				15
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m769",
+			"def": "wedge_short",
+			"pos": [
+				8,
+				1,
+				9
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m770",
+			"def": "wedge_short",
+			"pos": [
+				8,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m771",
+			"def": "wedge_short",
+			"pos": [
+				8,
+				3,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m772",
+			"def": "wedge_short",
+			"pos": [
+				8,
+				4,
+				15
+			],
+			"rot": 0
+		},
+		{
+			"id": "m773",
+			"def": "wedge_short",
+			"pos": [
+				9,
+				1,
+				9
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m774",
+			"def": "wedge_short",
+			"pos": [
+				9,
+				3,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m775",
+			"def": "wedge_short",
+			"pos": [
+				10,
+				1,
+				13
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m776",
+			"def": "wedge_short",
+			"pos": [
+				10,
+				3,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m777",
+			"def": "wedge_short",
+			"pos": [
+				11,
+				1,
+				13
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m778",
+			"def": "wedge_short",
+			"pos": [
+				11,
+				3,
+				13
+			],
+			"rot": 0
+		}
+	],
+	"rooms": [
+		{
+			"id": "r1",
+			"def": "corridor",
+			"deck": 2,
+			"rect": [
+				5,
+				8,
+				2,
+				42
+			]
+		},
+		{
+			"id": "r2",
+			"def": "corridor",
+			"deck": 1,
+			"rect": [
+				5,
+				10,
+				2,
+				40
+			]
+		},
+		{
+			"id": "r3",
+			"def": "corridor",
+			"deck": 3,
+			"rect": [
+				5,
+				10,
+				2,
+				40
+			]
+		},
+		{
+			"id": "r4",
+			"def": "corridor",
+			"deck": 0,
+			"rect": [
+				5,
+				16,
+				2,
+				32
+			]
+		},
+		{
+			"id": "r5",
+			"def": "corridor",
+			"deck": 4,
+			"rect": [
+				5,
+				16,
+				2,
+				32
+			]
+		},
+		{
+			"id": "r6",
+			"def": "dense_magazine",
+			"deck": 2,
+			"rect": [
+				4,
+				0,
+				1,
+				8
+			]
+		},
+		{
+			"id": "r7",
+			"def": "dense_magazine",
+			"deck": 2,
+			"rect": [
+				7,
+				0,
+				1,
+				8
+			]
+		},
+		{
+			"id": "r8",
+			"def": "dense_magazine",
+			"deck": 2,
+			"rect": [
+				3,
+				8,
+				2,
+				2
+			]
+		},
+		{
+			"id": "r9",
+			"def": "dense_magazine",
+			"deck": 2,
+			"rect": [
+				7,
+				8,
+				2,
+				2
+			]
+		},
+		{
+			"id": "r12",
+			"def": "magazine",
+			"deck": 2,
+			"rect": [
+				2,
+				10,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r14",
+			"def": "magazine",
+			"deck": 2,
+			"rect": [
+				7,
+				10,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r16",
+			"def": "crew_quarters",
+			"deck": 1,
+			"rect": [
+				2,
+				10,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r18",
+			"def": "life_support",
+			"deck": 1,
+			"rect": [
+				7,
+				10,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r20",
+			"def": "magazine",
+			"deck": 3,
+			"rect": [
+				2,
+				10,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r22",
+			"def": "armoury",
+			"deck": 3,
+			"rect": [
+				7,
+				10,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r26",
+			"def": "reactor_room",
+			"deck": 2,
+			"rect": [
+				0,
+				14,
+				5,
+				6
+			]
+		},
+		{
+			"id": "r31",
+			"def": "bridge",
+			"deck": 2,
+			"rect": [
+				0,
+				20,
+				5,
+				6
+			]
+		},
+		{
+			"id": "r33",
+			"def": "crew_quarters",
+			"deck": 2,
+			"rect": [
+				0,
+				26,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r35",
+			"def": "life_support",
+			"deck": 2,
+			"rect": [
+				0,
+				30,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r37",
+			"def": "workshop",
+			"deck": 2,
+			"rect": [
+				0,
+				34,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r39",
+			"def": "engine_room",
+			"deck": 2,
+			"rect": [
+				0,
+				38,
+				5,
+				12
+			]
+		},
+		{
+			"id": "r45",
+			"def": "reactor_room",
+			"deck": 2,
+			"rect": [
+				7,
+				14,
+				5,
+				6
+			]
+		},
+		{
+			"id": "r50",
+			"def": "bridge",
+			"deck": 2,
+			"rect": [
+				7,
+				20,
+				5,
+				6
+			]
+		},
+		{
+			"id": "r52",
+			"def": "crew_quarters",
+			"deck": 2,
+			"rect": [
+				7,
+				26,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r54",
+			"def": "cafeteria",
+			"deck": 2,
+			"rect": [
+				7,
+				30,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r56",
+			"def": "armoury",
+			"deck": 2,
+			"rect": [
+				7,
+				34,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r58",
+			"def": "engine_room",
+			"deck": 2,
+			"rect": [
+				7,
+				38,
+				5,
+				12
+			]
+		},
+		{
+			"id": "r64",
+			"def": "armoury",
+			"deck": 1,
+			"rect": [
+				0,
+				14,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r66",
+			"def": "engine_room",
+			"deck": 1,
+			"rect": [
+				0,
+				18,
+				5,
+				32
+			]
+		},
+		{
+			"id": "r80",
+			"def": "life_support",
+			"deck": 1,
+			"rect": [
+				7,
+				14,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r82",
+			"def": "engine_room",
+			"deck": 1,
+			"rect": [
+				7,
+				18,
+				5,
+				32
+			]
+		},
+		{
+			"id": "r99",
+			"def": "crew_quarters",
+			"deck": 3,
+			"rect": [
+				0,
+				14,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r101",
+			"def": "engine_room",
+			"deck": 3,
+			"rect": [
+				0,
+				18,
+				5,
+				32
+			]
+		},
+		{
+			"id": "r115",
+			"def": "crew_quarters",
+			"deck": 3,
+			"rect": [
+				7,
+				14,
+				5,
+				4
+			]
+		},
+		{
+			"id": "r117",
+			"def": "engine_room",
+			"deck": 3,
+			"rect": [
+				7,
+				18,
+				5,
+				32
+			]
+		},
+		{
+			"id": "r134",
+			"def": "magazine",
+			"deck": 4,
+			"rect": [
+				3,
+				16,
+				2,
+				6
+			]
+		},
+		{
+			"id": "r136",
+			"def": "crew_quarters",
+			"deck": 4,
+			"rect": [
+				3,
+				22,
+				2,
+				10
+			]
+		},
+		{
+			"id": "r138",
+			"def": "magazine",
+			"deck": 4,
+			"rect": [
+				3,
+				32,
+				2,
+				6
+			]
+		},
+		{
+			"id": "r140",
+			"def": "life_support",
+			"deck": 4,
+			"rect": [
+				3,
+				38,
+				2,
+				10
+			]
+		},
+		{
+			"id": "r142",
+			"def": "crew_quarters",
+			"deck": 4,
+			"rect": [
+				7,
+				16,
+				2,
+				10
+			]
+		},
+		{
+			"id": "r144",
+			"def": "magazine",
+			"deck": 4,
+			"rect": [
+				7,
+				26,
+				2,
+				6
+			]
+		},
+		{
+			"id": "r146",
+			"def": "cafeteria",
+			"deck": 4,
+			"rect": [
+				7,
+				32,
+				2,
+				10
+			]
+		},
+		{
+			"id": "r148",
+			"def": "magazine",
+			"deck": 4,
+			"rect": [
+				7,
+				42,
+				2,
+				6
+			]
+		},
+		{
+			"id": "r150",
+			"def": "magazine",
+			"deck": 0,
+			"rect": [
+				3,
+				16,
+				2,
+				6
+			]
+		},
+		{
+			"id": "r152",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				3,
+				22,
+				2,
+				10
+			]
+		},
+		{
+			"id": "r157",
+			"def": "cargo_hold",
+			"deck": 0,
+			"rect": [
+				3,
+				32,
+				2,
+				6
+			]
+		},
+		{
+			"id": "r159",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				3,
+				38,
+				2,
+				10
+			]
+		},
+		{
+			"id": "r164",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				7,
+				16,
+				2,
+				16
+			]
+		},
+		{
+			"id": "r172",
+			"def": "magazine",
+			"deck": 0,
+			"rect": [
+				7,
+				32,
+				2,
+				6
+			]
+		},
+		{
+			"id": "r174",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				7,
+				38,
+				2,
+				10
+			]
+		}
+	],
+	"hatches": [
+		{
+			"id": "h10",
+			"a": [
+				4,
+				2,
+				8
+			],
+			"b": [
+				5,
+				2,
+				8
+			]
+		},
+		{
+			"id": "h11",
+			"a": [
+				7,
+				2,
+				8
+			],
+			"b": [
+				6,
+				2,
+				8
+			]
+		},
+		{
+			"id": "h13",
+			"a": [
+				4,
+				2,
+				10
+			],
+			"b": [
+				5,
+				2,
+				10
+			]
+		},
+		{
+			"id": "h15",
+			"a": [
+				7,
+				2,
+				10
+			],
+			"b": [
+				6,
+				2,
+				10
+			]
+		},
+		{
+			"id": "h17",
+			"a": [
+				4,
+				1,
+				10
+			],
+			"b": [
+				5,
+				1,
+				10
+			]
+		},
+		{
+			"id": "h19",
+			"a": [
+				7,
+				1,
+				10
+			],
+			"b": [
+				6,
+				1,
+				10
+			]
+		},
+		{
+			"id": "h21",
+			"a": [
+				4,
+				3,
+				10
+			],
+			"b": [
+				5,
+				3,
+				10
+			]
+		},
+		{
+			"id": "h23",
+			"a": [
+				7,
+				3,
+				10
+			],
+			"b": [
+				6,
+				3,
+				10
+			]
+		},
+		{
+			"id": "h24",
+			"a": [
+				5,
+				1,
+				11
+			],
+			"b": [
+				5,
+				2,
+				11
+			]
+		},
+		{
+			"id": "h25",
+			"a": [
+				5,
+				2,
+				11
+			],
+			"b": [
+				5,
+				3,
+				11
+			]
+		},
+		{
+			"id": "h27",
+			"a": [
+				4,
+				2,
+				14
+			],
+			"b": [
+				5,
+				2,
+				14
+			]
+		},
+		{
+			"id": "h32",
+			"a": [
+				4,
+				2,
+				20
+			],
+			"b": [
+				5,
+				2,
+				20
+			]
+		},
+		{
+			"id": "h34",
+			"a": [
+				4,
+				2,
+				26
+			],
+			"b": [
+				5,
+				2,
+				26
+			]
+		},
+		{
+			"id": "h36",
+			"a": [
+				4,
+				2,
+				30
+			],
+			"b": [
+				5,
+				2,
+				30
+			]
+		},
+		{
+			"id": "h38",
+			"a": [
+				4,
+				2,
+				34
+			],
+			"b": [
+				5,
+				2,
+				34
+			]
+		},
+		{
+			"id": "h40",
+			"a": [
+				4,
+				2,
+				38
+			],
+			"b": [
+				5,
+				2,
+				38
+			]
+		},
+		{
+			"id": "h46",
+			"a": [
+				7,
+				2,
+				14
+			],
+			"b": [
+				6,
+				2,
+				14
+			]
+		},
+		{
+			"id": "h51",
+			"a": [
+				7,
+				2,
+				20
+			],
+			"b": [
+				6,
+				2,
+				20
+			]
+		},
+		{
+			"id": "h53",
+			"a": [
+				7,
+				2,
+				26
+			],
+			"b": [
+				6,
+				2,
+				26
+			]
+		},
+		{
+			"id": "h55",
+			"a": [
+				7,
+				2,
+				30
+			],
+			"b": [
+				6,
+				2,
+				30
+			]
+		},
+		{
+			"id": "h57",
+			"a": [
+				7,
+				2,
+				34
+			],
+			"b": [
+				6,
+				2,
+				34
+			]
+		},
+		{
+			"id": "h59",
+			"a": [
+				7,
+				2,
+				38
+			],
+			"b": [
+				6,
+				2,
+				38
+			]
+		},
+		{
+			"id": "h65",
+			"a": [
+				4,
+				1,
+				14
+			],
+			"b": [
+				5,
+				1,
+				14
+			]
+		},
+		{
+			"id": "h67",
+			"a": [
+				4,
+				1,
+				18
+			],
+			"b": [
+				5,
+				1,
+				18
+			]
+		},
+		{
+			"id": "h81",
+			"a": [
+				7,
+				1,
+				14
+			],
+			"b": [
+				6,
+				1,
+				14
+			]
+		},
+		{
+			"id": "h83",
+			"a": [
+				7,
+				1,
+				18
+			],
+			"b": [
+				6,
+				1,
+				18
+			]
+		},
+		{
+			"id": "h96",
+			"a": [
+				5,
+				1,
+				15
+			],
+			"b": [
+				5,
+				2,
+				15
+			]
+		},
+		{
+			"id": "h97",
+			"a": [
+				5,
+				1,
+				30
+			],
+			"b": [
+				5,
+				2,
+				30
+			]
+		},
+		{
+			"id": "h98",
+			"a": [
+				5,
+				1,
+				45
+			],
+			"b": [
+				5,
+				2,
+				45
+			]
+		},
+		{
+			"id": "h100",
+			"a": [
+				4,
+				3,
+				14
+			],
+			"b": [
+				5,
+				3,
+				14
+			]
+		},
+		{
+			"id": "h102",
+			"a": [
+				4,
+				3,
+				18
+			],
+			"b": [
+				5,
+				3,
+				18
+			]
+		},
+		{
+			"id": "h116",
+			"a": [
+				7,
+				3,
+				14
+			],
+			"b": [
+				6,
+				3,
+				14
+			]
+		},
+		{
+			"id": "h118",
+			"a": [
+				7,
+				3,
+				18
+			],
+			"b": [
+				6,
+				3,
+				18
+			]
+		},
+		{
+			"id": "h131",
+			"a": [
+				5,
+				2,
+				15
+			],
+			"b": [
+				5,
+				3,
+				15
+			]
+		},
+		{
+			"id": "h132",
+			"a": [
+				5,
+				2,
+				30
+			],
+			"b": [
+				5,
+				3,
+				30
+			]
+		},
+		{
+			"id": "h133",
+			"a": [
+				5,
+				2,
+				45
+			],
+			"b": [
+				5,
+				3,
+				45
+			]
+		},
+		{
+			"id": "h135",
+			"a": [
+				4,
+				4,
+				16
+			],
+			"b": [
+				5,
+				4,
+				16
+			]
+		},
+		{
+			"id": "h137",
+			"a": [
+				4,
+				4,
+				22
+			],
+			"b": [
+				5,
+				4,
+				22
+			]
+		},
+		{
+			"id": "h139",
+			"a": [
+				4,
+				4,
+				32
+			],
+			"b": [
+				5,
+				4,
+				32
+			]
+		},
+		{
+			"id": "h141",
+			"a": [
+				4,
+				4,
+				38
+			],
+			"b": [
+				5,
+				4,
+				38
+			]
+		},
+		{
+			"id": "h143",
+			"a": [
+				7,
+				4,
+				16
+			],
+			"b": [
+				6,
+				4,
+				16
+			]
+		},
+		{
+			"id": "h145",
+			"a": [
+				7,
+				4,
+				26
+			],
+			"b": [
+				6,
+				4,
+				26
+			]
+		},
+		{
+			"id": "h147",
+			"a": [
+				7,
+				4,
+				32
+			],
+			"b": [
+				6,
+				4,
+				32
+			]
+		},
+		{
+			"id": "h149",
+			"a": [
+				7,
+				4,
+				42
+			],
+			"b": [
+				6,
+				4,
+				42
+			]
+		},
+		{
+			"id": "h151",
+			"a": [
+				4,
+				0,
+				16
+			],
+			"b": [
+				5,
+				0,
+				16
+			]
+		},
+		{
+			"id": "h153",
+			"a": [
+				4,
+				0,
+				22
+			],
+			"b": [
+				5,
+				0,
+				22
+			]
+		},
+		{
+			"id": "h158",
+			"a": [
+				4,
+				0,
+				32
+			],
+			"b": [
+				5,
+				0,
+				32
+			]
+		},
+		{
+			"id": "h160",
+			"a": [
+				4,
+				0,
+				38
+			],
+			"b": [
+				5,
+				0,
+				38
+			]
+		},
+		{
+			"id": "h165",
+			"a": [
+				7,
+				0,
+				16
+			],
+			"b": [
+				6,
+				0,
+				16
+			]
+		},
+		{
+			"id": "h173",
+			"a": [
+				7,
+				0,
+				32
+			],
+			"b": [
+				6,
+				0,
+				32
+			]
+		},
+		{
+			"id": "h175",
+			"a": [
+				7,
+				0,
+				38
+			],
+			"b": [
+				6,
+				0,
+				38
+			]
+		},
+		{
+			"id": "h179",
+			"a": [
+				6,
+				3,
+				17
+			],
+			"b": [
+				6,
+				4,
+				17
+			]
+		},
+		{
+			"id": "h180",
+			"a": [
+				6,
+				0,
+				17
+			],
+			"b": [
+				6,
+				1,
+				17
+			]
+		},
+		{
+			"id": "h181",
+			"a": [
+				6,
+				3,
+				33
+			],
+			"b": [
+				6,
+				4,
+				33
+			]
+		},
+		{
+			"id": "h182",
+			"a": [
+				6,
+				0,
+				33
+			],
+			"b": [
+				6,
+				1,
+				33
+			]
+		}
+	],
+	"equipment": [
+		{
+			"id": "e28",
+			"def": "fusion_reactor_mk2",
+			"cell": [
+				0,
+				2,
+				14
+			]
+		},
+		{
+			"id": "e29",
+			"def": "fusion_reactor_mk2",
+			"cell": [
+				2,
+				2,
+				14
+			]
+		},
+		{
+			"id": "e30",
+			"def": "power_distribution_unit",
+			"cell": [
+				0,
+				2,
+				16
+			]
+		},
+		{
+			"id": "e41",
+			"def": "armored_propellant_tank",
+			"cell": [
+				0,
+				2,
+				38
+			]
+		},
+		{
+			"id": "e42",
+			"def": "armored_propellant_tank",
+			"cell": [
+				2,
+				2,
+				38
+			]
+		},
+		{
+			"id": "e43",
+			"def": "armored_propellant_tank",
+			"cell": [
+				0,
+				2,
+				40
+			]
+		},
+		{
+			"id": "e44",
+			"def": "armored_propellant_tank",
+			"cell": [
+				2,
+				2,
+				40
+			]
+		},
+		{
+			"id": "e47",
+			"def": "fusion_reactor_mk2",
+			"cell": [
+				8,
+				2,
+				14
+			]
+		},
+		{
+			"id": "e48",
+			"def": "fusion_reactor_mk2",
+			"cell": [
+				10,
+				2,
+				14
+			]
+		},
+		{
+			"id": "e49",
+			"def": "power_distribution_unit",
+			"cell": [
+				8,
+				2,
+				16
+			]
+		},
+		{
+			"id": "e60",
+			"def": "armored_propellant_tank",
+			"cell": [
+				8,
+				2,
+				38
+			]
+		},
+		{
+			"id": "e61",
+			"def": "armored_propellant_tank",
+			"cell": [
+				10,
+				2,
+				38
+			]
+		},
+		{
+			"id": "e62",
+			"def": "armored_propellant_tank",
+			"cell": [
+				8,
+				2,
+				40
+			]
+		},
+		{
+			"id": "e63",
+			"def": "armored_propellant_tank",
+			"cell": [
+				10,
+				2,
+				40
+			]
+		},
+		{
+			"id": "e68",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				1,
+				18
+			]
+		},
+		{
+			"id": "e69",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				1,
+				18
+			]
+		},
+		{
+			"id": "e70",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				1,
+				20
+			]
+		},
+		{
+			"id": "e71",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				1,
+				20
+			]
+		},
+		{
+			"id": "e72",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				1,
+				22
+			]
+		},
+		{
+			"id": "e73",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				1,
+				22
+			]
+		},
+		{
+			"id": "e74",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				1,
+				24
+			]
+		},
+		{
+			"id": "e75",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				1,
+				24
+			]
+		},
+		{
+			"id": "e76",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				1,
+				26
+			]
+		},
+		{
+			"id": "e77",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				1,
+				26
+			]
+		},
+		{
+			"id": "e78",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				1,
+				28
+			]
+		},
+		{
+			"id": "e79",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				1,
+				28
+			]
+		},
+		{
+			"id": "e84",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				1,
+				18
+			]
+		},
+		{
+			"id": "e85",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				1,
+				18
+			]
+		},
+		{
+			"id": "e86",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				1,
+				20
+			]
+		},
+		{
+			"id": "e87",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				1,
+				20
+			]
+		},
+		{
+			"id": "e88",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				1,
+				22
+			]
+		},
+		{
+			"id": "e89",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				1,
+				22
+			]
+		},
+		{
+			"id": "e90",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				1,
+				24
+			]
+		},
+		{
+			"id": "e91",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				1,
+				24
+			]
+		},
+		{
+			"id": "e92",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				1,
+				26
+			]
+		},
+		{
+			"id": "e93",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				1,
+				26
+			]
+		},
+		{
+			"id": "e94",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				1,
+				28
+			]
+		},
+		{
+			"id": "e95",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				1,
+				28
+			]
+		},
+		{
+			"id": "e103",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				3,
+				18
+			]
+		},
+		{
+			"id": "e104",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				3,
+				18
+			]
+		},
+		{
+			"id": "e105",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				3,
+				20
+			]
+		},
+		{
+			"id": "e106",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				3,
+				20
+			]
+		},
+		{
+			"id": "e107",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				3,
+				22
+			]
+		},
+		{
+			"id": "e108",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				3,
+				22
+			]
+		},
+		{
+			"id": "e109",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				3,
+				24
+			]
+		},
+		{
+			"id": "e110",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				3,
+				24
+			]
+		},
+		{
+			"id": "e111",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				3,
+				26
+			]
+		},
+		{
+			"id": "e112",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				3,
+				26
+			]
+		},
+		{
+			"id": "e113",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				3,
+				28
+			]
+		},
+		{
+			"id": "e114",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				3,
+				28
+			]
+		},
+		{
+			"id": "e119",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				3,
+				18
+			]
+		},
+		{
+			"id": "e120",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				3,
+				18
+			]
+		},
+		{
+			"id": "e121",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				3,
+				20
+			]
+		},
+		{
+			"id": "e122",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				3,
+				20
+			]
+		},
+		{
+			"id": "e123",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				3,
+				22
+			]
+		},
+		{
+			"id": "e124",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				3,
+				22
+			]
+		},
+		{
+			"id": "e125",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				3,
+				24
+			]
+		},
+		{
+			"id": "e126",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				3,
+				24
+			]
+		},
+		{
+			"id": "e127",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				3,
+				26
+			]
+		},
+		{
+			"id": "e128",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				3,
+				26
+			]
+		},
+		{
+			"id": "e129",
+			"def": "propellant_tank",
+			"cell": [
+				8,
+				3,
+				28
+			]
+		},
+		{
+			"id": "e130",
+			"def": "propellant_tank",
+			"cell": [
+				10,
+				3,
+				28
+			]
+		},
+		{
+			"id": "e154",
+			"def": "propellant_tank",
+			"cell": [
+				3,
+				0,
+				23
+			]
+		},
+		{
+			"id": "e155",
+			"def": "propellant_tank",
+			"cell": [
+				3,
+				0,
+				25
+			]
+		},
+		{
+			"id": "e156",
+			"def": "propellant_tank",
+			"cell": [
+				3,
+				0,
+				27
+			]
+		},
+		{
+			"id": "e161",
+			"def": "propellant_tank",
+			"cell": [
+				3,
+				0,
+				39
+			]
+		},
+		{
+			"id": "e162",
+			"def": "propellant_tank",
+			"cell": [
+				3,
+				0,
+				41
+			]
+		},
+		{
+			"id": "e163",
+			"def": "propellant_tank",
+			"cell": [
+				3,
+				0,
+				43
+			]
+		},
+		{
+			"id": "e166",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				17
+			]
+		},
+		{
+			"id": "e167",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				19
+			]
+		},
+		{
+			"id": "e168",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				21
+			]
+		},
+		{
+			"id": "e169",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				23
+			]
+		},
+		{
+			"id": "e170",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				25
+			]
+		},
+		{
+			"id": "e171",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				27
+			]
+		},
+		{
+			"id": "e176",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				39
+			]
+		},
+		{
+			"id": "e177",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				41
+			]
+		},
+		{
+			"id": "e178",
+			"def": "propellant_tank",
+			"cell": [
+				7,
+				0,
+				43
+			]
+		},
+		{
+			"id": "e183",
+			"def": "railgun",
+			"cell": [
+				4,
+				2,
+				0
+			],
+			"face": "fore"
+		},
+		{
+			"id": "e184",
+			"def": "railgun",
+			"cell": [
+				7,
+				2,
+				0
+			],
+			"face": "fore"
+		},
+		{
+			"id": "e185",
+			"def": "kinetic_cannon",
+			"cell": [
+				5,
+				4,
+				18
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e186",
+			"def": "kinetic_cannon",
+			"cell": [
+				6,
+				4,
+				23
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e187",
+			"def": "kinetic_cannon",
+			"cell": [
+				5,
+				4,
+				28
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e188",
+			"def": "railgun",
+			"cell": [
+				5,
+				4,
+				34
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e189",
+			"def": "kinetic_cannon",
+			"cell": [
+				6,
+				4,
+				44
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e190",
+			"def": "kinetic_cannon",
+			"cell": [
+				6,
+				0,
+				20
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e191",
+			"def": "railgun",
+			"cell": [
+				5,
+				0,
+				34
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e192",
+			"def": "kinetic_cannon",
+			"cell": [
+				5,
+				0,
+				44
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e193",
+			"def": "autocannon",
+			"cell": [
+				0,
+				3,
+				17
+			],
+			"face": "port"
+		},
+		{
+			"id": "e194",
+			"def": "autocannon",
+			"cell": [
+				11,
+				3,
+				17
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e195",
+			"def": "autocannon",
+			"cell": [
+				0,
+				3,
+				26
+			],
+			"face": "port"
+		},
+		{
+			"id": "e196",
+			"def": "autocannon",
+			"cell": [
+				11,
+				3,
+				26
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e197",
+			"def": "autocannon",
+			"cell": [
+				0,
+				3,
+				37
+			],
+			"face": "port"
+		},
+		{
+			"id": "e198",
+			"def": "autocannon",
+			"cell": [
+				11,
+				3,
+				37
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e199",
+			"def": "autocannon",
+			"cell": [
+				0,
+				3,
+				46
+			],
+			"face": "port"
+		},
+		{
+			"id": "e200",
+			"def": "autocannon",
+			"cell": [
+				11,
+				3,
+				46
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e201",
+			"def": "point_defence",
+			"cell": [
+				0,
+				3,
+				14
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e202",
+			"def": "point_defence",
+			"cell": [
+				11,
+				3,
+				14
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e203",
+			"def": "point_defence",
+			"cell": [
+				0,
+				1,
+				18
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e204",
+			"def": "point_defence",
+			"cell": [
+				11,
+				1,
+				18
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e205",
+			"def": "point_defence",
+			"cell": [
+				0,
+				3,
+				24
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e206",
+			"def": "point_defence",
+			"cell": [
+				11,
+				3,
+				24
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e207",
+			"def": "point_defence",
+			"cell": [
+				0,
+				1,
+				28
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e208",
+			"def": "point_defence",
+			"cell": [
+				11,
+				1,
+				28
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e209",
+			"def": "point_defence",
+			"cell": [
+				0,
+				3,
+				34
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e210",
+			"def": "point_defence",
+			"cell": [
+				11,
+				3,
+				34
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e211",
+			"def": "point_defence",
+			"cell": [
+				0,
+				1,
+				38
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e212",
+			"def": "point_defence",
+			"cell": [
+				11,
+				1,
+				38
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e213",
+			"def": "point_defence",
+			"cell": [
+				0,
+				3,
+				44
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e214",
+			"def": "point_defence",
+			"cell": [
+				11,
+				3,
+				44
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e215",
+			"def": "point_defence",
+			"cell": [
+				0,
+				1,
+				48
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e216",
+			"def": "point_defence",
+			"cell": [
+				11,
+				1,
+				48
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e217",
+			"def": "point_defence",
+			"cell": [
+				3,
+				4,
+				16
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e218",
+			"def": "point_defence",
+			"cell": [
+				8,
+				4,
+				16
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e219",
+			"def": "point_defence",
+			"cell": [
+				3,
+				0,
+				47
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e220",
+			"def": "point_defence",
+			"cell": [
+				8,
+				0,
+				47
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e221",
+			"def": "point_defence",
+			"cell": [
+				2,
+				3,
+				10
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e222",
+			"def": "point_defence",
+			"cell": [
+				9,
+				3,
+				10
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e223",
+			"def": "sensor_mast",
+			"cell": [
+				5,
+				4,
+				39
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e224",
+			"def": "sensor_mast_hardened",
+			"cell": [
+				6,
+				4,
+				39
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e225",
+			"def": "sensor_mast_hardened",
+			"cell": [
+				6,
+				0,
+				39
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e226",
+			"def": "docking_collar",
+			"cell": [
+				0,
+				2,
+				27
+			],
+			"face": "port"
+		},
+		{
+			"id": "e227",
+			"def": "docking_collar",
+			"cell": [
+				11,
+				2,
+				27
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e228",
+			"def": "flare_launcher",
+			"cell": [
+				1,
+				3,
+				44
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e229",
+			"def": "flare_launcher",
+			"cell": [
+				10,
+				3,
+				44
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e230",
+			"def": "flare_launcher",
+			"cell": [
+				1,
+				3,
+				48
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e231",
+			"def": "flare_launcher",
+			"cell": [
+				10,
+				3,
+				48
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e232",
+			"def": "flare_launcher",
+			"cell": [
+				1,
+				1,
+				48
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e233",
+			"def": "flare_launcher",
+			"cell": [
+				10,
+				1,
+				48
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e234",
+			"def": "main_engine",
+			"cell": [
+				2,
+				1,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e235",
+			"def": "main_engine",
+			"cell": [
+				2,
+				3,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e236",
+			"def": "main_engine",
+			"cell": [
+				3,
+				1,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e237",
+			"def": "main_engine",
+			"cell": [
+				3,
+				3,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e238",
+			"def": "main_engine",
+			"cell": [
+				4,
+				1,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e239",
+			"def": "main_engine",
+			"cell": [
+				4,
+				3,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e240",
+			"def": "main_engine",
+			"cell": [
+				5,
+				1,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e241",
+			"def": "main_engine",
+			"cell": [
+				5,
+				3,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e242",
+			"def": "main_engine",
+			"cell": [
+				6,
+				1,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e243",
+			"def": "main_engine",
+			"cell": [
+				6,
+				3,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e244",
+			"def": "main_engine",
+			"cell": [
+				7,
+				1,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e245",
+			"def": "main_engine",
+			"cell": [
+				7,
+				3,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e246",
+			"def": "main_engine",
+			"cell": [
+				8,
+				1,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e247",
+			"def": "main_engine",
+			"cell": [
+				8,
+				3,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e248",
+			"def": "main_engine",
+			"cell": [
+				9,
+				1,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e249",
+			"def": "main_engine",
+			"cell": [
+				9,
+				3,
+				49
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e250",
+			"def": "rcs_block_heavy",
+			"cell": [
+				4,
+				2,
+				0
+			],
+			"face": "port"
+		},
+		{
+			"id": "e251",
+			"def": "rcs_block_heavy",
+			"cell": [
+				7,
+				2,
+				0
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e252",
+			"def": "rcs_block_heavy",
+			"cell": [
+				4,
+				2,
+				1
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e253",
+			"def": "rcs_block_heavy",
+			"cell": [
+				7,
+				2,
+				1
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e254",
+			"def": "rcs_block_heavy",
+			"cell": [
+				4,
+				2,
+				1
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e255",
+			"def": "rcs_block_heavy",
+			"cell": [
+				7,
+				2,
+				1
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e256",
+			"def": "rcs_block_heavy",
+			"cell": [
+				0,
+				1,
+				14
+			],
+			"face": "port"
+		},
+		{
+			"id": "e257",
+			"def": "rcs_block_heavy",
+			"cell": [
+				11,
+				1,
+				14
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e258",
+			"def": "rcs_block_heavy",
+			"cell": [
+				0,
+				1,
+				49
+			],
+			"face": "port"
+		},
+		{
+			"id": "e259",
+			"def": "rcs_block_heavy",
+			"cell": [
+				11,
+				1,
+				49
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e260",
+			"def": "rcs_block_heavy",
+			"cell": [
+				0,
+				3,
+				14
+			],
+			"face": "port"
+		},
+		{
+			"id": "e261",
+			"def": "rcs_block_heavy",
+			"cell": [
+				11,
+				3,
+				14
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e262",
+			"def": "rcs_block_heavy",
+			"cell": [
+				0,
+				3,
+				49
+			],
+			"face": "port"
+		},
+		{
+			"id": "e263",
+			"def": "rcs_block_heavy",
+			"cell": [
+				11,
+				3,
+				49
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e264",
+			"def": "rcs_block_heavy",
+			"cell": [
+				3,
+				4,
+				47
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e265",
+			"def": "rcs_block_heavy",
+			"cell": [
+				8,
+				4,
+				47
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e266",
+			"def": "rcs_block_heavy",
+			"cell": [
+				3,
+				0,
+				16
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e267",
+			"def": "rcs_block_heavy",
+			"cell": [
+				8,
+				0,
+				16
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e268",
+			"def": "heat_pipe_radiator",
+			"cell": [
+				1,
+				3,
+				40
+			],
+			"face": "dorsal",
+			"rot": 4
+		},
+		{
+			"id": "e269",
+			"def": "heat_pipe_radiator",
+			"cell": [
+				10,
+				3,
+				40
+			],
+			"face": "dorsal",
+			"rot": 4
+		},
+		{
+			"id": "e270",
+			"def": "heat_pipe_radiator",
+			"cell": [
+				1,
+				1,
+				40
+			],
+			"face": "ventral",
+			"rot": 4
+		},
+		{
+			"id": "e271",
+			"def": "heat_pipe_radiator",
+			"cell": [
+				10,
+				1,
+				40
+			],
+			"face": "ventral",
+			"rot": 4
+		},
+		{
+			"id": "e272",
+			"def": "heat_pipe_radiator",
+			"cell": [
+				1,
+				3,
+				45
+			],
+			"face": "dorsal",
+			"rot": 4
+		},
+		{
+			"id": "e273",
+			"def": "heat_pipe_radiator",
+			"cell": [
+				10,
+				3,
+				45
+			],
+			"face": "dorsal",
+			"rot": 4
+		},
+		{
+			"id": "e274",
+			"def": "heat_pipe_radiator",
+			"cell": [
+				1,
+				1,
+				45
+			],
+			"face": "ventral",
+			"rot": 4
+		},
+		{
+			"id": "e275",
+			"def": "heat_pipe_radiator",
+			"cell": [
+				10,
+				1,
+				45
+			],
+			"face": "ventral",
+			"rot": 4
+		}
+	],
+	"armor": [
+		[
+			0,
+			1,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			1,
+			13,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			14,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			15,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			15,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			16,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			16,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			17,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			17,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			18,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			18,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			19,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			19,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			20,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			20,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			21,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			21,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			22,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			22,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			23,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			23,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			24,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			24,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			25,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			25,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			26,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			26,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			27,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			27,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			28,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			28,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			29,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			29,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			30,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			30,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			31,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			31,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			32,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			32,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			33,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			33,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			34,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			34,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			35,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			35,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			36,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			36,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			37,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			37,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			38,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			38,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			39,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			39,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			40,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			40,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			41,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			41,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			42,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			42,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			43,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			43,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			44,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			44,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			45,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			45,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			46,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			46,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			47,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			47,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			48,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			0,
+			1,
+			49,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			0,
+			2,
+			14,
+			"fore",
+			80
+		],
+		[
+			0,
+			2,
+			14,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			15,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			16,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			17,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			18,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			19,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			20,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			21,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			22,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			23,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			24,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			25,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			26,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			27,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			28,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			29,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			30,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			31,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			32,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			33,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			34,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			35,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			36,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			37,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			38,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			39,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			40,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			41,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			42,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			43,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			44,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			45,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			46,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			47,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			48,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			49,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			13,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			13,
+			"ventral",
+			80
+		],
+		[
+			0,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			14,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			15,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			16,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			17,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			18,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			19,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			20,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			21,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			22,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			23,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			24,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			25,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			26,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			27,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			28,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			29,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			30,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			31,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			32,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			33,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			34,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			35,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			36,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			37,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			38,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			39,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			40,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			41,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			42,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			43,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			44,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			45,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			46,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			47,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			48,
+			"port",
+			80
+		],
+		[
+			0,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			0,
+			3,
+			49,
+			"port",
+			80
+		],
+		[
+			1,
+			1,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			15,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			16,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			17,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			18,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			19,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			20,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			21,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			22,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			23,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			24,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			25,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			26,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			27,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			28,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			29,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			30,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			31,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			32,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			33,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			34,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			35,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			36,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			37,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			38,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			39,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			40,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			41,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			42,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			43,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			44,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			45,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			46,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			47,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			1,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			1,
+			2,
+			14,
+			"fore",
+			80
+		],
+		[
+			1,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			13,
+			"ventral",
+			80
+		],
+		[
+			1,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			1,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			1,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			15,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			16,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			17,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			18,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			19,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			20,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			21,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			22,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			23,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			24,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			25,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			26,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			27,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			28,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			29,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			30,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			31,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			32,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			33,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			34,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			35,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			36,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			37,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			38,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			39,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			40,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			41,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			42,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			43,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			44,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			45,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			46,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			47,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			10,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			10,
+			2,
+			14,
+			"fore",
+			80
+		],
+		[
+			10,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			13,
+			"ventral",
+			80
+		],
+		[
+			10,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			10,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			1,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			1,
+			13,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			14,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			15,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			15,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			16,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			16,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			17,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			17,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			18,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			18,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			19,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			19,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			20,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			20,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			21,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			21,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			22,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			22,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			23,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			23,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			24,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			24,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			25,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			25,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			26,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			26,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			27,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			27,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			28,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			28,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			29,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			29,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			30,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			30,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			31,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			31,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			32,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			32,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			33,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			33,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			34,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			34,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			35,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			35,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			36,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			36,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			37,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			37,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			38,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			38,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			39,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			39,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			40,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			40,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			41,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			41,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			42,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			42,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			43,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			43,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			44,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			44,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			45,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			45,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			46,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			46,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			47,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			47,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			48,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			11,
+			1,
+			49,
+			"starboard",
+			80
+		],
+		[
+			11,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			11,
+			2,
+			14,
+			"fore",
+			80
+		],
+		[
+			11,
+			2,
+			14,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			15,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			16,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			17,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			18,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			19,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			20,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			21,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			22,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			23,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			24,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			25,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			26,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			27,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			28,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			29,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			30,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			31,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			32,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			33,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			34,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			35,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			36,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			37,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			38,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			39,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			40,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			41,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			42,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			43,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			44,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			45,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			46,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			47,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			48,
+			"starboard",
+			80
+		],
+		[
+			11,
+			2,
+			49,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			13,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			13,
+			"ventral",
+			80
+		],
+		[
+			11,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			14,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			15,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			16,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			17,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			18,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			19,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			20,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			21,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			22,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			23,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			24,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			25,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			26,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			27,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			28,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			29,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			30,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			31,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			32,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			33,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			34,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			35,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			36,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			37,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			38,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			39,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			40,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			41,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			42,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			43,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			44,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			45,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			46,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			47,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			48,
+			"starboard",
+			80
+		],
+		[
+			11,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			11,
+			3,
+			49,
+			"starboard",
+			80
+		],
+		[
+			2,
+			1,
+			10,
+			"port",
+			80
+		],
+		[
+			2,
+			1,
+			10,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			11,
+			"port",
+			80
+		],
+		[
+			2,
+			1,
+			11,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			12,
+			"port",
+			80
+		],
+		[
+			2,
+			1,
+			12,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			15,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			16,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			17,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			18,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			19,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			20,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			21,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			22,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			23,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			24,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			25,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			26,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			27,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			28,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			29,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			30,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			31,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			32,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			33,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			34,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			35,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			36,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			37,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			38,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			39,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			40,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			41,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			42,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			43,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			44,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			45,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			46,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			47,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			2,
+			1,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			1,
+			9,
+			"port",
+			80
+		],
+		[
+			2,
+			1,
+			9,
+			"ventral",
+			80
+		],
+		[
+			2,
+			2,
+			10,
+			"fore",
+			80
+		],
+		[
+			2,
+			2,
+			10,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
+			11,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
+			12,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
+			13,
+			"port",
+			80
+		],
+		[
+			2,
+			3,
+			10,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			10,
+			"port",
+			80
+		],
+		[
+			2,
+			3,
+			11,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			11,
+			"port",
+			80
+		],
+		[
+			2,
+			3,
+			12,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			12,
+			"port",
+			80
+		],
+		[
+			2,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			3,
+			9,
+			"port",
+			80
+		],
+		[
+			2,
+			3,
+			9,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			15,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			15,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			16,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			16,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			17,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			17,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			18,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			18,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			19,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			19,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			20,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			20,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			21,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			21,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			22,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			22,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			23,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			23,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			24,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			24,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			25,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			25,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			26,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			26,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			27,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			27,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			28,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			28,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			29,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			29,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			30,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			30,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			31,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			31,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			32,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			32,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			33,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			33,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			34,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			34,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			35,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			35,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			36,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			36,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			37,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			37,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			38,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			38,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			39,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			39,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			40,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			40,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			41,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			41,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			42,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			42,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			43,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			43,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			44,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			44,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			45,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			45,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			46,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			46,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			47,
+			"port",
+			80
+		],
+		[
+			3,
+			0,
+			47,
+			"ventral",
+			80
+		],
+		[
+			3,
+			1,
+			10,
+			"ventral",
+			80
+		],
+		[
+			3,
+			1,
+			11,
+			"ventral",
+			80
+		],
+		[
+			3,
+			1,
+			12,
+			"ventral",
+			80
+		],
+		[
+			3,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			3,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			3,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			3,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			3,
+			1,
+			9,
+			"ventral",
+			80
+		],
+		[
+			3,
+			2,
+			7,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			2,
+			7,
+			"port",
+			80
+		],
+		[
+			3,
+			2,
+			7,
+			"ventral",
+			80
+		],
+		[
+			3,
+			2,
+			8,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			2,
+			8,
+			"port",
+			80
+		],
+		[
+			3,
+			2,
+			8,
+			"ventral",
+			80
+		],
+		[
+			3,
+			2,
+			9,
+			"port",
+			80
+		],
+		[
+			3,
+			3,
+			10,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			3,
+			11,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			3,
+			12,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			3,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			15,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			16,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			17,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			18,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			19,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			20,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			21,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			22,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			23,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			24,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			25,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			26,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			27,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			28,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			29,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			30,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			31,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			32,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			33,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			34,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			35,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			36,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			37,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			38,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			39,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			40,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			41,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			42,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			43,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			44,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			45,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			46,
+			"port",
+			80
+		],
+		[
+			3,
+			4,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			4,
+			47,
+			"port",
+			80
+		],
+		[
+			4,
+			0,
+			15,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			16,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			17,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			18,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			19,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			20,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			21,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			22,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			23,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			24,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			25,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			26,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			27,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			28,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			29,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			30,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			31,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			32,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			33,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			34,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			35,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			36,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			37,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			38,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			39,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			40,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			41,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			42,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			43,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			44,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			45,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			46,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			47,
+			"ventral",
+			80
+		],
+		[
+			4,
+			1,
+			10,
+			"ventral",
+			80
+		],
+		[
+			4,
+			1,
+			11,
+			"ventral",
+			80
+		],
+		[
+			4,
+			1,
+			12,
+			"ventral",
+			80
+		],
+		[
+			4,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			4,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			4,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			4,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			4,
+			1,
+			9,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			0,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			0,
+			"fore",
+			80
+		],
+		[
+			4,
+			2,
+			0,
+			"port",
+			80
+		],
+		[
+			4,
+			2,
+			0,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			0,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			1,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			1,
+			"port",
+			80
+		],
+		[
+			4,
+			2,
+			1,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			1,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			2,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			2,
+			"port",
+			80
+		],
+		[
+			4,
+			2,
+			2,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			2,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			3,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			3,
+			"port",
+			80
+		],
+		[
+			4,
+			2,
+			3,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			3,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			4,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			4,
+			"port",
+			80
+		],
+		[
+			4,
+			2,
+			4,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			4,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			5,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			5,
+			"port",
+			80
+		],
+		[
+			4,
+			2,
+			5,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			5,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			6,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			6,
+			"port",
+			80
+		],
+		[
+			4,
+			2,
+			6,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			6,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			7,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			7,
+			"ventral",
+			80
+		],
+		[
+			4,
+			2,
+			8,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			8,
+			"ventral",
+			80
+		],
+		[
+			4,
+			3,
+			10,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			3,
+			11,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			3,
+			12,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			3,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			4,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			0,
+			15,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			16,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			17,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			18,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			19,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			20,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			21,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			22,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			23,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			24,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			25,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			26,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			27,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			28,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			29,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			30,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			31,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			32,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			33,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			34,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			35,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			36,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			37,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			38,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			39,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			40,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			41,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			42,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			43,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			44,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			45,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			46,
+			"ventral",
+			80
+		],
+		[
+			5,
+			0,
+			47,
+			"ventral",
+			80
+		],
+		[
+			5,
+			1,
+			10,
+			"ventral",
+			80
+		],
+		[
+			5,
+			1,
+			11,
+			"ventral",
+			80
+		],
+		[
+			5,
+			1,
+			12,
+			"ventral",
+			80
+		],
+		[
+			5,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			5,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			5,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			5,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			5,
+			1,
+			9,
+			"ventral",
+			80
+		],
+		[
+			5,
+			2,
+			7,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			2,
+			7,
+			"ventral",
+			80
+		],
+		[
+			5,
+			2,
+			8,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			2,
+			8,
+			"ventral",
+			80
+		],
+		[
+			5,
+			3,
+			10,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			3,
+			11,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			3,
+			12,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			3,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			5,
+			4,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			0,
+			15,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			16,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			17,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			18,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			19,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			20,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			21,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			22,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			23,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			24,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			25,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			26,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			27,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			28,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			29,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			30,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			31,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			32,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			33,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			34,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			35,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			36,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			37,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			38,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			39,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			40,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			41,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			42,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			43,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			44,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			45,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			46,
+			"ventral",
+			80
+		],
+		[
+			6,
+			0,
+			47,
+			"ventral",
+			80
+		],
+		[
+			6,
+			1,
+			10,
+			"ventral",
+			80
+		],
+		[
+			6,
+			1,
+			11,
+			"ventral",
+			80
+		],
+		[
+			6,
+			1,
+			12,
+			"ventral",
+			80
+		],
+		[
+			6,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			6,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			6,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			6,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			6,
+			1,
+			9,
+			"ventral",
+			80
+		],
+		[
+			6,
+			2,
+			7,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			2,
+			7,
+			"ventral",
+			80
+		],
+		[
+			6,
+			2,
+			8,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			2,
+			8,
+			"ventral",
+			80
+		],
+		[
+			6,
+			3,
+			10,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			3,
+			11,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			3,
+			12,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			3,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			6,
+			4,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			0,
+			15,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			16,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			17,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			18,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			19,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			20,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			21,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			22,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			23,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			24,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			25,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			26,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			27,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			28,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			29,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			30,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			31,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			32,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			33,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			34,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			35,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			36,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			37,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			38,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			39,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			40,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			41,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			42,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			43,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			44,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			45,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			46,
+			"ventral",
+			80
+		],
+		[
+			7,
+			0,
+			47,
+			"ventral",
+			80
+		],
+		[
+			7,
+			1,
+			10,
+			"ventral",
+			80
+		],
+		[
+			7,
+			1,
+			11,
+			"ventral",
+			80
+		],
+		[
+			7,
+			1,
+			12,
+			"ventral",
+			80
+		],
+		[
+			7,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			7,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			7,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			7,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			7,
+			1,
+			9,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			0,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			0,
+			"fore",
+			80
+		],
+		[
+			7,
+			2,
+			0,
+			"port",
+			80
+		],
+		[
+			7,
+			2,
+			0,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			0,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			1,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			1,
+			"port",
+			80
+		],
+		[
+			7,
+			2,
+			1,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			1,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			2,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			2,
+			"port",
+			80
+		],
+		[
+			7,
+			2,
+			2,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			2,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			3,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			3,
+			"port",
+			80
+		],
+		[
+			7,
+			2,
+			3,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			3,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			4,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			4,
+			"port",
+			80
+		],
+		[
+			7,
+			2,
+			4,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			4,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			5,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			5,
+			"port",
+			80
+		],
+		[
+			7,
+			2,
+			5,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			5,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			6,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			6,
+			"port",
+			80
+		],
+		[
+			7,
+			2,
+			6,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			6,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			7,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			7,
+			"ventral",
+			80
+		],
+		[
+			7,
+			2,
+			8,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			2,
+			8,
+			"ventral",
+			80
+		],
+		[
+			7,
+			3,
+			10,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			3,
+			11,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			3,
+			12,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			3,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			7,
+			4,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			0,
+			15,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			15,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			16,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			16,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			17,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			17,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			18,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			18,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			19,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			19,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			20,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			20,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			21,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			21,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			22,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			22,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			23,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			23,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			24,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			24,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			25,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			25,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			26,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			26,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			27,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			27,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			28,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			28,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			29,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			29,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			30,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			30,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			31,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			31,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			32,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			32,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			33,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			33,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			34,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			34,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			35,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			35,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			36,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			36,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			37,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			37,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			38,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			38,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			39,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			39,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			40,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			40,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			41,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			41,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			42,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			42,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			43,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			43,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			44,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			44,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			45,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			45,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			46,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			46,
+			"ventral",
+			80
+		],
+		[
+			8,
+			0,
+			47,
+			"starboard",
+			80
+		],
+		[
+			8,
+			0,
+			47,
+			"ventral",
+			80
+		],
+		[
+			8,
+			1,
+			10,
+			"ventral",
+			80
+		],
+		[
+			8,
+			1,
+			11,
+			"ventral",
+			80
+		],
+		[
+			8,
+			1,
+			12,
+			"ventral",
+			80
+		],
+		[
+			8,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			8,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			8,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			8,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			8,
+			1,
+			9,
+			"ventral",
+			80
+		],
+		[
+			8,
+			2,
+			7,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			2,
+			7,
+			"starboard",
+			80
+		],
+		[
+			8,
+			2,
+			7,
+			"ventral",
+			80
+		],
+		[
+			8,
+			2,
+			8,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			2,
+			8,
+			"starboard",
+			80
+		],
+		[
+			8,
+			2,
+			8,
+			"ventral",
+			80
+		],
+		[
+			8,
+			2,
+			9,
+			"starboard",
+			80
+		],
+		[
+			8,
+			3,
+			10,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			3,
+			11,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			3,
+			12,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			3,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			15,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			16,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			17,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			18,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			19,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			20,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			21,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			22,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			23,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			24,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			25,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			26,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			27,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			28,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			29,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			30,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			31,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			32,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			33,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			34,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			35,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			36,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			37,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			38,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			39,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			40,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			41,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			42,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			43,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			44,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			45,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			46,
+			"starboard",
+			80
+		],
+		[
+			8,
+			4,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			8,
+			4,
+			47,
+			"starboard",
+			80
+		],
+		[
+			9,
+			1,
+			10,
+			"starboard",
+			80
+		],
+		[
+			9,
+			1,
+			10,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			11,
+			"starboard",
+			80
+		],
+		[
+			9,
+			1,
+			11,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			12,
+			"starboard",
+			80
+		],
+		[
+			9,
+			1,
+			12,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			13,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			14,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			15,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			16,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			17,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			18,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			19,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			20,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			21,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			22,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			23,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			24,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			25,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			26,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			27,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			28,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			29,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			30,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			31,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			32,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			33,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			34,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			35,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			36,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			37,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			38,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			39,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			40,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			41,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			42,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			43,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			44,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			45,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			46,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			47,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			48,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			49,
+			"ventral",
+			80
+		],
+		[
+			9,
+			1,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			1,
+			9,
+			"starboard",
+			80
+		],
+		[
+			9,
+			1,
+			9,
+			"ventral",
+			80
+		],
+		[
+			9,
+			2,
+			10,
+			"fore",
+			80
+		],
+		[
+			9,
+			2,
+			10,
+			"starboard",
+			80
+		],
+		[
+			9,
+			2,
+			11,
+			"starboard",
+			80
+		],
+		[
+			9,
+			2,
+			12,
+			"starboard",
+			80
+		],
+		[
+			9,
+			2,
+			13,
+			"starboard",
+			80
+		],
+		[
+			9,
+			3,
+			10,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			10,
+			"starboard",
+			80
+		],
+		[
+			9,
+			3,
+			11,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			11,
+			"starboard",
+			80
+		],
+		[
+			9,
+			3,
+			12,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			12,
+			"starboard",
+			80
+		],
+		[
+			9,
+			3,
+			13,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			14,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			15,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			16,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			17,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			18,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			19,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			20,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			21,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			22,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			23,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			24,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			25,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			26,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			27,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			28,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			29,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			30,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			31,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			32,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			33,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			34,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			35,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			36,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			37,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			38,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			39,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			40,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			41,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			42,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			43,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			44,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			45,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			46,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			47,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			48,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			49,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			9,
+			"dorsal",
+			80
+		],
+		[
+			9,
+			3,
+			9,
+			"starboard",
+			80
+		],
+		[
+			9,
+			3,
+			9,
+			"ventral",
+			80
+		]
+	],
+	"bus": [
+		[
+			0,
+			1,
+			13
+		],
+		[
+			0,
+			1,
+			14
+		],
+		[
+			0,
+			1,
+			16
+		],
+		[
+			0,
+			1,
+			17
+		],
+		[
+			0,
+			1,
+			18
+		],
+		[
+			0,
+			1,
+			28
+		],
+		[
+			0,
+			1,
+			38
+		],
+		[
+			0,
+			1,
+			48
+		],
+		[
+			0,
+			1,
+			49
+		],
+		[
+			0,
+			2,
+			14
+		],
+		[
+			0,
+			2,
+			15
+		],
+		[
+			0,
+			2,
+			16
+		],
+		[
+			0,
+			2,
+			20
+		],
+		[
+			0,
+			2,
+			26
+		],
+		[
+			0,
+			2,
+			27
+		],
+		[
+			0,
+			2,
+			28
+		],
+		[
+			0,
+			2,
+			29
+		],
+		[
+			0,
+			2,
+			30
+		],
+		[
+			0,
+			2,
+			31
+		],
+		[
+			0,
+			2,
+			32
+		],
+		[
+			0,
+			2,
+			33
+		],
+		[
+			0,
+			2,
+			34
+		],
+		[
+			0,
+			2,
+			38
+		],
+		[
+			0,
+			3,
+			14
+		],
+		[
+			0,
+			3,
+			16
+		],
+		[
+			0,
+			3,
+			17
+		],
+		[
+			0,
+			3,
+			18
+		],
+		[
+			0,
+			3,
+			19
+		],
+		[
+			0,
+			3,
+			20
+		],
+		[
+			0,
+			3,
+			21
+		],
+		[
+			0,
+			3,
+			22
+		],
+		[
+			0,
+			3,
+			23
+		],
+		[
+			0,
+			3,
+			24
+		],
+		[
+			0,
+			3,
+			25
+		],
+		[
+			0,
+			3,
+			26
+		],
+		[
+			0,
+			3,
+			34
+		],
+		[
+			0,
+			3,
+			35
+		],
+		[
+			0,
+			3,
+			36
+		],
+		[
+			0,
+			3,
+			37
+		],
+		[
+			0,
+			3,
+			38
+		],
+		[
+			0,
+			3,
+			44
+		],
+		[
+			0,
+			3,
+			45
+		],
+		[
+			0,
+			3,
+			46
+		],
+		[
+			0,
+			3,
+			49
+		],
+		[
+			1,
+			1,
+			13
+		],
+		[
+			1,
+			1,
+			48
+		],
+		[
+			1,
+			2,
+			15
+		],
+		[
+			1,
+			3,
+			16
+		],
+		[
+			1,
+			3,
+			24
+		],
+		[
+			1,
+			3,
+			38
+		],
+		[
+			1,
+			3,
+			44
+		],
+		[
+			1,
+			3,
+			46
+		],
+		[
+			1,
+			3,
+			47
+		],
+		[
+			1,
+			3,
+			48
+		],
+		[
+			1,
+			3,
+			49
+		],
+		[
+			10,
+			1,
+			48
+		],
+		[
+			10,
+			2,
+			14
+		],
+		[
+			10,
+			2,
+			15
+		],
+		[
+			10,
+			2,
+			37
+		],
+		[
+			10,
+			3,
+			44
+		],
+		[
+			10,
+			3,
+			46
+		],
+		[
+			10,
+			3,
+			47
+		],
+		[
+			10,
+			3,
+			48
+		],
+		[
+			10,
+			3,
+			49
+		],
+		[
+			11,
+			1,
+			14
+		],
+		[
+			11,
+			1,
+			18
+		],
+		[
+			11,
+			1,
+			28
+		],
+		[
+			11,
+			1,
+			38
+		],
+		[
+			11,
+			1,
+			48
+		],
+		[
+			11,
+			1,
+			49
+		],
+		[
+			11,
+			2,
+			14
+		],
+		[
+			11,
+			2,
+			18
+		],
+		[
+			11,
+			2,
+			27
+		],
+		[
+			11,
+			2,
+			28
+		],
+		[
+			11,
+			2,
+			37
+		],
+		[
+			11,
+			2,
+			38
+		],
+		[
+			11,
+			3,
+			14
+		],
+		[
+			11,
+			3,
+			15
+		],
+		[
+			11,
+			3,
+			16
+		],
+		[
+			11,
+			3,
+			17
+		],
+		[
+			11,
+			3,
+			18
+		],
+		[
+			11,
+			3,
+			19
+		],
+		[
+			11,
+			3,
+			20
+		],
+		[
+			11,
+			3,
+			21
+		],
+		[
+			11,
+			3,
+			22
+		],
+		[
+			11,
+			3,
+			23
+		],
+		[
+			11,
+			3,
+			24
+		],
+		[
+			11,
+			3,
+			25
+		],
+		[
+			11,
+			3,
+			26
+		],
+		[
+			11,
+			3,
+			27
+		],
+		[
+			11,
+			3,
+			34
+		],
+		[
+			11,
+			3,
+			35
+		],
+		[
+			11,
+			3,
+			36
+		],
+		[
+			11,
+			3,
+			37
+		],
+		[
+			11,
+			3,
+			44
+		],
+		[
+			11,
+			3,
+			45
+		],
+		[
+			11,
+			3,
+			46
+		],
+		[
+			11,
+			3,
+			49
+		],
+		[
+			2,
+			1,
+			10
+		],
+		[
+			2,
+			1,
+			11
+		],
+		[
+			2,
+			1,
+			12
+		],
+		[
+			2,
+			1,
+			13
+		],
+		[
+			2,
+			1,
+			48
+		],
+		[
+			2,
+			1,
+			49
+		],
+		[
+			2,
+			2,
+			10
+		],
+		[
+			2,
+			2,
+			15
+		],
+		[
+			2,
+			3,
+			10
+		],
+		[
+			2,
+			3,
+			16
+		],
+		[
+			2,
+			3,
+			24
+		],
+		[
+			2,
+			3,
+			38
+		],
+		[
+			2,
+			3,
+			48
+		],
+		[
+			2,
+			3,
+			49
+		],
+		[
+			3,
+			0,
+			16
+		],
+		[
+			3,
+			0,
+			24
+		],
+		[
+			3,
+			0,
+			47
+		],
+		[
+			3,
+			1,
+			16
+		],
+		[
+			3,
+			1,
+			24
+		],
+		[
+			3,
+			1,
+			47
+		],
+		[
+			3,
+			1,
+			48
+		],
+		[
+			3,
+			1,
+			49
+		],
+		[
+			3,
+			2,
+			16
+		],
+		[
+			3,
+			2,
+			24
+		],
+		[
+			3,
+			3,
+			16
+		],
+		[
+			3,
+			3,
+			24
+		],
+		[
+			3,
+			3,
+			38
+		],
+		[
+			3,
+			3,
+			49
+		],
+		[
+			3,
+			4,
+			16
+		],
+		[
+			3,
+			4,
+			17
+		],
+		[
+			3,
+			4,
+			18
+		],
+		[
+			3,
+			4,
+			23
+		],
+		[
+			3,
+			4,
+			24
+		],
+		[
+			3,
+			4,
+			38
+		],
+		[
+			3,
+			4,
+			39
+		],
+		[
+			3,
+			4,
+			47
+		],
+		[
+			4,
+			0,
+			39
+		],
+		[
+			4,
+			1,
+			49
+		],
+		[
+			4,
+			2,
+			0
+		],
+		[
+			4,
+			2,
+			1
+		],
+		[
+			4,
+			2,
+			2
+		],
+		[
+			4,
+			2,
+			3
+		],
+		[
+			4,
+			2,
+			4
+		],
+		[
+			4,
+			2,
+			5
+		],
+		[
+			4,
+			2,
+			6
+		],
+		[
+			4,
+			2,
+			7
+		],
+		[
+			4,
+			3,
+			49
+		],
+		[
+			4,
+			4,
+			18
+		],
+		[
+			4,
+			4,
+			23
+		],
+		[
+			4,
+			4,
+			39
+		],
+		[
+			4,
+			4,
+			47
+		],
+		[
+			5,
+			0,
+			34
+		],
+		[
+			5,
+			0,
+			39
+		],
+		[
+			5,
+			0,
+			40
+		],
+		[
+			5,
+			0,
+			41
+		],
+		[
+			5,
+			0,
+			42
+		],
+		[
+			5,
+			0,
+			43
+		],
+		[
+			5,
+			0,
+			44
+		],
+		[
+			5,
+			1,
+			10
+		],
+		[
+			5,
+			1,
+			11
+		],
+		[
+			5,
+			1,
+			12
+		],
+		[
+			5,
+			1,
+			13
+		],
+		[
+			5,
+			1,
+			14
+		],
+		[
+			5,
+			1,
+			15
+		],
+		[
+			5,
+			1,
+			16
+		],
+		[
+			5,
+			1,
+			17
+		],
+		[
+			5,
+			1,
+			18
+		],
+		[
+			5,
+			1,
+			19
+		],
+		[
+			5,
+			1,
+			20
+		],
+		[
+			5,
+			1,
+			21
+		],
+		[
+			5,
+			1,
+			22
+		],
+		[
+			5,
+			1,
+			23
+		],
+		[
+			5,
+			1,
+			24
+		],
+		[
+			5,
+			1,
+			25
+		],
+		[
+			5,
+			1,
+			26
+		],
+		[
+			5,
+			1,
+			27
+		],
+		[
+			5,
+			1,
+			28
+		],
+		[
+			5,
+			1,
+			29
+		],
+		[
+			5,
+			1,
+			30
+		],
+		[
+			5,
+			1,
+			31
+		],
+		[
+			5,
+			1,
+			32
+		],
+		[
+			5,
+			1,
+			33
+		],
+		[
+			5,
+			1,
+			34
+		],
+		[
+			5,
+			1,
+			35
+		],
+		[
+			5,
+			1,
+			36
+		],
+		[
+			5,
+			1,
+			37
+		],
+		[
+			5,
+			1,
+			38
+		],
+		[
+			5,
+			1,
+			39
+		],
+		[
+			5,
+			1,
+			40
+		],
+		[
+			5,
+			1,
+			41
+		],
+		[
+			5,
+			1,
+			42
+		],
+		[
+			5,
+			1,
+			43
+		],
+		[
+			5,
+			1,
+			44
+		],
+		[
+			5,
+			1,
+			45
+		],
+		[
+			5,
+			1,
+			46
+		],
+		[
+			5,
+			1,
+			47
+		],
+		[
+			5,
+			1,
+			48
+		],
+		[
+			5,
+			1,
+			49
+		],
+		[
+			5,
+			2,
+			10
+		],
+		[
+			5,
+			2,
+			11
+		],
+		[
+			5,
+			2,
+			12
+		],
+		[
+			5,
+			2,
+			13
+		],
+		[
+			5,
+			2,
+			14
+		],
+		[
+			5,
+			2,
+			15
+		],
+		[
+			5,
+			2,
+			16
+		],
+		[
+			5,
+			2,
+			17
+		],
+		[
+			5,
+			2,
+			18
+		],
+		[
+			5,
+			2,
+			19
+		],
+		[
+			5,
+			2,
+			20
+		],
+		[
+			5,
+			2,
+			21
+		],
+		[
+			5,
+			2,
+			22
+		],
+		[
+			5,
+			2,
+			23
+		],
+		[
+			5,
+			2,
+			24
+		],
+		[
+			5,
+			2,
+			25
+		],
+		[
+			5,
+			2,
+			26
+		],
+		[
+			5,
+			2,
+			27
+		],
+		[
+			5,
+			2,
+			28
+		],
+		[
+			5,
+			2,
+			29
+		],
+		[
+			5,
+			2,
+			30
+		],
+		[
+			5,
+			2,
+			31
+		],
+		[
+			5,
+			2,
+			32
+		],
+		[
+			5,
+			2,
+			33
+		],
+		[
+			5,
+			2,
+			34
+		],
+		[
+			5,
+			2,
+			35
+		],
+		[
+			5,
+			2,
+			36
+		],
+		[
+			5,
+			2,
+			37
+		],
+		[
+			5,
+			2,
+			38
+		],
+		[
+			5,
+			2,
+			39
+		],
+		[
+			5,
+			2,
+			40
+		],
+		[
+			5,
+			2,
+			41
+		],
+		[
+			5,
+			2,
+			42
+		],
+		[
+			5,
+			2,
+			43
+		],
+		[
+			5,
+			2,
+			44
+		],
+		[
+			5,
+			2,
+			45
+		],
+		[
+			5,
+			2,
+			46
+		],
+		[
+			5,
+			2,
+			47
+		],
+		[
+			5,
+			2,
+			48
+		],
+		[
+			5,
+			2,
+			49
+		],
+		[
+			5,
+			2,
+			7
+		],
+		[
+			5,
+			3,
+			10
+		],
+		[
+			5,
+			3,
+			11
+		],
+		[
+			5,
+			3,
+			12
+		],
+		[
+			5,
+			3,
+			13
+		],
+		[
+			5,
+			3,
+			14
+		],
+		[
+			5,
+			3,
+			15
+		],
+		[
+			5,
+			3,
+			16
+		],
+		[
+			5,
+			3,
+			17
+		],
+		[
+			5,
+			3,
+			18
+		],
+		[
+			5,
+			3,
+			19
+		],
+		[
+			5,
+			3,
+			20
+		],
+		[
+			5,
+			3,
+			21
+		],
+		[
+			5,
+			3,
+			22
+		],
+		[
+			5,
+			3,
+			23
+		],
+		[
+			5,
+			3,
+			24
+		],
+		[
+			5,
+			3,
+			25
+		],
+		[
+			5,
+			3,
+			26
+		],
+		[
+			5,
+			3,
+			27
+		],
+		[
+			5,
+			3,
+			28
+		],
+		[
+			5,
+			3,
+			29
+		],
+		[
+			5,
+			3,
+			30
+		],
+		[
+			5,
+			3,
+			31
+		],
+		[
+			5,
+			3,
+			32
+		],
+		[
+			5,
+			3,
+			33
+		],
+		[
+			5,
+			3,
+			34
+		],
+		[
+			5,
+			3,
+			35
+		],
+		[
+			5,
+			3,
+			36
+		],
+		[
+			5,
+			3,
+			37
+		],
+		[
+			5,
+			3,
+			38
+		],
+		[
+			5,
+			3,
+			39
+		],
+		[
+			5,
+			3,
+			40
+		],
+		[
+			5,
+			3,
+			41
+		],
+		[
+			5,
+			3,
+			42
+		],
+		[
+			5,
+			3,
+			43
+		],
+		[
+			5,
+			3,
+			44
+		],
+		[
+			5,
+			3,
+			45
+		],
+		[
+			5,
+			3,
+			46
+		],
+		[
+			5,
+			3,
+			47
+		],
+		[
+			5,
+			3,
+			48
+		],
+		[
+			5,
+			3,
+			49
+		],
+		[
+			5,
+			4,
+			18
+		],
+		[
+			5,
+			4,
+			23
+		],
+		[
+			5,
+			4,
+			24
+		],
+		[
+			5,
+			4,
+			25
+		],
+		[
+			5,
+			4,
+			26
+		],
+		[
+			5,
+			4,
+			27
+		],
+		[
+			5,
+			4,
+			28
+		],
+		[
+			5,
+			4,
+			34
+		],
+		[
+			5,
+			4,
+			39
+		],
+		[
+			5,
+			4,
+			47
+		],
+		[
+			6,
+			0,
+			20
+		],
+		[
+			6,
+			0,
+			39
+		],
+		[
+			6,
+			1,
+			49
+		],
+		[
+			6,
+			2,
+			34
+		],
+		[
+			6,
+			2,
+			7
+		],
+		[
+			6,
+			3,
+			49
+		],
+		[
+			6,
+			4,
+			18
+		],
+		[
+			6,
+			4,
+			23
+		],
+		[
+			6,
+			4,
+			39
+		],
+		[
+			6,
+			4,
+			40
+		],
+		[
+			6,
+			4,
+			41
+		],
+		[
+			6,
+			4,
+			42
+		],
+		[
+			6,
+			4,
+			43
+		],
+		[
+			6,
+			4,
+			44
+		],
+		[
+			6,
+			4,
+			45
+		],
+		[
+			6,
+			4,
+			46
+		],
+		[
+			6,
+			4,
+			47
+		],
+		[
+			7,
+			0,
+			18
+		],
+		[
+			7,
+			0,
+			19
+		],
+		[
+			7,
+			0,
+			20
+		],
+		[
+			7,
+			0,
+			39
+		],
+		[
+			7,
+			1,
+			17
+		],
+		[
+			7,
+			1,
+			18
+		],
+		[
+			7,
+			1,
+			39
+		],
+		[
+			7,
+			1,
+			49
+		],
+		[
+			7,
+			2,
+			0
+		],
+		[
+			7,
+			2,
+			1
+		],
+		[
+			7,
+			2,
+			18
+		],
+		[
+			7,
+			2,
+			19
+		],
+		[
+			7,
+			2,
+			2
+		],
+		[
+			7,
+			2,
+			20
+		],
+		[
+			7,
+			2,
+			29
+		],
+		[
+			7,
+			2,
+			3
+		],
+		[
+			7,
+			2,
+			30
+		],
+		[
+			7,
+			2,
+			31
+		],
+		[
+			7,
+			2,
+			32
+		],
+		[
+			7,
+			2,
+			33
+		],
+		[
+			7,
+			2,
+			34
+		],
+		[
+			7,
+			2,
+			35
+		],
+		[
+			7,
+			2,
+			36
+		],
+		[
+			7,
+			2,
+			37
+		],
+		[
+			7,
+			2,
+			38
+		],
+		[
+			7,
+			2,
+			39
+		],
+		[
+			7,
+			2,
+			4
+		],
+		[
+			7,
+			2,
+			5
+		],
+		[
+			7,
+			2,
+			6
+		],
+		[
+			7,
+			2,
+			7
+		],
+		[
+			7,
+			2,
+			8
+		],
+		[
+			7,
+			2,
+			9
+		],
+		[
+			7,
+			3,
+			17
+		],
+		[
+			7,
+			3,
+			18
+		],
+		[
+			7,
+			3,
+			39
+		],
+		[
+			7,
+			3,
+			49
+		],
+		[
+			7,
+			3,
+			9
+		],
+		[
+			7,
+			4,
+			16
+		],
+		[
+			7,
+			4,
+			17
+		],
+		[
+			7,
+			4,
+			18
+		],
+		[
+			7,
+			4,
+			39
+		],
+		[
+			7,
+			4,
+			47
+		],
+		[
+			8,
+			0,
+			16
+		],
+		[
+			8,
+			0,
+			47
+		],
+		[
+			8,
+			1,
+			13
+		],
+		[
+			8,
+			1,
+			16
+		],
+		[
+			8,
+			1,
+			47
+		],
+		[
+			8,
+			1,
+			49
+		],
+		[
+			8,
+			2,
+			13
+		],
+		[
+			8,
+			2,
+			15
+		],
+		[
+			8,
+			2,
+			16
+		],
+		[
+			8,
+			2,
+			37
+		],
+		[
+			8,
+			2,
+			47
+		],
+		[
+			8,
+			2,
+			49
+		],
+		[
+			8,
+			3,
+			10
+		],
+		[
+			8,
+			3,
+			11
+		],
+		[
+			8,
+			3,
+			12
+		],
+		[
+			8,
+			3,
+			13
+		],
+		[
+			8,
+			3,
+			14
+		],
+		[
+			8,
+			3,
+			15
+		],
+		[
+			8,
+			3,
+			16
+		],
+		[
+			8,
+			3,
+			47
+		],
+		[
+			8,
+			3,
+			48
+		],
+		[
+			8,
+			3,
+			49
+		],
+		[
+			8,
+			3,
+			9
+		],
+		[
+			8,
+			4,
+			16
+		],
+		[
+			8,
+			4,
+			47
+		],
+		[
+			9,
+			1,
+			48
+		],
+		[
+			9,
+			1,
+			49
+		],
+		[
+			9,
+			2,
+			15
+		],
+		[
+			9,
+			2,
+			37
+		],
+		[
+			9,
+			3,
+			10
+		],
+		[
+			9,
+			3,
+			48
+		],
+		[
+			9,
+			3,
+			49
+		]
+	],
+	"coolant": [
+		[
+			0,
+			2,
+			14
+		],
+		[
+			0,
+			2,
+			15
+		],
+		[
+			0,
+			2,
+			16
+		],
+		[
+			1,
+			1,
+			40
+		],
+		[
+			1,
+			1,
+			45
+		],
+		[
+			1,
+			2,
+			14
+		],
+		[
+			1,
+			2,
+			15
+		],
+		[
+			1,
+			2,
+			16
+		],
+		[
+			1,
+			2,
+			17
+		],
+		[
+			1,
+			2,
+			18
+		],
+		[
+			1,
+			2,
+			19
+		],
+		[
+			1,
+			2,
+			20
+		],
+		[
+			1,
+			2,
+			21
+		],
+		[
+			1,
+			2,
+			22
+		],
+		[
+			1,
+			2,
+			23
+		],
+		[
+			1,
+			2,
+			24
+		],
+		[
+			1,
+			2,
+			25
+		],
+		[
+			1,
+			2,
+			26
+		],
+		[
+			1,
+			2,
+			27
+		],
+		[
+			1,
+			2,
+			28
+		],
+		[
+			1,
+			2,
+			29
+		],
+		[
+			1,
+			2,
+			30
+		],
+		[
+			1,
+			2,
+			31
+		],
+		[
+			1,
+			2,
+			32
+		],
+		[
+			1,
+			2,
+			33
+		],
+		[
+			1,
+			2,
+			34
+		],
+		[
+			1,
+			2,
+			35
+		],
+		[
+			1,
+			2,
+			36
+		],
+		[
+			1,
+			2,
+			37
+		],
+		[
+			1,
+			2,
+			38
+		],
+		[
+			1,
+			2,
+			39
+		],
+		[
+			1,
+			2,
+			40
+		],
+		[
+			1,
+			2,
+			45
+		],
+		[
+			1,
+			3,
+			40
+		],
+		[
+			1,
+			3,
+			41
+		],
+		[
+			1,
+			3,
+			42
+		],
+		[
+			1,
+			3,
+			43
+		],
+		[
+			1,
+			3,
+			44
+		],
+		[
+			1,
+			3,
+			45
+		],
+		[
+			10,
+			1,
+			40
+		],
+		[
+			10,
+			1,
+			45
+		],
+		[
+			10,
+			2,
+			14
+		],
+		[
+			10,
+			2,
+			15
+		],
+		[
+			10,
+			2,
+			40
+		],
+		[
+			10,
+			2,
+			45
+		],
+		[
+			10,
+			3,
+			40
+		],
+		[
+			10,
+			3,
+			41
+		],
+		[
+			10,
+			3,
+			42
+		],
+		[
+			10,
+			3,
+			43
+		],
+		[
+			10,
+			3,
+			44
+		],
+		[
+			10,
+			3,
+			45
+		],
+		[
+			11,
+			2,
+			14
+		],
+		[
+			11,
+			2,
+			15
+		],
+		[
+			2,
+			2,
+			14
+		],
+		[
+			2,
+			2,
+			15
+		],
+		[
+			2,
+			3,
+			40
+		],
+		[
+			3,
+			2,
+			14
+		],
+		[
+			3,
+			2,
+			15
+		],
+		[
+			3,
+			3,
+			40
+		],
+		[
+			4,
+			3,
+			40
+		],
+		[
+			5,
+			3,
+			40
+		],
+		[
+			6,
+			3,
+			40
+		],
+		[
+			7,
+			3,
+			40
+		],
+		[
+			8,
+			2,
+			14
+		],
+		[
+			8,
+			2,
+			15
+		],
+		[
+			8,
+			2,
+			16
+		],
+		[
+			8,
+			3,
+			40
+		],
+		[
+			9,
+			2,
+			14
+		],
+		[
+			9,
+			2,
+			15
+		],
+		[
+			9,
+			3,
+			40
+		]
+	]
+}

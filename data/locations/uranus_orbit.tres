@@ -22,6 +22,6 @@ broker_pitch = "Charts for Uranus and Herschel Station. Nineteen times as far fr
 vendor_stock_size = 6
 vendor_max_rarity = 4
 price_factor = 2.2
-enemy_templates = PackedStringArray("cruiser_mk1.json", "anvil_heavy_cruiser.json", "wyvern_battlecruiser.json")
+enemy_templates = PackedStringArray("cruiser_mk1.json", "battleship_mk1.json", "destroyer_mk1.json")
 enemy_weights = PackedFloat32Array(2, 1, 1)
 threat_bonus = 6

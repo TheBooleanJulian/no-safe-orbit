@@ -10,7 +10,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _systems(workshop: bool) -> ShipSystems:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	if workshop:
 		(bp.find("r9") as ShipBlueprint.PlacedRoom).def_id = &"workshop"
 	var grid := ShipGrid.build(bp, _catalog())

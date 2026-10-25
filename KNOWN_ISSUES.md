@@ -5,6 +5,29 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 
 ## Open
 
+- **The prebuilt roster is new** (2026-10-26): masses, prices, crews and
+  the bulk-freight rate are provisional, covered by tests and a rendered
+  review, not yet by play. What it can't show, because the game has no
+  mechanic for it yet:
+  - **Cargo has no mass.** A loaded freighter flies and jumps like an empty
+    one; bulk freight is offered by hold size and pays by the cubic metre.
+  - **No signature or stealth model.** Sensors see out to the best mast's
+    range whatever the target; only missile seekers weigh a ship's size
+    and burn (`WorldSimulation.signature_of`). The scout's lopsided sensor
+    boom, ventral radiators and light hull are placed for when radiator
+    area and heat feed detection; today it scouts with three masts (two
+    hardened), a jammer, EW and recon drones and the Δv for deep surveys.
+  - **Missiles have no magazine feed**: each launcher holds its own load,
+    so the missile corvette's "magazine" is its launchers.
+  - **Big hulls turn at the assist floor** (0.05 rad/s about pitch and yaw
+    for the cruiser, battleship, carrier and freighter): their RCS can't
+    swing their length faster; they differ in roll and acceleration.
+  - **Cargo runs are fight-free**, as before: the freighter's risk is the
+    freight lost with the ship, not ambushes en route.
+  - **Players' own designs and vessels are untouched**; a hull bought from
+    the old dealer keeps its old design. Derelicts of the six retired hulls
+    come back as their replacements.
+
 - **Balance is still in development.** The play-test feedback pass retuned
   guns (equal damage rates, penetration tiers), magazines, engines, loot
   odds, the medic and crew sizes; hiring fees, quartermaster prices and
@@ -29,9 +52,9 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   before mission 11 — `test_enemy_kit`). Covered by tests, not yet by play.
 - **Repair and salvage drones, scaled crews are new** (Milestone 15):
   rates, loads and complements are first guesses, covered by tests, not
-  yet by play. No template has a workshop (an uncommon room blueprint found
-  in salvage), so the crew's field repairs — and the damage-control teams —
-  need one fitted first. Capital-ship enemies now carry far more security
+  yet by play. The destroyer, heavy cruiser, battleship and carrier come
+  with a workshop (its blueprint unlocked with the hull); the smaller hulls
+  need one found and fitted before the crew can make field repairs. Capital-ship enemies now carry far more security
   crew, so boarding one is much harder.
 - **Very large fights are still heavy**: four carriers with 46 craft out run
   at ~20 fps (slightly slower than real time), down from 7; the simulation

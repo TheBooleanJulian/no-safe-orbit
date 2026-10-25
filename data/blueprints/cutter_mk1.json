@@ -1,31 +1,31 @@
 {
 	"schema_version": 2,
-	"name": "Cutter Mk I",
+	"name": "Halley-class interceptor",
 	"designer": "Earth Shipyard",
 	"modules": [
 		{
-			"id": "m1",
+			"id": "m38",
 			"def": "hull_block",
 			"pos": [
-				0,
+				2,
 				0,
 				0
 			],
 			"rot": 0
 		},
 		{
-			"id": "m2",
+			"id": "m39",
 			"def": "hull_block",
 			"pos": [
-				0,
+				2,
 				0,
 				2
 			],
 			"rot": 0
 		},
 		{
-			"id": "m3",
-			"def": "hull_block",
+			"id": "m40",
+			"def": "truss_block",
 			"pos": [
 				0,
 				0,
@@ -34,8 +34,28 @@
 			"rot": 0
 		},
 		{
-			"id": "m4",
+			"id": "m41",
 			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m42",
+			"def": "truss_block",
+			"pos": [
+				5,
+				0,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m43",
+			"def": "truss_block",
 			"pos": [
 				0,
 				0,
@@ -44,8 +64,28 @@
 			"rot": 0
 		},
 		{
-			"id": "m5",
+			"id": "m44",
 			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m45",
+			"def": "truss_block",
+			"pos": [
+				5,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m46",
+			"def": "truss_block",
 			"pos": [
 				0,
 				0,
@@ -54,20 +94,130 @@
 			"rot": 0
 		},
 		{
-			"id": "m6",
-			"def": "wedge_long",
+			"id": "m47",
+			"def": "truss_block",
+			"pos": [
+				1,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m48",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m49",
+			"def": "truss_block",
+			"pos": [
+				4,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m50",
+			"def": "truss_block",
+			"pos": [
+				5,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m51",
+			"def": "truss_block",
 			"pos": [
 				0,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m52",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m53",
+			"def": "truss_block",
+			"pos": [
+				5,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m54",
+			"def": "truss_1x1",
+			"pos": [
+				0,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m55",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m56",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m57",
+			"def": "truss_1x1",
+			"pos": [
+				5,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m58",
+			"def": "wedge_long",
+			"pos": [
+				2,
 				0,
 				-2
 			],
 			"rot": 0
 		},
 		{
-			"id": "m7",
+			"id": "m59",
 			"def": "wedge_long",
 			"pos": [
-				1,
+				3,
 				0,
 				-2
 			],
@@ -76,182 +226,158 @@
 	],
 	"rooms": [
 		{
-			"id": "r8",
+			"id": "r1",
 			"def": "bridge",
 			"deck": 0,
 			"rect": [
-				0,
+				2,
 				0,
 				2,
 				2
 			]
 		},
 		{
-			"id": "r9",
+			"id": "r2",
 			"def": "corridor",
 			"deck": 0,
 			"rect": [
-				0,
+				3,
 				2,
-				2,
-				1
+				1,
+				4
 			]
 		},
 		{
-			"id": "r10",
+			"id": "r3",
 			"def": "crew_quarters",
 			"deck": 0,
 			"rect": [
-				0,
-				3,
+				2,
+				2,
 				1,
 				2
 			]
 		},
 		{
-			"id": "r11",
+			"id": "r4",
 			"def": "life_support",
 			"deck": 0,
 			"rect": [
+				2,
+				4,
 				1,
-				3,
-				1,
-				2
+				1
 			]
 		},
 		{
-			"id": "r12",
+			"id": "r5",
 			"def": "magazine",
 			"deck": 0,
 			"rect": [
-				0,
+				2,
 				5,
 				1,
 				1
 			]
 		},
 		{
-			"id": "r13",
-			"def": "corridor",
-			"deck": 0,
-			"rect": [
-				1,
-				5,
-				1,
-				1
-			]
-		},
-		{
-			"id": "r14",
+			"id": "r6",
 			"def": "reactor_room",
 			"deck": 0,
 			"rect": [
-				0,
+				2,
 				6,
 				2,
 				2
 			]
 		},
 		{
-			"id": "r15",
+			"id": "r7",
 			"def": "engine_room",
 			"deck": 0,
 			"rect": [
-				0,
+				2,
 				8,
 				2,
-				2
+				5
 			]
 		}
 	],
 	"hatches": [
 		{
-			"id": "h16",
+			"id": "h8",
 			"a": [
-				0,
+				3,
 				0,
 				1
 			],
 			"b": [
-				0,
+				3,
 				0,
 				2
 			]
 		},
 		{
-			"id": "h17",
+			"id": "h9",
 			"a": [
-				0,
-				0,
-				2
-			],
-			"b": [
-				0,
-				0,
-				3
-			]
-		},
-		{
-			"id": "h18",
-			"a": [
-				1,
+				3,
 				0,
 				2
 			],
 			"b": [
-				1,
+				2,
 				0,
-				3
+				2
 			]
 		},
 		{
-			"id": "h19",
+			"id": "h10",
 			"a": [
-				1,
+				3,
 				0,
 				4
 			],
 			"b": [
-				1,
+				2,
+				0,
+				4
+			]
+		},
+		{
+			"id": "h11",
+			"a": [
+				3,
+				0,
+				5
+			],
+			"b": [
+				2,
 				0,
 				5
 			]
 		},
 		{
-			"id": "h20",
+			"id": "h12",
 			"a": [
-				1,
+				3,
 				0,
 				5
 			],
 			"b": [
-				0,
-				0,
-				5
-			]
-		},
-		{
-			"id": "h21",
-			"a": [
-				1,
-				0,
-				5
-			],
-			"b": [
-				1,
+				3,
 				0,
 				6
 			]
 		},
 		{
-			"id": "h22",
+			"id": "h13",
 			"a": [
-				1,
+				3,
 				0,
 				7
 			],
 			"b": [
-				1,
+				3,
 				0,
 				8
 			]
@@ -259,71 +385,160 @@
 	],
 	"equipment": [
 		{
-			"id": "e23",
-			"def": "power_distribution_unit",
+			"id": "e14",
+			"def": "compact_reactor",
 			"cell": [
-				0,
-				0,
-				0
-			]
-		},
-		{
-			"id": "e24",
-			"def": "fusion_reactor",
-			"cell": [
-				0,
+				2,
 				0,
 				6
 			]
 		},
 		{
-			"id": "e25",
-			"def": "propellant_tank",
+			"id": "e15",
+			"def": "power_distribution_unit",
 			"cell": [
+				2,
 				0,
-				0,
-				8
+				7
 			]
 		},
 		{
-			"id": "e26",
-			"def": "main_engine",
+			"id": "e16",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				0,
+				9
+			]
+		},
+		{
+			"id": "e17",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				0,
+				11
+			]
+		},
+		{
+			"id": "e18",
+			"def": "main_engine_high_thrust",
 			"cell": [
 				0,
 				0,
-				9
+				12
 			],
 			"face": "aft"
 		},
 		{
-			"id": "e27",
-			"def": "main_engine",
+			"id": "e19",
+			"def": "main_engine_high_thrust",
 			"cell": [
-				1,
+				5,
 				0,
-				9
+				12
 			],
 			"face": "aft"
+		},
+		{
+			"id": "e20",
+			"def": "main_engine",
+			"cell": [
+				2,
+				0,
+				12
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e21",
+			"def": "main_engine",
+			"cell": [
+				3,
+				0,
+				12
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e22",
+			"def": "autocannon",
+			"cell": [
+				0,
+				0,
+				4
+			],
+			"face": "fore"
+		},
+		{
+			"id": "e23",
+			"def": "autocannon",
+			"cell": [
+				5,
+				0,
+				4
+			],
+			"face": "fore"
+		},
+		{
+			"id": "e24",
+			"def": "rcs_block",
+			"cell": [
+				2,
+				0,
+				0
+			],
+			"face": "port"
+		},
+		{
+			"id": "e25",
+			"def": "rcs_block",
+			"cell": [
+				3,
+				0,
+				0
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e26",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				11
+			],
+			"face": "port"
+		},
+		{
+			"id": "e27",
+			"def": "rcs_block",
+			"cell": [
+				5,
+				0,
+				11
+			],
+			"face": "starboard"
 		},
 		{
 			"id": "e28",
 			"def": "rcs_block",
 			"cell": [
+				3,
 				0,
-				0,
-				1
+				0
 			],
-			"face": "port"
+			"face": "dorsal"
 		},
 		{
 			"id": "e29",
 			"def": "rcs_block",
 			"cell": [
-				1,
+				2,
 				0,
-				1
+				0
 			],
-			"face": "starboard"
+			"face": "ventral"
 		},
 		{
 			"id": "e30",
@@ -331,131 +546,232 @@
 			"cell": [
 				0,
 				0,
-				8
+				12
 			],
-			"face": "port"
+			"face": "dorsal"
 		},
 		{
 			"id": "e31",
 			"def": "rcs_block",
 			"cell": [
-				1,
+				5,
 				0,
-				8
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e32",
-			"def": "rcs_block",
-			"cell": [
-				0,
-				0,
-				0
+				12
 			],
 			"face": "ventral"
 		},
 		{
-			"id": "e33",
-			"def": "rcs_block",
+			"id": "e32",
+			"def": "radiator_long",
 			"cell": [
-				1,
+				0,
+				0,
+				7
+			],
+			"face": "dorsal",
+			"rot": 4
+		},
+		{
+			"id": "e33",
+			"def": "radiator_long",
+			"cell": [
+				5,
+				0,
+				7
+			],
+			"face": "dorsal",
+			"rot": 4
+		},
+		{
+			"id": "e34",
+			"def": "sensor_mast",
+			"cell": [
+				2,
+				0,
+				1
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e35",
+			"def": "point_defence",
+			"cell": [
+				3,
+				0,
+				6
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e36",
+			"def": "point_defence",
+			"cell": [
+				2,
 				0,
 				9
 			],
 			"face": "dorsal"
 		},
 		{
-			"id": "e34",
-			"def": "autocannon",
-			"cell": [
-				0,
-				0,
-				2
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e35",
-			"def": "autocannon",
-			"cell": [
-				1,
-				0,
-				2
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e36",
-			"def": "radiator_long",
-			"cell": [
-				0,
-				0,
-				5
-			],
-			"face": "port"
-		},
-		{
 			"id": "e37",
-			"def": "radiator_long",
+			"def": "flare_launcher",
 			"cell": [
-				1,
+				3,
 				0,
-				5
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e38",
-			"def": "docking_collar",
-			"cell": [
-				1,
-				0,
-				4
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e39",
-			"def": "grapple_arm",
-			"cell": [
-				1,
-				0,
-				3
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e40",
-			"def": "sensor_mast",
-			"cell": [
-				1,
-				0,
-				0
+				11
 			],
 			"face": "dorsal"
 		}
+	],
+	"armor": [
+		[
+			2,
+			0,
+			-1,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			0,
+			-1,
+			"port",
+			40
+		],
+		[
+			2,
+			0,
+			-2,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			0,
+			-2,
+			"port",
+			40
+		],
+		[
+			2,
+			0,
+			0,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			0,
+			0,
+			"port",
+			40
+		],
+		[
+			2,
+			0,
+			1,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			0,
+			1,
+			"port",
+			40
+		],
+		[
+			3,
+			0,
+			-1,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			0,
+			-1,
+			"starboard",
+			40
+		],
+		[
+			3,
+			0,
+			-2,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			0,
+			-2,
+			"starboard",
+			40
+		],
+		[
+			3,
+			0,
+			0,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			0,
+			0,
+			"starboard",
+			40
+		],
+		[
+			3,
+			0,
+			1,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			0,
+			1,
+			"starboard",
+			40
+		]
 	],
 	"bus": [
 		[
 			0,
 			0,
-			0
+			10
 		],
 		[
 			0,
 			0,
-			1
+			11
 		],
 		[
 			0,
 			0,
-			2
+			12
 		],
 		[
 			0,
 			0,
-			3
+			4
+		],
+		[
+			0,
+			0,
+			5
+		],
+		[
+			0,
+			0,
+			6
+		],
+		[
+			0,
+			0,
+			7
 		],
 		[
 			0,
@@ -470,50 +786,145 @@
 		[
 			1,
 			0,
+			9
+		],
+		[
+			2,
+			0,
 			0
 		],
 		[
-			1,
+			2,
 			0,
 			1
 		],
 		[
-			1,
+			2,
+			0,
+			10
+		],
+		[
+			2,
+			0,
+			11
+		],
+		[
+			2,
+			0,
+			12
+		],
+		[
+			2,
 			0,
 			2
 		],
 		[
-			1,
+			2,
 			0,
 			3
 		],
 		[
-			1,
+			2,
 			0,
 			4
 		],
 		[
-			1,
+			2,
 			0,
 			5
 		],
 		[
-			1,
+			2,
 			0,
 			6
 		],
 		[
-			1,
+			2,
 			0,
 			7
 		],
 		[
-			1,
+			2,
 			0,
 			8
 		],
 		[
-			1,
+			2,
+			0,
+			9
+		],
+		[
+			3,
+			0,
+			0
+		],
+		[
+			3,
+			0,
+			11
+		],
+		[
+			3,
+			0,
+			12
+		],
+		[
+			3,
+			0,
+			6
+		],
+		[
+			3,
+			0,
+			9
+		],
+		[
+			4,
+			0,
+			9
+		],
+		[
+			5,
+			0,
+			10
+		],
+		[
+			5,
+			0,
+			11
+		],
+		[
+			5,
+			0,
+			12
+		],
+		[
+			5,
+			0,
+			4
+		],
+		[
+			5,
+			0,
+			5
+		],
+		[
+			5,
+			0,
+			6
+		],
+		[
+			5,
+			0,
+			7
+		],
+		[
+			5,
+			0,
+			8
+		],
+		[
+			5,
 			0,
 			9
 		]
@@ -522,52 +933,52 @@
 		[
 			0,
 			0,
-			0
-		],
-		[
-			0,
-			0,
-			1
-		],
-		[
-			0,
-			0,
-			2
-		],
-		[
-			0,
-			0,
-			3
-		],
-		[
-			0,
-			0,
-			4
-		],
-		[
-			0,
-			0,
-			5
-		],
-		[
-			0,
-			0,
-			6
-		],
-		[
-			0,
-			0,
 			7
+		],
+		[
+			0,
+			0,
+			8
 		],
 		[
 			1,
 			0,
+			8
+		],
+		[
+			2,
+			0,
 			6
 		],
 		[
-			1,
+			2,
 			0,
 			7
+		],
+		[
+			2,
+			0,
+			8
+		],
+		[
+			3,
+			0,
+			8
+		],
+		[
+			4,
+			0,
+			8
+		],
+		[
+			5,
+			0,
+			7
+		],
+		[
+			5,
+			0,
+			8
 		]
 	]
 }

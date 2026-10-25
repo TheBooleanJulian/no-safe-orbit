@@ -15,7 +15,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _fitted(parts: Array) -> ShipBlueprint:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var rng := RandomNumberGenerator.new()
 	for id: StringName in parts:
 		EnemyFactory._fit_launcher(bp, _catalog(), id, rng)
@@ -171,7 +171,7 @@ func test_jamming_degrades_tracks_beyond_burn_through() -> void:
 	close.update(observer, far, 0.0, DT, jam)
 	assert_true(close.locked and close.jammed == 0.0, "inside 3 km the radar burns through")
 	far.position = Vector3(0, 0, -8000)
-	var hardened := _ship(&"h", BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()), Vector3.ZERO, &"hostile")
+	var hardened := _ship(&"h", BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()), Vector3.ZERO, &"hostile")
 	for e in hardened.systems.equipment:
 		if e.def.kind == EquipmentDefinition.Kind.SENSOR:
 			e.def = _catalog().equipment[&"sensor_mast_hardened"]
@@ -252,7 +252,7 @@ func test_policy_auto_countermeasures() -> void:
 	old["preset_name"] = "Defensive"
 	assert_true(ShipPolicy.from_dict(old).cm_auto, "a vessel saved before Milestone 11 takes its preset's (additive, no migration)")
 	assert_true(EnemyFactory.policy(4, 0).cm_auto, "enemies fire flares")
-	var d4 := EnemyFactory.design(4, BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()), _catalog())
+	var d4 := EnemyFactory.design(4, BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()), _catalog())
 	assert_true(d4.equipment.any(func(e: ShipBlueprint.PlacedEquipment) -> bool: return e.def_id == &"flare_launcher"), "from mission 3 enemies carry flares")
 
 

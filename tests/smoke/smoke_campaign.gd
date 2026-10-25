@@ -99,7 +99,8 @@ func _run() -> void:
 		"the target hits us and leaves damage (%d hits)" % player.hits_taken)
 
 	# 2. Mission kill, then come alongside.
-	target.systems.damage_equipment(target.systems.equipment_by_id("e41"), 1000.0)
+	for id in _ids_of(target.systems, EquipmentDefinition.Kind.CANNON):
+		target.systems.damage_equipment(target.systems.equipment_by_id(id), 1000.0)
 	target.position = player.position + Vector3(0, 0, -300)
 	target.velocity = player.velocity
 	await _frames(2)
@@ -189,7 +190,7 @@ func _run() -> void:
 	_check(spent > 0 and not vessel.is_damaged() and profile.spare_parts == before_repair - spent,
 		"full repair: %d spare parts, vessel like new" % spent)
 	var radiators := yard.editor.blueprint.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool: return e.def_id == &"radiator").size()
-	yard.editor.place_equipment(&"radiator", Vector3i(3, 2, 6), &"dorsal")
+	yard.editor.place_equipment(&"radiator", Vector3i(1, 1, 3), &"dorsal")
 	var parts_before_launch := profile.spare_parts
 	_check(not yard.editor.report.has_errors(), "refitted design (extra radiator) validates")
 
@@ -353,3 +354,13 @@ func _finish() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + PlayerProfile.BACKUP_SUFFIX))
 	print("smoke_campaign: %d failure(s)" % _failures.size())
 	quit(1 if not _failures.is_empty() else 0)
+
+
+## The ids of a ship's systems of one kind (the prebuilt designs change;
+## the smoke test shouldn't depend on their part ids).
+func _ids_of(sys: ShipSystems, kind: EquipmentDefinition.Kind) -> Array[String]:
+	var out: Array[String] = []
+	for e in sys.equipment:
+		if e.def.kind == kind:
+			out.append(e.id)
+	return out

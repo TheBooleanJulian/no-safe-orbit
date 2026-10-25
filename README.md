@@ -230,8 +230,8 @@ licences) and **Dev support** — a form for feedback and bug reports
 closing the window: a sortie in progress docks as it is. Settings are saved
 per user in `settings.cfg`, not in the profile.
 
-**Propellant:** the Frigate Mk I carries 80 t — about 1.6 km/s of main-engine
-Δv; the RCS shares the main engines' propellant feed and exhaust velocity
+**Propellant:** the Kepler-class escort frigate (the starting ship) carries
+120 t — about 1.6 km/s of main-engine Δv; the RCS shares the main engines' propellant feed and exhaust velocity
 (Isp 900 s), so manoeuvring costs no more per m/s than the mains. Flight assist's target-matching and
 every manoeuvre spend it. Empty tanks mean no thrust and no RCS.
 
@@ -419,9 +419,9 @@ the bounty on it, ±15 %.
 Ramming is a real weapon and hurts both ships: the blow is shared by
 toughness (mass × local armour, to the power 1.5), so the lighter, thinner
 side takes far more, and it spreads into the modules within three cells and
-the external systems near the impact. An 8 m/s Cutter-into-Destroyer ram
-costs the Cutter about a third of its structure and the Destroyer under
-1 %. Ships joined by a gangway, and craft near their own carrier, don't
+the external systems near the impact. An 8 m/s ram of a 150 t cutter into a
+3,000 t destroyer costs the cutter about a third of its structure and the
+destroyer under 1 %. Ships joined by a gangway, and craft near their own carrier, don't
 collide.
 
 **Rounds never expire.** Misses coast on their own orbits — around the planet
@@ -762,15 +762,16 @@ date (sources and uncertainty in `data/ATTRIBUTION.md`):
   the right direction, its disc shrinking to a point at 172 AU. The jump
   out and back is paid at launch and must fit in the Δv your full tanks and
   jump reserve give: the Roadster needs Δv 1,741 m/s round trip, Voyager 1
-  2,512 m/s. The Frigate Mk I carries 1,557 m/s; the Corvette, Destroyer and
-  Cruiser can reach every object — or design a long-range ship.
+  2,512 m/s. The starting frigate carries 1,962 m/s with its reserve, enough
+  for the near ones; the scout (4,172 m/s), the heavy cruiser, the missile
+  corvette and the freighter reach every object — or design a long-range ship.
 - **Look, don't touch:** real objects can't be damaged, grappled or
   salvaged. JWST is left out: it sits at the Sun–Earth L2 point, which
   needs a rotating frame the game doesn't have.
 
 ## Air wing: fighters and drones
 
-The Frigate Mk I carries a **Wasp fighter** in an internal **fighter bay**
+The escort frigate carries a **Wasp fighter** in an internal **fighter bay**
 (its hangar door is on the underside) and a **recon drone** on an external
 rack. They fly with the same physics as every ship and can be shot down.
 
@@ -948,8 +949,8 @@ Beside the builder the directory narrows to the names.
 | Place (section) | What's there |
 |---|---|
 | **Berth** (STATION, opens here) | Your ship in its docking bay (deck plate, gantries, clamp arms, work lights) inside the station's docking hall — ribbed walls, catwalks with amber lamps, a gridded deck, light strips overhead — turning slowly — drag to look around. Its name plate, the service tags (repair crews, armoury, crew quarters, next sortie — each a button to its place) and the **dockmaster's log**: what the dockmaster, repair crews, quartermaster, brokers and crew quarters have to say this visit |
-| **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage, **retrieve** (a pod lost at a charted station, guarded by a ship or two: G alongside it — within the beacon's reach, 8 km with a salvage drone, and 5 m/s — stows it in the hold; paid once you dock at the station that offered the work) — and **cargo** (about one offer in three once a second station is charted): no fight, 20–90 m³ of freight to another station, loaded into your hold on accepting (refused if it won't fit), paid on arriving there with it aboard (120 cr + 4 cr a m³, more the further the jump). Banking leaves the freight aboard; jettisoning it, abandoning the contract or losing the ship fails it. Accepting a combat contract sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
-| **DEALER** | Every template for credits, with its standard crew hired — twelve hulls, cheapest first: Cutter, Corvette, Frigate, and capital ships (Halberd Frigate, Destroyer, Carrier, Cruiser, Wyvern Battlecruiser, Anvil Heavy Cruiser) up to the super-heavies (Sovereign Supercarrier, Colossus Battleship, Leviathan Dreadnought). Three cards across, filling in as the dealer opens. Each card shows a catalogue picture of the hull; the first time a template is seen its 3D view is drawn as it scrolls into sight and kept as that picture (in `user://dealer_shots`, redrawn when the template changes), so the dealer opens quickly from then on. The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee |
+| **MISSIONS** | People at the yard with work. A navy liaison, a merchant guild factor, a bounty broker, a salvage boss and station security offer contracts: bounty, capture, escort, defend, salvage, **retrieve** (a pod lost at a charted station, guarded by a ship or two: G alongside it — within the beacon's reach, 8 km with a salvage drone, and 5 m/s — stows it in the hold; paid once you dock at the station that offered the work) — and **cargo** (about one offer in three once a second station is charted): no fight, 20–90 m³ of freight to another station, loaded into your hold on accepting (refused if it won't fit), paid on arriving there with it aboard (120 cr + 4 cr a m³, more the further the jump). Flying a hold of 1,000 m³ or more, every other cargo offer is **bulk freight**: 300–3,000 m³ (never more than 90 % of the hold) at 0.25 cr a m³ — the freighter's 1,663 m³ to Mars pays 1,310 cr, against a parcel's 460 cr. Banking leaves the freight aboard; jettisoning it, abandoning the contract or losing the ship fails it. Accepting a combat contract sets where your next sortie flies, how many ships it meets and how dangerous they are, and it pays when its goal is met. One at a time; new offers after every sortie |
+| **DEALER** | Every template for credits, with its standard crew hired — the nine hulls of the prebuilt roster (below), cheapest first. Three cards across, filling in as the dealer opens. Each card shows a catalogue picture of the hull; the first time a template is seen its 3D view is drawn as it scrolls into sight and kept as that picture (in `user://dealer_shots`, redrawn when the template changes), so the dealer opens quickly from then on. The price is the parts at station rates plus the hull fee, with a 25 % margin, the rarer parts it carries at the quartermaster's prices (with the margin; they are yours with it), plus the crew at the hiring fee. The blueprints of any rarer rooms it has (a workshop, a dense magazine) come with it, so it can launch |
 | **HANGAR** (Hangar & bank) | A card per vessel (fly another), new hulls, scrap (half its parts back, never your last ship), the service record — and the **station bank**: a deposit (1 % a sortie, compounding) and three loans, one of each at a time — Dockyard credit 1,000 cr at 5 % over 5 sorties, Guild loan 5,000 cr at 4 % over 10, Shipbuilder's mortgage 25,000 cr at 3 % over 20 — paid off in instalments on docking (a shortfall adds 10 % of it) or repaid early |
 | **REFIT** | The builder below |
 | **CREW** (Crew manifest) | All eight departments (pilots too), each against the standard complement (amber when short), its crew as badges with a placeholder portrait, level, previous occupation and sorties (wage on hover) — **drag a badge onto another department** to post them there, ▲ to train, ✕ to dismiss. Top right, the **hiring hall** (never empty: each hire is replaced; **Fill berths** brings resting crew aboard, then hires general hands). Below it, **resting crew**: ashore and unpaid — drag a badge there to rest them, back onto a department (or ▲) to bring them aboard. Berths follow the design on the slip live (2 a quarters cell); anyone over goes ashore |
@@ -959,29 +960,34 @@ Beside the builder the directory narrows to the names.
 | **MAP** | Where you launch from, how many you meet |
 | **LOOT** | Every crate drop and its odds |
 
-**Capital ships** (at the dealer) are built like battleships: a long
-armoured hull (80 mm down the flanks, 40 mm on top and the bow) that
-narrows to a stepped prow, a two-deck superstructure amidships with the
-bridge on top, a main battery on the centreline — heavy kinetic cannons
-ahead of the superstructure and superfiring on its roof (the Cruiser adds
-railguns) — autocannon secondaries down the flanks, point defence, missile
-racks. Destroyer 3,002 t (3 heavy guns), Cruiser 4,987 t (4 heavy guns, 2
-railguns), Carrier 6,512 t (16 craft). The camera sits back further the
-bigger the ship.
+**The prebuilt roster** (2026-10-26) is one family of nine hulls from the
+same yards and the same parts, each shaped by what it is for. Built by
+`tools/make_roster.gd`; every one validates clean, with power and heat in
+budget, the point defence its hull wants (the freighter excepted), weapons,
+launchers and engine plumes clear of their own hull, and no hatch blocked.
 
-Play-test batch 10 added six more, with science-fiction lines:
+| Hull | Built for | What it looks like, and why | Dry mass · g · Δv | Armament and kit | Crew · hold | Price |
+|---|---|---|---|---|---|---|
+| Halley-class interceptor | pursuit, interception | a two-cell dart between open outrigger booms: a gun on the nose of each boom, a high-thrust engine at its tail, a radiator fin over it — lose a pylon, lose that side | 191 t · 2.72 g · 1,269 m/s | 2 autocannons, 2 PD, flares | 4 · — | 2,711 cr |
+| Goddard-class missile corvette | stand-off missile attack | crew capsule, an open launcher cage round a pressurised keel (corridor over a tank deck), drive block — three sections you can tell apart | 515 t · 0.78 g · 2,121 m/s | 8 missile racks (96 missiles), 1 autocannon, 3 PD, two masts | 12 · 324 m³ | 7,365 cr |
+| Kepler-class escort frigate | the generalist; every captain's first ship | sloped bow, a raised gun spine (magazine inside), cargo sponsons, a hangar underneath, twin radiator fins over the drive; a second way aft on the lower deck | 602 t · 0.98 g · 1,603 m/s | 3 autocannons, a missile rack, 4 PD, a Wasp and a recon drone, collar and grappling arm | 16 · 864 m³ | 3,172 cr |
+| Gauss-class gun destroyer | concentrated kinetic fire | a railgun on the tip of a 30 m armoured boom on the centreline (the boom is its magazine); two reactors at the breech; heavy RCS at both ends to point the ship — the gun traverses 12°/s | 1,125 t · 0.45 g · 1,836 m/s | 1 railgun, 2 autocannons, 5 PD, a workshop | 24 · 216 m³ | 13,242 cr |
+| Laplace-class heavy cruiser | fighting alone, far from a yard | three armoured blocks on two narrow waists lined with radiators; keel corridors on two decks bow to stern; bridge and auxiliary bridge; three reactor rooms; high-Isp engines | 3,453 t · 0.27 g · 3,368 m/s | 6 heavy guns, 6 missile racks, 4 autocannons, 14 PD, repair, salvage and recon drones, a workshop | 108 · 702 m³ | 38,783 cr |
+| Newton-class battleship | capital firepower and protection | twin gun booms ahead of a stepped bow; a broad, deep hull plated 80 mm on every face but the stern; turret decks over magazines; keel corridors on three decks, two bridges, four Mk II reactors | 8,943 t · 0.18 g · 1,301 m/s | 4 railguns (2 spinal), 6 heavy guns, 8 autocannons, 22 PD | 264 · 324 m³ | 92,073 cr |
+| Galileo-class fleet carrier | craft and reach | two hulls with the hangar deck slung low between them (its flanks covered, its roof armoured, doors underneath); three hangars bulkheaded by magazines; servicing deck over them | 4,930 t · 0.25 g · 1,389 m/s | 8 Wasp and 2 Mantis bays, 5 drones, 6 autocannons, 20 PD, 2 jammers | 168 · 648 m³ | 34,246 cr |
+| Herschel-class scout | reconnaissance, surveys | low, single-decked and lopsided on purpose: masts and jammer out on a starboard boom, radiators flat underneath | 211 t · 1.05 g · 3,433 m/s | 3 masts (2 hardened), jammer, EW and recon drones, 1 autocannon, 2 PD | 8 · — | 6,980 cr |
+| Drayman-class heavy freighter | courier and bulk cargo | a semi-truck: a flat-fronted cab, ten containers clamped in pairs along a keel tunnel between truss frames, a drive unit; common, cheap kit | 1,330 t · 0.31 g · 3,008 m/s | 2 PD, 1 autocannon, flares, grappling arm, two collars | 10 · 4,671 m³ | 3,435 cr |
 
-| Hull | Shape | Mass · g | Armament | Price |
-|---|---|---|---|---|
-| Halberd Frigate | hammerhead prow on a narrow neck | 2,694 t · 0.34 g | 2 heavy guns, 8 PD | 18,153 cr |
-| Wyvern Battlecruiser | long tapered bow, swept wings aft with engines across them | 6,309 t · 0.32 g | 3 heavy guns, 2 railguns, 16 PD | 43,693 cr |
-| Anvil Heavy Cruiser | hammerhead prow, short wings | 6,656 t · 0.28 g | 4 heavy guns, 2 railguns, 18 PD | 45,067 cr |
-| Sovereign Supercarrier | forked prow, three-level bridge tower | 12,414 t · 0.23 g | 3 heavy guns, 26 PD, 30 craft | 70,836 cr |
-| Colossus Battleship | hammerhead prow, two-deck wings, three-level tower | 10,810 t · 0.28 g | 4 heavy guns, 4 railguns, 24 PD | 77,067 cr |
-| Leviathan Dreadnought | tapered bow, broad two-deck wings, three-level tower, RCS amidships | 12,460 t · 0.33 g | 2 heavy guns, 6 railguns, 28 PD | 92,859 cr |
+The heavy cruiser and the battleship are not one ship at two sizes: the
+battleship has three times the armour, railguns and more guns, but no craft
+and no missiles, accelerates two-thirds as fast, has less than half the
+range on standard engines and burns 3.6 times the propellant on a jump to
+Mars (1,034 t against 288 t), with 2.4 times the crew and price. The
+freighter's hold earns from **bulk freight** (see MISSIONS). The camera sits
+back further the bigger the ship.
 
-In REFIT you start from the ship you were flying (the Frigate Mk I template
-by default).
+In REFIT you start from the ship you were flying (the escort frigate by
+default).
 
 **Nav chart** (OPERATIONS › Nav chart, or the ◎ route button beside
 LAUNCH): click a body to **set the next sortie's course** — nothing moves
@@ -999,9 +1005,9 @@ each after the one before (6,000, 8,000, 10,000 cr).
   every tenfold of distance in 1,000 km — 70 m/s home within a location,
   487 m/s Earth ↔ Moon, 928 m/s Earth → Mars, 1132 m/s Earth → Neptune
   (the real distances on the scenario date). Each ship pays it in propellant by the rocket equation at
-  its own main-engine Isp: the Frigate Mk I burns 33 t for the Moon, the
-  Cutter 8.5 t. The chart, the artifacts list and the SERVICE BAY show the Δv
-  your tanks give (Frigate: 1,557 m/s with full tanks and the reserve).
+  its own main-engine Isp: the escort frigate burns 40 t for the Moon, the
+  scout 10 t. The chart, the artifacts list and the SERVICE BAY show the Δv
+  your tanks give (frigate: 1,962 m/s with full tanks and the reserve).
 - **Jump reserve**: a quarter of your tankage that only the jump drive can
   burn, used after the main tank. The SERVICE BAY shows and refills it.
 - **Not enough?** A course beyond what the ship can carry even full is
@@ -1020,8 +1026,9 @@ down to slope down. Trusses are an open lattice (no rooms). Any common face
 attaches two blocks. (The old large sections still load and fly but are no
 longer offered.)
 
-**Templates**: Cutter Mk I (light, ~150 t), Corvette Mk I (medium, ~365 t)
-and Frigate Mk I (heavy) — common parts only, so any profile can fly them.
+**Templates**: the nine hulls of the prebuilt roster (see DEALER). A new
+captain's frigate comes with its missile rack; a bought hull with its
+rarer parts and room blueprints, so any of them can launch.
 
 **The parts list** is grouped by category and section — Hull (blocks,
 slopes & noses, frames, armoured sections), Armour, Rooms (crew & command,
@@ -1085,7 +1092,7 @@ needed between them.
 | Remove anything | Right-click (a room takes its hatches with it) |
 | Hatches | Hatch tool (H): click near an edge for a door, a cell's centre for a ladder to the deck above (Shift: below) |
 | Change deck | ▲ / ▼ or PgUp / PgDn |
-| Save / load | Top bar (saved to `user://blueprints/`); "Load template" restores the Frigate Mk I |
+| Save / load | Top bar (saved to `user://blueprints/`); "Load template" restores the escort frigate |
 | Fly it | LAUNCH ▶ (disabled while the design has errors; warnings are allowed; new parts are paid for in spare parts) |
 | Bigger views | VIEWS bar: Side, Front or 3D fill the main area; Restore |
 | Repair the hangar vessel | HANGAR → SERVICE: pick a priority, then Repair |

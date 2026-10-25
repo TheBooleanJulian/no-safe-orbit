@@ -10,7 +10,7 @@ const CELL := ShipGrid.CELL_SIZE_M
 
 func _template_ship(id: StringName) -> ShipState:
 	var errors := PackedStringArray()
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, errors)
 	var catalog := ConstructionCatalog.default_catalog()
 	var grid := ShipGrid.build(bp, catalog)
 	var stats := ShipStats.compute(bp, grid)

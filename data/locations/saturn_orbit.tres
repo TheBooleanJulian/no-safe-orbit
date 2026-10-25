@@ -23,6 +23,6 @@ broker_pitch = "Charts for Saturn and the Cassini Ring Station, threaded between
 vendor_stock_size = 6
 vendor_max_rarity = 4
 price_factor = 2.0
-enemy_templates = PackedStringArray("destroyer_mk1.json", "cruiser_mk1.json", "wyvern_battlecruiser.json", "carrier_mk1.json")
+enemy_templates = PackedStringArray("destroyer_mk1.json", "cruiser_mk1.json", "battleship_mk1.json", "carrier_mk1.json")
 enemy_weights = PackedFloat32Array(2, 2, 1, 1)
 threat_bonus = 5

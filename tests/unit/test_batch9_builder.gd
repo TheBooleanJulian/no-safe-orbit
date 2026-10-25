@@ -15,7 +15,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _frigate() -> ShipBlueprint:
-	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	return BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 
 
 func test_a_radiator_turned_out_as_a_fin() -> void:
@@ -76,7 +76,7 @@ func test_a_radiator_turned_out_as_a_fin() -> void:
 func test_bigger_rooms_do_more() -> void:
 	var cat := _catalog()
 	for name in ["frigate_mk1", "destroyer_mk1", "carrier_mk1"]:
-		var bp := BlueprintIO.load_file("res://data/blueprints/%s.json" % name, PackedStringArray())
+		var bp := BlueprintIO.load_file("res://tests/fixtures/%s.json" % name, PackedStringArray())
 		var grid := ShipGrid.build(bp, cat)
 		var stats := ShipStats.compute(bp, grid)
 		var raw := 0.0

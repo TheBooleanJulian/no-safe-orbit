@@ -16,7 +16,7 @@ func _catalog() -> ConstructionCatalog:
 func _frigate_plan(pilots: bool) -> Array:
 	var v := ShipInstance.new()
 	v.name = "Test"
-	v.blueprint = BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	v.blueprint = BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	v.ensure_crew(_catalog())
 	if not pilots:
 		for c: Dictionary in v.crew:
@@ -26,7 +26,7 @@ func _frigate_plan(pilots: bool) -> Array:
 
 
 func _carrier(plan: Array) -> ShipState:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var cfg := stats.to_ship_config("c")
@@ -92,7 +92,7 @@ func test_a_v11_save_posts_pilots() -> void:
 	for s in ["", ".bak", ".tmp", ".v11"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + s))
 	var p := PlayerProfile.new(4)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	p.vessel.crew = _frigate_plan(false)
 	var d := p.to_dict()
 	d.schema_version = 11
@@ -113,7 +113,7 @@ func test_a_v11_save_posts_pilots() -> void:
 
 func test_crew_rise_with_sorties_and_training_and_are_paid() -> void:
 	var p := PlayerProfile.new(6)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	p.vessel.ensure_crew(_catalog())
 	p.credits = 1000
 	var wages := p.wages()

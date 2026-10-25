@@ -12,7 +12,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _template() -> ShipBlueprint:
 	var errors := PackedStringArray()
-	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	return BlueprintIO.load_file(TestCase.FRIGATE, errors)
 
 
 func _ship(id: StringName, pos: Vector3 = Vector3.ZERO, bp: ShipBlueprint = null) -> ShipState:
@@ -307,14 +307,14 @@ func test_templates_of_every_size_use_only_standard_parts() -> void:
 		var r := ShipValidator.validate(bp, cat)
 		assert_true(not r.has_errors(), "%s is valid:\n%s" % [bp.name, r.summary()])
 		# Common parts only, apart from the rarer parts the dealer sells with
-		# a capital ship (play-test batch 6).
+		# a hull (play-test batch 6) and the rarer rooms it unlocks with it
+		# (2026-10-26: the cruiser's workshop, the destroyer's dense magazine).
 		var fresh := PlayerProfile.new(1)
-		var units := ServiceYard.rare_units(bp, cat)
-		for id: StringName in units:
-			fresh.inventory[String(id)] = int(units[id])
+		fresh.credits = 10_000_000
+		assert_true(fresh.buy_ship(bp, cat) == "", "%s can be bought" % bp.name)
 		var rep := ShipValidator.Report.new()
 		fresh.check_design(bp, cat, rep)
-		assert_true(not rep.has_errors(), "%s flies on a new profile (common parts, plus the rarer parts sold with it):\n%s" % [bp.name, rep.summary()])
+		assert_true(not rep.has_errors(), "%s flies on a new profile (common parts, plus what is sold with it):\n%s" % [bp.name, rep.summary()])
 		masses.append(ShipStats.compute(bp, ShipGrid.build(bp, cat)).wet_mass_kg())
 	masses.sort()
 	assert_true(masses.size() >= 3 and masses[-1] > masses[0] * 2.0, "light to heavy (%s t)" % [masses.map(func(m: float) -> int: return roundi(m / 1000.0))])

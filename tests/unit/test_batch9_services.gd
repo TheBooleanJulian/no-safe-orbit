@@ -11,7 +11,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _profile() -> Array:
 	var p := PlayerProfile.new(4)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	var st := ShipStats.compute(p.vessel.blueprint, ShipGrid.build(p.vessel.blueprint, _catalog()))
 	var reserve := JumpDrive.standard().reserve_capacity_kg(st.propellant_capacity_kg)
 	p.vessel.condition["stores"] = {"propellant_kg": 20_000.0, "jump_reserve_kg": 0.0, "rounds": 100, "pd_rounds": 50}

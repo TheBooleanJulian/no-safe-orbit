@@ -13,7 +13,7 @@ func _catalog() -> ConstructionCatalog:
 	return ConstructionCatalog.default_catalog()
 
 
-func _ship(id: StringName, swap: Dictionary = {}, template: String = BlueprintIO.DEFAULT_TEMPLATE) -> ShipState:
+func _ship(id: StringName, swap: Dictionary = {}, template: String = TestCase.FRIGATE) -> ShipState:
 	var bp := BlueprintIO.load_file(template, PackedStringArray())
 	for e in bp.equipment:
 		if swap.has(e.def_id):
@@ -91,7 +91,7 @@ func test_three_laser_tiers() -> void:
 
 func test_flares_one_at_a_time_with_trails() -> void:
 	var world := WorldSimulation.new(DT)
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var r := RandomNumberGenerator.new()
 	EnemyFactory._fit_launcher(bp, _catalog(), &"flare_launcher", r)
 	EnemyFactory._fit_launcher(bp, _catalog(), &"flare_launcher", r)
@@ -128,7 +128,7 @@ func test_flares_one_at_a_time_with_trails() -> void:
 
 func test_battle_stations_shut_doors_and_spread_the_crew() -> void:
 	# The destroyer: its corridors, deck over deck, are one space.
-	var destroyer := "res://data/blueprints/destroyer_mk1.json"
+	var destroyer := "res://tests/fixtures/destroyer_mk1.json"
 	var s := _ship(&"s", {}, destroyer).systems
 	var pair := []
 	for a: int in s.grid.open_rooms:

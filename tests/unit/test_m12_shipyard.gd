@@ -37,8 +37,8 @@ func test_every_template_is_for_sale() -> void:
 
 func test_buying_a_ship() -> void:
 	var p := PlayerProfile.new(1)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
-	var cutter := BlueprintIO.load_file("res://data/blueprints/cutter_mk1.json", PackedStringArray())
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
+	var cutter := BlueprintIO.load_file("res://tests/fixtures/cutter_mk1.json", PackedStringArray())
 	var price := ServiceYard.dealer_price(cutter, _catalog())
 	p.credits = int(price.total) - 1
 	assert_true(p.buy_ship(cutter, _catalog()) != "" and p.vessels.size() == 1 and p.credits == int(price.total) - 1,
@@ -52,7 +52,7 @@ func test_buying_a_ship() -> void:
 func test_no_buy_then_scrap_arbitrage() -> void:
 	for bp in _templates():
 		var p := PlayerProfile.new(2)
-		p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+		p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 		var price := ServiceYard.dealer_price(bp, _catalog())
 		p.credits = int(price.total)
 		var parts_before := p.spare_parts
@@ -68,7 +68,7 @@ func test_no_buy_then_scrap_arbitrage() -> void:
 
 func test_scrapping() -> void:
 	var p := PlayerProfile.new(3)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	assert_true(p.scrap_vessel(0, _catalog()) == -1 and p.vessels.size() == 1, "not your last ship")
 	var v := p.vessel
 	v.condition = {"equipment": {}}
@@ -79,7 +79,7 @@ func test_scrapping() -> void:
 func test_capital_ships_are_battleships_and_spawn_fast() -> void:
 	var cat := _catalog()
 	for id in ["destroyer_mk1", "cruiser_mk1", "carrier_mk1"]:
-		var bp := BlueprintIO.load_file("res://data/blueprints/%s.json" % id, PackedStringArray())
+		var bp := BlueprintIO.load_file("res://tests/fixtures/%s.json" % id, PackedStringArray())
 		assert_true(bp != null, "%s exists" % id)
 		if bp == null:
 			continue
@@ -102,7 +102,7 @@ func test_capital_ships_are_battleships_and_spawn_fast() -> void:
 		assert_true(top_tower >= 3, "%s: a superstructure rises above the hull (deck %d)" % [id, top_tower])
 		# Its rarer parts come with it.
 		var p := PlayerProfile.new(3)
-		p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+		p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 		p.credits = 10_000_000
 		var units := ServiceYard.rare_units(bp, cat)
 		assert_true(p.buy_ship(bp, cat) == "", "%s bought" % id)
@@ -120,7 +120,7 @@ func test_capital_ships_are_battleships_and_spawn_fast() -> void:
 
 func test_the_mission_board() -> void:
 	var p := PlayerProfile.new(9)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	ContractBoard.refresh(p)
 	assert_true(p.board.size() == ContractBoard.OFFERS, "%d offers on the board" % p.board.size())
 	var again := ContractBoard.generate(p)
@@ -150,7 +150,7 @@ func test_schema_8_migration() -> void:
 	for s in ["", ".bak", ".tmp", ".v7"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + s))
 	var p := PlayerProfile.new(4)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	var d := p.to_dict()
 	d.schema_version = 7
 	for k in ["board", "board_sortie", "board_seed", "active_contract"]:

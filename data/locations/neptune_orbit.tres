@@ -22,6 +22,6 @@ broker_pitch = "Charts for Neptune and Le Verrier Station, at the edge of charte
 vendor_stock_size = 7
 vendor_max_rarity = 4
 price_factor = 2.5
-enemy_templates = PackedStringArray("cruiser_mk1.json", "anvil_heavy_cruiser.json", "colossus_battleship.json", "sovereign_supercarrier.json")
+enemy_templates = PackedStringArray("cruiser_mk1.json", "destroyer_mk1.json", "battleship_mk1.json", "carrier_mk1.json")
 enemy_weights = PackedFloat32Array(2, 2, 1, 1)
 threat_bonus = 7
