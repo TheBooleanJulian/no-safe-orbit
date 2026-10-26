@@ -4,7 +4,7 @@ extends TestCase
 ## placement, derived mass/CoM/inertia/thrust/torque, power, weapon arcs,
 ## and that a validated design flies.
 
-const TEMPLATE := BlueprintIO.DEFAULT_TEMPLATE
+const TEMPLATE := TestCase.FRIGATE
 const TMP_DIR := "user://test_blueprints"
 
 

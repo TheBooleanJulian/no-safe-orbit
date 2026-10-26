@@ -20,9 +20,9 @@ const SECTIONS := {
 	"Rooms": ["Crew & command", "Engineering", "Stores & hangars"],
 	"Propulsion": ["Main engines", "Thrusters (RCS)", "Propellant tanks"],
 	"Power & thermal": ["Reactors", "Radiators", "Power distribution", "Power bus"],
-	"Weapons": ["Guns", "Point defence", "Missile launchers", "Countermeasures & EW"],
+	"Weapons": ["Guns", "Lasers", "Point defence", "Missile launchers", "Countermeasures & EW"],
 	"Hangars & craft": ["Fighters", "Drones"],
-	"Sensors & utility": ["Sensors", "Docking & salvage"],
+	"Sensors & utility": ["Sensors", "Docking & salvage", "Landing gear"],
 }
 ## Armour palette entries: id -> [mm (0 = remove), name, description].
 const ARMOR_ENTRIES := {
@@ -40,7 +40,6 @@ const BUS_ENTRIES := {
 }
 
 @onready var name_edit: LineEdit = %NameEdit
-@onready var template_list: OptionButton = %TemplateList
 @onready var design_list: OptionButton = %DesignList
 @onready var status_label: Label = %Status
 @onready var launch_button: Button = %Launch
@@ -171,7 +170,6 @@ func _ready() -> void:
 	hatch_button.pressed.connect(set_tool.bind(Tool.HATCH))
 	%DeckUp.pressed.connect(change_deck.bind(1))
 	%DeckDown.pressed.connect(change_deck.bind(-1))
-	%LoadTemplate.pressed.connect(func() -> void: load_design(template_list.get_item_metadata(template_list.selected)))
 	%LoadDesign.pressed.connect(_on_load_design_pressed)
 	%Save.pressed.connect(save_design)
 	%Undo.pressed.connect(undo)
@@ -196,7 +194,6 @@ func _ready() -> void:
 	iso_view.room_dragged.connect(_on_room_dragged)
 	iso_view.hover_changed.connect(_on_hover)
 	issue_text.meta_clicked.connect(_on_issue_clicked)
-	_fill_file_list(template_list, BlueprintIO.list_templates())
 	_fill_file_list(design_list, BlueprintIO.list_user())
 	deck_editor.deck = 1
 	set_tool(Tool.SELECT)
@@ -915,28 +912,41 @@ static func _complement_text(want: Array[int]) -> String:
 	return " ".join(parts)
 
 
-## What a bigger room of `d` does (play-test batch 9), for the room card.
+## What a room of `d` gains from its size, for the room card.
 static func room_size_text(d: RoomDefinition) -> String:
 	var step := ShipSystems.ROOM_BONUS_PER_CELL
 	match d.id:
 		&"engine_room":
-			return "BIGGER IS BETTER  every cell beyond the first adds main thrust — +%d %% for the first, up to +%d %% (all engine rooms together)" % [
+			return "SIZE  each cell beyond the first adds main thrust: +%d %% for the first, up to +%d %% for all engine rooms together" % [
 				roundi((ShipStats.size_gain(1, ShipStats.ROOM_SIZE_GAIN, ShipStats.ROOM_SIZE_SCALE) - 1.0) * 100.0), roundi(ShipStats.ROOM_SIZE_GAIN * 100.0)]
 		&"reactor_room":
-			return "BIGGER IS BETTER  every cell beyond the first adds reactor output — +%d %% for the first, up to +%d %% (all reactor rooms together)" % [
+			return "SIZE  each cell beyond the first adds reactor output: +%d %% for the first, up to +%d %% for all reactor rooms together" % [
 				roundi((ShipStats.size_gain(1, ShipStats.ROOM_SIZE_GAIN, ShipStats.ROOM_SIZE_SCALE) - 1.0) * 100.0), roundi(ShipStats.ROOM_SIZE_GAIN * 100.0)]
 		&"hangar":
-			return "BIGGER IS BETTER  every free deck cell (no bay on it) turns craft round faster — up to ×%.0f" % (1.0 + ShipStats.HANGAR_DECK_GAIN)
+			return "SIZE  each free deck cell (no bay on it) turns craft round faster, up to ×%.0f" % (1.0 + ShipStats.HANGAR_DECK_GAIN)
 	match d.role:
 		&"workshop":
-			return "BIGGER IS BETTER  +%d %% faster repairs and hull sealing per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+			return "SIZE  each cell beyond the first: +%d %% faster repairs and hull sealing, up to ×%.0f" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
 		&"life_support":
-			return "BIGGER IS BETTER  +%d %% faster treatment of the wounded per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+			return "SIZE  each cell beyond the first: +%d %% faster treatment of the wounded, up to ×%.0f" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
 		&"command":
-			return "BIGGER IS BETTER  +%d %% faster scans per cell beyond the first (up to ×%.0f)" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
-		&"quarters", &"cargo", &"magazine":
-			return "Holds more with every cell"
-	return "Size doesn't matter: it only connects rooms"
+			return "SIZE  each cell beyond the first: +%d %% faster scans, up to ×%.0f" % [roundi(step * 100.0), ShipSystems.ROOM_BONUS_MAX]
+		&"cafeteria":
+			return "SIZE  each cell: +%d %% to all the crew's skill does (gunnery, reactor output, repairs, treatment), up to +%d %%" % [
+				roundi(ShipSystems.CAFETERIA_PER_CELL * 100.0), roundi(ShipSystems.CAFETERIA_MAX * 100.0)]
+		&"armoury":
+			return "SIZE  each cell: your boarders and defenders fight +%d %% harder, up to +%d %%" % [
+				roundi(ShipSystems.ARMOURY_PER_CELL * 100.0), roundi(ShipSystems.ARMOURY_MAX * 100.0)]
+		&"access":
+			return "SIZE  each cell: the crew cross every room %d %% faster, up to %d %%" % [
+				roundi(ShipSystems.CORRIDOR_PER_CELL * 100.0), roundi(ShipSystems.CORRIDOR_MAX * 100.0)]
+		&"quarters":
+			return "SIZE  each cell: %d berths" % d.crew_capacity_per_cell
+		&"cargo":
+			return "SIZE  each free cell: %.0f m³ of hold" % d.cargo_m3_per_cell
+		&"magazine":
+			return "SIZE  each cell: %.0f kg of rounds" % d.ammo_kg_per_cell
+	return "SIZE  each cell adds to what it does"
 
 
 ## What the design's rooms add by their size, for the stats panel.
@@ -948,7 +958,7 @@ func _rooms_text(s: ShipStats) -> String:
 		parts.append("reactor rooms +%d %% output" % roundi((s.reactor_room_factor - 1.0) * 100.0))
 	if s.hangar_factor > 1.0:
 		parts.append("hangar ×%.1f turnaround" % s.hangar_factor)
-	return "ROOMS      %s" % (" · ".join(parts) if not parts.is_empty() else "all 1 cell or no size bonus — bigger engine and reactor rooms, workshops, medbays, bridges and hangars do more")
+	return "ROOMS      %s" % (" · ".join(parts) if not parts.is_empty() else "no size gains yet (each room's card says what its size adds)")
 
 
 ## Point defence against what the hull wants (Milestone 15).
@@ -1121,13 +1131,15 @@ static func palette_place(kind: String, def: Resource) -> Array:
 		EquipmentDefinition.Kind.POWER_DISTRIBUTION:
 			return ["Power & thermal", "Power distribution"]
 		EquipmentDefinition.Kind.CANNON:
-			return ["Weapons", "Guns"]
+			return ["Weapons", "Lasers" if e.cannon != null and e.cannon.is_beam() else "Guns"]
 		EquipmentDefinition.Kind.POINT_DEFENCE:
 			return ["Weapons", "Point defence"]
 		EquipmentDefinition.Kind.MISSILE_LAUNCHER:
 			return ["Weapons", "Missile launchers"]
 		EquipmentDefinition.Kind.DECOY_LAUNCHER, EquipmentDefinition.Kind.JAMMER:
 			return ["Weapons", "Countermeasures & EW"]
+		EquipmentDefinition.Kind.LANDING_LEG:
+			return ["Sensors & utility", "Landing gear"]
 		EquipmentDefinition.Kind.CRAFT_MOUNT:
 			return ["Hangars & craft", "Drones" if String(e.id).contains("drone") else "Fighters"]
 		EquipmentDefinition.Kind.SENSOR:
@@ -1176,8 +1188,8 @@ func _fill_palette_list() -> void:
 			var place := palette_place(entry[0], def)
 			var text: String = def.display_name
 			var suffix := ""
-			# The part's own colour, as its cells are drawn (play-test batch 11);
-			# its rarity is the icon's colour and in the tooltip.
+			# The part's own colour, as its cells are drawn (play-test batch 11),
+			# for its name and its icon alike; its rarity is in the tooltip.
 			var color := palette_color(def.color)
 			if def.rarity != Rarity.Tier.COMMON:
 				if def is EquipmentDefinition:
@@ -1233,7 +1245,7 @@ func _fill_palette_list() -> void:
 		if str(r[4][0]) == "equipment":
 			var edef: EquipmentDefinition = editor.catalog.equipment.get(r[4][1])
 			if edef != null:
-				palette_list.set_item_icon(i, EquipmentIcons.icon(edef, Rarity.color_of(edef.rarity)))
+				palette_list.set_item_icon(i, EquipmentIcons.icon(edef, r[5]))
 
 
 ## Key figures above the detailed stats.
@@ -1323,10 +1335,10 @@ func expand_view(which: String) -> void:
 	side_view.visible = which in ["", "side"]
 	front_view.visible = which in ["", "front"]
 	preview.visible = which in ["", "3d"]
-	# Shown alone, a view takes the whole width (the front and 3D panes are
-	# fixed-width beside the side view otherwise — play-test batch 9).
-	front_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if which == "front" else Control.SIZE_FILL
-	preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL if which == "3d" else Control.SIZE_FILL
+	# The side view has a full-width strip of its own (a long hull's side is
+	# wide and low); front and 3D share the row under it, and one shown alone
+	# takes the whole of it.
+	front_view.get_parent().visible = which != "side"
 	_refresh_views()
 
 
@@ -2071,13 +2083,19 @@ func _update_ghost() -> void:
 			"equipment":
 				var def: EquipmentDefinition = editor.catalog.equipment[place_def]
 				if def.is_external():
-					var step := ShipGrid.external_step(_hover_face, place_rotation)
-					for k in (1 if ShipGrid.is_fin(def, place_rotation) else maxi(def.length_cells, 1)):
-						deck_editor.ghost_cells.append(cell + step * k)
+					if def.size_cells > 1:
+						# A medium or large part: its N × N patch, standing N out.
+						deck_editor.ghost_cells.append_array(ShipGrid.patch(cell, _hover_face, def.size_cells))
+						deck_editor.ghost_out = def.size_cells
+					else:
+						var step := ShipGrid.external_step(_hover_face, place_rotation)
+						for k in (1 if ShipGrid.is_fin(def, place_rotation) else maxi(def.length_cells, 1)):
+							deck_editor.ghost_cells.append(cell + step * k)
+						deck_editor.ghost_out = def.length_cells if ShipGrid.is_fin(def, place_rotation) else 0
 					deck_editor.ghost_face = _hover_face
-					deck_editor.ghost_out = def.length_cells if ShipGrid.is_fin(def, place_rotation) else 0
-					hint = "%s — %s face (near an edge: that side; middle: %s — [V] switches, Shift: the other)" % [
-						def.display_name, _hover_face, "underside" if deck_editor.prefer_underside else "top"]
+					hint = "%s%s — %s face (near an edge: that side; middle: %s — [V] switches, Shift: the other)" % [
+						def.display_name, " %d×%d×%d" % [def.size_cells, def.size_cells, def.size_cells] if def.size_cells > 1 else "",
+						_hover_face, "underside" if deck_editor.prefer_underside else "top"]
 				else:
 					var fp := def.footprint_cells
 					if place_rotation % 2 == 1:
@@ -2193,7 +2211,9 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 			]))
 	var e: EquipmentDefinition = catalog.equipment[def_id]
 	var lines := PackedStringArray([
-		"%s — %s" % [e.display_name, "external" if e.is_external() else "internal, %d×%d cells" % [e.footprint_cells.x, e.footprint_cells.y]],
+		"%s — %s" % [e.display_name, ("external, %s %d×%d×%d: covers %d×%d faces and stands %d cells out" % [["light", "medium", "large"][e.size_cells - 1],
+			e.size_cells, e.size_cells, e.size_cells, e.size_cells, e.size_cells, e.size_cells] if e.size_cells > 1 else "external") if e.is_external()
+			else "internal, %d×%d cells" % [e.footprint_cells.x, e.footprint_cells.y]],
 		"MASS %.1f t · POWER %s · HEAT %.0f kW" % [e.mass_kg / 1000.0,
 			"makes %.0f kW" % e.power_kw if e.power_kw > 0.0 else ("uses %.0f kW" % -e.power_kw if e.power_kw < 0.0 else "none"), e.heat_kw],
 		"DURABILITY %.0f hp · stops %.0f mm of a round passing through" % [e.max_hit_points(), e.shielding_mm()],
@@ -2261,6 +2281,9 @@ static func describe_definition(kind: String, catalog: ConstructionCatalog, def_
 		EquipmentDefinition.Kind.JAMMER:
 			lines.append("JAMMING %.1f · enemy tracks of you lose confidence and their locks fail; missiles may lose lock — beyond %.0f km (burn-through), full beyond %.0f km; hardened masts filter it" % [
 				e.jam_strength, WorldSimulation.BURN_THROUGH_M / 1000.0, WorldSimulation.JAM_FULL_M / 1000.0])
+	if e.kind == EquipmentDefinition.Kind.LANDING_LEG:
+		lines.append("LANDING  %d or more on faces turned to the ground (within %.0f°): touch down at up to ×%.0f the body's safe speed · stands %d cells out" % [
+			WorldSimulation.LEGS_FOR_FOOTING, WorldSimulation.LEG_DOWN_DEG, WorldSimulation.LEG_TOUCHDOWN_FACTOR, e.stands_out()])
 	if e.kind == EquipmentDefinition.Kind.SENSOR and e.emp_hardening > 0.0:
 		lines.append("EW FILTER %d %%: a hardened mast also shrugs off that much jamming" % roundi(e.emp_hardening * 100.0))
 	if e.emp_hardening > 0.0:

@@ -36,7 +36,7 @@ func test_engine_bells_grow_with_thrust() -> void:
 	for k in range(1, sizes.size()):
 		assert_true(sizes[k][1].y > sizes[k - 1][1].y and sizes[k][1].x >= sizes[k - 1][1].x, "more thrust, a bigger bell")
 	assert_true(sizes[-1][1].x <= 1.5, "the mouth stays within a cell")
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var model := ShipModelBuilder.build(bp, grid, Vector3.ZERO)
 	var engines := bp.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool:

@@ -14,7 +14,7 @@ func _moon() -> OrbitalBody:
 
 
 func _frigate(id: StringName) -> ShipState:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, ConstructionCatalog.default_catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var s := ShipState.create(id, String(id), stats.to_ship_config(String(id)))
@@ -124,7 +124,7 @@ func test_the_ground_drawn_below_11_km() -> void:
 
 
 func test_earth_reentry_takes_the_hull_apart() -> void:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, ConstructionCatalog.default_catalog())
 	var view := ShipView.new()
 	view.blueprint = bp

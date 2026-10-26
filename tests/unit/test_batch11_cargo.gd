@@ -11,7 +11,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _profile() -> PlayerProfile:
 	var p := PlayerProfile.new(7)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	return p
 
 

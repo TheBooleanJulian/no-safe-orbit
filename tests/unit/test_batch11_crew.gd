@@ -13,7 +13,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _profile() -> PlayerProfile:
 	var p := PlayerProfile.new(11)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	p.vessel.ensure_crew(_catalog())
 	return p
 
@@ -45,7 +45,7 @@ func test_the_hall_never_runs_dry_and_names_differ() -> void:
 	assert_true(p.vessel.crew.size() == n, "the berths filled again")
 	# A destroyer filled: every name differs, everyone has a past.
 	var big := PlayerProfile.new(12)
-	big.ensure_vessel(BlueprintIO.load_file("res://data/blueprints/destroyer_mk1.json", PackedStringArray()))
+	big.ensure_vessel(BlueprintIO.load_file("res://tests/fixtures/destroyer_mk1.json", PackedStringArray()))
 	big.vessel.crew = []
 	big.credits = 1_000_000
 	var line := big.fill_berths(big.berths(_catalog()))
@@ -69,7 +69,7 @@ func test_resting_crew_and_ships() -> void:
 	# Crew are yours: a bigger ship bought, they go with you.
 	p.credits = 1_000_000
 	var crew_names := p.vessel.crew.map(func(c: Dictionary) -> String: return str(c.name))
-	assert_true(p.buy_ship(BlueprintIO.load_file("res://data/blueprints/destroyer_mk1.json", PackedStringArray()), _catalog()) == "", "bought")
+	assert_true(p.buy_ship(BlueprintIO.load_file("res://tests/fixtures/destroyer_mk1.json", PackedStringArray()), _catalog()) == "", "bought")
 	var aboard := p.vessel.crew.map(func(c: Dictionary) -> String: return str(c.name))
 	var kept := crew_names.filter(func(n: String) -> bool: return aboard.has(n)).size()
 	print("    measured: the destroyer has %d aboard (%d from the frigate), %d resting; the frigate %d" % [aboard.size(), kept, p.resting.size(),
@@ -82,7 +82,7 @@ func test_resting_crew_and_ships() -> void:
 
 
 func test_cafeteria_and_armoury() -> void:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var pg := ShipGrid.build(bp, _catalog())
 	var ps := ShipStats.compute(bp, pg)
 	var plain := ShipSystems.create(bp, pg, ps, ps.to_ship_config("p"))
@@ -115,7 +115,7 @@ func test_v13_saves_move_crew_to_the_station() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(path + s))
 	var p := _profile()
 	p.credits = 1_000_000
-	p.buy_ship(BlueprintIO.load_file("res://data/blueprints/cutter_mk1.json", PackedStringArray()), _catalog())
+	p.buy_ship(BlueprintIO.load_file("res://tests/fixtures/cutter_mk1.json", PackedStringArray()), _catalog())
 	var d := p.to_dict()
 	d.schema_version = 13
 	d.erase("resting")

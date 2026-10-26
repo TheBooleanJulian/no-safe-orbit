@@ -130,7 +130,7 @@ func test_every_part_has_an_engineering_card() -> void:
 
 
 func test_middle_of_a_bottom_cell_picks_the_underside() -> void:
-	var ed := ShipEditor.new(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()), ConstructionCatalog.default_catalog())
+	var ed := ShipEditor.new(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()), ConstructionCatalog.default_catalog())
 	var deck := DeckEditor.new()
 	deck.editor = ed
 	# Deck 0 of the engine section: covered above by deck 1, open below.
@@ -145,7 +145,7 @@ func test_middle_of_a_bottom_cell_picks_the_underside() -> void:
 
 
 func test_a_group_of_blocks_moves_with_rooms_spanning_them() -> void:
-	var ed := ShipEditor.new(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()), ConstructionCatalog.default_catalog())
+	var ed := ShipEditor.new(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()), ConstructionCatalog.default_catalog())
 	# The whole hull: every room, system, plate and conduit comes along.
 	var ids: Array = ed.blueprint.modules.map(func(m: ShipBlueprint.PlacedModule) -> String: return m.id)
 	var bridge := ed.blueprint.find("r7") as ShipBlueprint.PlacedRoom

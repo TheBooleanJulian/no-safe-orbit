@@ -5,6 +5,45 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 
 ## Open
 
+- **The prebuilt roster is new** (2026-10-26): masses, prices, crews and
+  the bulk-freight rate are provisional, covered by tests and a rendered
+  review, not yet by play. What it can't show, because the game has no
+  mechanic for it yet:
+  - **Cargo has no mass.** A loaded freighter flies and jumps like an empty
+    one; bulk freight is offered by hold size and pays by the cubic metre.
+  - **No signature or stealth model.** Sensors see out to the best mast's
+    range whatever the target; only missile seekers weigh a ship's size
+    and burn (`WorldSimulation.signature_of`). The scout's lopsided sensor
+    boom, ventral radiators and light hull are placed for when radiator
+    area and heat feed detection; today it scouts with three masts (two
+    hardened), a jammer, EW and recon drones and the Δv for deep surveys.
+  - **Missiles have no magazine feed**: each launcher holds its own load,
+    so the missile corvette's "magazine" is its launchers.
+  - **Big hulls turn at the assist floor** (0.05 rad/s about pitch and yaw
+    for the cruiser, battleship, carrier and freighter): their RCS can't
+    swing their length faster; they differ in roll and acceleration.
+  - **Cargo runs are fight-free**, as before: the freighter's risk is the
+    freight lost with the ship, not ambushes en route.
+  - **Players' own designs and vessels are untouched**; a hull bought from
+    the old dealer keeps its old design. Derelicts of the six retired hulls
+    come back as their replacements.
+- **Part sizes are new** (2026-10-26): a medium or large part kept its old
+  numbers, so a 2 × 2 high-thrust engine gives less thrust per face of hull
+  than four standard ones, and a 3 × 3 torch drive less than nine — the
+  bigger engines now earn their place on efficiency or a small stern, not
+  raw thrust. A design saved before the sizes whose big guns can't be
+  re-seated (two railguns a cell apart) shows `equipment_overlap` or
+  `equipment_blocked` in the yard until it is refitted.
+- **Landing legs are new**: one rule (three legs within 30° of down), no
+  leg damage on touchdown and no tipping on slopes.
+- **Roster conduit has single points of failure** (measured 2026-10-26):
+  the roster tool auto-routes each hull's power bus as a tree, so wrecking
+  one hull block on the trunk can black out most of a ship — on the Kepler
+  frigate the worst block cuts 36 of 48 systems, and its trunk runs down
+  the main deck's port flank just inside the skirt, where hits land (the
+  old frigate's worst cut 22 of 28, on the centreline). Redundant conduit
+  loops would fix it; not done yet.
+
 - **Balance is still in development.** The play-test feedback pass retuned
   guns (equal damage rates, penetration tiers), magazines, engines, loot
   odds, the medic and crew sizes; hiring fees, quartermaster prices and
@@ -29,9 +68,9 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   before mission 11 — `test_enemy_kit`). Covered by tests, not yet by play.
 - **Repair and salvage drones, scaled crews are new** (Milestone 15):
   rates, loads and complements are first guesses, covered by tests, not
-  yet by play. No template has a workshop (an uncommon room blueprint found
-  in salvage), so the crew's field repairs — and the damage-control teams —
-  need one fitted first. Capital-ship enemies now carry far more security
+  yet by play. The destroyer, heavy cruiser, battleship and carrier come
+  with a workshop (its blueprint unlocked with the hull); the smaller hulls
+  need one found and fitted before the crew can make field repairs. Capital-ship enemies now carry far more security
   crew, so boarding one is much harder.
 - **Very large fights are still heavy**: four carriers with 46 craft out run
   at ~20 fps (slightly slower than real time), down from 7; the simulation

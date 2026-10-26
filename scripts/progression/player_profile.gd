@@ -760,11 +760,17 @@ func buy_tech(id: String) -> String:
 
 # --- Vessel ------------------------------------------------------------------------
 
-## The hangar vessel, created from `bp` the first time.
+## The hangar vessel, created from `bp` the first time — a new captain's
+## first ship comes with the rarer parts it carries (the frigate's missile
+## rack), as a bought one does.
 func ensure_vessel(bp: ShipBlueprint) -> ShipInstance:
 	if vessel == null:
 		vessel = ShipInstance.fresh(bp)
 		vessel.record("Commissioned as %s" % bp.name)
+		var cat := ConstructionCatalog.default_catalog()
+		var units := rare_units(bp, cat)
+		for id in units:
+			inventory[str(id)] = maxi(owned(StringName(id)), int(units[id]))
 	return vessel
 
 
@@ -803,6 +809,16 @@ func buy_ship(bp: ShipBlueprint, catalog: ConstructionCatalog) -> String:
 	# Its rarer parts come with it, banked like any others.
 	for id: StringName in price.unit_ids:
 		inventory[String(id)] = owned(id) + int(price.unit_ids[id])
+	# So do the blueprints of its rarer rooms and hull (a cruiser's workshop),
+	# or it couldn't launch.
+	for m in bp.modules:
+		var hdef: HullModuleDefinition = catalog.hull.get(m.def_id)
+		if hdef != null and not is_unlocked(hdef):
+			unlocks[String(hdef.id)] = true
+	for r in bp.rooms:
+		var rdef: RoomDefinition = catalog.rooms.get(r.def_id)
+		if rdef != null and not is_unlocked(rdef):
+			unlocks[String(rdef.id)] = true
 	var v := ShipInstance.fresh(bp.duplicate_blueprint())
 	# Its standard crew are hired with it: they join yours (crew are yours,
 	# not a ship's), and whoever has a berth goes aboard.
@@ -1101,8 +1117,13 @@ static func _read_v8_board(p: PlayerProfile, d: Dictionary) -> void:
 	var field: Variant = d.get("derelicts", [])
 	if field is Array:
 		for r in field:
-			if r is Dictionary and (r as Dictionary).has_all(["id", "location", "template", "intact"]) 					and Location.by_id(str(r.location)).id == str(r.location) 					and FileAccess.file_exists("res://data/blueprints/" + str(r.template)):
-				p.derelicts.append((r as Dictionary).duplicate())
+			if not (r is Dictionary and (r as Dictionary).has_all(["id", "location", "template", "intact"])):
+				continue
+			# A retired template (the 2026-10-26 roster) becomes its replacement.
+			var rec := (r as Dictionary).duplicate()
+			rec.template = BlueprintIO.current_template(str(rec.template))
+			if Location.by_id(str(rec.location)).id == str(rec.location) and FileAccess.file_exists("res://data/blueprints/" + str(rec.template)):
+				p.derelicts.append(rec)
 	var c: Variant = d.get("codex", {})
 	if c is Dictionary:
 		for id in c:

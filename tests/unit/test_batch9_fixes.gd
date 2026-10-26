@@ -13,7 +13,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _frigate() -> ShipState:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var cfg := stats.to_ship_config("me")
@@ -49,7 +49,7 @@ func test_point_defence_spares_the_escorted_courier() -> void:
 
 
 func test_launchers_show_the_missiles_left() -> void:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	EnemyFactory._fit_launcher(bp, _catalog(), &"missile_rack", RandomNumberGenerator.new())
 	var grid := ShipGrid.build(bp, _catalog())
 	var stats := ShipStats.compute(bp, grid)

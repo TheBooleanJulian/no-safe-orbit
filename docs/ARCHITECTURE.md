@@ -299,6 +299,59 @@ and the location's central body:
   `PlayerProfile.backup_copy` / `backup_dir`. The CHANGELOG tab reads
   `res://CHANGELOG.md` (exported via `include_filter`) through
   `SettingsMenu.changelog_bbcode`.
+- **Refit bay and part sizes (2026-10-26)**: `EquipmentDefinition.size_cells`
+  (1–3, the tier) and `stand_cells` / `stands_out()`; `ShipGrid.face_tangents`,
+  `patch` (the N × N faces from a part's cell, along +tangents), `standing` /
+  `standing_cells` (the space N out, which the validator's
+  `equipment_blocked` keeps clear of hull) and `can_mount` (used by
+  `EnemyFactory._fits_in_place` / `_fit_launcher` and the roster tool);
+  `external_cells` returns the patch, so overlap, hit mapping, coolant and
+  the deck editor follow. `BlueprintFix.fit_spans` re-seats a sized part
+  that no longer fits (`_fit_size`). Turret heights: `ShipStats.cannon_heights`
+  → `ShipConfig.cannon_turret_heights` / `turret_height(k)` in the world's
+  muzzle and hull-clear ray and the HUD reticles; `ShipModelBuilder` scales
+  a sized part about its mount (plumes too). `Kind.LANDING_LEG`
+  (`landing_leg.tres`): `WorldSimulation.legs_down` / `safe_landing_mps`
+  (LEGS_FOR_FOOTING, LEG_DOWN_DEG, LEG_TOUCHDOWN_FACTOR) in `_check_terrain`
+  and the HUD. `ShipSystems.room_transit_s()` (corridor cells) replaces
+  `CrewRoster.ROOM_TRANSIT_S` for walks aboard; `Shipyard.room_size_text`
+  states every role's size benefit. Windows under a plate get a recess at
+  `ShipModelBuilder.plate_depth`; `_paint_name` finds each flank's own
+  outer face. The refit views: `Views` is a VBox (`SideView`, then `Lower`
+  with `FrontView` and `Preview`); `ShipPreview3D._fit_distance` fits the
+  hull's projected box (`_zoom` from the wheel). The roster tool's `Draft`
+  gains `skirt(s)` (sloped wedge armour outside a slab's edges), `prow(…,
+  sharp)` (long wedges) and `legs`.
+- **The prebuilt roster (2026-10-26)**: `tools/make_roster.gd` builds the
+  nine templates in `data/blueprints/` (the registry is unchanged:
+  `BlueprintIO.list_templates`) and writes one only when `ShipValidator`
+  reports nothing and its own checks pass (weapon, launcher, sensor and
+  plume faces three cells clear; no hatch on internal equipment; PD mounts
+  ≥ `PdCoverage` recommends, the freighter excepted). One builder per hull,
+  all in one vocabulary (`Draft`): `hull` / `truss` cell boxes, `prow`
+  wedges ahead of exposed fronts, `_tile` (2 × 2 blocks paired outwards from
+  the centreline, an odd beam's centre column alone; truss in 1 × 2),
+  `run` (a row of rooms down one side of a corridor, each with its hatch,
+  `furnish`ed with 2 × 2 parts kept off the hatch's walkway), `pair`
+  (mirrored fittings), `armour` rules, then `ShipEditor.auto_route_bus` /
+  `auto_route_coolant` plus extra `trunks` (second keel trunks on the
+  cruiser, battleship and carrier). File ids are kept where a hull took over
+  a role (`cutter_mk1` is the interceptor, `frigate_mk1` still the
+  `DEFAULT_TEMPLATE`); `BlueprintIO.RENAMED_TEMPLATES` / `current_template`
+  map the six retired files to their replacements, applied to saved
+  derelict records in `PlayerProfile.from_dict`. `EnemyFactory.hull_type`
+  takes the hull's kind from "<Class>-class <kind>" for enemy names;
+  `EnemyFactory.design` upgrades a gun only within the template's spare
+  power and heat (`budget`, no extra RNG draws) and fits its mission-4
+  rack only where `_has_kind` finds no launcher.
+  `PlayerProfile.ensure_vessel` gives a new captain the first ship's rarer
+  units (the frigate's missile rack); `buy_ship` also unlocks the
+  bought design's rarer room and hull blueprints (workshop, dense magazine).
+  `ContractBoard._cargo_offer` makes every other cargo offer bulk
+  (`BULK_*`) when the active vessel's design holds `BULK_HOLD_M3` or more
+  (`hold_m3`); same RNG draws, so other boards are unchanged. Mechanics
+  tests fly frozen copies of the old templates (`tests/fixtures/`,
+  `TestCase.FRIGATE`); `test_roster.gd` tests the roster itself.
 - **Flight and shipyard (play-test batch 11, part 4)**: `Hud.drawer_open`
   shuts the hit cam while the Tab drawer is open. `ShipInstance.cargo_summary`
   names the contract freight. `PlayerProfile.sell_price` / `sell_cargo_equipment`
@@ -351,7 +404,7 @@ and the location's central body:
   `recover_pod` on G (beacon reach, `POD_MATCH_MPS`, hold space) stows it as
   `vessel.cargo.freight`; `close_sortie` calls `ContractBoard.deliver` after
   docking.
-- **Dealer (play-test batch 10, part 3)**: `tools/make_capital_templates.gd`
+- **Dealer (play-test batch 10, part 3)**: `tools/make_capital_templates.gd` (retired with its hulls 2026-10-26; see the roster above)
   describes the hull cell by cell (`_row_cols`: taper, "hammer" head and
   neck, "split" fork; swept "wing_*" blocks; `tower` levels; "rcs_mid"),
   places wedges ahead of any cell with nothing ahead of it, and kit at each
@@ -484,7 +537,7 @@ and the location's central body:
   beside other guns. `take_beams()` → `BeamView` (pooled cylinders, body-frame
   ends, 0.18 s fade). `AirWing._resupply_from` recharges beam craft without
   drawing the carrier's magazine.
-- **Capital templates (play-test batch 6)**: generated by
+- **Capital templates (play-test batch 6; replaced by the 2026-10-26 roster)**: generated by
   `tools/make_capital_templates.gd` (prow taper `_row_blocks`, wedges ahead
   of each step, a two-deck superstructure, flank/top/bow armour `_armour`,
   long parts claim their whole span). `ServiceYard.dealer_price` adds
@@ -533,7 +586,7 @@ and the location's central body:
   (goal, brief, reward); `complete` pays and clears it without advancing
   the chain. The contract's `threat` replaces the mission number for enemy
   designs. Profile schema 8.
-- Capital templates are generated (`tools/make_capital_templates.gd`) and
+- Templates are generated (now `tools/make_roster.gd`) and
   written only when the validator finds nothing. `CrewRoster` indexes
   rooms by role once per roster, making a 300-module hull's crew linear.
 

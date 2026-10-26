@@ -22,6 +22,6 @@ broker_pitch = "Charts for Jupiter and the Galilean Yards. Mind the radiation be
 vendor_stock_size = 6
 vendor_max_rarity = 4
 price_factor = 1.8
-enemy_templates = PackedStringArray("destroyer_mk1.json", "cruiser_mk1.json", "halberd_frigate.json", "carrier_mk1.json")
+enemy_templates = PackedStringArray("destroyer_mk1.json", "cruiser_mk1.json", "corvette_mk1.json", "carrier_mk1.json")
 enemy_weights = PackedFloat32Array(2, 1, 2, 1)
 threat_bonus = 4

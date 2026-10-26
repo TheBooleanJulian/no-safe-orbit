@@ -56,7 +56,7 @@ func test_settings_save_clamp_and_apply() -> void:
 
 func test_save_stats_and_changelog() -> void:
 	var p := PlayerProfile.new(3)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	p.credits = 4321
 	p.missions_completed = 7
 	assert_true(p.save(PROFILE) == OK, "a scratch profile")

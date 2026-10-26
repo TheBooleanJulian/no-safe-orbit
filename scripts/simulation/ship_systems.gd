@@ -94,6 +94,11 @@ const CAFETERIA_PER_CELL := 0.02
 const CAFETERIA_MAX := 0.5
 const ARMOURY_PER_CELL := 0.1
 const ARMOURY_MAX := 0.5
+## Corridors: each pressurised corridor cell aboard takes this off the time
+## the crew need to cross a room, up to CORRIDOR_MAX (wide, continuous
+## passageways move people faster than a chain of hatches).
+const CORRIDOR_PER_CELL := 0.01
+const CORRIDOR_MAX := 0.4
 ## Crew reach external systems on EVA from rooms this close (cells).
 const EVA_REACH_CELLS := 2
 ## A medic treats one wounded crew member in this long (s), with a working
@@ -855,7 +860,7 @@ func reassign(id: String, role: int) -> String:
 	if path.is_empty():
 		return "%s can't get to the %s station" % [m.label(), CrewRoster.ROLE_NAMES[role]]
 	m.busy = true
-	crew_orders[m.id] = {"role": role, "room": dest, "left_s": (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S}
+	crew_orders[m.id] = {"role": role, "room": dest, "left_s": (path.size() - 1) * room_transit_s()}
 	_note("%s heading off to %s — %.0f s" % [m.label(), CrewRoster.ROLE_NAMES[role], crew_orders[m.id].left_s])
 	return ""
 
@@ -1239,6 +1244,16 @@ func working_cells(role: StringName) -> int:
 	return cells
 
 
+## Seconds for the crew to cross one room aboard (CrewRoster.ROOM_TRANSIT_S,
+## less the corridors' share).
+func room_transit_s() -> float:
+	var cells := 0
+	for i in blueprint.rooms.size():
+		if room_role(i) == &"access" and (suited or rooms[i].pressurized):
+			cells += blueprint.rooms[i].rect.size.x * blueprint.rooms[i].rect.size.y
+	return CrewRoster.ROOM_TRANSIT_S * (1.0 - minf(CORRIDOR_PER_CELL * cells, CORRIDOR_MAX))
+
+
 ## The cafeteria's lift to everything the crew's skill touches (1 without one).
 func crew_skill_factor() -> float:
 	return 1.0 + minf(CAFETERIA_PER_CELL * working_cells(&"cafeteria"), CAFETERIA_MAX)
@@ -1449,7 +1464,7 @@ func cover_role(role: int) -> String:
 	if best == null:
 		return "no free general crew can reach the %s station" % CrewRoster.ROLE_NAMES[role]
 	best.busy = true
-	crew_orders[best.id] = {"role": role, "room": dest, "left_s": (best_path.size() - 1) * CrewRoster.ROOM_TRANSIT_S}
+	crew_orders[best.id] = {"role": role, "room": dest, "left_s": (best_path.size() - 1) * room_transit_s()}
 	_note("%s (general) heading to cover %s — %.0f s" % [best.id, CrewRoster.ROLE_NAMES[role], crew_orders[best.id].left_s])
 	return ""
 
@@ -2037,7 +2052,7 @@ func start_field_repair() -> EquipmentState:
 	task.equipment_id = e.id
 	task.member_id = m.id
 	task.target_hp = FIELD_REPAIR_LIMIT * e.max_hp
-	task.travel_s = (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S
+	task.travel_s = (path.size() - 1) * room_transit_s()
 	task.total_s = task.travel_s + (FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)) / maxf(room_bonus(&"workshop"), 1.0)
 	task.remaining_s = task.total_s
 	repair_tasks.append(task)

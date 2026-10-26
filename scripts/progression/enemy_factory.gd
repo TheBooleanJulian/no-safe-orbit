@@ -1,18 +1,22 @@
 class_name EnemyFactory
 extends RefCounted
-## Enemy designs that get tougher mission by mission: the Frigate Mk I
-## template with some of its parts swapped for rarer ones. Deterministic per
+## Enemy designs that get tougher mission by mission: the location's
+## template (Location.enemy_templates) with some of its parts swapped for
+## rarer ones, renamed "<bird>-class <its hull type>". Deterministic per
 ## mission number (same mission, same enemy), and always a valid design —
 ## if a variant fails validation, the plain template flies instead.
 ##
 ## Chances per swap rise with the mission number m:
 ##   gun        heavy kinetic cannon from m ≥ 2 (the template's guns are
-##              autocannons), railgun from m ≥ 4           (p = 0.15·m, ≤ 0.6)
+##              autocannons), railgun from m ≥ 4           (p = 0.15·m, ≤ 0.6;
+##              while the reactors and radiators carry it, and where the
+##              bigger gun fits)
 ##   armour     plates on exposed faces from m ≥ 2           (p = 0.06·m, ≤ 0.4 per face;
 ##              80 mm instead of 40 from m ≥ 4, 1 in 3)
 ##   RCS        heavy RCS blocks from m ≥ 2                  (p = 0.1·m,  ≤ 0.5)
 ##   reactor    Mk II fusion reactor from m ≥ 3              (p = 0.08·m, ≤ 0.4)
-##   missiles   a missile rack from m ≥ 4 (always); an EMP launcher too from
+##   missiles   a missile rack from m ≥ 4 (unless the template has a launcher
+##              of its own); an EMP launcher too from
 ##              m ≥ 6 (p = 0.5) — each on a free exterior face, dropped again
 ##              if it makes the design invalid
 ## Mission 1 is always the plain template.
@@ -80,6 +84,14 @@ static func kit_mission(mission: int, variant: int) -> int:
 	return mission if variant <= 0 else maxi(mission - 1 - variant, 1)
 
 
+## What kind of hull a design is, from its name: "Kepler-class escort
+## frigate" → "escort frigate" (an older "Frigate Mk I" → "frigate").
+static func hull_type(design_name: String) -> String:
+	if design_name.contains("-class "):
+		return design_name.get_slice("-class ", 1).strip_edges().to_lower()
+	return design_name.split(" ")[0].to_lower()
+
+
 ## `variant` > 0: another ship of the same mission's encounter (its own
 ## rolls, fitted as for an earlier mission, kit_mission); variant 0 is the
 ## mission's lead ship as before.
@@ -87,9 +99,15 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7919 * mission + 17 + 104_729 * variant
 	var bp := template.duplicate_blueprint()
-	bp.name = "%s-class %s" % [CLASS_NAMES[(mission - 1 + variant) % CLASS_NAMES.size()], template.name.split(" ")[0].to_lower()]
+	bp.name = "%s-class %s" % [CLASS_NAMES[(mission - 1 + variant) % CLASS_NAMES.size()], hull_type(template.name)]
 	mission = kit_mission(mission, variant)
 	var m := float(mission)
+	# A gun is upgraded only while the reactors and radiators carry it (a
+	# hull with several guns would otherwise roll itself into a brown-out
+	# and hold fire, hot); the rolls are made either way.
+	var budget := ShipStats.compute(bp, ShipGrid.build(bp, catalog))
+	var spare_kw := budget.power_generation_kw - budget.power_draw_kw
+	var spare_heat_kw := budget.heat_rejection_kw - budget.heat_generation_kw
 	for e in bp.equipment:
 		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
 		if def == null:
@@ -97,7 +115,14 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 		match def.kind:
 			EquipmentDefinition.Kind.CANNON:
 				if mission >= 2 and rng.randf() < minf(0.15 * m, 0.6):
-					e.def_id = &"railgun" if mission >= 4 and rng.randf() < 0.4 else &"kinetic_cannon"
+					var gun: StringName = &"railgun" if mission >= 4 and rng.randf() < 0.4 else &"kinetic_cannon"
+					var to: EquipmentDefinition = catalog.equipment[gun]
+					var draw := def.power_kw - to.power_kw
+					var heat := to.heat_kw - def.heat_kw
+					if draw <= spare_kw and heat <= spare_heat_kw and _fits_in_place(bp, catalog, e, to):
+						e.def_id = gun
+						spare_kw -= draw
+						spare_heat_kw -= heat
 			EquipmentDefinition.Kind.RCS:
 				if mission >= 2 and rng.randf() < minf(0.1 * m, 0.5):
 					e.def_id = &"rcs_block_heavy"
@@ -111,7 +136,9 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 					e.def_id = &"interceptor_rack"
 				elif e.def_id == &"fighter_bay" and mission >= 7 and rng.randf() < 0.5:
 					e.def_id = &"bomber_bay"
-	if mission >= MISSILE_RACK_FROM_MISSION:
+	# A rack for a template that has none (a missile corvette or the frigate
+	# brings its own: one more would double their salvos).
+	if mission >= MISSILE_RACK_FROM_MISSION and not _has_kind(bp, catalog, EquipmentDefinition.Kind.MISSILE_LAUNCHER):
 		_fit_launcher(bp, catalog, &"missile_rack", rng)
 	if mission >= EMP_LAUNCHER_FROM_MISSION and rng.randf() < 0.5:
 		_fit_launcher(bp, catalog, &"emp_launcher", rng)
@@ -151,6 +178,8 @@ static func _fit_new_kit(bp: ShipBlueprint, catalog: ConstructionCatalog, missio
 			EquipmentDefinition.Kind.CANNON:
 				if mission >= LASER_FROM_MISSION and rng.randf() < minf(0.08 * (m - 4.0), 0.35):
 					var was := e.def_id
+					if not _fits_in_place(bp, catalog, e, catalog.equipment[&"laser_turret"]):
+						continue
 					e.def_id = &"laser_turret"
 					var stats := ShipStats.compute(bp, ShipGrid.build(bp, catalog))
 					if stats.power_draw_kw > stats.power_generation_kw:
@@ -163,6 +192,25 @@ static func _fit_new_kit(bp: ShipBlueprint, catalog: ConstructionCatalog, missio
 						e.def_id = &"repair_drone_rack"
 				elif e.def_id == &"fighter_bay" and mission >= LASER_FIGHTER_FROM_MISSION and rng.randf() < 0.3:
 					e.def_id = &"laser_fighter_bay"
+
+
+## Whether external part `e` of `bp` could be `to` where it stands: a
+## bigger tier's patch and the space it stands in must be free.
+static func _fits_in_place(bp: ShipBlueprint, catalog: ConstructionCatalog, e: ShipBlueprint.PlacedEquipment, to: EquipmentDefinition) -> bool:
+	var grid := ShipGrid.build(bp, catalog)
+	var taken := {}
+	for j in bp.equipment.size():
+		var other := grid.equipment_def(j)
+		if other != null and other.is_external() and bp.equipment[j] != e:
+			for c in grid.external_cells(j):
+				taken["%s|%s" % [c, bp.equipment[j].face]] = true
+	return grid.can_mount(to, e.cell, e.face, taken)
+
+
+static func _has_kind(bp: ShipBlueprint, catalog: ConstructionCatalog, kind: EquipmentDefinition.Kind) -> bool:
+	return bp.equipment.any(func(e: ShipBlueprint.PlacedEquipment) -> bool:
+		var def: EquipmentDefinition = catalog.equipment.get(e.def_id)
+		return def != null and def.kind == kind)
 
 
 ## Mount a launcher on a free exterior face it allows (top faces first, then
@@ -186,7 +234,7 @@ static func _fit_launcher(bp: ShipBlueprint, catalog: ConstructionCatalog, def_i
 			continue
 		var spots: Array[Vector3i] = []
 		for cell: Vector3i in cells:
-			if grid.is_exterior_face(cell, face) and not grid.slope_faces(cell).has(face) and not taken.has("%s|%s" % [cell, face]) 					and (bp.bus.is_empty() or bp.bus.has(ShipBlueprint.cell_key(cell))):
+			if grid.can_mount(def, cell, face, taken) and (bp.bus.is_empty() or bp.bus.has(ShipBlueprint.cell_key(cell))):
 				spots.append(cell)
 		if spots.is_empty():
 			continue

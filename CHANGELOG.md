@@ -10,6 +10,70 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
 
 ## [Unreleased]
 
+### Refit bay, part sizes and a brutalist roster (2026-10-26)
+
+#### Changed
+- **Parts come in tiers of size**: medium parts (heavy kinetic cannon,
+  Nd:YAG laser, high-thrust engine, saturation pod, nuclear launcher)
+  cover 2 × 2 hull faces and stand two cells out, large ones (railgun,
+  free-electron laser, torch drive) 3 × 3 and three out; the space must be
+  clear of hull, turrets ride that high, models are that big. Older designs
+  are re-seated on loading where they fit, flagged where they don't.
+- **The roster redesigned** in a brutalist military idiom: chamfered slabs
+  with sloped wedge skirts, chisel bows, flat gun-port bows round spinal
+  guns (the destroyer's and battleship's 3 × 3 railguns), stepped turret
+  decks, boxy engine blocks; every hull on landing legs.
+- **Refit bay**: the side view gets a full-width strip, front and 3D share
+  the row under it, and the 3D view is framed to the hull's shape; the
+  "Load template" button is gone (hulls come from the dealer); lasers have
+  their own section in the parts list; each part's name and icon share its
+  colour.
+- **Every room does more with its size**, and its card says what (no more
+  "bigger is better" line): cafeteria and armoury as before, now stated;
+  corridors new — each pressurised corridor cell speeds the crew through
+  every room 1 % (up to 40 %).
+- Windows show through armour (cut into the plate) and the hull name stands
+  proud of the thickest plate on both flanks.
+- `EnemyFactory` upgrades a gun in place only where the bigger one fits.
+
+#### Added
+- **Landing legs**: three or more on faces turned to the ground let a ship
+  touch down at up to three times a body's safe landing speed.
+
+### The prebuilt roster (2026-10-26)
+
+#### Changed
+- **Nine new prebuilt hulls** replace the twelve old templates, one family
+  from the same yards with a silhouette, interior and kit for each role:
+  Halley-class interceptor, Goddard-class missile corvette, Kepler-class
+  escort frigate (the starting ship), Gauss-class gun destroyer (a spinal
+  railgun on a 30 m boom), Laplace-class heavy cruiser, Newton-class
+  battleship, Galileo-class fleet carrier, Herschel-class scout and
+  Drayman-class heavy freighter. Each validates clean with power, heat, PD
+  and arcs in order; the cruiser and battleship differ in range, speed,
+  armour, armament, crew and running costs, not just size (README).
+- Station traffic flies the new hulls; enemies are named "<bird>-class
+  <hull type>".
+- A new captain's frigate comes with its missile rack; a bought hull
+  with the blueprints of its rarer rooms (workshop, dense magazine).
+
+- Enemy fits (`EnemyFactory`): a gun is upgraded only while the hull's
+  reactors and radiators carry it, and the mission-4 missile rack goes only
+  on a template without launchers — so multi-gun hulls don't fly as
+  overheated, browned-out wrecks or double their salvos.
+
+#### Added
+- **Bulk freight**: with a hold of 1,000 m³ or more, every other cargo
+  offer is a bulk load (300–3,000 m³ at 0.25 cr a m³).
+- `tools/make_roster.gd` builds the roster; `test_roster.gd` measures it.
+
+#### Removed
+- The Halberd Frigate, Wyvern Battlecruiser, Anvil Heavy Cruiser, Colossus
+  Battleship, Leviathan Dreadnought and Sovereign Supercarrier, and
+  `tools/make_capital_templates.gd` / `tools/fit_grapple_arms.gd`. Saved
+  derelicts of retired hulls come back as their replacements; vessels you
+  own keep their designs.
+
 ## [0.18.0] — 2026-10-23 — Milestone 16: the solar system
 
 ### Milestone 16 — the solar system (2026-10-23)

@@ -21,6 +21,6 @@ broker_pitch = "Approach charts for Mercury and the Caloris Foundry. Bring sunsh
 vendor_stock_size = 5
 vendor_max_rarity = 3
 price_factor = 1.6
-enemy_templates = PackedStringArray("frigate_mk1.json", "destroyer_mk1.json", "halberd_frigate.json")
+enemy_templates = PackedStringArray("frigate_mk1.json", "destroyer_mk1.json", "scout_mk1.json")
 enemy_weights = PackedFloat32Array(2, 1, 1)
 threat_bonus = 3

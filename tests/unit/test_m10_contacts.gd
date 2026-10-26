@@ -16,7 +16,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _template() -> ShipBlueprint:
-	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	return BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 
 
 func _ship(id: StringName, pos: Vector3 = Vector3.ZERO, bp: ShipBlueprint = null, side: StringName = &"") -> ShipState:

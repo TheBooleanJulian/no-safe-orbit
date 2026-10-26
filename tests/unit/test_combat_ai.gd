@@ -15,7 +15,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _ship(id: StringName, pos: Vector3, side: StringName, bp: ShipBlueprint = null) -> ShipState:
 	if bp == null:
-		bp = BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+		bp = BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var cfg := stats.to_ship_config(String(id))
@@ -151,8 +151,8 @@ func test_an_ew_drone_holds_station_towards_the_threat() -> void:
 
 func test_ramming_is_harder_and_worse_for_the_lighter_ship() -> void:
 	var world := WorldSimulation.new(DT)
-	var big := _ship(&"big", Vector3.ZERO, &"a", BlueprintIO.load_file("res://data/blueprints/destroyer_mk1.json", PackedStringArray()))
-	var small := _ship(&"small", Vector3(0, 0, -120), &"b", BlueprintIO.load_file("res://data/blueprints/cutter_mk1.json", PackedStringArray()))
+	var big := _ship(&"big", Vector3.ZERO, &"a", BlueprintIO.load_file("res://tests/fixtures/destroyer_mk1.json", PackedStringArray()))
+	var small := _ship(&"small", Vector3(0, 0, -120), &"b", BlueprintIO.load_file("res://tests/fixtures/cutter_mk1.json", PackedStringArray()))
 	small.velocity = Vector3(0, 0, 8)
 	world.add_ship(big)
 	world.add_ship(small)

@@ -1,13 +1,13 @@
 {
 	"schema_version": 2,
-	"name": "Halberd Frigate",
+	"name": "Destroyer Mk I",
 	"designer": "Template",
 	"modules": [
 		{
 			"id": "m1",
 			"def": "hull_block",
 			"pos": [
-				0,
+				2,
 				0,
 				0
 			],
@@ -17,7 +17,7 @@
 			"id": "m2",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				0,
 				0
 			],
@@ -27,8 +27,8 @@
 			"id": "m3",
 			"def": "hull_block",
 			"pos": [
-				4,
-				0,
+				2,
+				1,
 				0
 			],
 			"rot": 0
@@ -37,8 +37,8 @@
 			"id": "m4",
 			"def": "hull_block",
 			"pos": [
-				6,
-				0,
+				4,
+				1,
 				0
 			],
 			"rot": 0
@@ -47,8 +47,8 @@
 			"id": "m5",
 			"def": "hull_block",
 			"pos": [
-				0,
-				1,
+				2,
+				2,
 				0
 			],
 			"rot": 0
@@ -57,8 +57,8 @@
 			"id": "m6",
 			"def": "hull_block",
 			"pos": [
+				4,
 				2,
-				1,
 				0
 			],
 			"rot": 0
@@ -67,9 +67,9 @@
 			"id": "m7",
 			"def": "hull_block",
 			"pos": [
-				4,
-				1,
-				0
+				2,
+				0,
+				2
 			],
 			"rot": 0
 		},
@@ -77,9 +77,9 @@
 			"id": "m8",
 			"def": "hull_block",
 			"pos": [
-				6,
-				1,
-				0
+				4,
+				0,
+				2
 			],
 			"rot": 0
 		},
@@ -87,9 +87,9 @@
 			"id": "m9",
 			"def": "hull_block",
 			"pos": [
-				0,
 				2,
-				0
+				1,
+				2
 			],
 			"rot": 0
 		},
@@ -97,9 +97,9 @@
 			"id": "m10",
 			"def": "hull_block",
 			"pos": [
-				2,
-				2,
-				0
+				4,
+				1,
+				2
 			],
 			"rot": 0
 		},
@@ -107,9 +107,9 @@
 			"id": "m11",
 			"def": "hull_block",
 			"pos": [
-				4,
 				2,
-				0
+				2,
+				2
 			],
 			"rot": 0
 		},
@@ -117,9 +117,9 @@
 			"id": "m12",
 			"def": "hull_block",
 			"pos": [
-				6,
+				4,
 				2,
-				0
+				2
 			],
 			"rot": 0
 		},
@@ -127,9 +127,9 @@
 			"id": "m13",
 			"def": "hull_block",
 			"pos": [
+				2,
 				0,
-				0,
-				2
+				4
 			],
 			"rot": 0
 		},
@@ -137,9 +137,9 @@
 			"id": "m14",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				0,
-				2
+				4
 			],
 			"rot": 0
 		},
@@ -147,9 +147,9 @@
 			"id": "m15",
 			"def": "hull_block",
 			"pos": [
-				4,
-				0,
-				2
+				2,
+				1,
+				4
 			],
 			"rot": 0
 		},
@@ -157,9 +157,9 @@
 			"id": "m16",
 			"def": "hull_block",
 			"pos": [
-				6,
-				0,
-				2
+				4,
+				1,
+				4
 			],
 			"rot": 0
 		},
@@ -167,9 +167,9 @@
 			"id": "m17",
 			"def": "hull_block",
 			"pos": [
-				0,
-				1,
-				2
+				2,
+				2,
+				4
 			],
 			"rot": 0
 		},
@@ -177,9 +177,9 @@
 			"id": "m18",
 			"def": "hull_block",
 			"pos": [
+				4,
 				2,
-				1,
-				2
+				4
 			],
 			"rot": 0
 		},
@@ -187,9 +187,9 @@
 			"id": "m19",
 			"def": "hull_block",
 			"pos": [
-				4,
-				1,
-				2
+				0,
+				0,
+				6
 			],
 			"rot": 0
 		},
@@ -197,9 +197,9 @@
 			"id": "m20",
 			"def": "hull_block",
 			"pos": [
-				6,
-				1,
-				2
+				2,
+				0,
+				6
 			],
 			"rot": 0
 		},
@@ -207,9 +207,9 @@
 			"id": "m21",
 			"def": "hull_block",
 			"pos": [
+				4,
 				0,
-				2,
-				2
+				6
 			],
 			"rot": 0
 		},
@@ -217,9 +217,9 @@
 			"id": "m22",
 			"def": "hull_block",
 			"pos": [
-				2,
-				2,
-				2
+				6,
+				0,
+				6
 			],
 			"rot": 0
 		},
@@ -227,9 +227,9 @@
 			"id": "m23",
 			"def": "hull_block",
 			"pos": [
-				4,
-				2,
-				2
+				0,
+				1,
+				6
 			],
 			"rot": 0
 		},
@@ -237,9 +237,9 @@
 			"id": "m24",
 			"def": "hull_block",
 			"pos": [
-				6,
 				2,
-				2
+				1,
+				6
 			],
 			"rot": 0
 		},
@@ -247,9 +247,9 @@
 			"id": "m25",
 			"def": "hull_block",
 			"pos": [
-				2,
-				0,
-				4
+				4,
+				1,
+				6
 			],
 			"rot": 0
 		},
@@ -257,9 +257,9 @@
 			"id": "m26",
 			"def": "hull_block",
 			"pos": [
-				4,
-				0,
-				4
+				6,
+				1,
+				6
 			],
 			"rot": 0
 		},
@@ -267,9 +267,9 @@
 			"id": "m27",
 			"def": "hull_block",
 			"pos": [
+				0,
 				2,
-				1,
-				4
+				6
 			],
 			"rot": 0
 		},
@@ -277,9 +277,9 @@
 			"id": "m28",
 			"def": "hull_block",
 			"pos": [
-				4,
-				1,
-				4
+				2,
+				2,
+				6
 			],
 			"rot": 0
 		},
@@ -287,9 +287,9 @@
 			"id": "m29",
 			"def": "hull_block",
 			"pos": [
+				4,
 				2,
-				2,
-				4
+				6
 			],
 			"rot": 0
 		},
@@ -297,9 +297,9 @@
 			"id": "m30",
 			"def": "hull_block",
 			"pos": [
-				4,
+				6,
 				2,
-				4
+				6
 			],
 			"rot": 0
 		},
@@ -307,9 +307,9 @@
 			"id": "m31",
 			"def": "hull_block",
 			"pos": [
-				2,
 				0,
-				6
+				0,
+				8
 			],
 			"rot": 0
 		},
@@ -317,9 +317,9 @@
 			"id": "m32",
 			"def": "hull_block",
 			"pos": [
-				4,
+				2,
 				0,
-				6
+				8
 			],
 			"rot": 0
 		},
@@ -327,9 +327,9 @@
 			"id": "m33",
 			"def": "hull_block",
 			"pos": [
-				2,
-				1,
-				6
+				4,
+				0,
+				8
 			],
 			"rot": 0
 		},
@@ -337,9 +337,9 @@
 			"id": "m34",
 			"def": "hull_block",
 			"pos": [
-				4,
-				1,
-				6
+				6,
+				0,
+				8
 			],
 			"rot": 0
 		},
@@ -347,9 +347,9 @@
 			"id": "m35",
 			"def": "hull_block",
 			"pos": [
-				2,
-				2,
-				6
+				0,
+				1,
+				8
 			],
 			"rot": 0
 		},
@@ -357,9 +357,9 @@
 			"id": "m36",
 			"def": "hull_block",
 			"pos": [
-				4,
 				2,
-				6
+				1,
+				8
 			],
 			"rot": 0
 		},
@@ -367,8 +367,8 @@
 			"id": "m37",
 			"def": "hull_block",
 			"pos": [
-				2,
-				0,
+				4,
+				1,
 				8
 			],
 			"rot": 0
@@ -377,8 +377,8 @@
 			"id": "m38",
 			"def": "hull_block",
 			"pos": [
-				4,
-				0,
+				6,
+				1,
 				8
 			],
 			"rot": 0
@@ -387,8 +387,8 @@
 			"id": "m39",
 			"def": "hull_block",
 			"pos": [
+				0,
 				2,
-				1,
 				8
 			],
 			"rot": 0
@@ -397,8 +397,8 @@
 			"id": "m40",
 			"def": "hull_block",
 			"pos": [
-				4,
-				1,
+				2,
+				2,
 				8
 			],
 			"rot": 0
@@ -407,7 +407,7 @@
 			"id": "m41",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				2,
 				8
 			],
@@ -417,7 +417,7 @@
 			"id": "m42",
 			"def": "hull_block",
 			"pos": [
-				4,
+				6,
 				2,
 				8
 			],
@@ -1745,169 +1745,241 @@
 		},
 		{
 			"id": "m175",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
 				0,
 				0,
-				-1
+				32
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
+		},
+		{
+			"id": "m176",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				32
+			],
+			"rot": 0
 		},
 		{
 			"id": "m177",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
+				4,
 				0,
-				2,
-				-1
+				32
 			],
 			"rot": 0
 		},
 		{
 			"id": "m178",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				1,
+				6,
 				0,
-				-1
+				32
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
+		},
+		{
+			"id": "m179",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				32
+			],
+			"rot": 0
 		},
 		{
 			"id": "m180",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				1,
 				2,
-				-1
+				1,
+				32
 			],
 			"rot": 0
 		},
 		{
 			"id": "m181",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				2,
-				0,
-				-1
+				4,
+				1,
+				32
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
+		},
+		{
+			"id": "m182",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				32
+			],
+			"rot": 0
 		},
 		{
 			"id": "m183",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
+				0,
 				2,
-				2,
-				-1
+				32
 			],
 			"rot": 0
 		},
 		{
 			"id": "m184",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				3,
-				0,
-				-1
+				2,
+				2,
+				32
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
+		},
+		{
+			"id": "m185",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				32
+			],
+			"rot": 0
 		},
 		{
 			"id": "m186",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				3,
+				6,
 				2,
-				-1
+				32
 			],
 			"rot": 0
 		},
 		{
 			"id": "m187",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				4,
 				0,
-				-1
+				0,
+				34
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
+		},
+		{
+			"id": "m188",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				34
+			],
+			"rot": 0
 		},
 		{
 			"id": "m189",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
 				4,
-				2,
-				-1
+				0,
+				34
 			],
 			"rot": 0
 		},
 		{
 			"id": "m190",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				5,
+				6,
 				0,
-				-1
+				34
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
+		},
+		{
+			"id": "m191",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				34
+			],
+			"rot": 0
 		},
 		{
 			"id": "m192",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				5,
 				2,
-				-1
+				1,
+				34
 			],
 			"rot": 0
 		},
 		{
 			"id": "m193",
-			"def": "wedge_short",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				34
+			],
+			"rot": 0
+		},
+		{
+			"id": "m194",
+			"def": "hull_block",
 			"pos": [
 				6,
-				0,
-				-1
+				1,
+				34
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
 		},
 		{
 			"id": "m195",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				6,
+				0,
 				2,
-				-1
+				34
 			],
 			"rot": 0
 		},
 		{
 			"id": "m196",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				7,
-				0,
-				-1
+				2,
+				2,
+				34
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
+		},
+		{
+			"id": "m197",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				34
+			],
+			"rot": 0
 		},
 		{
 			"id": "m198",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				7,
+				6,
 				2,
-				-1
+				34
 			],
 			"rot": 0
 		},
@@ -1915,9 +1987,9 @@
 			"id": "m199",
 			"def": "wedge_short",
 			"pos": [
+				2,
 				0,
-				0,
-				9
+				-1
 			],
 			"rot": 0,
 			"flip": true
@@ -1926,9 +1998,9 @@
 			"id": "m201",
 			"def": "wedge_short",
 			"pos": [
-				0,
 				2,
-				9
+				2,
+				-1
 			],
 			"rot": 0
 		},
@@ -1936,9 +2008,9 @@
 			"id": "m202",
 			"def": "wedge_short",
 			"pos": [
-				1,
+				3,
 				0,
-				9
+				-1
 			],
 			"rot": 0,
 			"flip": true
@@ -1947,9 +2019,9 @@
 			"id": "m204",
 			"def": "wedge_short",
 			"pos": [
-				1,
+				3,
 				2,
-				9
+				-1
 			],
 			"rot": 0
 		},
@@ -1957,9 +2029,9 @@
 			"id": "m205",
 			"def": "wedge_short",
 			"pos": [
-				6,
+				4,
 				0,
-				9
+				-1
 			],
 			"rot": 0,
 			"flip": true
@@ -1968,9 +2040,9 @@
 			"id": "m207",
 			"def": "wedge_short",
 			"pos": [
-				6,
+				4,
 				2,
-				9
+				-1
 			],
 			"rot": 0
 		},
@@ -1978,9 +2050,9 @@
 			"id": "m208",
 			"def": "wedge_short",
 			"pos": [
-				7,
+				5,
 				0,
-				9
+				-1
 			],
 			"rot": 0,
 			"flip": true
@@ -1989,69 +2061,51 @@
 			"id": "m210",
 			"def": "wedge_short",
 			"pos": [
-				7,
+				5,
 				2,
-				9
+				-1
 			],
 			"rot": 0
 		},
 		{
 			"id": "m211",
-			"def": "hull_block",
+			"def": "wedge_short",
 			"pos": [
-				2,
-				3,
-				12
+				0,
+				0,
+				5
 			],
-			"rot": 0
-		},
-		{
-			"id": "m212",
-			"def": "hull_block",
-			"pos": [
-				4,
-				3,
-				12
-			],
-			"rot": 0
+			"rot": 0,
+			"flip": true
 		},
 		{
 			"id": "m213",
-			"def": "hull_block",
+			"def": "wedge_short",
 			"pos": [
+				0,
 				2,
-				3,
-				14
+				5
 			],
 			"rot": 0
 		},
 		{
 			"id": "m214",
-			"def": "hull_block",
+			"def": "wedge_short",
 			"pos": [
-				4,
-				3,
-				14
+				1,
+				0,
+				5
 			],
-			"rot": 0
-		},
-		{
-			"id": "m215",
-			"def": "hull_block",
-			"pos": [
-				2,
-				3,
-				16
-			],
-			"rot": 0
+			"rot": 0,
+			"flip": true
 		},
 		{
 			"id": "m216",
-			"def": "hull_block",
+			"def": "wedge_short",
 			"pos": [
-				4,
-				3,
-				16
+				1,
+				2,
+				5
 			],
 			"rot": 0
 		},
@@ -2059,20 +2113,9 @@
 			"id": "m217",
 			"def": "wedge_short",
 			"pos": [
-				2,
-				3,
-				11
-			],
-			"rot": 0,
-			"flip": true
-		},
-		{
-			"id": "m218",
-			"def": "wedge_short",
-			"pos": [
-				3,
-				3,
-				11
+				6,
+				0,
+				5
 			],
 			"rot": 0,
 			"flip": true
@@ -2081,41 +2124,30 @@
 			"id": "m219",
 			"def": "wedge_short",
 			"pos": [
-				4,
-				3,
-				11
+				6,
+				2,
+				5
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
 		},
 		{
 			"id": "m220",
 			"def": "wedge_short",
 			"pos": [
-				5,
-				3,
-				11
+				7,
+				0,
+				5
 			],
 			"rot": 0,
 			"flip": true
 		},
 		{
-			"id": "m221",
-			"def": "hull_block",
-			"pos": [
-				2,
-				4,
-				12
-			],
-			"rot": 0
-		},
-		{
 			"id": "m222",
-			"def": "hull_block",
+			"def": "wedge_short",
 			"pos": [
-				4,
-				4,
-				12
+				7,
+				2,
+				5
 			],
 			"rot": 0
 		},
@@ -2124,7 +2156,7 @@
 			"def": "hull_block",
 			"pos": [
 				2,
-				4,
+				3,
 				14
 			],
 			"rot": 0
@@ -2134,7 +2166,7 @@
 			"def": "hull_block",
 			"pos": [
 				4,
-				4,
+				3,
 				14
 			],
 			"rot": 0
@@ -2144,7 +2176,7 @@
 			"def": "hull_block",
 			"pos": [
 				2,
-				4,
+				3,
 				16
 			],
 			"rot": 0
@@ -2154,28 +2186,28 @@
 			"def": "hull_block",
 			"pos": [
 				4,
-				4,
+				3,
 				16
 			],
 			"rot": 0
 		},
 		{
 			"id": "m227",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
 				2,
-				4,
-				11
+				3,
+				18
 			],
 			"rot": 0
 		},
 		{
 			"id": "m228",
-			"def": "wedge_short",
+			"def": "hull_block",
 			"pos": [
-				3,
 				4,
-				11
+				3,
+				18
 			],
 			"rot": 0
 		},
@@ -2183,169 +2215,271 @@
 			"id": "m229",
 			"def": "wedge_short",
 			"pos": [
-				4,
-				4,
-				11
+				2,
+				3,
+				13
 			],
-			"rot": 0
+			"rot": 0,
+			"flip": true
 		},
 		{
 			"id": "m230",
 			"def": "wedge_short",
 			"pos": [
+				3,
+				3,
+				13
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m231",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				3,
+				13
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m232",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				3,
+				13
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m233",
+			"def": "hull_block",
+			"pos": [
+				2,
+				4,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m234",
+			"def": "hull_block",
+			"pos": [
+				4,
+				4,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m235",
+			"def": "hull_block",
+			"pos": [
+				2,
+				4,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m236",
+			"def": "hull_block",
+			"pos": [
+				4,
+				4,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m237",
+			"def": "hull_block",
+			"pos": [
+				2,
+				4,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m238",
+			"def": "hull_block",
+			"pos": [
+				4,
+				4,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m239",
+			"def": "wedge_short",
+			"pos": [
+				2,
+				4,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m240",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				4,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m241",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				4,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m242",
+			"def": "wedge_short",
+			"pos": [
 				5,
 				4,
-				11
+				13
 			],
 			"rot": 0
 		}
 	],
 	"rooms": [
 		{
-			"id": "r231",
+			"id": "r243",
 			"def": "crew_quarters",
 			"deck": 3,
 			"rect": [
 				2,
-				12,
+				14,
 				4,
 				6
 			]
 		},
 		{
-			"id": "r232",
+			"id": "r244",
 			"def": "bridge",
 			"deck": 4,
 			"rect": [
 				2,
-				12,
+				14,
 				4,
 				6
 			]
 		},
 		{
-			"id": "r235",
+			"id": "r247",
 			"def": "corridor",
 			"deck": 0,
 			"rect": [
 				3,
 				0,
 				2,
-				30
+				34
 			]
 		},
 		{
-			"id": "r236",
+			"id": "r248",
 			"def": "engine_room",
 			"deck": 0,
 			"rect": [
 				0,
-				30,
+				34,
 				8,
 				2
-			]
-		},
-		{
-			"id": "r238",
-			"def": "corridor",
-			"deck": 1,
-			"rect": [
-				3,
-				0,
-				2,
-				30
-			]
-		},
-		{
-			"id": "r239",
-			"def": "engine_room",
-			"deck": 1,
-			"rect": [
-				0,
-				30,
-				8,
-				2
-			]
-		},
-		{
-			"id": "r242",
-			"def": "corridor",
-			"deck": 2,
-			"rect": [
-				3,
-				0,
-				2,
-				30
-			]
-		},
-		{
-			"id": "r243",
-			"def": "engine_room",
-			"deck": 2,
-			"rect": [
-				0,
-				30,
-				8,
-				2
-			]
-		},
-		{
-			"id": "r246",
-			"def": "reactor_room",
-			"deck": 0,
-			"rect": [
-				5,
-				18,
-				3,
-				4
 			]
 		},
 		{
 			"id": "r250",
-			"def": "reactor_room",
-			"deck": 0,
+			"def": "corridor",
+			"deck": 1,
+			"rect": [
+				3,
+				0,
+				2,
+				34
+			]
+		},
+		{
+			"id": "r251",
+			"def": "engine_room",
+			"deck": 1,
 			"rect": [
 				0,
-				18,
-				3,
-				4
+				34,
+				8,
+				2
 			]
 		},
 		{
 			"id": "r254",
-			"def": "reactor_room",
-			"deck": 0,
+			"def": "corridor",
+			"deck": 2,
 			"rect": [
-				5,
-				14,
 				3,
-				4
+				0,
+				2,
+				34
+			]
+		},
+		{
+			"id": "r255",
+			"def": "engine_room",
+			"deck": 2,
+			"rect": [
+				0,
+				34,
+				8,
+				2
 			]
 		},
 		{
 			"id": "r258",
-			"def": "magazine",
-			"deck": 0,
-			"rect": [
-				0,
-				14,
-				3,
-				4
-			]
-		},
-		{
-			"id": "r260",
-			"def": "magazine",
+			"def": "reactor_room",
 			"deck": 0,
 			"rect": [
 				5,
-				22,
+				18,
 				3,
 				4
 			]
 		},
 		{
 			"id": "r262",
+			"def": "reactor_room",
+			"deck": 0,
+			"rect": [
+				0,
+				18,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r266",
+			"def": "reactor_room",
+			"deck": 0,
+			"rect": [
+				5,
+				22,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r270",
 			"def": "magazine",
 			"deck": 0,
 			"rect": [
@@ -2356,111 +2490,89 @@
 			]
 		},
 		{
-			"id": "r264",
-			"def": "life_support",
-			"deck": 0,
-			"rect": [
-				5,
-				10,
-				3,
-				4
-			]
-		},
-		{
-			"id": "r266",
-			"def": "life_support",
-			"deck": 0,
-			"rect": [
-				0,
-				10,
-				3,
-				4
-			]
-		},
-		{
-			"id": "r268",
-			"def": "crew_quarters",
-			"deck": 0,
-			"rect": [
-				5,
-				26,
-				3,
-				4
-			]
-		},
-		{
-			"id": "r270",
-			"def": "crew_quarters",
-			"deck": 0,
-			"rect": [
-				0,
-				26,
-				3,
-				4
-			]
-		},
-		{
 			"id": "r272",
-			"def": "crew_quarters",
-			"deck": 1,
+			"def": "magazine",
+			"deck": 0,
 			"rect": [
 				5,
-				18,
+				14,
 				3,
 				4
 			]
 		},
 		{
 			"id": "r274",
-			"def": "crew_quarters",
-			"deck": 1,
+			"def": "magazine",
+			"deck": 0,
 			"rect": [
 				0,
-				18,
+				14,
 				3,
 				4
 			]
 		},
 		{
 			"id": "r276",
-			"def": "cargo_hold",
-			"deck": 1,
+			"def": "life_support",
+			"deck": 0,
 			"rect": [
 				5,
-				14,
+				26,
 				3,
 				4
 			]
 		},
 		{
-			"id": "r279",
-			"def": "cargo_hold",
-			"deck": 1,
+			"id": "r278",
+			"def": "life_support",
+			"deck": 0,
 			"rect": [
 				0,
-				14,
+				26,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r280",
+			"def": "crew_quarters",
+			"deck": 0,
+			"rect": [
+				5,
+				10,
 				3,
 				4
 			]
 		},
 		{
 			"id": "r282",
-			"def": "cargo_hold",
-			"deck": 1,
+			"def": "crew_quarters",
+			"deck": 0,
 			"rect": [
-				5,
+				0,
 				10,
 				3,
 				4
 			]
 		},
 		{
-			"id": "r285",
-			"def": "cargo_hold",
-			"deck": 1,
+			"id": "r284",
+			"def": "crew_quarters",
+			"deck": 0,
+			"rect": [
+				5,
+				30,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r286",
+			"def": "crew_quarters",
+			"deck": 0,
 			"rect": [
 				0,
-				10,
+				30,
 				3,
 				4
 			]
@@ -2468,10 +2580,10 @@
 		{
 			"id": "r288",
 			"def": "cargo_hold",
-			"deck": 1,
+			"deck": 0,
 			"rect": [
-				0,
-				22,
+				5,
+				6,
 				3,
 				4
 			]
@@ -2479,10 +2591,10 @@
 		{
 			"id": "r291",
 			"def": "cargo_hold",
-			"deck": 1,
+			"deck": 0,
 			"rect": [
-				5,
-				22,
+				0,
+				6,
 				3,
 				4
 			]
@@ -2492,8 +2604,8 @@
 			"def": "cargo_hold",
 			"deck": 1,
 			"rect": [
-				0,
-				26,
+				5,
+				18,
 				3,
 				4
 			]
@@ -2503,8 +2615,8 @@
 			"def": "cargo_hold",
 			"deck": 1,
 			"rect": [
-				5,
-				26,
+				0,
+				18,
 				3,
 				4
 			]
@@ -2512,7 +2624,7 @@
 		{
 			"id": "r300",
 			"def": "cargo_hold",
-			"deck": 2,
+			"deck": 1,
 			"rect": [
 				0,
 				14,
@@ -2523,7 +2635,7 @@
 		{
 			"id": "r303",
 			"def": "cargo_hold",
-			"deck": 2,
+			"deck": 1,
 			"rect": [
 				5,
 				14,
@@ -2534,10 +2646,10 @@
 		{
 			"id": "r306",
 			"def": "cargo_hold",
-			"deck": 2,
+			"deck": 1,
 			"rect": [
-				5,
-				18,
+				0,
+				22,
 				3,
 				4
 			]
@@ -2545,10 +2657,10 @@
 		{
 			"id": "r309",
 			"def": "cargo_hold",
-			"deck": 2,
+			"deck": 1,
 			"rect": [
-				0,
-				18,
+				5,
+				22,
 				3,
 				4
 			]
@@ -2556,7 +2668,7 @@
 		{
 			"id": "r312",
 			"def": "cargo_hold",
-			"deck": 2,
+			"deck": 1,
 			"rect": [
 				0,
 				10,
@@ -2567,7 +2679,7 @@
 		{
 			"id": "r315",
 			"def": "cargo_hold",
-			"deck": 2,
+			"deck": 1,
 			"rect": [
 				5,
 				10,
@@ -2578,10 +2690,10 @@
 		{
 			"id": "r318",
 			"def": "cargo_hold",
-			"deck": 2,
+			"deck": 1,
 			"rect": [
 				0,
-				22,
+				26,
 				3,
 				4
 			]
@@ -2589,6 +2701,105 @@
 		{
 			"id": "r321",
 			"def": "cargo_hold",
+			"deck": 1,
+			"rect": [
+				5,
+				26,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r324",
+			"def": "cargo_hold",
+			"deck": 1,
+			"rect": [
+				5,
+				30,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r327",
+			"def": "cargo_hold",
+			"deck": 1,
+			"rect": [
+				0,
+				30,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r330",
+			"def": "cargo_hold",
+			"deck": 1,
+			"rect": [
+				0,
+				6,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r333",
+			"def": "cargo_hold",
+			"deck": 1,
+			"rect": [
+				5,
+				6,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r336",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				5,
+				18,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r339",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				0,
+				18,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r342",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				0,
+				14,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r345",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				5,
+				14,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r348",
+			"def": "cargo_hold",
 			"deck": 2,
 			"rect": [
 				5,
@@ -2598,7 +2809,40 @@
 			]
 		},
 		{
-			"id": "r324",
+			"id": "r351",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				0,
+				22,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r354",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				0,
+				10,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r357",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				5,
+				10,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r360",
 			"def": "cargo_hold",
 			"deck": 2,
 			"rect": [
@@ -2609,12 +2853,56 @@
 			]
 		},
 		{
-			"id": "r327",
+			"id": "r363",
 			"def": "cargo_hold",
 			"deck": 2,
 			"rect": [
 				5,
 				26,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r366",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				5,
+				6,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r369",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				0,
+				6,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r372",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				0,
+				30,
+				3,
+				4
+			]
+		},
+		{
+			"id": "r375",
+			"def": "cargo_hold",
+			"deck": 2,
+			"rect": [
+				5,
+				30,
 				3,
 				4
 			]
@@ -2622,159 +2910,107 @@
 	],
 	"hatches": [
 		{
-			"id": "h233",
-			"a": [
-				3,
-				2,
-				13
-			],
-			"b": [
-				3,
-				3,
-				13
-			]
-		},
-		{
-			"id": "h234",
-			"a": [
-				4,
-				3,
-				15
-			],
-			"b": [
-				4,
-				4,
-				15
-			]
-		},
-		{
-			"id": "h237",
-			"a": [
-				3,
-				0,
-				29
-			],
-			"b": [
-				3,
-				0,
-				30
-			]
-		},
-		{
-			"id": "h240",
-			"a": [
-				3,
-				1,
-				29
-			],
-			"b": [
-				3,
-				1,
-				30
-			]
-		},
-		{
-			"id": "h241",
-			"a": [
-				4,
-				1,
-				16
-			],
-			"b": [
-				4,
-				0,
-				16
-			]
-		},
-		{
-			"id": "h244",
-			"a": [
-				3,
-				2,
-				29
-			],
-			"b": [
-				3,
-				2,
-				30
-			]
-		},
-		{
 			"id": "h245",
 			"a": [
-				4,
+				3,
 				2,
-				16
+				15
 			],
 			"b": [
-				4,
-				1,
-				16
+				3,
+				3,
+				15
 			]
 		},
 		{
-			"id": "h247",
+			"id": "h246",
 			"a": [
-				5,
-				0,
-				20
+				4,
+				3,
+				17
 			],
 			"b": [
 				4,
-				0,
-				20
+				4,
+				17
 			]
 		},
 		{
-			"id": "h251",
+			"id": "h249",
 			"a": [
-				2,
+				3,
 				0,
-				20
+				33
 			],
 			"b": [
 				3,
 				0,
-				20
+				34
 			]
 		},
 		{
-			"id": "h255",
+			"id": "h252",
 			"a": [
-				5,
-				0,
-				16
+				3,
+				1,
+				33
+			],
+			"b": [
+				3,
+				1,
+				34
+			]
+		},
+		{
+			"id": "h253",
+			"a": [
+				4,
+				1,
+				18
 			],
 			"b": [
 				4,
 				0,
-				16
+				18
+			]
+		},
+		{
+			"id": "h256",
+			"a": [
+				3,
+				2,
+				33
+			],
+			"b": [
+				3,
+				2,
+				34
+			]
+		},
+		{
+			"id": "h257",
+			"a": [
+				4,
+				2,
+				18
+			],
+			"b": [
+				4,
+				1,
+				18
 			]
 		},
 		{
 			"id": "h259",
 			"a": [
-				2,
-				0,
-				16
-			],
-			"b": [
-				3,
-				0,
-				16
-			]
-		},
-		{
-			"id": "h261",
-			"a": [
 				5,
 				0,
-				24
+				20
 			],
 			"b": [
 				4,
 				0,
-				24
+				20
 			]
 		},
 		{
@@ -2782,51 +3018,25 @@
 			"a": [
 				2,
 				0,
-				24
+				20
 			],
 			"b": [
 				3,
 				0,
-				24
-			]
-		},
-		{
-			"id": "h265",
-			"a": [
-				5,
-				0,
-				12
-			],
-			"b": [
-				4,
-				0,
-				12
+				20
 			]
 		},
 		{
 			"id": "h267",
 			"a": [
-				2,
-				0,
-				12
-			],
-			"b": [
-				3,
-				0,
-				12
-			]
-		},
-		{
-			"id": "h269",
-			"a": [
 				5,
 				0,
-				28
+				24
 			],
 			"b": [
 				4,
 				0,
-				28
+				24
 			]
 		},
 		{
@@ -2834,6 +3044,58 @@
 			"a": [
 				2,
 				0,
+				24
+			],
+			"b": [
+				3,
+				0,
+				24
+			]
+		},
+		{
+			"id": "h273",
+			"a": [
+				5,
+				0,
+				16
+			],
+			"b": [
+				4,
+				0,
+				16
+			]
+		},
+		{
+			"id": "h275",
+			"a": [
+				2,
+				0,
+				16
+			],
+			"b": [
+				3,
+				0,
+				16
+			]
+		},
+		{
+			"id": "h277",
+			"a": [
+				5,
+				0,
+				28
+			],
+			"b": [
+				4,
+				0,
+				28
+			]
+		},
+		{
+			"id": "h279",
+			"a": [
+				2,
+				0,
 				28
 			],
 			"b": [
@@ -2843,145 +3105,119 @@
 			]
 		},
 		{
-			"id": "h273",
+			"id": "h281",
 			"a": [
 				5,
-				1,
-				20
+				0,
+				12
 			],
 			"b": [
 				4,
-				1,
-				20
-			]
-		},
-		{
-			"id": "h275",
-			"a": [
-				2,
-				1,
-				20
-			],
-			"b": [
-				3,
-				1,
-				20
-			]
-		},
-		{
-			"id": "h277",
-			"a": [
-				5,
-				1,
-				16
-			],
-			"b": [
-				4,
-				1,
-				16
-			]
-		},
-		{
-			"id": "h280",
-			"a": [
-				2,
-				1,
-				16
-			],
-			"b": [
-				3,
-				1,
-				16
+				0,
+				12
 			]
 		},
 		{
 			"id": "h283",
 			"a": [
-				5,
-				1,
-				12
-			],
-			"b": [
-				4,
-				1,
-				12
-			]
-		},
-		{
-			"id": "h286",
-			"a": [
 				2,
-				1,
+				0,
 				12
 			],
 			"b": [
 				3,
-				1,
+				0,
 				12
+			]
+		},
+		{
+			"id": "h285",
+			"a": [
+				5,
+				0,
+				32
+			],
+			"b": [
+				4,
+				0,
+				32
+			]
+		},
+		{
+			"id": "h287",
+			"a": [
+				2,
+				0,
+				32
+			],
+			"b": [
+				3,
+				0,
+				32
 			]
 		},
 		{
 			"id": "h289",
 			"a": [
-				2,
-				1,
-				24
+				5,
+				0,
+				8
 			],
 			"b": [
-				3,
-				1,
-				24
+				4,
+				0,
+				8
 			]
 		},
 		{
 			"id": "h292",
 			"a": [
-				5,
-				1,
-				24
+				2,
+				0,
+				8
 			],
 			"b": [
-				4,
-				1,
-				24
+				3,
+				0,
+				8
 			]
 		},
 		{
 			"id": "h295",
 			"a": [
-				2,
+				5,
 				1,
-				28
+				20
 			],
 			"b": [
-				3,
+				4,
 				1,
-				28
+				20
 			]
 		},
 		{
 			"id": "h298",
 			"a": [
-				5,
+				2,
 				1,
-				28
+				20
 			],
 			"b": [
-				4,
+				3,
 				1,
-				28
+				20
 			]
 		},
 		{
 			"id": "h301",
 			"a": [
 				2,
-				2,
+				1,
 				16
 			],
 			"b": [
 				3,
-				2,
+				1,
 				16
 			]
 		},
@@ -2989,51 +3225,51 @@
 			"id": "h304",
 			"a": [
 				5,
-				2,
+				1,
 				16
 			],
 			"b": [
 				4,
-				2,
+				1,
 				16
 			]
 		},
 		{
 			"id": "h307",
 			"a": [
-				5,
 				2,
-				20
+				1,
+				24
 			],
 			"b": [
-				4,
-				2,
-				20
+				3,
+				1,
+				24
 			]
 		},
 		{
 			"id": "h310",
 			"a": [
-				2,
-				2,
-				20
+				5,
+				1,
+				24
 			],
 			"b": [
-				3,
-				2,
-				20
+				4,
+				1,
+				24
 			]
 		},
 		{
 			"id": "h313",
 			"a": [
 				2,
-				2,
+				1,
 				12
 			],
 			"b": [
 				3,
-				2,
+				1,
 				12
 			]
 		},
@@ -3041,12 +3277,12 @@
 			"id": "h316",
 			"a": [
 				5,
-				2,
+				1,
 				12
 			],
 			"b": [
 				4,
-				2,
+				1,
 				12
 			]
 		},
@@ -3054,19 +3290,136 @@
 			"id": "h319",
 			"a": [
 				2,
-				2,
-				24
+				1,
+				28
 			],
 			"b": [
 				3,
-				2,
-				24
+				1,
+				28
 			]
 		},
 		{
 			"id": "h322",
 			"a": [
 				5,
+				1,
+				28
+			],
+			"b": [
+				4,
+				1,
+				28
+			]
+		},
+		{
+			"id": "h325",
+			"a": [
+				5,
+				1,
+				32
+			],
+			"b": [
+				4,
+				1,
+				32
+			]
+		},
+		{
+			"id": "h328",
+			"a": [
+				2,
+				1,
+				32
+			],
+			"b": [
+				3,
+				1,
+				32
+			]
+		},
+		{
+			"id": "h331",
+			"a": [
+				2,
+				1,
+				8
+			],
+			"b": [
+				3,
+				1,
+				8
+			]
+		},
+		{
+			"id": "h334",
+			"a": [
+				5,
+				1,
+				8
+			],
+			"b": [
+				4,
+				1,
+				8
+			]
+		},
+		{
+			"id": "h337",
+			"a": [
+				5,
+				2,
+				20
+			],
+			"b": [
+				4,
+				2,
+				20
+			]
+		},
+		{
+			"id": "h340",
+			"a": [
+				2,
+				2,
+				20
+			],
+			"b": [
+				3,
+				2,
+				20
+			]
+		},
+		{
+			"id": "h343",
+			"a": [
+				2,
+				2,
+				16
+			],
+			"b": [
+				3,
+				2,
+				16
+			]
+		},
+		{
+			"id": "h346",
+			"a": [
+				5,
+				2,
+				16
+			],
+			"b": [
+				4,
+				2,
+				16
+			]
+		},
+		{
+			"id": "h349",
+			"a": [
+				5,
 				2,
 				24
 			],
@@ -3077,7 +3430,46 @@
 			]
 		},
 		{
-			"id": "h325",
+			"id": "h352",
+			"a": [
+				2,
+				2,
+				24
+			],
+			"b": [
+				3,
+				2,
+				24
+			]
+		},
+		{
+			"id": "h355",
+			"a": [
+				2,
+				2,
+				12
+			],
+			"b": [
+				3,
+				2,
+				12
+			]
+		},
+		{
+			"id": "h358",
+			"a": [
+				5,
+				2,
+				12
+			],
+			"b": [
+				4,
+				2,
+				12
+			]
+		},
+		{
+			"id": "h361",
 			"a": [
 				2,
 				2,
@@ -3090,7 +3482,7 @@
 			]
 		},
 		{
-			"id": "h328",
+			"id": "h364",
 			"a": [
 				5,
 				2,
@@ -3101,11 +3493,63 @@
 				2,
 				28
 			]
+		},
+		{
+			"id": "h367",
+			"a": [
+				5,
+				2,
+				8
+			],
+			"b": [
+				4,
+				2,
+				8
+			]
+		},
+		{
+			"id": "h370",
+			"a": [
+				2,
+				2,
+				8
+			],
+			"b": [
+				3,
+				2,
+				8
+			]
+		},
+		{
+			"id": "h373",
+			"a": [
+				2,
+				2,
+				32
+			],
+			"b": [
+				3,
+				2,
+				32
+			]
+		},
+		{
+			"id": "h376",
+			"a": [
+				5,
+				2,
+				32
+			],
+			"b": [
+				4,
+				2,
+				32
+			]
 		}
 	],
 	"equipment": [
 		{
-			"id": "e248",
+			"id": "e260",
 			"def": "fusion_reactor",
 			"cell": [
 				5,
@@ -3114,7 +3558,7 @@
 			]
 		},
 		{
-			"id": "e249",
+			"id": "e261",
 			"def": "propellant_tank",
 			"cell": [
 				5,
@@ -3123,7 +3567,7 @@
 			]
 		},
 		{
-			"id": "e252",
+			"id": "e264",
 			"def": "fusion_reactor",
 			"cell": [
 				0,
@@ -3132,7 +3576,7 @@
 			]
 		},
 		{
-			"id": "e253",
+			"id": "e265",
 			"def": "propellant_tank",
 			"cell": [
 				0,
@@ -3141,93 +3585,57 @@
 			]
 		},
 		{
-			"id": "e256",
+			"id": "e268",
 			"def": "fusion_reactor",
 			"cell": [
 				5,
 				0,
-				14
+				22
 			]
 		},
 		{
-			"id": "e257",
+			"id": "e269",
 			"def": "propellant_tank",
 			"cell": [
 				5,
 				0,
-				16
-			]
-		},
-		{
-			"id": "e278",
-			"def": "propellant_tank",
-			"cell": [
-				5,
-				1,
-				14
-			]
-		},
-		{
-			"id": "e281",
-			"def": "propellant_tank",
-			"cell": [
-				0,
-				1,
-				14
-			]
-		},
-		{
-			"id": "e284",
-			"def": "propellant_tank",
-			"cell": [
-				5,
-				1,
-				10
-			]
-		},
-		{
-			"id": "e287",
-			"def": "propellant_tank",
-			"cell": [
-				0,
-				1,
-				10
+				24
 			]
 		},
 		{
 			"id": "e290",
 			"def": "propellant_tank",
 			"cell": [
+				5,
 				0,
-				1,
-				22
+				6
 			]
 		},
 		{
 			"id": "e293",
 			"def": "propellant_tank",
 			"cell": [
-				5,
-				1,
-				22
+				0,
+				0,
+				6
 			]
 		},
 		{
 			"id": "e296",
 			"def": "propellant_tank",
 			"cell": [
-				0,
+				5,
 				1,
-				26
+				18
 			]
 		},
 		{
 			"id": "e299",
 			"def": "propellant_tank",
 			"cell": [
-				5,
+				0,
 				1,
-				26
+				18
 			]
 		},
 		{
@@ -3235,7 +3643,7 @@
 			"def": "propellant_tank",
 			"cell": [
 				0,
-				2,
+				1,
 				14
 			]
 		},
@@ -3244,7 +3652,7 @@
 			"def": "propellant_tank",
 			"cell": [
 				5,
-				2,
+				1,
 				14
 			]
 		},
@@ -3252,18 +3660,18 @@
 			"id": "e308",
 			"def": "propellant_tank",
 			"cell": [
-				5,
-				2,
-				18
+				0,
+				1,
+				22
 			]
 		},
 		{
 			"id": "e311",
 			"def": "propellant_tank",
 			"cell": [
-				0,
-				2,
-				18
+				5,
+				1,
+				22
 			]
 		},
 		{
@@ -3271,7 +3679,7 @@
 			"def": "propellant_tank",
 			"cell": [
 				0,
-				2,
+				1,
 				10
 			]
 		},
@@ -3280,7 +3688,7 @@
 			"def": "propellant_tank",
 			"cell": [
 				5,
-				2,
+				1,
 				10
 			]
 		},
@@ -3289,8 +3697,8 @@
 			"def": "propellant_tank",
 			"cell": [
 				0,
-				2,
-				22
+				1,
+				26
 			]
 		},
 		{
@@ -3298,43 +3706,25 @@
 			"def": "propellant_tank",
 			"cell": [
 				5,
-				2,
-				22
+				1,
+				26
 			]
 		},
 		{
 			"id": "e326",
 			"def": "propellant_tank",
 			"cell": [
-				0,
-				2,
-				26
+				5,
+				1,
+				30
 			]
 		},
 		{
 			"id": "e329",
 			"def": "propellant_tank",
 			"cell": [
-				5,
-				2,
-				26
-			]
-		},
-		{
-			"id": "e330",
-			"def": "propellant_tank",
-			"cell": [
 				0,
-				0,
-				30
-			]
-		},
-		{
-			"id": "e331",
-			"def": "propellant_tank",
-			"cell": [
-				2,
-				0,
+				1,
 				30
 			]
 		},
@@ -3342,582 +3732,814 @@
 			"id": "e332",
 			"def": "propellant_tank",
 			"cell": [
-				6,
-				0,
-				30
-			]
-		},
-		{
-			"id": "e333",
-			"def": "propellant_tank",
-			"cell": [
 				0,
 				1,
-				30
-			]
-		},
-		{
-			"id": "e334",
-			"def": "propellant_tank",
-			"cell": [
-				2,
-				1,
-				30
+				6
 			]
 		},
 		{
 			"id": "e335",
 			"def": "propellant_tank",
 			"cell": [
-				6,
+				5,
 				1,
-				30
-			]
-		},
-		{
-			"id": "e336",
-			"def": "propellant_tank",
-			"cell": [
-				0,
-				2,
-				30
-			]
-		},
-		{
-			"id": "e337",
-			"def": "propellant_tank",
-			"cell": [
-				2,
-				2,
-				30
+				6
 			]
 		},
 		{
 			"id": "e338",
 			"def": "propellant_tank",
 			"cell": [
-				6,
+				5,
+				2,
+				18
+			]
+		},
+		{
+			"id": "e341",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				2,
+				18
+			]
+		},
+		{
+			"id": "e344",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				2,
+				14
+			]
+		},
+		{
+			"id": "e347",
+			"def": "propellant_tank",
+			"cell": [
+				5,
+				2,
+				14
+			]
+		},
+		{
+			"id": "e350",
+			"def": "propellant_tank",
+			"cell": [
+				5,
+				2,
+				22
+			]
+		},
+		{
+			"id": "e353",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				2,
+				22
+			]
+		},
+		{
+			"id": "e356",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				2,
+				10
+			]
+		},
+		{
+			"id": "e359",
+			"def": "propellant_tank",
+			"cell": [
+				5,
+				2,
+				10
+			]
+		},
+		{
+			"id": "e362",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				2,
+				26
+			]
+		},
+		{
+			"id": "e365",
+			"def": "propellant_tank",
+			"cell": [
+				5,
+				2,
+				26
+			]
+		},
+		{
+			"id": "e368",
+			"def": "propellant_tank",
+			"cell": [
+				5,
+				2,
+				6
+			]
+		},
+		{
+			"id": "e371",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				2,
+				6
+			]
+		},
+		{
+			"id": "e374",
+			"def": "propellant_tank",
+			"cell": [
+				0,
 				2,
 				30
 			]
 		},
 		{
-			"id": "e339",
-			"def": "main_engine",
-			"cell": [
-				3,
-				0,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e340",
-			"def": "main_engine",
-			"cell": [
-				3,
-				1,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e341",
-			"def": "main_engine",
-			"cell": [
-				3,
-				2,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e342",
-			"def": "main_engine",
-			"cell": [
-				4,
-				0,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e343",
-			"def": "main_engine",
-			"cell": [
-				4,
-				1,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e344",
-			"def": "main_engine",
-			"cell": [
-				4,
-				2,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e345",
-			"def": "main_engine",
-			"cell": [
-				2,
-				0,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e346",
-			"def": "main_engine",
-			"cell": [
-				2,
-				1,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e347",
-			"def": "main_engine",
-			"cell": [
-				2,
-				2,
-				31
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e348",
-			"def": "rcs_block",
-			"cell": [
-				0,
-				0,
-				10
-			],
-			"face": "port"
-		},
-		{
-			"id": "e349",
-			"def": "rcs_block",
-			"cell": [
-				0,
-				2,
-				10
-			],
-			"face": "port"
-		},
-		{
-			"id": "e350",
-			"def": "rcs_block",
-			"cell": [
-				7,
-				0,
-				10
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e351",
-			"def": "rcs_block",
-			"cell": [
-				7,
-				2,
-				10
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e352",
-			"def": "rcs_block",
-			"cell": [
-				0,
-				0,
-				31
-			],
-			"face": "port"
-		},
-		{
-			"id": "e353",
-			"def": "rcs_block",
-			"cell": [
-				0,
-				2,
-				31
-			],
-			"face": "port"
-		},
-		{
-			"id": "e354",
-			"def": "rcs_block",
-			"cell": [
-				7,
-				0,
-				31
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e355",
-			"def": "rcs_block",
-			"cell": [
-				7,
-				2,
-				31
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e356",
-			"def": "kinetic_cannon",
-			"cell": [
-				3,
-				2,
-				9
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e357",
-			"def": "kinetic_cannon",
-			"cell": [
-				3,
-				4,
-				13
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e358",
-			"def": "autocannon",
-			"cell": [
-				0,
-				1,
-				12
-			],
-			"face": "port"
-		},
-		{
-			"id": "e359",
-			"def": "autocannon",
-			"cell": [
-				7,
-				1,
-				12
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e360",
-			"def": "autocannon",
-			"cell": [
-				0,
-				1,
-				17
-			],
-			"face": "port"
-		},
-		{
-			"id": "e361",
-			"def": "autocannon",
-			"cell": [
-				7,
-				1,
-				17
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e362",
-			"def": "autocannon",
-			"cell": [
-				0,
-				1,
-				22
-			],
-			"face": "port"
-		},
-		{
-			"id": "e363",
-			"def": "autocannon",
-			"cell": [
-				7,
-				1,
-				22
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e364",
-			"def": "autocannon",
-			"cell": [
-				3,
-				0,
-				10
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e365",
-			"def": "autocannon",
-			"cell": [
-				4,
-				0,
-				21
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e366",
-			"def": "point_defence",
-			"cell": [
-				2,
-				4,
-				17
-			],
-			"face": "port"
-		},
-		{
-			"id": "e367",
-			"def": "point_defence",
+			"id": "e377",
+			"def": "propellant_tank",
 			"cell": [
 				5,
-				4,
-				17
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e368",
-			"def": "point_defence",
-			"cell": [
-				0,
 				2,
-				11
-			],
-			"face": "port"
-		},
-		{
-			"id": "e369",
-			"def": "point_defence",
-			"cell": [
-				7,
-				2,
-				11
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e370",
-			"def": "point_defence",
-			"cell": [
-				0,
-				2,
-				18
-			],
-			"face": "port"
-		},
-		{
-			"id": "e371",
-			"def": "point_defence",
-			"cell": [
-				7,
-				2,
-				18
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e372",
-			"def": "point_defence",
-			"cell": [
-				0,
-				2,
-				25
-			],
-			"face": "port"
-		},
-		{
-			"id": "e373",
-			"def": "point_defence",
-			"cell": [
-				7,
-				2,
-				25
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e374",
-			"def": "radiator_long",
-			"cell": [
-				0,
-				0,
-				12
-			],
-			"face": "port"
-		},
-		{
-			"id": "e375",
-			"def": "radiator_long",
-			"cell": [
-				7,
-				0,
-				12
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e376",
-			"def": "radiator_long",
-			"cell": [
-				0,
-				0,
-				16
-			],
-			"face": "port"
-		},
-		{
-			"id": "e377",
-			"def": "radiator_long",
-			"cell": [
-				7,
-				0,
-				16
-			],
-			"face": "starboard"
+				30
+			]
 		},
 		{
 			"id": "e378",
-			"def": "radiator_long",
+			"def": "propellant_tank",
 			"cell": [
 				0,
 				0,
-				20
-			],
-			"face": "port"
+				34
+			]
 		},
 		{
 			"id": "e379",
-			"def": "radiator_long",
+			"def": "propellant_tank",
 			"cell": [
-				7,
+				2,
 				0,
-				20
-			],
-			"face": "starboard"
+				34
+			]
 		},
 		{
 			"id": "e380",
-			"def": "radiator_long",
+			"def": "propellant_tank",
 			"cell": [
+				6,
 				0,
-				0,
-				24
-			],
-			"face": "port"
+				34
+			]
 		},
 		{
 			"id": "e381",
-			"def": "radiator_long",
+			"def": "propellant_tank",
 			"cell": [
-				7,
 				0,
-				24
-			],
-			"face": "starboard"
+				1,
+				34
+			]
 		},
 		{
 			"id": "e382",
-			"def": "radiator_long",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				1,
+				34
+			]
+		},
+		{
+			"id": "e383",
+			"def": "propellant_tank",
+			"cell": [
+				6,
+				1,
+				34
+			]
+		},
+		{
+			"id": "e384",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				2,
+				34
+			]
+		},
+		{
+			"id": "e385",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				2,
+				34
+			]
+		},
+		{
+			"id": "e386",
+			"def": "propellant_tank",
+			"cell": [
+				6,
+				2,
+				34
+			]
+		},
+		{
+			"id": "e387",
+			"def": "main_engine",
+			"cell": [
+				3,
+				0,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e388",
+			"def": "main_engine",
+			"cell": [
+				3,
+				1,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e389",
+			"def": "main_engine",
+			"cell": [
+				3,
+				2,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e390",
+			"def": "main_engine",
+			"cell": [
+				4,
+				0,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e391",
+			"def": "main_engine",
+			"cell": [
+				4,
+				1,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e392",
+			"def": "main_engine",
+			"cell": [
+				4,
+				2,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e393",
+			"def": "main_engine",
+			"cell": [
+				2,
+				0,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e394",
+			"def": "main_engine",
+			"cell": [
+				2,
+				1,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e395",
+			"def": "main_engine",
+			"cell": [
+				2,
+				2,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e396",
+			"def": "main_engine",
+			"cell": [
+				5,
+				0,
+				35
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e397",
+			"def": "rcs_block",
 			"cell": [
 				0,
 				0,
-				28
+				6
 			],
 			"face": "port"
 		},
 		{
-			"id": "e383",
-			"def": "radiator_long",
+			"id": "e398",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				2,
+				6
+			],
+			"face": "port"
+		},
+		{
+			"id": "e399",
+			"def": "rcs_block",
 			"cell": [
 				7,
 				0,
-				28
+				6
 			],
 			"face": "starboard"
 		},
 		{
-			"id": "e384",
-			"def": "missile_rack",
+			"id": "e400",
+			"def": "rcs_block",
 			"cell": [
+				7,
 				2,
+				6
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e401",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				35
+			],
+			"face": "port"
+		},
+		{
+			"id": "e402",
+			"def": "rcs_block",
+			"cell": [
+				0,
 				2,
-				18
+				35
+			],
+			"face": "port"
+		},
+		{
+			"id": "e403",
+			"def": "rcs_block",
+			"cell": [
+				7,
+				0,
+				35
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e404",
+			"def": "rcs_block",
+			"cell": [
+				7,
+				2,
+				35
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e405",
+			"def": "kinetic_cannon",
+			"cell": [
+				3,
+				2,
+				11
 			],
 			"face": "dorsal"
 		},
 		{
-			"id": "e385",
+			"id": "e406",
+			"def": "kinetic_cannon",
+			"cell": [
+				4,
+				2,
+				7
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e407",
+			"def": "kinetic_cannon",
+			"cell": [
+				3,
+				4,
+				15
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e408",
+			"def": "autocannon",
+			"cell": [
+				0,
+				1,
+				8
+			],
+			"face": "port"
+		},
+		{
+			"id": "e409",
+			"def": "autocannon",
+			"cell": [
+				7,
+				1,
+				8
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e410",
+			"def": "autocannon",
+			"cell": [
+				0,
+				1,
+				16
+			],
+			"face": "port"
+		},
+		{
+			"id": "e411",
+			"def": "autocannon",
+			"cell": [
+				7,
+				1,
+				16
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e412",
+			"def": "autocannon",
+			"cell": [
+				0,
+				1,
+				24
+			],
+			"face": "port"
+		},
+		{
+			"id": "e413",
+			"def": "autocannon",
+			"cell": [
+				7,
+				1,
+				24
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e414",
+			"def": "autocannon",
+			"cell": [
+				3,
+				0,
+				12
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e415",
+			"def": "autocannon",
+			"cell": [
+				4,
+				0,
+				24
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e416",
+			"def": "point_defence",
+			"cell": [
+				2,
+				4,
+				19
+			],
+			"face": "port"
+		},
+		{
+			"id": "e417",
+			"def": "point_defence",
+			"cell": [
+				5,
+				4,
+				19
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e418",
+			"def": "point_defence",
+			"cell": [
+				0,
+				2,
+				7
+			],
+			"face": "port"
+		},
+		{
+			"id": "e419",
+			"def": "point_defence",
+			"cell": [
+				7,
+				2,
+				7
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e420",
+			"def": "point_defence",
+			"cell": [
+				0,
+				2,
+				14
+			],
+			"face": "port"
+		},
+		{
+			"id": "e421",
+			"def": "point_defence",
+			"cell": [
+				7,
+				2,
+				14
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e422",
+			"def": "point_defence",
+			"cell": [
+				0,
+				2,
+				21
+			],
+			"face": "port"
+		},
+		{
+			"id": "e423",
+			"def": "point_defence",
+			"cell": [
+				7,
+				2,
+				21
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e424",
+			"def": "point_defence",
+			"cell": [
+				0,
+				2,
+				28
+			],
+			"face": "port"
+		},
+		{
+			"id": "e425",
+			"def": "point_defence",
+			"cell": [
+				7,
+				2,
+				28
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e426",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				8
+			],
+			"face": "port"
+		},
+		{
+			"id": "e427",
+			"def": "radiator_long",
+			"cell": [
+				7,
+				0,
+				8
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e428",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				12
+			],
+			"face": "port"
+		},
+		{
+			"id": "e429",
+			"def": "radiator_long",
+			"cell": [
+				7,
+				0,
+				12
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e430",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				16
+			],
+			"face": "port"
+		},
+		{
+			"id": "e431",
+			"def": "radiator_long",
+			"cell": [
+				7,
+				0,
+				16
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e432",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				20
+			],
+			"face": "port"
+		},
+		{
+			"id": "e433",
+			"def": "radiator_long",
+			"cell": [
+				7,
+				0,
+				20
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e434",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				24
+			],
+			"face": "port"
+		},
+		{
+			"id": "e435",
+			"def": "radiator_long",
+			"cell": [
+				7,
+				0,
+				24
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e436",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				28
+			],
+			"face": "port"
+		},
+		{
+			"id": "e437",
+			"def": "radiator_long",
+			"cell": [
+				7,
+				0,
+				28
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e438",
+			"def": "missile_rack",
+			"cell": [
+				2,
+				2,
+				7
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e439",
 			"def": "missile_rack",
 			"cell": [
 				5,
 				2,
-				18
+				7
 			],
 			"face": "dorsal"
 		},
 		{
-			"id": "e386",
+			"id": "e440",
 			"def": "sensor_mast",
 			"cell": [
 				4,
 				4,
-				17
+				19
 			],
 			"face": "dorsal"
 		},
 		{
-			"id": "e387",
+			"id": "e441",
+			"def": "docking_collar",
+			"cell": [
+				0,
+				0,
+				19
+			],
+			"face": "port"
+		},
+		{
+			"id": "e442",
 			"def": "flare_launcher",
 			"cell": [
 				2,
 				2,
-				29
+				33
 			],
 			"face": "dorsal"
 		},
 		{
-			"id": "e388",
+			"id": "e443",
 			"def": "flare_launcher",
 			"cell": [
 				3,
 				2,
-				29
+				33
 			],
 			"face": "dorsal"
 		},
 		{
-			"id": "e389",
+			"id": "e444",
 			"def": "drone_rack",
 			"cell": [
 				3,
 				2,
-				26
+				30
 			],
 			"face": "dorsal"
 		},
 		{
-			"id": "e390",
+			"id": "e445",
 			"def": "fighter_rack",
 			"cell": [
 				4,
 				2,
-				26
+				30
 			],
 			"face": "dorsal"
 		}
@@ -3926,34 +4548,6 @@
 		[
 			0,
 			0,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			0,
-			-1,
-			"port",
-			80
-		],
-		[
-			0,
-			0,
-			0,
-			"port",
-			80
-		],
-		[
-			0,
-			0,
-			1,
-			"port",
-			80
-		],
-		[
-			0,
-			0,
 			10,
 			"port",
 			80
@@ -4018,13 +4612,6 @@
 			0,
 			0,
 			19,
-			"port",
-			80
-		],
-		[
-			0,
-			0,
-			2,
 			"port",
 			80
 		],
@@ -4101,13 +4688,6 @@
 		[
 			0,
 			0,
-			3,
-			"port",
-			80
-		],
-		[
-			0,
-			0,
 			30,
 			"port",
 			80
@@ -4122,872 +4702,1005 @@
 		[
 			0,
 			0,
-			9,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			0,
-			9,
+			32,
 			"port",
 			80
 		],
 		[
 			0,
-			1,
 			0,
-			"fore",
-			40
-		],
-		[
-			0,
-			1,
-			0,
+			33,
 			"port",
 			80
 		],
 		[
 			0,
-			1,
-			1,
+			0,
+			34,
 			"port",
 			80
 		],
 		[
 			0,
-			1,
-			10,
-			"fore",
-			40
-		],
-		[
 			0,
-			1,
-			10,
+			35,
 			"port",
 			80
 		],
 		[
 			0,
-			1,
-			11,
-			"port",
-			80
-		],
-		[
 			0,
-			1,
-			12,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			13,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			14,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			15,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			16,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			17,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			18,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			19,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			2,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			20,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			21,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			22,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			23,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			24,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			25,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			26,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			27,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			28,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			29,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			3,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			30,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			31,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			-1,
+			5,
 			"dorsal",
 			40
 		],
 		[
 			0,
-			2,
-			-1,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			0,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			0,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			1,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			1,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			10,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			10,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			11,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			11,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			12,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			12,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			13,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			13,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			14,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			14,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			15,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			15,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			16,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			16,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			17,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			17,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			18,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			18,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			19,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			19,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			2,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			2,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			20,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			20,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			21,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			21,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			22,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			22,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			23,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			23,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			24,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			24,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			25,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			25,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			26,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			26,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			27,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			27,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			28,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			28,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			29,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			29,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			3,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			3,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			30,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			30,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			31,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			31,
-			"port",
-			80
-		],
-		[
-			0,
-			2,
-			9,
-			"dorsal",
-			40
-		],
-		[
-			0,
-			2,
-			9,
-			"port",
-			80
-		],
-		[
-			1,
-			0,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			0,
-			9,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			1,
-			0,
-			"fore",
-			40
-		],
-		[
-			1,
-			1,
-			10,
-			"fore",
-			40
-		],
-		[
-			1,
-			2,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			0,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			1,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			10,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			11,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			12,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			13,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			14,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			15,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			16,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			17,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			18,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			19,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			2,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			20,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			21,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			22,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			23,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			24,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			25,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			26,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			27,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			28,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			29,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			3,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			30,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			31,
-			"dorsal",
-			40
-		],
-		[
-			1,
-			2,
-			9,
-			"dorsal",
-			40
-		],
-		[
-			2,
-			0,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			2,
-			0,
-			4,
-			"port",
-			80
-		],
-		[
-			2,
 			0,
 			5,
 			"port",
 			80
 		],
 		[
-			2,
+			0,
 			0,
 			6,
 			"port",
 			80
 		],
 		[
-			2,
+			0,
 			0,
 			7,
 			"port",
 			80
 		],
 		[
-			2,
+			0,
 			0,
 			8,
 			"port",
 			80
 		],
 		[
+			0,
+			0,
+			9,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			10,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			11,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			12,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			13,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			14,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			15,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			16,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			17,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			18,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			19,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			20,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			21,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			22,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			23,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			24,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			25,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			26,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			27,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			28,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			29,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			30,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			31,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			32,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			33,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			34,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			35,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			6,
+			"fore",
+			40
+		],
+		[
+			0,
+			1,
+			6,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			7,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			8,
+			"port",
+			80
+		],
+		[
+			0,
+			1,
+			9,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			10,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			10,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			11,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			12,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			12,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			13,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			13,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			14,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			14,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			15,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			15,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			16,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			16,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			17,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			17,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			18,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			18,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			19,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			19,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			20,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			20,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			21,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			21,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			22,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			22,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			23,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			23,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			24,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			24,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			25,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			25,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			26,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			26,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			27,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			27,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			28,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			28,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			29,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			29,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			30,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			30,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			31,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			31,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			32,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			32,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			33,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			33,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			34,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			34,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			35,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			35,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			5,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			6,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			6,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			7,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			7,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			8,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			8,
+			"port",
+			80
+		],
+		[
+			0,
+			2,
+			9,
+			"dorsal",
+			40
+		],
+		[
+			0,
+			2,
+			9,
+			"port",
+			80
+		],
+		[
+			1,
+			0,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			1,
+			6,
+			"fore",
+			40
+		],
+		[
+			1,
+			2,
+			10,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			12,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			13,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			14,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			15,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			16,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			17,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			18,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			19,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			20,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			21,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			22,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			23,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			24,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			25,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			26,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			27,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			28,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			29,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			30,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			31,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			32,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			33,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			34,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			35,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			6,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			7,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			8,
+			"dorsal",
+			40
+		],
+		[
+			1,
+			2,
+			9,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			0,
+			-1,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			0,
+			-1,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			0,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			1,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			2,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			3,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			4,
+			"port",
+			80
+		],
+		[
 			2,
 			1,
 			0,
@@ -4997,6 +5710,34 @@
 		[
 			2,
 			1,
+			0,
+			"port",
+			80
+		],
+		[
+			2,
+			1,
+			1,
+			"port",
+			80
+		],
+		[
+			2,
+			1,
+			2,
+			"port",
+			80
+		],
+		[
+			2,
+			1,
+			3,
+			"port",
+			80
+		],
+		[
+			2,
+			1,
 			4,
 			"port",
 			80
@@ -5010,38 +5751,17 @@
 		],
 		[
 			2,
-			1,
-			6,
-			"port",
-			80
-		],
-		[
 			2,
-			1,
-			7,
-			"port",
-			80
-		],
-		[
-			2,
-			1,
-			8,
-			"port",
-			80
-		],
-		[
-			2,
-			1,
-			9,
-			"port",
-			80
+			-1,
+			"dorsal",
+			40
 		],
 		[
 			2,
 			2,
 			-1,
-			"dorsal",
-			40
+			"port",
+			80
 		],
 		[
 			2,
@@ -5053,9 +5773,23 @@
 		[
 			2,
 			2,
+			0,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
 			1,
 			"dorsal",
 			40
+		],
+		[
+			2,
+			2,
+			1,
+			"port",
+			80
 		],
 		[
 			2,
@@ -5067,14 +5801,14 @@
 		[
 			2,
 			2,
-			18,
+			11,
 			"dorsal",
 			40
 		],
 		[
 			2,
 			2,
-			19,
+			12,
 			"dorsal",
 			40
 		],
@@ -5084,6 +5818,13 @@
 			2,
 			"dorsal",
 			40
+		],
+		[
+			2,
+			2,
+			2,
+			"port",
+			80
 		],
 		[
 			2,
@@ -5165,6 +5906,13 @@
 		[
 			2,
 			2,
+			3,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
 			30,
 			"dorsal",
 			40
@@ -5179,6 +5927,34 @@
 		[
 			2,
 			2,
+			32,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			33,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			34,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			35,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
 			4,
 			"dorsal",
 			40
@@ -5200,23 +5976,9 @@
 		[
 			2,
 			2,
-			5,
-			"port",
-			80
-		],
-		[
-			2,
-			2,
 			6,
 			"dorsal",
 			40
-		],
-		[
-			2,
-			2,
-			6,
-			"port",
-			80
 		],
 		[
 			2,
@@ -5228,23 +5990,9 @@
 		[
 			2,
 			2,
-			7,
-			"port",
-			80
-		],
-		[
-			2,
-			2,
 			8,
 			"dorsal",
 			40
-		],
-		[
-			2,
-			2,
-			8,
-			"port",
-			80
 		],
 		[
 			2,
@@ -5256,20 +6004,6 @@
 		[
 			2,
 			3,
-			11,
-			"port",
-			80
-		],
-		[
-			2,
-			3,
-			12,
-			"port",
-			80
-		],
-		[
-			2,
-			3,
 			13,
 			"port",
 			80
@@ -5304,29 +6038,15 @@
 		],
 		[
 			2,
-			4,
-			11,
-			"dorsal",
-			40
-		],
-		[
-			2,
-			4,
-			11,
+			3,
+			18,
 			"port",
 			80
 		],
 		[
 			2,
-			4,
-			12,
-			"dorsal",
-			40
-		],
-		[
-			2,
-			4,
-			12,
+			3,
+			19,
 			"port",
 			80
 		],
@@ -5397,6 +6117,34 @@
 			2,
 			4,
 			17,
+			"port",
+			80
+		],
+		[
+			2,
+			4,
+			18,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			4,
+			18,
+			"port",
+			80
+		],
+		[
+			2,
+			4,
+			19,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			4,
+			19,
 			"port",
 			80
 		],
@@ -5445,14 +6193,14 @@
 		[
 			3,
 			2,
-			18,
+			11,
 			"dorsal",
 			40
 		],
 		[
 			3,
 			2,
-			19,
+			12,
 			"dorsal",
 			40
 		],
@@ -5551,6 +6299,34 @@
 			3,
 			2,
 			31,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			32,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			33,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			34,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			35,
 			"dorsal",
 			40
 		],
@@ -5599,20 +6375,6 @@
 		[
 			3,
 			4,
-			11,
-			"dorsal",
-			40
-		],
-		[
-			3,
-			4,
-			12,
-			"dorsal",
-			40
-		],
-		[
-			3,
-			4,
 			13,
 			"dorsal",
 			40
@@ -5642,6 +6404,20 @@
 			3,
 			4,
 			17,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			4,
+			18,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			4,
+			19,
 			"dorsal",
 			40
 		],
@@ -5690,14 +6466,14 @@
 		[
 			4,
 			2,
-			18,
+			11,
 			"dorsal",
 			40
 		],
 		[
 			4,
 			2,
-			19,
+			12,
 			"dorsal",
 			40
 		],
@@ -5796,6 +6572,34 @@
 			4,
 			2,
 			31,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			2,
+			32,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			2,
+			33,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			2,
+			34,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			2,
+			35,
 			"dorsal",
 			40
 		],
@@ -5844,20 +6648,6 @@
 		[
 			4,
 			4,
-			11,
-			"dorsal",
-			40
-		],
-		[
-			4,
-			4,
-			12,
-			"dorsal",
-			40
-		],
-		[
-			4,
-			4,
 			13,
 			"dorsal",
 			40
@@ -5891,11 +6681,60 @@
 			40
 		],
 		[
+			4,
+			4,
+			18,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			4,
+			19,
+			"dorsal",
+			40
+		],
+		[
 			5,
 			0,
 			-1,
 			"dorsal",
 			40
+		],
+		[
+			5,
+			0,
+			-1,
+			"starboard",
+			80
+		],
+		[
+			5,
+			0,
+			0,
+			"starboard",
+			80
+		],
+		[
+			5,
+			0,
+			1,
+			"starboard",
+			80
+		],
+		[
+			5,
+			0,
+			2,
+			"starboard",
+			80
+		],
+		[
+			5,
+			0,
+			3,
+			"starboard",
+			80
 		],
 		[
 			5,
@@ -5906,1450 +6745,1541 @@
 		],
 		[
 			5,
+			1,
 			0,
+			"fore",
+			40
+		],
+		[
+			5,
+			1,
+			0,
+			"starboard",
+			80
+		],
+		[
+			5,
+			1,
+			1,
+			"starboard",
+			80
+		],
+		[
+			5,
+			1,
+			2,
+			"starboard",
+			80
+		],
+		[
+			5,
+			1,
+			3,
+			"starboard",
+			80
+		],
+		[
+			5,
+			1,
+			4,
+			"starboard",
+			80
+		],
+		[
+			5,
+			1,
 			5,
 			"starboard",
 			80
 		],
 		[
 			5,
+			2,
+			-1,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			-1,
+			"starboard",
+			80
+		],
+		[
+			5,
+			2,
+			0,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			0,
+			"starboard",
+			80
+		],
+		[
+			5,
+			2,
+			1,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			1,
+			"starboard",
+			80
+		],
+		[
+			5,
+			2,
+			10,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			12,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			2,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			2,
+			"starboard",
+			80
+		],
+		[
+			5,
+			2,
+			20,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			21,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			22,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			23,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			24,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			25,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			26,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			27,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			28,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			29,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			3,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			3,
+			"starboard",
+			80
+		],
+		[
+			5,
+			2,
+			30,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			31,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			32,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			33,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			34,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			35,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			4,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			4,
+			"starboard",
+			80
+		],
+		[
+			5,
+			2,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			6,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			7,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			8,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			9,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			3,
+			13,
+			"starboard",
+			80
+		],
+		[
+			5,
+			3,
+			14,
+			"starboard",
+			80
+		],
+		[
+			5,
+			3,
+			15,
+			"starboard",
+			80
+		],
+		[
+			5,
+			3,
+			16,
+			"starboard",
+			80
+		],
+		[
+			5,
+			3,
+			17,
+			"starboard",
+			80
+		],
+		[
+			5,
+			3,
+			18,
+			"starboard",
+			80
+		],
+		[
+			5,
+			3,
+			19,
+			"starboard",
+			80
+		],
+		[
+			5,
+			4,
+			13,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			4,
+			13,
+			"starboard",
+			80
+		],
+		[
+			5,
+			4,
+			14,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			4,
+			14,
+			"starboard",
+			80
+		],
+		[
+			5,
+			4,
+			15,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			4,
+			15,
+			"starboard",
+			80
+		],
+		[
+			5,
+			4,
+			16,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			4,
+			16,
+			"starboard",
+			80
+		],
+		[
+			5,
+			4,
+			17,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			4,
+			17,
+			"starboard",
+			80
+		],
+		[
+			5,
+			4,
+			18,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			4,
+			18,
+			"starboard",
+			80
+		],
+		[
+			5,
+			4,
+			19,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			4,
+			19,
+			"starboard",
+			80
+		],
+		[
+			6,
+			0,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			1,
+			6,
+			"fore",
+			40
+		],
+		[
+			6,
+			2,
+			10,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			12,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			13,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			14,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			15,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			16,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			17,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			18,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			19,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			20,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			21,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			22,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			23,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			24,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			25,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			26,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			27,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			28,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			29,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			30,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			31,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			32,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			33,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			34,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			35,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			6,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			7,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			8,
+			"dorsal",
+			40
+		],
+		[
+			6,
+			2,
+			9,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			0,
+			10,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			11,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			12,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			13,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			14,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			15,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			16,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			17,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			18,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			19,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			20,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			21,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			22,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			23,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			24,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			25,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			26,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			27,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			28,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			29,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			30,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			31,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			32,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			33,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			34,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			35,
+			"starboard",
+			80
+		],
+		[
+			7,
+			0,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			0,
+			5,
+			"starboard",
+			80
+		],
+		[
+			7,
 			0,
 			6,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
 			0,
 			7,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
 			0,
 			8,
 			"starboard",
 			80
 		],
 		[
-			5,
-			1,
+			7,
 			0,
+			9,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			10,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			11,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			12,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			13,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			14,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			15,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			16,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			17,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			18,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			19,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			20,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			21,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			22,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			23,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			24,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			25,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			26,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			27,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			28,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			29,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			30,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			31,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			32,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			33,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			34,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			35,
+			"starboard",
+			80
+		],
+		[
+			7,
+			1,
+			6,
 			"fore",
 			40
 		],
 		[
-			5,
-			1,
-			4,
-			"starboard",
-			80
-		],
-		[
-			5,
-			1,
-			5,
-			"starboard",
-			80
-		],
-		[
-			5,
+			7,
 			1,
 			6,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
 			1,
 			7,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
 			1,
 			8,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
 			1,
 			9,
 			"starboard",
 			80
 		],
 		[
-			5,
-			2,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			2,
-			0,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			2,
-			1,
-			"dorsal",
-			40
-		],
-		[
-			5,
+			7,
 			2,
 			10,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			10,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			11,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			12,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			12,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			13,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			13,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			14,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			14,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			15,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			15,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			16,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			16,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			17,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			17,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			18,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			18,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			19,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
 			2,
-			2,
-			"dorsal",
-			40
+			19,
+			"starboard",
+			80
 		],
 		[
-			5,
+			7,
 			2,
 			20,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			20,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			21,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			21,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			22,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			22,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			23,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			23,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			24,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			24,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			25,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			25,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			26,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			26,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			27,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			27,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			28,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			28,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			29,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
 			2,
-			3,
-			"dorsal",
-			40
+			29,
+			"starboard",
+			80
 		],
 		[
-			5,
+			7,
 			2,
 			30,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
+			2,
+			30,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			31,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
 			2,
-			4,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			2,
-			4,
+			31,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
+			2,
+			32,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			32,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			33,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			33,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			34,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			34,
+			"starboard",
+			80
+		],
+		[
+			7,
+			2,
+			35,
+			"dorsal",
+			40
+		],
+		[
+			7,
+			2,
+			35,
+			"starboard",
+			80
+		],
+		[
+			7,
 			2,
 			5,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
 			2,
 			5,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
 			2,
 			6,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
 			2,
 			6,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
 			2,
 			7,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
 			2,
 			7,
 			"starboard",
 			80
 		],
 		[
-			5,
+			7,
 			2,
 			8,
 			"dorsal",
 			40
 		],
 		[
-			5,
+			7,
 			2,
 			8,
-			"starboard",
-			80
-		],
-		[
-			5,
-			2,
-			9,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			3,
-			11,
-			"starboard",
-			80
-		],
-		[
-			5,
-			3,
-			12,
-			"starboard",
-			80
-		],
-		[
-			5,
-			3,
-			13,
-			"starboard",
-			80
-		],
-		[
-			5,
-			3,
-			14,
-			"starboard",
-			80
-		],
-		[
-			5,
-			3,
-			15,
-			"starboard",
-			80
-		],
-		[
-			5,
-			3,
-			16,
-			"starboard",
-			80
-		],
-		[
-			5,
-			3,
-			17,
-			"starboard",
-			80
-		],
-		[
-			5,
-			4,
-			11,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			4,
-			11,
-			"starboard",
-			80
-		],
-		[
-			5,
-			4,
-			12,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			4,
-			12,
-			"starboard",
-			80
-		],
-		[
-			5,
-			4,
-			13,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			4,
-			13,
-			"starboard",
-			80
-		],
-		[
-			5,
-			4,
-			14,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			4,
-			14,
-			"starboard",
-			80
-		],
-		[
-			5,
-			4,
-			15,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			4,
-			15,
-			"starboard",
-			80
-		],
-		[
-			5,
-			4,
-			16,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			4,
-			16,
-			"starboard",
-			80
-		],
-		[
-			5,
-			4,
-			17,
-			"dorsal",
-			40
-		],
-		[
-			5,
-			4,
-			17,
-			"starboard",
-			80
-		],
-		[
-			6,
-			0,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			0,
-			9,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			1,
-			0,
-			"fore",
-			40
-		],
-		[
-			6,
-			1,
-			10,
-			"fore",
-			40
-		],
-		[
-			6,
-			2,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			0,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			1,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			10,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			11,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			12,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			13,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			14,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			15,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			16,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			17,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			18,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			19,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			2,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			20,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			21,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			22,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			23,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			24,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			25,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			26,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			27,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			28,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			29,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			3,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			30,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			31,
-			"dorsal",
-			40
-		],
-		[
-			6,
-			2,
-			9,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			0,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			0,
-			-1,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			0,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			1,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			10,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			11,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			12,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			13,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			14,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			15,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			16,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			17,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			18,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			19,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			2,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			20,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			21,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			22,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			23,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			24,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			25,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			26,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			27,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			28,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			29,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			3,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			30,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			31,
-			"starboard",
-			80
-		],
-		[
-			7,
-			0,
-			9,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			0,
-			9,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			0,
-			"fore",
-			40
-		],
-		[
-			7,
-			1,
-			0,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			1,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			10,
-			"fore",
-			40
-		],
-		[
-			7,
-			1,
-			10,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			11,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			12,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			13,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			14,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			15,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			16,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			17,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			18,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			19,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			2,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			20,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			21,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			22,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			23,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			24,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			25,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			26,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			27,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			28,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			29,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			3,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			30,
-			"starboard",
-			80
-		],
-		[
-			7,
-			1,
-			31,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			-1,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			-1,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			0,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			0,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			1,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			1,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			10,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			10,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			11,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			11,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			12,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			12,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			13,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			13,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			14,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			14,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			15,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			15,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			16,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			16,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			17,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			17,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			18,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			18,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			19,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			19,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			2,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			2,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			20,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			20,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			21,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			21,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			22,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			22,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			23,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			23,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			24,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			24,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			25,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			25,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			26,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			26,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			27,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			27,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			28,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			28,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			29,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			29,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			3,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			3,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			30,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			30,
-			"starboard",
-			80
-		],
-		[
-			7,
-			2,
-			31,
-			"dorsal",
-			40
-		],
-		[
-			7,
-			2,
-			31,
 			"starboard",
 			80
 		],
