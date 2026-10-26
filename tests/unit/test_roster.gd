@@ -100,10 +100,11 @@ func test_nine_different_silhouettes() -> void:
 		assert_true(not seen.has(key), "%s's outline differs from %s's" % [id, seen.get(key, "")])
 		seen[key] = id
 	# What makes each one out, physically.
-	var interceptor := _bp("cutter_mk1")
-	var booms := interceptor.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool:
-		return e.face == &"fore" and e.def_id == &"autocannon")
-	assert_true(booms.size() == 2, "the interceptor's guns are at the front of its outrigger booms")
+	var interceptor := ShipGrid.build(_bp("cutter_mk1"), _catalog())
+	var big := _bp("cutter_mk1").equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool:
+		return e.def_id == &"main_engine_high_thrust")
+	assert_true(big.size() == 2 and interceptor.is_hull(Vector3i(0, 1, 11)) and not interceptor.is_hull(Vector3i(1, 1, 5)),
+		"the interceptor: a low dart ahead of an engine block twice its height and wider, two medium engines in it")
 	var destroyer := _bp("destroyer_mk1")
 	var gun := destroyer.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool: return e.def_id == &"railgun")
 	var dgrid := ShipGrid.build(destroyer, _catalog())

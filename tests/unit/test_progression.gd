@@ -39,6 +39,7 @@ func _report(bp: ShipBlueprint, profile: PlayerProfile) -> ShipValidator.Report:
 func _with_gun(def_id: StringName) -> ShipBlueprint:
 	var bp := _template()
 	(bp.find("e41") as ShipBlueprint.PlacedEquipment).def_id = def_id
+	BlueprintFix.fit_spans(bp, _catalog())  # a bigger gun seated as a loaded design's is
 	return bp
 
 
@@ -205,7 +206,7 @@ func test_locked_blueprints_and_unowned_parts_are_errors() -> void:
 
 func test_mixed_gun_batteries_compile_per_mount() -> void:
 	var bp := _template()
-	bp.add_equipment(&"kinetic_cannon", Vector3i(4, 2, 4), &"dorsal")
+	bp.add_equipment(&"kinetic_cannon", Vector3i(4, 2, 6), &"dorsal")  # a free 2 × 2 patch
 	var r := ShipValidator.validate(bp, _catalog())
 	assert_true(not r.has_errors(), "an autocannon and a heavy kinetic cannon can share a ship:\n%s" % r.summary())
 	var cfg := ShipStats.compute(bp, ShipGrid.build(bp, _catalog())).to_ship_config("mixed")
@@ -547,7 +548,7 @@ func test_field_repair_needs_a_working_workshop_and_patches_over_time() -> void:
 	var e := s.start_field_repair()
 	assert_true(e != null and e.id == "e28", "crew patch the damaged reactor, not the destroyed engine")
 	# Damage control walk from the workshop r9 → corridor r8 → corridor r14 → reactor room r15.
-	var walk := 3.0 * CrewRoster.ROOM_TRANSIT_S
+	var walk := 3.0 * s.room_transit_s()
 	assert_near(s.repair_task.travel_s, walk, 1e-6, "walk from the workshop to the reactor room (s)")
 	var work := (ShipSystems.FIELD_REPAIR_SETUP_S + 15.0) / s.room_bonus(&"workshop")
 	assert_near(s.repair_task.total_s, walk + work, 1e-6, "repair time = walk + (setup + 1 s per hp) ÷ workshop size bonus (s)")

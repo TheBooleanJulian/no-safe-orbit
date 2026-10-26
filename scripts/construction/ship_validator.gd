@@ -271,6 +271,13 @@ static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 							"%s %s stands out %d cells from its face as a fin; the hull at %s is in the way." % [
 								def.display_name, e.id, def.length_cells, _cell_text(cell)], e.id)
 						break
+				if def.stands_out() > 1:
+					for cell in grid.standing_cells(i):
+						if grid.is_hull(cell):
+							_add(report, Severity.ERROR, &"equipment_blocked",
+								"%s %s is a %d×%d×%d part: it stands %d cells out from its face, and the hull at %s is in the way. Move it where it has the room." % [
+									def.display_name, e.id, def.size_cells, def.size_cells, def.stands_out(), def.stands_out(), _cell_text(cell)], e.id)
+							break
 				if def.kind == EquipmentDefinition.Kind.MAIN_ENGINE and e.face != &"aft":
 					var room: int = grid.room_at.get(e.cell, -1)
 					if room < 0 or bp.rooms[room].def_id != ENGINE_ROOM_ID:

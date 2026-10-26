@@ -66,6 +66,9 @@ extends Resource
 ## Outward normal of each mount's hull face (same order); empty = fixed guns.
 ## A turret trains anywhere above its face plane (see WorldSimulation).
 @export var cannon_mount_normals_body: PackedVector3Array = PackedVector3Array()
+## How far each turret's barrel rides off its face (m; same order) — a
+## bigger gun's turret stands taller. Empty = WorldSimulation.TURRET_HEIGHT_M.
+@export var cannon_turret_heights: PackedFloat32Array = PackedFloat32Array()
 ## Point-defence turrets: gun, mounts (body), face normals and ids. They
 ## pick their own targets (hostile craft) and have their own magazines.
 @export var pd_gun: KineticCannonConfig
@@ -106,6 +109,11 @@ func primary_muzzle() -> Vector3:
 ## The gun on mount k.
 func mount_cannon(k: int) -> KineticCannonConfig:
 	return mount_cannons[k] if k < mount_cannons.size() and mount_cannons[k] != null else cannon
+
+
+## Mount k's barrel height off its face (m).
+func turret_height(k: int) -> float:
+	return cannon_turret_heights[k] if k < cannon_turret_heights.size() else WorldSimulation.TURRET_HEIGHT_M
 
 
 ## Whether mount k is a trainable turret (else it fires along the nose).

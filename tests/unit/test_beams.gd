@@ -198,7 +198,7 @@ func test_a_laser_drone_shoots_down_a_missile() -> void:
 func test_beam_parts_exist_and_sort_into_their_sections() -> void:
 	var cat := _catalog()
 	var want := {
-		&"laser_turret": ["Weapons", "Guns"], &"laser_fighter_bay": ["Hangars & craft", "Fighters"],
+		&"laser_turret": ["Weapons", "Lasers"], &"railgun": ["Weapons", "Guns"], &"laser_fighter_bay": ["Hangars & craft", "Fighters"],
 		&"laser_drone_rack": ["Hangars & craft", "Drones"], &"fighter_bay": ["Hangars & craft", "Fighters"],
 		&"interceptor_rack": ["Hangars & craft", "Fighters"], &"drone_rack": ["Hangars & craft", "Drones"],
 		&"ew_drone_rack": ["Hangars & craft", "Drones"],

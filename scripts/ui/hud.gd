@@ -615,7 +615,7 @@ const GROUND_WARN_M := 3000.0
 static func ground_text(world: WorldSimulation, player: ShipState) -> String:
 	if world.terrain == null or world.frame == null or world.altitude_of(player) > world.body.entry_interface_altitude_m * 2.0:
 		return ""
-	var safe := world.body.safe_landing_mps
+	var safe := world.safe_landing_mps(player)
 	if player.landed:
 		return "GROUND  %s LANDED · touched down at %.1f m/s · thrust up to lift off" % [CyberTheme.GLYPH_OK, player.touchdown_mps]
 	var v := world.velocity_over_ground(player)
@@ -865,7 +865,7 @@ func _alerts(world: WorldSimulation, player: ShipState, orbit: OrbitElements) ->
 		# Real ground (play-test batch 10): a warning low and coming down too fast to land.
 		var agl := world.height_above_ground(player)
 		var v := world.velocity_over_ground(player)
-		if not player.landed and agl < GROUND_WARN_M and v.length() > world.body.safe_landing_mps:
+		if not player.landed and agl < GROUND_WARN_M and v.length() > world.safe_landing_mps(player):
 			out.append(AlertQueue.make(&"entry", &"nav", DANGER if agl < GROUND_WARN_M * 0.3 else CAUTION, "GROUND",
 				"%.1fkm" % (agl / 1000.0), "", "[O]"))
 	elif orbit != null:
@@ -1563,7 +1563,7 @@ func _update_gun_reticles(player: ShipState, alpha: float, render_origin: Vector
 	for k in cfg.cannon_muzzles_body.size():
 		var muzzle := cfg.cannon_muzzles_body[k]
 		if cfg.is_turret(k):
-			muzzle += cfg.cannon_mount_normals_body[k] * WorldSimulation.TURRET_HEIGHT_M
+			muzzle += cfg.cannon_mount_normals_body[k] * cfg.turret_height(k)
 		var p := base + q * muzzle + q * player.turret_dirs[k] * input.aim_range_m
 		overlay.gun_reticles.append({"pos": p, "status": player.turret_status[k], "label": str(k + 1)})
 

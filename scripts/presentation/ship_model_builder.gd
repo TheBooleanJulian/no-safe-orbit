@@ -81,7 +81,7 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 	_add_lights(model, bp, grid, origin_m)
 	var flank := _best_flank(bp, grid)
 	if hull_name != "" and not flank.is_empty():
-		_paint_name(model.root, flank, origin_m, hull_name)
+		_paint_name(model.root, flank, origin_m, hull_name, grid)
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
 		if def == null:
@@ -97,6 +97,7 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 		part.name = bp.equipment[i].id
 		model.root.add_child(part)
 		model.parts[bp.equipment[i].id] = part
+		var plumes_before := model.engine_nozzles.size()
 		match def.kind:
 			EquipmentDefinition.Kind.MAIN_ENGINE:
 				# A gimbal mount and combustion chamber on the hull, feed lines
@@ -242,6 +243,19 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 					cone.transform = Transform3D(b, at + normal * 0.25)
 					cones.append(cone)
 				model.missile_cones[bp.equipment[i].id] = cones
+			EquipmentDefinition.Kind.LANDING_LEG:
+				# A fixed strut out to its full height, braced, on a foot pad.
+				var b := _basis_y_along(normal)
+				var dark := _mat(mats, Color(0.16, 0.17, 0.19) * tint)
+				var reach := def.stands_out() * ShipGrid.CELL_SIZE_M - 0.3
+				var strut := _cylinder(part, 0.28, 0.36, reach, Vector3.ZERO, mat)
+				strut.transform = Transform3D(b, mount + normal * reach * 0.5)
+				var brace := _cylinder(part, 0.12, 0.12, reach * 0.75, Vector3.ZERO, dark)
+				brace.transform = Transform3D(b * Basis(Vector3.RIGHT, deg_to_rad(28.0)), mount + normal * reach * 0.38 + b.z * reach * 0.17)
+				var base := _box(part, Vector3(0.9, 0.3, 0.9), Vector3.ZERO, dark)
+				base.transform = Transform3D(b, mount + normal * 0.15)
+				var foot := _box(part, Vector3(1.8, 0.22, 1.8), Vector3.ZERO, dark)
+				foot.transform = Transform3D(b, mount + normal * reach)
 			EquipmentDefinition.Kind.DECOY_LAUNCHER:
 				# A squat dispenser: a block with a 3 × 3 grid of flare tubes.
 				var b := _basis_y_along(normal)
@@ -272,6 +286,15 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				craft.transform = Transform3D(_basis_y_along(normal), mount + normal * 0.9)
 				CraftView.build_model(craft, def.craft, def.craft.cannon != null, false)
 				model.docked_craft[bp.equipment[i].id] = craft
+		# A medium or large part (its tier's size): the same model, that many
+		# times bigger about its mount — a turret's pivot rides as high as the
+		# simulation's (ShipConfig.turret_height), a plume is as wide as its bell.
+		if def.size_cells > 1:
+			var k := float(def.size_cells)
+			part.transform = Transform3D(Basis.from_scale(Vector3.ONE * k), mount * (1.0 - k))
+			for p in range(plumes_before, model.engine_nozzles.size()):
+				model.engine_nozzles[p] = mount + (model.engine_nozzles[p] - mount) * k
+				model.engine_widths[p] *= k
 		_merge_static(part)
 	return model
 
@@ -502,21 +525,31 @@ static func _add_lights(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_
 	lit.emission_enabled = true
 	lit.emission = Color(1.0, 0.82, 0.55)
 	lit.emission_energy_multiplier = 2.5
+	var recess := StandardMaterial3D.new()
+	recess.albedo_color = Color(0.02, 0.02, 0.025)
+	recess.roughness = 0.9
 	for ri in bp.rooms.size():
 		var def: RoomDefinition = grid.catalog.rooms.get(bp.rooms[ri].def_id)
 		if def == null or not def.role in [&"command", &"quarters", &"life_support", &"workshop"]:
 			continue
 		for cell in ShipGrid.room_cells(bp.rooms[ri]):
 			for face: StringName in [&"port", &"starboard", &"fore"]:
-				if not grid.is_exterior_face(cell, face) or grid.slope_faces(cell).has(face) \
-						or bp.armor.has(ShipBlueprint.plate_key(cell, face)):
+				if not grid.is_exterior_face(cell, face) or grid.slope_faces(cell).has(face):
 					continue
 				var n := Vector3(ShipGrid.FACE_NORMALS[face])
 				var size := Vector3(1.6, 0.4, 1.6)
 				for axis in 3:
 					if n[axis] != 0.0:
 						size[axis] = 0.06
-				var w := _box(holder, size, ShipGrid.cell_center_m(cell) - origin_m + n * (c * 0.5 + 0.03) + Vector3(0, 0.3, 0), lit)
+				var at := ShipGrid.cell_center_m(cell) - origin_m + Vector3(0, 0.3, 0)
+				# Under armour, the window is cut through the plate: a dark
+				# recess flush with the plate's face, the lit pane set in it.
+				var key := ShipBlueprint.plate_key(cell, face)
+				var lift := plate_depth(int(bp.armor[key])) if bp.armor.has(key) else 0.0
+				if lift > 0.0:
+					var frame := size + (Vector3.ONE - n.abs()) * 0.35
+					_box(holder, frame, at + n * (c * 0.5 + lift + 0.01), recess)
+				var w := _box(holder, size, at + n * (c * 0.5 + lift + 0.03), lit)
 				model.windows.append({"room": ri, "node": w})
 	if grid.module_at.is_empty():
 		return
@@ -687,6 +720,11 @@ static func _wedge(parent: Node3D, def: HullModuleDefinition, m: ShipBlueprint.P
 ## Armour plates as raised slabs on their faces, set apart from the bare
 ## hull (play-test batch 6): a neutral gunmetal, glossier, one panel per
 ## cell; darker and thicker for 80 mm; slope plates lie on the slope.
+## How thick a plate of `mm` is drawn (m): exaggerated, so it reads.
+static func plate_depth(mm: int) -> float:
+	return 0.45 if mm >= ShipBlueprint.PLATE_THICK_MM else 0.28
+
+
 static func _add_plates(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, mats: Dictionary, tint: Color) -> void:
 	if bp.armor.is_empty():
 		return
@@ -704,7 +742,7 @@ static func _add_plates(model: Model, bp: ShipBlueprint, grid: ShipGrid, origin_
 		if not grid.is_hull(cell):
 			continue
 		var mm := int(bp.armor[key])
-		var depth := 0.45 if mm >= ShipBlueprint.PLATE_THICK_MM else 0.28
+		var depth := plate_depth(mm)
 		var mat := thick if mm >= ShipBlueprint.PLATE_THICK_MM else thin
 		var cell_center := ShipGrid.cell_center_m(cell) - origin_m
 		if grid.is_wedge_cell(cell) and grid.slope_faces(cell).has(face):
@@ -862,11 +900,18 @@ static func _best_flank(bp: ShipBlueprint, grid: ShipGrid) -> Dictionary:
 	return best
 
 
-## The ship's name stencilled along a flank run, mirrored on the far side.
-static func _paint_name(root: Node3D, flank: Dictionary, origin_m: Vector3, hull_name: String) -> void:
+## The ship's name stencilled along a flank run, and on the far side over
+## the same stretch of hull — standing just proud of the thickest armour.
+static func _paint_name(root: Node3D, flank: Dictionary, origin_m: Vector3, hull_name: String, grid: ShipGrid) -> void:
 	var c := ShipGrid.CELL_SIZE_M
 	var length: float = flank.len * c
-	var x_port: float = flank.x * c if flank.side == &"port" else (flank.x + 1) * c
+	# Each side's outermost hull face over the run (an asymmetric hull's
+	# far side is not the mirror image of the near one).
+	var outer := {-1.0: INF, 1.0: -INF}
+	for cell: Vector3i in grid.module_at:
+		if cell.y == int(flank.y) and cell.z >= int(flank.z0) and cell.z < int(flank.z0) + int(flank.len):
+			outer[-1.0] = minf(outer[-1.0], cell.x * c)
+			outer[1.0] = maxf(outer[1.0], (cell.x + 1) * c)
 	for side in [-1.0, 1.0]:
 		var label := Label3D.new()
 		label.text = hull_name.to_upper()
@@ -880,8 +925,8 @@ static func _paint_name(root: Node3D, flank: Dictionary, origin_m: Vector3, hull
 		# The run's own flank, and the mirror image of it on the other side
 		# of the centreline. Face outward along ±X, reading nose-to-the-left
 		# on the port side and nose-to-the-right on starboard.
-		var x := x_port if (side < 0.0) == (flank.side == &"port") else -x_port + 2.0 * origin_m.x
-		var plate_off := 0.4
+		var x: float = outer[side]
+		var plate_off := plate_depth(ShipBlueprint.PLATE_THICK_MM) + 0.08
 		label.position = Vector3(x - origin_m.x + side * plate_off, (flank.y + 0.55) * c - origin_m.y, (flank.z0 + flank.len * 0.5) * c - origin_m.z)
 		label.rotation = Vector3(0, side * PI * 0.5, 0)
 		root.add_child(label)

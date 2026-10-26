@@ -27,6 +27,22 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   - **Players' own designs and vessels are untouched**; a hull bought from
     the old dealer keeps its old design. Derelicts of the six retired hulls
     come back as their replacements.
+- **Part sizes are new** (2026-10-26): a medium or large part kept its old
+  numbers, so a 2 × 2 high-thrust engine gives less thrust per face of hull
+  than four standard ones, and a 3 × 3 torch drive less than nine — the
+  bigger engines now earn their place on efficiency or a small stern, not
+  raw thrust. A design saved before the sizes whose big guns can't be
+  re-seated (two railguns a cell apart) shows `equipment_overlap` or
+  `equipment_blocked` in the yard until it is refitted.
+- **Landing legs are new**: one rule (three legs within 30° of down), no
+  leg damage on touchdown and no tipping on slopes.
+- **Roster conduit has single points of failure** (measured 2026-10-26):
+  the roster tool auto-routes each hull's power bus as a tree, so wrecking
+  one hull block on the trunk can black out most of a ship — on the Kepler
+  frigate the worst block cuts 36 of 48 systems, and its trunk runs down
+  the main deck's port flank just inside the skirt, where hits land (the
+  old frigate's worst cut 22 of 28, on the centreline). Redundant conduit
+  loops would fix it; not done yet.
 
 - **Balance is still in development.** The play-test feedback pass retuned
   guns (equal damage rates, penetration tiers), magazines, engines, loot

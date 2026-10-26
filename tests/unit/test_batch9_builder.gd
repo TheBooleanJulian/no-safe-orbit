@@ -106,8 +106,10 @@ func test_bigger_rooms_do_more() -> void:
 	print("    measured: engine room gain +1 cell %.3f, +7 %.3f, +8 %.3f, +99 %.3f" % [g1, g7, g8, g99])
 	assert_true(ShipStats.size_gain(0, 0.25, 12.0) == 1.0 and g1 > 1.0 and g8 > g7 and g8 - g7 < g1 - 1.0 and g99 <= 1.0 + ShipStats.ROOM_SIZE_GAIN,
 		"every cell adds, the first most, never past the gain")
-	assert_true(Shipyard.room_size_text(cat.rooms[&"engine_room"]).begins_with("BIGGER IS BETTER") \
-		and Shipyard.room_size_text(cat.rooms[&"corridor"]).contains("only connects"), "the room card says what size does")
+	for id: StringName in cat.rooms:
+		var text := Shipyard.room_size_text(cat.rooms[id])
+		assert_true(text.begins_with("SIZE  each") and not text.contains("BIGGER") and text != "SIZE  each cell adds to what it does",
+			"%s's card states what its size adds (%s)" % [id, text])
 
 
 func test_point_defence_draws_from_the_magazine() -> void:

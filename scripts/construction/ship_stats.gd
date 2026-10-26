@@ -67,6 +67,8 @@ var hull_bounds_m: AABB = AABB()
 var cannon_ids: PackedStringArray = PackedStringArray()
 var cannon_positions_m: PackedVector3Array = PackedVector3Array()
 var cannon_normals: PackedVector3Array = PackedVector3Array()
+## Each mount's turret height off its face (m): its tier's size.
+var cannon_heights: PackedFloat32Array = PackedFloat32Array()
 var cannon_config: KineticCannonConfig
 ## Each mount's gun (same order as cannon_ids).
 var cannon_configs: Array[KineticCannonConfig] = []
@@ -169,6 +171,7 @@ static func compute(bp: ShipBlueprint, grid: ShipGrid) -> ShipStats:
 				s.cannon_ids.append(bp.equipment[i].id)
 				s.cannon_positions_m.append(pos)
 				s.cannon_normals.append(Vector3(ShipGrid.FACE_NORMALS.get(bp.equipment[i].face, Vector3i(0, 0, -1))))
+				s.cannon_heights.append(WorldSimulation.TURRET_HEIGHT_M * def.size_cells)
 				s.cannon_configs.append(def.cannon)
 				if s.cannon_config == null:
 					s.cannon_config = def.cannon
@@ -329,6 +332,7 @@ func to_ship_config(display_name: String) -> ShipConfig:
 		cfg.cannon_muzzles_body = muzzles
 		cfg.cannon_mount_ids = cannon_ids
 		cfg.cannon_mount_normals_body = cannon_normals
+		cfg.cannon_turret_heights = cannon_heights
 	else:
 		cfg.cannon_muzzles_body = PackedVector3Array()
 	if pd_gun != null:

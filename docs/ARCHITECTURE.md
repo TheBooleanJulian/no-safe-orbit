@@ -299,6 +299,29 @@ and the location's central body:
   `PlayerProfile.backup_copy` / `backup_dir`. The CHANGELOG tab reads
   `res://CHANGELOG.md` (exported via `include_filter`) through
   `SettingsMenu.changelog_bbcode`.
+- **Refit bay and part sizes (2026-10-26)**: `EquipmentDefinition.size_cells`
+  (1–3, the tier) and `stand_cells` / `stands_out()`; `ShipGrid.face_tangents`,
+  `patch` (the N × N faces from a part's cell, along +tangents), `standing` /
+  `standing_cells` (the space N out, which the validator's
+  `equipment_blocked` keeps clear of hull) and `can_mount` (used by
+  `EnemyFactory._fits_in_place` / `_fit_launcher` and the roster tool);
+  `external_cells` returns the patch, so overlap, hit mapping, coolant and
+  the deck editor follow. `BlueprintFix.fit_spans` re-seats a sized part
+  that no longer fits (`_fit_size`). Turret heights: `ShipStats.cannon_heights`
+  → `ShipConfig.cannon_turret_heights` / `turret_height(k)` in the world's
+  muzzle and hull-clear ray and the HUD reticles; `ShipModelBuilder` scales
+  a sized part about its mount (plumes too). `Kind.LANDING_LEG`
+  (`landing_leg.tres`): `WorldSimulation.legs_down` / `safe_landing_mps`
+  (LEGS_FOR_FOOTING, LEG_DOWN_DEG, LEG_TOUCHDOWN_FACTOR) in `_check_terrain`
+  and the HUD. `ShipSystems.room_transit_s()` (corridor cells) replaces
+  `CrewRoster.ROOM_TRANSIT_S` for walks aboard; `Shipyard.room_size_text`
+  states every role's size benefit. Windows under a plate get a recess at
+  `ShipModelBuilder.plate_depth`; `_paint_name` finds each flank's own
+  outer face. The refit views: `Views` is a VBox (`SideView`, then `Lower`
+  with `FrontView` and `Preview`); `ShipPreview3D._fit_distance` fits the
+  hull's projected box (`_zoom` from the wheel). The roster tool's `Draft`
+  gains `skirt(s)` (sloped wedge armour outside a slab's edges), `prow(…,
+  sharp)` (long wedges) and `legs`.
 - **The prebuilt roster (2026-10-26)**: `tools/make_roster.gd` builds the
   nine templates in `data/blueprints/` (the registry is unchanged:
   `BlueprintIO.list_templates`) and writes one only when `ShipValidator`

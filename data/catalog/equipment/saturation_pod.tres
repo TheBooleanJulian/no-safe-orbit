@@ -15,6 +15,7 @@ allowed_faces = Array[StringName]([&"fore", &"port", &"starboard", &"dorsal", &"
 missile = ExtResource("2_msl")
 missile_capacity = 48
 missile_salvo = 8
+size_cells = 2
 mass_kg = 3200.0
 power_kw = -25.0
 heat_kw = 6.0

@@ -37,7 +37,7 @@ func test_cost_is_delta_v_by_distance_paid_by_the_rocket_equation() -> void:
 	assert_true(moon_dv > 3.0 * home_dv, "Earth to the Moon is a real cost")
 	# Every ship pays the same Δv; the propellant follows from its mass and Isp.
 	var cutter := PlayerProfile.new(1)
-	cutter.ensure_vessel(BlueprintIO.load_file("res://data/blueprints/cutter_mk1.json", PackedStringArray()))
+	cutter.ensure_vessel(BlueprintIO.load_file("res://tests/fixtures/cutter_mk1.json", PackedStringArray()))
 	var ct := cutter.vessel_tanks(_cat())
 	print("    measured: the Cutter (%.0f t) pays the same %.0f m/s with %.1f t" % [float(ct.mass_kg) / 1000.0, cutter.jump_dv("moon"), cutter.jump_cost_kg("moon", _cat()) / 1000.0])
 	assert_near(cutter.jump_dv("moon"), moon_dv, 1e-6, "the same Δv for every ship (m/s)")

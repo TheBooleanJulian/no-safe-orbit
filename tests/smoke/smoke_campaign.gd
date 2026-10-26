@@ -190,7 +190,7 @@ func _run() -> void:
 	_check(spent > 0 and not vessel.is_damaged() and profile.spare_parts == before_repair - spent,
 		"full repair: %d spare parts, vessel like new" % spent)
 	var radiators := yard.editor.blueprint.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool: return e.def_id == &"radiator").size()
-	yard.editor.place_equipment(&"radiator", Vector3i(1, 1, 3), &"dorsal")
+	yard.editor.place_equipment(&"radiator", Vector3i(2, 1, 3), &"dorsal")
 	var parts_before_launch := profile.spare_parts
 	_check(not yard.editor.report.has_errors(), "refitted design (extra radiator) validates")
 

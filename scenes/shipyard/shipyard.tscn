@@ -93,17 +93,6 @@ custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 placeholder_text = "Design name"
 
-[node name="TemplateList" type="OptionButton" parent="Margin/VBox/TopBar"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(150, 0)
-layout_mode = 2
-tooltip_text = "Prebuilt templates"
-
-[node name="LoadTemplate" type="Button" parent="Margin/VBox/TopBar"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Load template"
-
 [node name="DesignList" type="OptionButton" parent="Margin/VBox/TopBar"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(150, 0)
@@ -246,29 +235,39 @@ layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("2_deck")
 
-[node name="Views" type="HBoxContainer" parent="Margin/VBox/Body/Center"]
-custom_minimum_size = Vector2(0, 220)
+[node name="Views" type="VBoxContainer" parent="Margin/VBox/Body/Center"]
+custom_minimum_size = Vector2(0, 260)
 layout_mode = 2
 
 [node name="SideView" type="Control" parent="Margin/VBox/Body/Center/Views"]
 unique_name_in_owner = true
 clip_contents = true
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+size_flags_stretch_ratio = 0.6
+script = ExtResource("3_ortho")
+
+[node name="Lower" type="HBoxContainer" parent="Margin/VBox/Body/Center/Views"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="FrontView" type="Control" parent="Margin/VBox/Body/Center/Views/Lower"]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 script = ExtResource("3_ortho")
-
-[node name="FrontView" type="Control" parent="Margin/VBox/Body/Center/Views"]
-unique_name_in_owner = true
-clip_contents = true
-custom_minimum_size = Vector2(180, 0)
-layout_mode = 2
-script = ExtResource("3_ortho")
 mode = 1
 
-[node name="Preview" type="SubViewportContainer" parent="Margin/VBox/Body/Center/Views"]
+[node name="Preview" type="SubViewportContainer" parent="Margin/VBox/Body/Center/Views/Lower"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.6
 stretch = true
 script = ExtResource("4_prev")
 

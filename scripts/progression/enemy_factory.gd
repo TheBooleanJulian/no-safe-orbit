@@ -9,7 +9,8 @@ extends RefCounted
 ## Chances per swap rise with the mission number m:
 ##   gun        heavy kinetic cannon from m ≥ 2 (the template's guns are
 ##              autocannons), railgun from m ≥ 4           (p = 0.15·m, ≤ 0.6;
-##              while the reactors and radiators carry it)
+##              while the reactors and radiators carry it, and where the
+##              bigger gun fits)
 ##   armour     plates on exposed faces from m ≥ 2           (p = 0.06·m, ≤ 0.4 per face;
 ##              80 mm instead of 40 from m ≥ 4, 1 in 3)
 ##   RCS        heavy RCS blocks from m ≥ 2                  (p = 0.1·m,  ≤ 0.5)
@@ -118,7 +119,7 @@ static func design(mission: int, template: ShipBlueprint, catalog: ConstructionC
 					var to: EquipmentDefinition = catalog.equipment[gun]
 					var draw := def.power_kw - to.power_kw
 					var heat := to.heat_kw - def.heat_kw
-					if draw <= spare_kw and heat <= spare_heat_kw:
+					if draw <= spare_kw and heat <= spare_heat_kw and _fits_in_place(bp, catalog, e, to):
 						e.def_id = gun
 						spare_kw -= draw
 						spare_heat_kw -= heat
@@ -177,6 +178,8 @@ static func _fit_new_kit(bp: ShipBlueprint, catalog: ConstructionCatalog, missio
 			EquipmentDefinition.Kind.CANNON:
 				if mission >= LASER_FROM_MISSION and rng.randf() < minf(0.08 * (m - 4.0), 0.35):
 					var was := e.def_id
+					if not _fits_in_place(bp, catalog, e, catalog.equipment[&"laser_turret"]):
+						continue
 					e.def_id = &"laser_turret"
 					var stats := ShipStats.compute(bp, ShipGrid.build(bp, catalog))
 					if stats.power_draw_kw > stats.power_generation_kw:
@@ -189,6 +192,19 @@ static func _fit_new_kit(bp: ShipBlueprint, catalog: ConstructionCatalog, missio
 						e.def_id = &"repair_drone_rack"
 				elif e.def_id == &"fighter_bay" and mission >= LASER_FIGHTER_FROM_MISSION and rng.randf() < 0.3:
 					e.def_id = &"laser_fighter_bay"
+
+
+## Whether external part `e` of `bp` could be `to` where it stands: a
+## bigger tier's patch and the space it stands in must be free.
+static func _fits_in_place(bp: ShipBlueprint, catalog: ConstructionCatalog, e: ShipBlueprint.PlacedEquipment, to: EquipmentDefinition) -> bool:
+	var grid := ShipGrid.build(bp, catalog)
+	var taken := {}
+	for j in bp.equipment.size():
+		var other := grid.equipment_def(j)
+		if other != null and other.is_external() and bp.equipment[j] != e:
+			for c in grid.external_cells(j):
+				taken["%s|%s" % [c, bp.equipment[j].face]] = true
+	return grid.can_mount(to, e.cell, e.face, taken)
 
 
 static func _has_kind(bp: ShipBlueprint, catalog: ConstructionCatalog, kind: EquipmentDefinition.Kind) -> bool:
@@ -218,7 +234,7 @@ static func _fit_launcher(bp: ShipBlueprint, catalog: ConstructionCatalog, def_i
 			continue
 		var spots: Array[Vector3i] = []
 		for cell: Vector3i in cells:
-			if grid.is_exterior_face(cell, face) and not grid.slope_faces(cell).has(face) and not taken.has("%s|%s" % [cell, face]) 					and (bp.bus.is_empty() or bp.bus.has(ShipBlueprint.cell_key(cell))):
+			if grid.can_mount(def, cell, face, taken) and (bp.bus.is_empty() or bp.bus.has(ShipBlueprint.cell_key(cell))):
 				spots.append(cell)
 		if spots.is_empty():
 			continue

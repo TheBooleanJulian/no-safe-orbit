@@ -4,232 +4,12 @@
 	"designer": "Caloris Foundry",
 	"modules": [
 		{
-			"id": "m81",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				0,
-				12
-			],
-			"rot": 0
-		},
-		{
-			"id": "m82",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				0,
-				12
-			],
-			"rot": 0
-		},
-		{
-			"id": "m83",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				0,
-				12
-			],
-			"rot": 0
-		},
-		{
-			"id": "m84",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				0,
-				13
-			],
-			"rot": 0
-		},
-		{
-			"id": "m85",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				0,
-				13
-			],
-			"rot": 0
-		},
-		{
-			"id": "m86",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				0,
-				13
-			],
-			"rot": 0
-		},
-		{
-			"id": "m87",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				0,
-				14
-			],
-			"rot": 0
-		},
-		{
-			"id": "m88",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				0,
-				14
-			],
-			"rot": 0
-		},
-		{
-			"id": "m89",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				0,
-				14
-			],
-			"rot": 0
-		},
-		{
-			"id": "m90",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				0,
-				15
-			],
-			"rot": 0
-		},
-		{
-			"id": "m91",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				0,
-				15
-			],
-			"rot": 0
-		},
-		{
-			"id": "m92",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				0,
-				15
-			],
-			"rot": 0
-		},
-		{
-			"id": "m93",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				0,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m94",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				0,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m95",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				0,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m96",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				0,
-				17
-			],
-			"rot": 0
-		},
-		{
-			"id": "m97",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				0,
-				17
-			],
-			"rot": 0
-		},
-		{
-			"id": "m98",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				0,
-				17
-			],
-			"rot": 0
-		},
-		{
-			"id": "m99",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				0,
-				18
-			],
-			"rot": 0
-		},
-		{
-			"id": "m100",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				0,
-				18
-			],
-			"rot": 0
-		},
-		{
-			"id": "m101",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				0,
-				18
-			],
-			"rot": 0
-		},
-		{
-			"id": "m102",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				0,
-				19
-			],
-			"rot": 0
-		},
-		{
 			"id": "m103",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
 				0,
-				19
+				0
 			],
 			"rot": 0
 		},
@@ -239,7 +19,7 @@
 			"pos": [
 				3,
 				0,
-				19
+				0
 			],
 			"rot": 0
 		},
@@ -247,9 +27,9 @@
 			"id": "m105",
 			"def": "hull_block_1x1",
 			"pos": [
-				1,
+				4,
 				0,
-				20
+				0
 			],
 			"rot": 0
 		},
@@ -259,7 +39,7 @@
 			"pos": [
 				2,
 				0,
-				20
+				1
 			],
 			"rot": 0
 		},
@@ -269,7 +49,7 @@
 			"pos": [
 				3,
 				0,
-				20
+				1
 			],
 			"rot": 0
 		},
@@ -277,9 +57,9 @@
 			"id": "m108",
 			"def": "hull_block_1x1",
 			"pos": [
-				1,
+				4,
 				0,
-				21
+				1
 			],
 			"rot": 0
 		},
@@ -289,7 +69,7 @@
 			"pos": [
 				2,
 				0,
-				21
+				2
 			],
 			"rot": 0
 		},
@@ -299,7 +79,7 @@
 			"pos": [
 				3,
 				0,
-				21
+				2
 			],
 			"rot": 0
 		},
@@ -307,9 +87,9 @@
 			"id": "m111",
 			"def": "hull_block_1x1",
 			"pos": [
-				1,
+				4,
 				0,
-				22
+				2
 			],
 			"rot": 0
 		},
@@ -319,7 +99,7 @@
 			"pos": [
 				2,
 				0,
-				22
+				3
 			],
 			"rot": 0
 		},
@@ -329,7 +109,7 @@
 			"pos": [
 				3,
 				0,
-				22
+				3
 			],
 			"rot": 0
 		},
@@ -337,9 +117,9 @@
 			"id": "m114",
 			"def": "hull_block_1x1",
 			"pos": [
-				1,
+				4,
 				0,
-				23
+				3
 			],
 			"rot": 0
 		},
@@ -349,7 +129,7 @@
 			"pos": [
 				2,
 				0,
-				23
+				4
 			],
 			"rot": 0
 		},
@@ -359,7 +139,7 @@
 			"pos": [
 				3,
 				0,
-				23
+				4
 			],
 			"rot": 0
 		},
@@ -367,9 +147,9 @@
 			"id": "m117",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
-				1,
-				0
+				4,
+				0,
+				4
 			],
 			"rot": 0
 		},
@@ -378,8 +158,8 @@
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
-				1,
-				1
+				0,
+				5
 			],
 			"rot": 0
 		},
@@ -387,9 +167,9 @@
 			"id": "m119",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
-				1,
-				2
+				3,
+				0,
+				5
 			],
 			"rot": 0
 		},
@@ -397,9 +177,9 @@
 			"id": "m120",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
-				1,
-				3
+				4,
+				0,
+				5
 			],
 			"rot": 0
 		},
@@ -408,8 +188,8 @@
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
-				1,
-				4
+				0,
+				6
 			],
 			"rot": 0
 		},
@@ -417,9 +197,9 @@
 			"id": "m122",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
-				1,
-				5
+				3,
+				0,
+				6
 			],
 			"rot": 0
 		},
@@ -427,8 +207,8 @@
 			"id": "m123",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
-				1,
+				4,
+				0,
 				6
 			],
 			"rot": 0
@@ -438,13 +218,833 @@
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
-				1,
+				0,
 				7
 			],
 			"rot": 0
 		},
 		{
 			"id": "m125",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m126",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				0,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m127",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m128",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m129",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m130",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m131",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m132",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				0,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m133",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m134",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m135",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m136",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m137",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m138",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				0,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m139",
+			"def": "hull_block",
+			"pos": [
+				1,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m140",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m141",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m142",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m143",
+			"def": "hull_block",
+			"pos": [
+				1,
+				0,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m144",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m145",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m146",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				15
+			],
+			"rot": 0
+		},
+		{
+			"id": "m147",
+			"def": "hull_block",
+			"pos": [
+				1,
+				0,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m148",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m149",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m150",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				17
+			],
+			"rot": 0
+		},
+		{
+			"id": "m151",
+			"def": "hull_block",
+			"pos": [
+				1,
+				0,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m152",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m153",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m154",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				19
+			],
+			"rot": 0
+		},
+		{
+			"id": "m155",
+			"def": "hull_block",
+			"pos": [
+				1,
+				0,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m156",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m157",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m158",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				21
+			],
+			"rot": 0
+		},
+		{
+			"id": "m159",
+			"def": "hull_block",
+			"pos": [
+				1,
+				0,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m160",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m161",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m162",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				23
+			],
+			"rot": 0
+		},
+		{
+			"id": "m163",
+			"def": "hull_block",
+			"pos": [
+				1,
+				0,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m164",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m165",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m166",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				25
+			],
+			"rot": 0
+		},
+		{
+			"id": "m167",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m168",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m169",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m170",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m171",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				0,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m172",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				27
+			],
+			"rot": 0
+		},
+		{
+			"id": "m173",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				27
+			],
+			"rot": 0
+		},
+		{
+			"id": "m174",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				0,
+				27
+			],
+			"rot": 0
+		},
+		{
+			"id": "m175",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m176",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m177",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m178",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m179",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				0,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m180",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				0,
+				29
+			],
+			"rot": 0
+		},
+		{
+			"id": "m181",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				0,
+				29
+			],
+			"rot": 0
+		},
+		{
+			"id": "m182",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				0,
+				29
+			],
+			"rot": 0
+		},
+		{
+			"id": "m183",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				1,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m184",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m185",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m186",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				1,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m187",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m188",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m189",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				1,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m190",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m191",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m192",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				1,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m193",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m194",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m195",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				1,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m196",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m197",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m198",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				1,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m199",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m200",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m201",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				1,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m202",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m203",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m204",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				1,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m205",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m206",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m207",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -454,7 +1054,27 @@
 			"rot": 0
 		},
 		{
-			"id": "m126",
+			"id": "m208",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m209",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m210",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -464,17 +1084,27 @@
 			"rot": 0
 		},
 		{
-			"id": "m127",
+			"id": "m211",
 			"def": "hull_block_1x1",
 			"pos": [
+				3,
 				1,
-				1,
-				10
+				9
 			],
 			"rot": 0
 		},
 		{
-			"id": "m128",
+			"id": "m212",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m213",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -484,7 +1114,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m129",
+			"id": "m214",
 			"def": "hull_block_1x1",
 			"pos": [
 				3,
@@ -494,17 +1124,17 @@
 			"rot": 0
 		},
 		{
-			"id": "m130",
+			"id": "m215",
 			"def": "hull_block_1x1",
 			"pos": [
+				4,
 				1,
-				1,
-				11
+				10
 			],
 			"rot": 0
 		},
 		{
-			"id": "m131",
+			"id": "m216",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -514,7 +1144,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m132",
+			"id": "m217",
 			"def": "hull_block_1x1",
 			"pos": [
 				3,
@@ -524,28 +1154,28 @@
 			"rot": 0
 		},
 		{
-			"id": "m133",
+			"id": "m218",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				1,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m219",
 			"def": "hull_block",
 			"pos": [
-				0,
+				1,
 				1,
 				12
 			],
 			"rot": 0
 		},
 		{
-			"id": "m134",
+			"id": "m220",
 			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				12
-			],
-			"rot": 0
-		},
-		{
-			"id": "m135",
-			"def": "hull_block",
 			"pos": [
 				3,
 				1,
@@ -554,38 +1184,38 @@
 			"rot": 0
 		},
 		{
-			"id": "m136",
+			"id": "m221",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m222",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
+				3,
 				1,
 				13
 			],
 			"rot": 0
 		},
 		{
-			"id": "m137",
+			"id": "m223",
 			"def": "hull_block",
 			"pos": [
-				0,
+				1,
 				1,
 				14
 			],
 			"rot": 0
 		},
 		{
-			"id": "m138",
+			"id": "m224",
 			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				14
-			],
-			"rot": 0
-		},
-		{
-			"id": "m139",
-			"def": "hull_block",
 			"pos": [
 				3,
 				1,
@@ -594,38 +1224,38 @@
 			"rot": 0
 		},
 		{
-			"id": "m140",
+			"id": "m225",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m226",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
+				3,
 				1,
 				15
 			],
 			"rot": 0
 		},
 		{
-			"id": "m141",
+			"id": "m227",
 			"def": "hull_block",
 			"pos": [
-				0,
+				1,
 				1,
 				16
 			],
 			"rot": 0
 		},
 		{
-			"id": "m142",
+			"id": "m228",
 			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m143",
-			"def": "hull_block",
 			"pos": [
 				3,
 				1,
@@ -634,38 +1264,38 @@
 			"rot": 0
 		},
 		{
-			"id": "m144",
+			"id": "m229",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m230",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
+				3,
 				1,
 				17
 			],
 			"rot": 0
 		},
 		{
-			"id": "m145",
+			"id": "m231",
 			"def": "hull_block",
 			"pos": [
-				0,
+				1,
 				1,
 				18
 			],
 			"rot": 0
 		},
 		{
-			"id": "m146",
+			"id": "m232",
 			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				18
-			],
-			"rot": 0
-		},
-		{
-			"id": "m147",
-			"def": "hull_block",
 			"pos": [
 				3,
 				1,
@@ -674,38 +1304,38 @@
 			"rot": 0
 		},
 		{
-			"id": "m148",
+			"id": "m233",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m234",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
+				3,
 				1,
 				19
 			],
 			"rot": 0
 		},
 		{
-			"id": "m149",
+			"id": "m235",
 			"def": "hull_block",
 			"pos": [
-				0,
+				1,
 				1,
 				20
 			],
 			"rot": 0
 		},
 		{
-			"id": "m150",
+			"id": "m236",
 			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				20
-			],
-			"rot": 0
-		},
-		{
-			"id": "m151",
-			"def": "hull_block",
 			"pos": [
 				3,
 				1,
@@ -714,38 +1344,38 @@
 			"rot": 0
 		},
 		{
-			"id": "m152",
+			"id": "m237",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m238",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
+				3,
 				1,
 				21
 			],
 			"rot": 0
 		},
 		{
-			"id": "m153",
+			"id": "m239",
 			"def": "hull_block",
 			"pos": [
-				0,
+				1,
 				1,
 				22
 			],
 			"rot": 0
 		},
 		{
-			"id": "m154",
+			"id": "m240",
 			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				22
-			],
-			"rot": 0
-		},
-		{
-			"id": "m155",
-			"def": "hull_block",
 			"pos": [
 				3,
 				1,
@@ -754,38 +1384,38 @@
 			"rot": 0
 		},
 		{
-			"id": "m156",
+			"id": "m241",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m242",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
+				3,
 				1,
 				23
 			],
 			"rot": 0
 		},
 		{
-			"id": "m157",
+			"id": "m243",
 			"def": "hull_block",
 			"pos": [
-				0,
+				1,
 				1,
 				24
 			],
 			"rot": 0
 		},
 		{
-			"id": "m158",
+			"id": "m244",
 			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				24
-			],
-			"rot": 0
-		},
-		{
-			"id": "m159",
-			"def": "hull_block",
 			"pos": [
 				3,
 				1,
@@ -794,17 +1424,27 @@
 			"rot": 0
 		},
 		{
-			"id": "m160",
+			"id": "m245",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m246",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
+				3,
 				1,
 				25
 			],
 			"rot": 0
 		},
 		{
-			"id": "m161",
+			"id": "m247",
 			"def": "hull_block",
 			"pos": [
 				0,
@@ -814,7 +1454,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m162",
+			"id": "m248",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -824,8 +1464,8 @@
 			"rot": 0
 		},
 		{
-			"id": "m163",
-			"def": "hull_block",
+			"id": "m249",
+			"def": "hull_block_1x1",
 			"pos": [
 				3,
 				1,
@@ -834,7 +1474,27 @@
 			"rot": 0
 		},
 		{
-			"id": "m164",
+			"id": "m250",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m251",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				1,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m252",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -844,7 +1504,27 @@
 			"rot": 0
 		},
 		{
-			"id": "m165",
+			"id": "m253",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				1,
+				27
+			],
+			"rot": 0
+		},
+		{
+			"id": "m254",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				1,
+				27
+			],
+			"rot": 0
+		},
+		{
+			"id": "m255",
 			"def": "hull_block",
 			"pos": [
 				0,
@@ -854,7 +1534,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m166",
+			"id": "m256",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -864,8 +1544,8 @@
 			"rot": 0
 		},
 		{
-			"id": "m167",
-			"def": "hull_block",
+			"id": "m257",
+			"def": "hull_block_1x1",
 			"pos": [
 				3,
 				1,
@@ -874,7 +1554,27 @@
 			"rot": 0
 		},
 		{
-			"id": "m168",
+			"id": "m258",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m259",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				1,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m260",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -884,547 +1584,1454 @@
 			"rot": 0
 		},
 		{
-			"id": "m169",
-			"def": "hull_block",
-			"pos": [
-				0,
-				1,
-				30
-			],
-			"rot": 0
-		},
-		{
-			"id": "m170",
+			"id": "m261",
 			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				30
-			],
-			"rot": 0
-		},
-		{
-			"id": "m171",
-			"def": "hull_block",
 			"pos": [
 				3,
 				1,
-				30
+				29
 			],
 			"rot": 0
 		},
 		{
-			"id": "m172",
+			"id": "m262",
 			"def": "hull_block_1x1",
 			"pos": [
-				2,
+				6,
 				1,
-				31
+				29
 			],
 			"rot": 0
 		},
 		{
-			"id": "m173",
-			"def": "hull_block",
-			"pos": [
-				0,
-				1,
-				32
-			],
-			"rot": 0
-		},
-		{
-			"id": "m174",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				32
-			],
-			"rot": 0
-		},
-		{
-			"id": "m175",
-			"def": "hull_block",
-			"pos": [
-				3,
-				1,
-				32
-			],
-			"rot": 0
-		},
-		{
-			"id": "m176",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				1,
-				33
-			],
-			"rot": 0
-		},
-		{
-			"id": "m177",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				12
-			],
-			"rot": 0
-		},
-		{
-			"id": "m178",
+			"id": "m263",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
 				2,
-				12
+				0
 			],
 			"rot": 0
 		},
 		{
-			"id": "m179",
+			"id": "m264",
 			"def": "hull_block_1x1",
 			"pos": [
 				3,
 				2,
-				12
+				0
 			],
 			"rot": 0
 		},
 		{
-			"id": "m180",
+			"id": "m265",
 			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				13
-			],
-			"rot": 0
-		},
-		{
-			"id": "m181",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				13
-			],
-			"rot": 0
-		},
-		{
-			"id": "m182",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				13
-			],
-			"rot": 0
-		},
-		{
-			"id": "m183",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				14
-			],
-			"rot": 0
-		},
-		{
-			"id": "m184",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				14
-			],
-			"rot": 0
-		},
-		{
-			"id": "m185",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				14
-			],
-			"rot": 0
-		},
-		{
-			"id": "m186",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				15
-			],
-			"rot": 0
-		},
-		{
-			"id": "m187",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				15
-			],
-			"rot": 0
-		},
-		{
-			"id": "m188",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				15
-			],
-			"rot": 0
-		},
-		{
-			"id": "m189",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m190",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m191",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m192",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				17
-			],
-			"rot": 0
-		},
-		{
-			"id": "m193",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				17
-			],
-			"rot": 0
-		},
-		{
-			"id": "m194",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				17
-			],
-			"rot": 0
-		},
-		{
-			"id": "m195",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				18
-			],
-			"rot": 0
-		},
-		{
-			"id": "m196",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				18
-			],
-			"rot": 0
-		},
-		{
-			"id": "m197",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				18
-			],
-			"rot": 0
-		},
-		{
-			"id": "m198",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				19
-			],
-			"rot": 0
-		},
-		{
-			"id": "m199",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				19
-			],
-			"rot": 0
-		},
-		{
-			"id": "m200",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				19
-			],
-			"rot": 0
-		},
-		{
-			"id": "m201",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				20
-			],
-			"rot": 0
-		},
-		{
-			"id": "m202",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				20
-			],
-			"rot": 0
-		},
-		{
-			"id": "m203",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				20
-			],
-			"rot": 0
-		},
-		{
-			"id": "m204",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				21
-			],
-			"rot": 0
-		},
-		{
-			"id": "m205",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				21
-			],
-			"rot": 0
-		},
-		{
-			"id": "m206",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				21
-			],
-			"rot": 0
-		},
-		{
-			"id": "m207",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				22
-			],
-			"rot": 0
-		},
-		{
-			"id": "m208",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				22
-			],
-			"rot": 0
-		},
-		{
-			"id": "m209",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				22
-			],
-			"rot": 0
-		},
-		{
-			"id": "m210",
-			"def": "hull_block_1x1",
-			"pos": [
-				1,
-				2,
-				23
-			],
-			"rot": 0
-		},
-		{
-			"id": "m211",
-			"def": "hull_block_1x1",
-			"pos": [
-				2,
-				2,
-				23
-			],
-			"rot": 0
-		},
-		{
-			"id": "m212",
-			"def": "hull_block_1x1",
-			"pos": [
-				3,
-				2,
-				23
-			],
-			"rot": 0
-		},
-		{
-			"id": "m213",
-			"def": "wedge_short",
-			"pos": [
-				0,
-				1,
-				11
-			],
-			"rot": 0
-		},
-		{
-			"id": "m214",
-			"def": "wedge_short",
-			"pos": [
-				1,
-				0,
-				11
-			],
-			"rot": 0,
-			"flip": true
-		},
-		{
-			"id": "m215",
-			"def": "wedge_short",
-			"pos": [
-				1,
-				1,
-				9
-			],
-			"rot": 0
-		},
-		{
-			"id": "m216",
-			"def": "wedge_short",
-			"pos": [
-				1,
-				2,
-				11
-			],
-			"rot": 0
-		},
-		{
-			"id": "m217",
-			"def": "wedge_short",
-			"pos": [
-				2,
-				0,
-				11
-			],
-			"rot": 0,
-			"flip": true
-		},
-		{
-			"id": "m218",
-			"def": "wedge_short",
-			"pos": [
-				2,
-				2,
-				11
-			],
-			"rot": 0
-		},
-		{
-			"id": "m219",
-			"def": "wedge_short",
-			"pos": [
-				3,
-				0,
-				11
-			],
-			"rot": 0,
-			"flip": true
-		},
-		{
-			"id": "m220",
-			"def": "wedge_short",
-			"pos": [
-				3,
-				1,
-				9
-			],
-			"rot": 0
-		},
-		{
-			"id": "m221",
-			"def": "wedge_short",
-			"pos": [
-				3,
-				2,
-				11
-			],
-			"rot": 0
-		},
-		{
-			"id": "m222",
-			"def": "wedge_short",
 			"pos": [
 				4,
-				1,
+				2,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m266",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m267",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m268",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m269",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m270",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m271",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m272",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m273",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m274",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m275",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m276",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m277",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m278",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m279",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m280",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m281",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m282",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m283",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m284",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m285",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m286",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				7
+			],
+			"rot": 0
+		},
+		{
+			"id": "m287",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m288",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m289",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m290",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m291",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m292",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				9
+			],
+			"rot": 0
+		},
+		{
+			"id": "m293",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m294",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m295",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m296",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
 				11
 			],
 			"rot": 0
+		},
+		{
+			"id": "m297",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m298",
+			"def": "hull_block_1x1",
+			"pos": [
+				4,
+				2,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m299",
+			"def": "hull_block",
+			"pos": [
+				1,
+				2,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m300",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m301",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m302",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				13
+			],
+			"rot": 0
+		},
+		{
+			"id": "m303",
+			"def": "hull_block",
+			"pos": [
+				1,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m304",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m305",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m306",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				15
+			],
+			"rot": 0
+		},
+		{
+			"id": "m307",
+			"def": "hull_block",
+			"pos": [
+				1,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m308",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m309",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				16
+			],
+			"rot": 0
+		},
+		{
+			"id": "m310",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				17
+			],
+			"rot": 0
+		},
+		{
+			"id": "m311",
+			"def": "hull_block",
+			"pos": [
+				1,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m312",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m313",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				18
+			],
+			"rot": 0
+		},
+		{
+			"id": "m314",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				19
+			],
+			"rot": 0
+		},
+		{
+			"id": "m315",
+			"def": "hull_block",
+			"pos": [
+				1,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m316",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m317",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				20
+			],
+			"rot": 0
+		},
+		{
+			"id": "m318",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				21
+			],
+			"rot": 0
+		},
+		{
+			"id": "m319",
+			"def": "hull_block",
+			"pos": [
+				1,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m320",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m321",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				22
+			],
+			"rot": 0
+		},
+		{
+			"id": "m322",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				23
+			],
+			"rot": 0
+		},
+		{
+			"id": "m323",
+			"def": "hull_block",
+			"pos": [
+				1,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m324",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m325",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				24
+			],
+			"rot": 0
+		},
+		{
+			"id": "m326",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				25
+			],
+			"rot": 0
+		},
+		{
+			"id": "m327",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m328",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m329",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m330",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m331",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				2,
+				26
+			],
+			"rot": 0
+		},
+		{
+			"id": "m332",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				27
+			],
+			"rot": 0
+		},
+		{
+			"id": "m333",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				27
+			],
+			"rot": 0
+		},
+		{
+			"id": "m334",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				2,
+				27
+			],
+			"rot": 0
+		},
+		{
+			"id": "m335",
+			"def": "hull_block",
+			"pos": [
+				0,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m336",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m337",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m338",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m339",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				2,
+				28
+			],
+			"rot": 0
+		},
+		{
+			"id": "m340",
+			"def": "hull_block_1x1",
+			"pos": [
+				2,
+				2,
+				29
+			],
+			"rot": 0
+		},
+		{
+			"id": "m341",
+			"def": "hull_block_1x1",
+			"pos": [
+				3,
+				2,
+				29
+			],
+			"rot": 0
+		},
+		{
+			"id": "m342",
+			"def": "hull_block_1x1",
+			"pos": [
+				6,
+				2,
+				29
+			],
+			"rot": 0
+		},
+		{
+			"id": "m343",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				12
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m344",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				13
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m345",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				14
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m346",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				15
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m347",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				16
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m348",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				17
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m349",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				18
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m350",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				19
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m351",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				20
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m352",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				21
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m353",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				22
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m354",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				23
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m355",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				24
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m356",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				25
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m357",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				12
+			],
+			"rot": 1
+		},
+		{
+			"id": "m358",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				13
+			],
+			"rot": 1
+		},
+		{
+			"id": "m359",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				14
+			],
+			"rot": 1
+		},
+		{
+			"id": "m360",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				15
+			],
+			"rot": 1
+		},
+		{
+			"id": "m361",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				16
+			],
+			"rot": 1
+		},
+		{
+			"id": "m362",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				17
+			],
+			"rot": 1
+		},
+		{
+			"id": "m363",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				18
+			],
+			"rot": 1
+		},
+		{
+			"id": "m364",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				19
+			],
+			"rot": 1
+		},
+		{
+			"id": "m365",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				20
+			],
+			"rot": 1
+		},
+		{
+			"id": "m366",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				21
+			],
+			"rot": 1
+		},
+		{
+			"id": "m367",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				22
+			],
+			"rot": 1
+		},
+		{
+			"id": "m368",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				23
+			],
+			"rot": 1
+		},
+		{
+			"id": "m369",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				24
+			],
+			"rot": 1
+		},
+		{
+			"id": "m370",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				2,
+				25
+			],
+			"rot": 1
+		},
+		{
+			"id": "m371",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				0,
+				11
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m372",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				2,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m373",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				0,
+				11
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m374",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				2,
+				11
+			],
+			"rot": 0
+		},
+		{
+			"id": "m375",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				12
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m376",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				13
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m377",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				14
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m378",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				15
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m379",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				16
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m380",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				17
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m381",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				18
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m382",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				19
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m383",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				20
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m384",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				21
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m385",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				22
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m386",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				23
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m387",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				24
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m388",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				0,
+				25
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m389",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				12
+			],
+			"rot": 3
+		},
+		{
+			"id": "m390",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				13
+			],
+			"rot": 3
+		},
+		{
+			"id": "m391",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				14
+			],
+			"rot": 3
+		},
+		{
+			"id": "m392",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				15
+			],
+			"rot": 3
+		},
+		{
+			"id": "m393",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				16
+			],
+			"rot": 3
+		},
+		{
+			"id": "m394",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				17
+			],
+			"rot": 3
+		},
+		{
+			"id": "m395",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				18
+			],
+			"rot": 3
+		},
+		{
+			"id": "m396",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				19
+			],
+			"rot": 3
+		},
+		{
+			"id": "m397",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				20
+			],
+			"rot": 3
+		},
+		{
+			"id": "m398",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				21
+			],
+			"rot": 3
+		},
+		{
+			"id": "m399",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				22
+			],
+			"rot": 3
+		},
+		{
+			"id": "m400",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				23
+			],
+			"rot": 3
+		},
+		{
+			"id": "m401",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				24
+			],
+			"rot": 3
+		},
+		{
+			"id": "m402",
+			"def": "wedge_short",
+			"pos": [
+				6,
+				2,
+				25
+			],
+			"rot": 3
 		}
 	],
 	"rooms": [
@@ -1435,520 +3042,556 @@
 			"rect": [
 				2,
 				0,
-				1,
-				10
+				3,
+				5
 			]
 		},
 		{
 			"id": "r2",
-			"def": "corridor",
+			"def": "reactor_room",
 			"deck": 1,
 			"rect": [
 				2,
-				10,
-				1,
-				20
-			]
-		},
-		{
-			"id": "r3",
-			"def": "reactor_room",
-			"deck": 1,
-			"rect": [
-				1,
-				10,
-				1,
-				2
-			]
-		},
-		{
-			"id": "r4",
-			"def": "reactor_room",
-			"deck": 1,
-			"rect": [
+				5,
 				3,
-				10,
-				1,
-				2
-			]
-		},
-		{
-			"id": "r5",
-			"def": "reactor_room",
-			"deck": 1,
-			"rect": [
-				0,
-				12,
-				2,
-				4
-			]
-		},
-		{
-			"id": "r6",
-			"def": "reactor_room",
-			"deck": 1,
-			"rect": [
-				3,
-				12,
-				2,
-				4
-			]
-		},
-		{
-			"id": "r7",
-			"def": "bridge",
-			"deck": 1,
-			"rect": [
-				0,
-				16,
-				2,
-				4
+				7
 			]
 		},
 		{
 			"id": "r8",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				2,
+				0,
+				3,
+				12
+			]
+		},
+		{
+			"id": "r14",
+			"def": "engine_room",
+			"deck": 2,
+			"rect": [
+				2,
+				0,
+				3,
+				12
+			]
+		},
+		{
+			"id": "r20",
+			"def": "corridor",
+			"deck": 1,
+			"rect": [
+				3,
+				12,
+				1,
+				14
+			]
+		},
+		{
+			"id": "r22",
+			"def": "bridge",
+			"deck": 1,
+			"rect": [
+				1,
+				12,
+				2,
+				4
+			]
+		},
+		{
+			"id": "r24",
+			"def": "crew_quarters",
+			"deck": 1,
+			"rect": [
+				1,
+				16,
+				2,
+				3
+			]
+		},
+		{
+			"id": "r26",
+			"def": "life_support",
+			"deck": 1,
+			"rect": [
+				1,
+				19,
+				2,
+				3
+			]
+		},
+		{
+			"id": "r28",
+			"def": "magazine",
+			"deck": 1,
+			"rect": [
+				1,
+				22,
+				2,
+				4
+			]
+		},
+		{
+			"id": "r30",
 			"def": "workshop",
 			"deck": 1,
 			"rect": [
-				3,
+				4,
+				12,
+				2,
+				4
+			]
+		},
+		{
+			"id": "r32",
+			"def": "crew_quarters",
+			"deck": 1,
+			"rect": [
+				4,
 				16,
 				2,
-				4
-			]
-		},
-		{
-			"id": "r9",
-			"def": "cargo_hold",
-			"deck": 1,
-			"rect": [
-				0,
-				20,
-				2,
-				10
-			]
-		},
-		{
-			"id": "r10",
-			"def": "cargo_hold",
-			"deck": 1,
-			"rect": [
-				3,
-				20,
-				2,
-				10
-			]
-		},
-		{
-			"id": "r11",
-			"def": "engine_room",
-			"deck": 1,
-			"rect": [
-				0,
-				30,
-				5,
-				4
+				3
 			]
 		},
 		{
 			"id": "r34",
-			"def": "magazine",
-			"deck": 2,
+			"def": "cafeteria",
+			"deck": 1,
 			"rect": [
-				1,
-				12,
-				3,
-				2
-			]
-		},
-		{
-			"id": "r35",
-			"def": "corridor",
-			"deck": 2,
-			"rect": [
+				4,
+				19,
 				2,
-				14,
-				1,
-				10
+				3
 			]
 		},
 		{
 			"id": "r36",
-			"def": "crew_quarters",
-			"deck": 2,
+			"def": "armoury",
+			"deck": 1,
 			"rect": [
-				1,
-				14,
-				1,
-				6
-			]
-		},
-		{
-			"id": "r37",
-			"def": "crew_quarters",
-			"deck": 2,
-			"rect": [
-				3,
-				14,
-				1,
-				6
+				4,
+				22,
+				2,
+				4
 			]
 		},
 		{
 			"id": "r38",
-			"def": "cafeteria",
-			"deck": 2,
-			"rect": [
-				1,
-				20,
-				1,
-				4
-			]
-		},
-		{
-			"id": "r39",
-			"def": "life_support",
-			"deck": 2,
-			"rect": [
-				3,
-				20,
-				1,
-				4
-			]
-		},
-		{
-			"id": "r46",
 			"def": "engine_room",
 			"deck": 0,
 			"rect": [
 				1,
 				12,
-				3,
-				12
+				5,
+				14
+			]
+		},
+		{
+			"id": "r46",
+			"def": "engine_room",
+			"deck": 2,
+			"rect": [
+				1,
+				12,
+				5,
+				14
+			]
+		},
+		{
+			"id": "r54",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				0,
+				26,
+				7,
+				4
+			]
+		},
+		{
+			"id": "r57",
+			"def": "engine_room",
+			"deck": 1,
+			"rect": [
+				0,
+				26,
+				7,
+				4
+			]
+		},
+		{
+			"id": "r60",
+			"def": "engine_room",
+			"deck": 2,
+			"rect": [
+				0,
+				26,
+				7,
+				4
 			]
 		}
 	],
 	"hatches": [
 		{
-			"id": "h12",
+			"id": "h3",
 			"a": [
-				2,
+				4,
 				1,
-				9
+				4
 			],
 			"b": [
-				2,
+				4,
 				1,
-				10
+				5
 			]
 		},
 		{
-			"id": "h13",
+			"id": "h9",
 			"a": [
-				2,
-				1,
-				12
+				4,
+				0,
+				8
 			],
 			"b": [
+				4,
 				1,
-				1,
-				12
-			]
-		},
-		{
-			"id": "h14",
-			"a": [
-				2,
-				1,
-				12
-			],
-			"b": [
-				3,
-				1,
-				12
+				8
 			]
 		},
 		{
 			"id": "h15",
 			"a": [
-				2,
+				4,
 				1,
-				17
+				8
 			],
 			"b": [
-				1,
-				1,
-				17
+				4,
+				2,
+				8
 			]
 		},
 		{
-			"id": "h16",
+			"id": "h21",
 			"a": [
-				2,
+				3,
 				1,
-				17
+				11
 			],
 			"b": [
 				3,
 				1,
-				17
+				12
 			]
 		},
 		{
-			"id": "h17",
+			"id": "h23",
 			"a": [
 				2,
 				1,
-				20
-			],
-			"b": [
-				1,
-				1,
-				20
-			]
-		},
-		{
-			"id": "h18",
-			"a": [
-				2,
-				1,
-				20
+				12
 			],
 			"b": [
 				3,
 				1,
-				20
+				12
 			]
 		},
 		{
-			"id": "h19",
+			"id": "h25",
 			"a": [
 				2,
 				1,
-				29
-			],
-			"b": [
-				2,
-				1,
-				30
-			]
-		},
-		{
-			"id": "h40",
-			"a": [
-				2,
-				1,
-				14
-			],
-			"b": [
-				2,
-				2,
-				14
-			]
-		},
-		{
-			"id": "h41",
-			"a": [
-				2,
-				2,
-				13
-			],
-			"b": [
-				2,
-				2,
-				14
-			]
-		},
-		{
-			"id": "h42",
-			"a": [
-				2,
-				2,
-				16
-			],
-			"b": [
-				1,
-				2,
-				16
-			]
-		},
-		{
-			"id": "h43",
-			"a": [
-				2,
-				2,
 				16
 			],
 			"b": [
 				3,
-				2,
+				1,
 				16
 			]
 		},
 		{
-			"id": "h44",
+			"id": "h27",
 			"a": [
 				2,
-				2,
-				21
-			],
-			"b": [
 				1,
-				2,
-				21
-			]
-		},
-		{
-			"id": "h45",
-			"a": [
-				2,
-				2,
-				21
+				19
 			],
 			"b": [
 				3,
+				1,
+				19
+			]
+		},
+		{
+			"id": "h29",
+			"a": [
 				2,
-				21
+				1,
+				22
+			],
+			"b": [
+				3,
+				1,
+				22
+			]
+		},
+		{
+			"id": "h31",
+			"a": [
+				4,
+				1,
+				12
+			],
+			"b": [
+				3,
+				1,
+				12
+			]
+		},
+		{
+			"id": "h33",
+			"a": [
+				4,
+				1,
+				16
+			],
+			"b": [
+				3,
+				1,
+				16
+			]
+		},
+		{
+			"id": "h35",
+			"a": [
+				4,
+				1,
+				19
+			],
+			"b": [
+				3,
+				1,
+				19
+			]
+		},
+		{
+			"id": "h37",
+			"a": [
+				4,
+				1,
+				22
+			],
+			"b": [
+				3,
+				1,
+				22
+			]
+		},
+		{
+			"id": "h39",
+			"a": [
+				3,
+				0,
+				18
+			],
+			"b": [
+				3,
+				1,
+				18
 			]
 		},
 		{
 			"id": "h47",
 			"a": [
-				2,
+				3,
 				1,
-				15
+				18
 			],
 			"b": [
+				3,
 				2,
-				0,
-				15
+				18
+			]
+		},
+		{
+			"id": "h63",
+			"a": [
+				3,
+				1,
+				25
+			],
+			"b": [
+				3,
+				1,
+				26
 			]
 		}
 	],
 	"equipment": [
 		{
-			"id": "e20",
+			"id": "e4",
 			"def": "fusion_reactor",
 			"cell": [
-				0,
+				2,
 				1,
-				13
+				6
 			]
 		},
 		{
-			"id": "e21",
-			"def": "propellant_tank",
-			"cell": [
-				0,
-				1,
-				21
-			]
-		},
-		{
-			"id": "e22",
-			"def": "propellant_tank",
-			"cell": [
-				0,
-				1,
-				23
-			]
-		},
-		{
-			"id": "e23",
-			"def": "propellant_tank",
-			"cell": [
-				0,
-				1,
-				25
-			]
-		},
-		{
-			"id": "e24",
-			"def": "propellant_tank",
-			"cell": [
-				0,
-				1,
-				27
-			]
-		},
-		{
-			"id": "e25",
-			"def": "propellant_tank",
-			"cell": [
-				0,
-				1,
-				31
-			]
-		},
-		{
-			"id": "e26",
+			"id": "e5",
 			"def": "fusion_reactor",
 			"cell": [
-				3,
+				2,
 				1,
-				13
+				9
 			]
 		},
 		{
-			"id": "e27",
-			"def": "propellant_tank",
-			"cell": [
-				3,
-				1,
-				21
-			]
-		},
-		{
-			"id": "e28",
-			"def": "propellant_tank",
-			"cell": [
-				3,
-				1,
-				23
-			]
-		},
-		{
-			"id": "e29",
-			"def": "propellant_tank",
-			"cell": [
-				3,
-				1,
-				25
-			]
-		},
-		{
-			"id": "e30",
-			"def": "propellant_tank",
-			"cell": [
-				3,
-				1,
-				27
-			]
-		},
-		{
-			"id": "e31",
-			"def": "propellant_tank",
-			"cell": [
-				3,
-				1,
-				31
-			]
-		},
-		{
-			"id": "e32",
+			"id": "e6",
 			"def": "power_distribution_unit",
 			"cell": [
+				2,
 				1,
-				1,
-				10
+				5
 			]
 		},
 		{
-			"id": "e33",
+			"id": "e7",
 			"def": "power_distribution_unit",
 			"cell": [
-				3,
+				2,
 				1,
-				10
+				11
+			]
+		},
+		{
+			"id": "e10",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				0,
+				0
+			]
+		},
+		{
+			"id": "e11",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				0,
+				2
+			]
+		},
+		{
+			"id": "e12",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				0,
+				4
+			]
+		},
+		{
+			"id": "e13",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				0,
+				6
+			]
+		},
+		{
+			"id": "e16",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				2,
+				0
+			]
+		},
+		{
+			"id": "e17",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				2,
+				2
+			]
+		},
+		{
+			"id": "e18",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				2,
+				4
+			]
+		},
+		{
+			"id": "e19",
+			"def": "propellant_tank",
+			"cell": [
+				2,
+				2,
+				6
+			]
+		},
+		{
+			"id": "e40",
+			"def": "propellant_tank",
+			"cell": [
+				1,
+				0,
+				12
+			]
+		},
+		{
+			"id": "e41",
+			"def": "propellant_tank",
+			"cell": [
+				4,
+				0,
+				12
+			]
+		},
+		{
+			"id": "e42",
+			"def": "propellant_tank",
+			"cell": [
+				1,
+				0,
+				14
+			]
+		},
+		{
+			"id": "e43",
+			"def": "propellant_tank",
+			"cell": [
+				4,
+				0,
+				14
+			]
+		},
+		{
+			"id": "e44",
+			"def": "propellant_tank",
+			"cell": [
+				1,
+				0,
+				16
+			]
+		},
+		{
+			"id": "e45",
+			"def": "propellant_tank",
+			"cell": [
+				4,
+				0,
+				16
 			]
 		},
 		{
@@ -1956,7 +3599,7 @@
 			"def": "propellant_tank",
 			"cell": [
 				1,
-				0,
+				2,
 				12
 			]
 		},
@@ -1964,9 +3607,9 @@
 			"id": "e49",
 			"def": "propellant_tank",
 			"cell": [
-				1,
-				0,
-				16
+				4,
+				2,
+				12
 			]
 		},
 		{
@@ -1974,510 +3617,492 @@
 			"def": "propellant_tank",
 			"cell": [
 				1,
-				0,
-				20
+				2,
+				14
 			]
 		},
 		{
 			"id": "e51",
-			"def": "railgun",
+			"def": "propellant_tank",
 			"cell": [
+				4,
 				2,
-				1,
-				0
-			],
-			"face": "fore"
+				14
+			]
 		},
 		{
 			"id": "e52",
-			"def": "rcs_block_heavy",
+			"def": "propellant_tank",
 			"cell": [
-				2,
 				1,
-				1
-			],
-			"face": "port"
+				2,
+				16
+			]
 		},
 		{
 			"id": "e53",
-			"def": "rcs_block_heavy",
+			"def": "propellant_tank",
 			"cell": [
+				4,
 				2,
-				1,
-				1
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e54",
-			"def": "rcs_block_heavy",
-			"cell": [
-				2,
-				1,
-				1
-			],
-			"face": "dorsal"
+				16
+			]
 		},
 		{
 			"id": "e55",
-			"def": "rcs_block_heavy",
+			"def": "propellant_tank",
 			"cell": [
-				2,
-				1,
-				1
-			],
-			"face": "ventral"
+				0,
+				0,
+				26
+			]
 		},
 		{
 			"id": "e56",
-			"def": "rcs_block_heavy",
-			"cell": [
-				0,
-				1,
-				33
-			],
-			"face": "port"
-		},
-		{
-			"id": "e57",
-			"def": "rcs_block_heavy",
+			"def": "propellant_tank",
 			"cell": [
 				4,
-				1,
-				33
-			],
-			"face": "starboard"
+				0,
+				26
+			]
 		},
 		{
 			"id": "e58",
-			"def": "rcs_block_heavy",
-			"cell": [
-				2,
-				1,
-				33
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e59",
-			"def": "rcs_block_heavy",
-			"cell": [
-				2,
-				1,
-				33
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e60",
-			"def": "main_engine",
+			"def": "propellant_tank",
 			"cell": [
 				0,
 				1,
-				33
-			],
-			"face": "aft"
+				26
+			]
+		},
+		{
+			"id": "e59",
+			"def": "propellant_tank",
+			"cell": [
+				4,
+				1,
+				26
+			]
 		},
 		{
 			"id": "e61",
-			"def": "main_engine",
+			"def": "propellant_tank",
 			"cell": [
-				1,
-				1,
-				33
-			],
-			"face": "aft"
+				0,
+				2,
+				26
+			]
 		},
 		{
 			"id": "e62",
-			"def": "main_engine",
+			"def": "propellant_tank",
 			"cell": [
+				4,
 				2,
-				1,
-				33
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e63",
-			"def": "main_engine",
-			"cell": [
-				3,
-				1,
-				33
-			],
-			"face": "aft"
+				26
+			]
 		},
 		{
 			"id": "e64",
 			"def": "main_engine",
 			"cell": [
-				4,
-				1,
-				33
+				2,
+				0,
+				29
 			],
 			"face": "aft"
 		},
 		{
 			"id": "e65",
-			"def": "radiator_long",
+			"def": "main_engine",
 			"cell": [
-				0,
+				2,
 				1,
 				29
 			],
-			"face": "dorsal",
-			"rot": 4
+			"face": "aft"
 		},
 		{
 			"id": "e66",
-			"def": "radiator_long",
+			"def": "main_engine",
 			"cell": [
-				4,
-				1,
+				2,
+				2,
 				29
 			],
-			"face": "dorsal",
-			"rot": 4
+			"face": "aft"
 		},
 		{
 			"id": "e67",
-			"def": "radiator_long",
-			"cell": [
-				0,
-				1,
-				29
-			],
-			"face": "ventral",
-			"rot": 4
-		},
-		{
-			"id": "e68",
-			"def": "radiator_long",
-			"cell": [
-				4,
-				1,
-				29
-			],
-			"face": "ventral",
-			"rot": 4
-		},
-		{
-			"id": "e69",
-			"def": "autocannon",
-			"cell": [
-				2,
-				2,
-				22
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e70",
-			"def": "autocannon",
-			"cell": [
-				2,
-				0,
-				22
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e71",
-			"def": "point_defence",
-			"cell": [
-				0,
-				1,
-				13
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e72",
-			"def": "point_defence",
-			"cell": [
-				4,
-				1,
-				13
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e73",
-			"def": "point_defence",
-			"cell": [
-				0,
-				1,
-				26
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e74",
-			"def": "point_defence",
-			"cell": [
-				4,
-				1,
-				26
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e75",
-			"def": "point_defence",
-			"cell": [
-				2,
-				2,
-				12
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e76",
-			"def": "sensor_mast",
-			"cell": [
-				1,
-				2,
-				15
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e77",
-			"def": "sensor_mast_hardened",
+			"def": "main_engine",
 			"cell": [
 				3,
 				0,
-				15
+				29
 			],
-			"face": "ventral"
+			"face": "aft"
+		},
+		{
+			"id": "e68",
+			"def": "main_engine",
+			"cell": [
+				3,
+				1,
+				29
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e69",
+			"def": "main_engine",
+			"cell": [
+				3,
+				2,
+				29
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e70",
+			"def": "main_engine",
+			"cell": [
+				4,
+				0,
+				29
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e71",
+			"def": "main_engine",
+			"cell": [
+				4,
+				1,
+				29
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e72",
+			"def": "main_engine",
+			"cell": [
+				4,
+				2,
+				29
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e73",
+			"def": "railgun",
+			"cell": [
+				2,
+				0,
+				0
+			],
+			"face": "fore"
+		},
+		{
+			"id": "e74",
+			"def": "rcs_block_heavy",
+			"cell": [
+				2,
+				0,
+				1
+			],
+			"face": "port"
+		},
+		{
+			"id": "e75",
+			"def": "rcs_block_heavy",
+			"cell": [
+				4,
+				0,
+				1
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e76",
+			"def": "rcs_block_heavy",
+			"cell": [
+				0,
+				0,
+				29
+			],
+			"face": "port"
+		},
+		{
+			"id": "e77",
+			"def": "rcs_block_heavy",
+			"cell": [
+				6,
+				0,
+				29
+			],
+			"face": "starboard"
 		},
 		{
 			"id": "e78",
-			"def": "docking_collar",
+			"def": "rcs_block_heavy",
 			"cell": [
-				0,
-				1,
-				20
+				2,
+				2,
+				1
 			],
 			"face": "port"
 		},
 		{
 			"id": "e79",
-			"def": "flare_launcher",
+			"def": "rcs_block_heavy",
 			"cell": [
-				1,
-				1,
-				32
+				4,
+				2,
+				1
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e80",
+			"def": "rcs_block_heavy",
+			"cell": [
+				0,
+				2,
+				29
+			],
+			"face": "port"
+		},
+		{
+			"id": "e81",
+			"def": "rcs_block_heavy",
+			"cell": [
+				6,
+				2,
+				29
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e82",
+			"def": "autocannon",
+			"cell": [
+				3,
+				2,
+				23
 			],
 			"face": "dorsal"
 		},
 		{
-			"id": "e80",
-			"def": "flare_launcher",
+			"id": "e83",
+			"def": "autocannon",
 			"cell": [
 				3,
-				1,
-				32
+				0,
+				23
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e84",
+			"def": "point_defence",
+			"cell": [
+				3,
+				2,
+				6
 			],
 			"face": "dorsal"
+		},
+		{
+			"id": "e85",
+			"def": "point_defence",
+			"cell": [
+				3,
+				0,
+				6
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e86",
+			"def": "point_defence",
+			"cell": [
+				1,
+				2,
+				14
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e87",
+			"def": "point_defence",
+			"cell": [
+				5,
+				2,
+				14
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e88",
+			"def": "point_defence",
+			"cell": [
+				1,
+				0,
+				22
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e89",
+			"def": "point_defence",
+			"cell": [
+				5,
+				0,
+				22
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e90",
+			"def": "sensor_mast",
+			"cell": [
+				2,
+				2,
+				13
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e91",
+			"def": "sensor_mast_hardened",
+			"cell": [
+				4,
+				0,
+				13
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e92",
+			"def": "docking_collar",
+			"cell": [
+				1,
+				1,
+				17
+			],
+			"face": "port"
+		},
+		{
+			"id": "e93",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				2,
+				27
+			],
+			"face": "dorsal",
+			"rot": 4
+		},
+		{
+			"id": "e94",
+			"def": "radiator_long",
+			"cell": [
+				6,
+				2,
+				27
+			],
+			"face": "dorsal",
+			"rot": 4
+		},
+		{
+			"id": "e95",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				27
+			],
+			"face": "ventral",
+			"rot": 4
+		},
+		{
+			"id": "e96",
+			"def": "radiator_long",
+			"cell": [
+				6,
+				0,
+				27
+			],
+			"face": "ventral",
+			"rot": 4
+		},
+		{
+			"id": "e97",
+			"def": "flare_launcher",
+			"cell": [
+				1,
+				2,
+				29
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e98",
+			"def": "flare_launcher",
+			"cell": [
+				5,
+				2,
+				29
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e99",
+			"def": "landing_leg",
+			"cell": [
+				1,
+				0,
+				13
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e100",
+			"def": "landing_leg",
+			"cell": [
+				5,
+				0,
+				13
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e101",
+			"def": "landing_leg",
+			"cell": [
+				1,
+				0,
+				29
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e102",
+			"def": "landing_leg",
+			"cell": [
+				5,
+				0,
+				29
+			],
+			"face": "ventral"
 		}
 	],
 	"armor": [
 		[
-			0,
 			1,
+			0,
 			11,
 			"dorsal",
-			80
-		],
-		[
-			0,
-			1,
-			11,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			11,
-			"ventral",
-			80
-		],
-		[
-			0,
-			1,
-			12,
-			"dorsal",
-			80
-		],
-		[
-			0,
-			1,
-			12,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			12,
-			"ventral",
-			80
-		],
-		[
-			0,
-			1,
-			13,
-			"dorsal",
-			80
-		],
-		[
-			0,
-			1,
-			13,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			13,
-			"ventral",
-			80
-		],
-		[
-			0,
-			1,
-			14,
-			"dorsal",
-			80
-		],
-		[
-			0,
-			1,
-			14,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			14,
-			"ventral",
-			80
-		],
-		[
-			0,
-			1,
-			15,
-			"dorsal",
-			80
-		],
-		[
-			0,
-			1,
-			15,
-			"port",
-			80
-		],
-		[
-			0,
-			1,
-			15,
-			"ventral",
-			80
-		],
-		[
-			0,
-			1,
-			16,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			17,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			18,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			19,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			20,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			21,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			22,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			23,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			24,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			25,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			26,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			27,
-			"port",
-			40
-		],
-		[
-			0,
-			1,
-			28,
-			"port",
 			40
 		],
 		[
@@ -2485,293 +4110,83 @@
 			0,
 			11,
 			"port",
-			80
+			40
 		],
 		[
 			1,
 			0,
 			11,
 			"ventral",
-			80
-		],
-		[
-			1,
-			0,
-			12,
-			"port",
-			80
-		],
-		[
-			1,
-			0,
-			12,
-			"ventral",
-			80
-		],
-		[
-			1,
-			0,
-			13,
-			"port",
-			80
-		],
-		[
-			1,
-			0,
-			13,
-			"ventral",
-			80
-		],
-		[
-			1,
-			0,
-			14,
-			"port",
-			80
-		],
-		[
-			1,
-			0,
-			14,
-			"ventral",
-			80
-		],
-		[
-			1,
-			0,
-			15,
-			"port",
-			80
-		],
-		[
-			1,
-			0,
-			15,
-			"ventral",
-			80
-		],
-		[
-			1,
-			0,
-			16,
-			"port",
 			40
 		],
 		[
 			1,
-			0,
-			17,
-			"port",
-			40
-		],
-		[
-			1,
-			0,
-			18,
-			"port",
-			40
-		],
-		[
-			1,
-			0,
-			19,
-			"port",
-			40
-		],
-		[
-			1,
-			0,
-			20,
-			"port",
-			40
-		],
-		[
-			1,
-			0,
-			21,
-			"port",
-			40
-		],
-		[
-			1,
-			0,
-			22,
-			"port",
-			40
-		],
-		[
-			1,
-			0,
-			23,
-			"port",
-			40
-		],
-		[
-			1,
-			1,
-			10,
+			2,
+			11,
 			"dorsal",
-			80
+			40
 		],
 		[
 			1,
+			2,
+			11,
+			"port",
+			40
+		],
+		[
 			1,
+			2,
+			11,
+			"ventral",
+			40
+		],
+		[
+			2,
+			0,
+			0,
+			"fore",
+			80
+		],
+		[
+			2,
+			0,
+			0,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			0,
+			"ventral",
+			80
+		],
+		[
+			2,
+			0,
+			1,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			1,
+			"ventral",
+			80
+		],
+		[
+			2,
+			0,
 			10,
 			"port",
-			80
+			40
 		],
 		[
-			1,
-			1,
+			2,
+			0,
 			10,
 			"ventral",
-			80
-		],
-		[
-			1,
-			1,
-			9,
-			"dorsal",
-			80
-		],
-		[
-			1,
-			1,
-			9,
-			"port",
-			80
-		],
-		[
-			1,
-			1,
-			9,
-			"ventral",
-			80
-		],
-		[
-			1,
-			2,
-			11,
-			"dorsal",
-			80
-		],
-		[
-			1,
-			2,
-			11,
-			"port",
-			80
-		],
-		[
-			1,
-			2,
-			12,
-			"dorsal",
-			80
-		],
-		[
-			1,
-			2,
-			12,
-			"port",
-			80
-		],
-		[
-			1,
-			2,
-			13,
-			"dorsal",
-			80
-		],
-		[
-			1,
-			2,
-			13,
-			"port",
-			80
-		],
-		[
-			1,
-			2,
-			14,
-			"dorsal",
-			80
-		],
-		[
-			1,
-			2,
-			14,
-			"port",
-			80
-		],
-		[
-			1,
-			2,
-			15,
-			"dorsal",
-			80
-		],
-		[
-			1,
-			2,
-			15,
-			"port",
-			80
-		],
-		[
-			1,
-			2,
-			16,
-			"port",
-			40
-		],
-		[
-			1,
-			2,
-			17,
-			"port",
-			40
-		],
-		[
-			1,
-			2,
-			18,
-			"port",
-			40
-		],
-		[
-			1,
-			2,
-			19,
-			"port",
-			40
-		],
-		[
-			1,
-			2,
-			20,
-			"port",
-			40
-		],
-		[
-			1,
-			2,
-			21,
-			"port",
-			40
-		],
-		[
-			1,
-			2,
-			22,
-			"port",
-			40
-		],
-		[
-			1,
-			2,
-			23,
-			"port",
 			40
 		],
 		[
@@ -2779,42 +4194,119 @@
 			0,
 			11,
 			"ventral",
+			40
+		],
+		[
+			2,
+			0,
+			2,
+			"port",
 			80
 		],
 		[
 			2,
 			0,
-			12,
+			2,
 			"ventral",
 			80
 		],
 		[
 			2,
 			0,
-			13,
+			3,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			3,
 			"ventral",
 			80
 		],
 		[
 			2,
 			0,
-			14,
+			4,
+			"port",
+			80
+		],
+		[
+			2,
+			0,
+			4,
 			"ventral",
 			80
 		],
 		[
 			2,
 			0,
-			15,
-			"ventral",
-			80
+			5,
+			"port",
+			40
 		],
 		[
 			2,
-			1,
 			0,
-			"dorsal",
-			80
+			5,
+			"ventral",
+			40
+		],
+		[
+			2,
+			0,
+			6,
+			"port",
+			40
+		],
+		[
+			2,
+			0,
+			6,
+			"ventral",
+			40
+		],
+		[
+			2,
+			0,
+			7,
+			"port",
+			40
+		],
+		[
+			2,
+			0,
+			7,
+			"ventral",
+			40
+		],
+		[
+			2,
+			0,
+			8,
+			"port",
+			40
+		],
+		[
+			2,
+			0,
+			8,
+			"ventral",
+			40
+		],
+		[
+			2,
+			0,
+			9,
+			"port",
+			40
+		],
+		[
+			2,
+			0,
+			9,
+			"ventral",
+			40
 		],
 		[
 			2,
@@ -2833,92 +4325,29 @@
 		[
 			2,
 			1,
-			0,
-			"starboard",
-			80
-		],
-		[
-			2,
-			1,
-			0,
-			"ventral",
-			80
-		],
-		[
-			2,
-			1,
-			1,
-			"dorsal",
-			80
-		],
-		[
-			2,
-			1,
 			1,
 			"port",
-			80
-		],
-		[
-			2,
-			1,
-			1,
-			"starboard",
-			80
-		],
-		[
-			2,
-			1,
-			1,
-			"ventral",
 			80
 		],
 		[
 			2,
 			1,
 			10,
-			"dorsal",
-			80
+			"port",
+			40
 		],
 		[
 			2,
 			1,
-			10,
-			"ventral",
-			80
-		],
-		[
-			2,
-			1,
-			2,
-			"dorsal",
-			80
+			11,
+			"port",
+			40
 		],
 		[
 			2,
 			1,
 			2,
 			"port",
-			80
-		],
-		[
-			2,
-			1,
-			2,
-			"starboard",
-			80
-		],
-		[
-			2,
-			1,
-			2,
-			"ventral",
-			80
-		],
-		[
-			2,
-			1,
-			3,
-			"dorsal",
 			80
 		],
 		[
@@ -2931,50 +4360,8 @@
 		[
 			2,
 			1,
-			3,
-			"starboard",
-			80
-		],
-		[
-			2,
-			1,
-			3,
-			"ventral",
-			80
-		],
-		[
-			2,
-			1,
-			4,
-			"dorsal",
-			80
-		],
-		[
-			2,
-			1,
 			4,
 			"port",
-			80
-		],
-		[
-			2,
-			1,
-			4,
-			"starboard",
-			80
-		],
-		[
-			2,
-			1,
-			4,
-			"ventral",
-			80
-		],
-		[
-			2,
-			1,
-			5,
-			"dorsal",
 			80
 		],
 		[
@@ -2982,696 +4369,868 @@
 			1,
 			5,
 			"port",
+			40
+		],
+		[
+			2,
+			1,
+			6,
+			"port",
+			40
+		],
+		[
+			2,
+			1,
+			7,
+			"port",
+			40
+		],
+		[
+			2,
+			1,
+			8,
+			"port",
+			40
+		],
+		[
+			2,
+			1,
+			9,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			0,
+			"dorsal",
 			80
 		],
 		[
 			2,
+			2,
+			0,
+			"fore",
+			80
+		],
+		[
+			2,
+			2,
+			0,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
+			1,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			2,
+			1,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
+			10,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			10,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			2,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			2,
+			2,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
+			3,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			2,
+			3,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
+			4,
+			"dorsal",
+			80
+		],
+		[
+			2,
+			2,
+			4,
+			"port",
+			80
+		],
+		[
+			2,
+			2,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			5,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			6,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			6,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			7,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			7,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			8,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			8,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			9,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			9,
+			"port",
+			40
+		],
+		[
+			3,
+			0,
+			0,
+			"fore",
+			80
+		],
+		[
+			3,
+			0,
+			0,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			1,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			10,
+			"ventral",
+			40
+		],
+		[
+			3,
+			0,
+			11,
+			"ventral",
+			40
+		],
+		[
+			3,
+			0,
+			2,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			3,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			4,
+			"ventral",
+			80
+		],
+		[
+			3,
+			0,
+			5,
+			"ventral",
+			40
+		],
+		[
+			3,
+			0,
+			6,
+			"ventral",
+			40
+		],
+		[
+			3,
+			0,
+			7,
+			"ventral",
+			40
+		],
+		[
+			3,
+			0,
+			8,
+			"ventral",
+			40
+		],
+		[
+			3,
+			0,
+			9,
+			"ventral",
+			40
+		],
+		[
+			3,
+			1,
+			0,
+			"fore",
+			80
+		],
+		[
+			3,
+			2,
+			0,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			2,
+			0,
+			"fore",
+			80
+		],
+		[
+			3,
+			2,
+			1,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			2,
+			10,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			2,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			2,
+			3,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			2,
+			4,
+			"dorsal",
+			80
+		],
+		[
+			3,
+			2,
+			5,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			6,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			7,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			8,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			9,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			0,
+			0,
+			"fore",
+			80
+		],
+		[
+			4,
+			0,
+			0,
+			"starboard",
+			80
+		],
+		[
+			4,
+			0,
+			0,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			1,
+			"starboard",
+			80
+		],
+		[
+			4,
+			0,
+			1,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			10,
+			"starboard",
+			40
+		],
+		[
+			4,
+			0,
+			10,
+			"ventral",
+			40
+		],
+		[
+			4,
+			0,
+			11,
+			"ventral",
+			40
+		],
+		[
+			4,
+			0,
+			2,
+			"starboard",
+			80
+		],
+		[
+			4,
+			0,
+			2,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			3,
+			"starboard",
+			80
+		],
+		[
+			4,
+			0,
+			3,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			4,
+			"starboard",
+			80
+		],
+		[
+			4,
+			0,
+			4,
+			"ventral",
+			80
+		],
+		[
+			4,
+			0,
+			5,
+			"starboard",
+			40
+		],
+		[
+			4,
+			0,
+			5,
+			"ventral",
+			40
+		],
+		[
+			4,
+			0,
+			6,
+			"starboard",
+			40
+		],
+		[
+			4,
+			0,
+			6,
+			"ventral",
+			40
+		],
+		[
+			4,
+			0,
+			7,
+			"starboard",
+			40
+		],
+		[
+			4,
+			0,
+			7,
+			"ventral",
+			40
+		],
+		[
+			4,
+			0,
+			8,
+			"starboard",
+			40
+		],
+		[
+			4,
+			0,
+			8,
+			"ventral",
+			40
+		],
+		[
+			4,
+			0,
+			9,
+			"starboard",
+			40
+		],
+		[
+			4,
+			0,
+			9,
+			"ventral",
+			40
+		],
+		[
+			4,
+			1,
+			0,
+			"fore",
+			80
+		],
+		[
+			4,
+			1,
+			0,
+			"starboard",
+			80
+		],
+		[
+			4,
+			1,
+			1,
+			"starboard",
+			80
+		],
+		[
+			4,
+			1,
+			10,
+			"starboard",
+			40
+		],
+		[
+			4,
+			1,
+			11,
+			"starboard",
+			40
+		],
+		[
+			4,
+			1,
+			2,
+			"starboard",
+			80
+		],
+		[
+			4,
+			1,
+			3,
+			"starboard",
+			80
+		],
+		[
+			4,
+			1,
+			4,
+			"starboard",
+			80
+		],
+		[
+			4,
 			1,
 			5,
 			"starboard",
+			40
+		],
+		[
+			4,
+			1,
+			6,
+			"starboard",
+			40
+		],
+		[
+			4,
+			1,
+			7,
+			"starboard",
+			40
+		],
+		[
+			4,
+			1,
+			8,
+			"starboard",
+			40
+		],
+		[
+			4,
+			1,
+			9,
+			"starboard",
+			40
+		],
+		[
+			4,
+			2,
+			0,
+			"dorsal",
 			80
 		],
 		[
+			4,
+			2,
+			0,
+			"fore",
+			80
+		],
+		[
+			4,
+			2,
+			0,
+			"starboard",
+			80
+		],
+		[
+			4,
 			2,
 			1,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			1,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			10,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			2,
+			10,
+			"starboard",
+			40
+		],
+		[
+			4,
+			2,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			2,
+			2,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			2,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			3,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			3,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
+			4,
+			"dorsal",
+			80
+		],
+		[
+			4,
+			2,
+			4,
+			"starboard",
+			80
+		],
+		[
+			4,
+			2,
 			5,
-			"ventral",
-			80
+			"dorsal",
+			40
 		],
 		[
+			4,
 			2,
-			1,
+			5,
+			"starboard",
+			40
+		],
+		[
+			4,
+			2,
 			6,
 			"dorsal",
-			80
+			40
 		],
 		[
+			4,
 			2,
-			1,
-			6,
-			"port",
-			80
-		],
-		[
-			2,
-			1,
 			6,
 			"starboard",
-			80
+			40
 		],
 		[
+			4,
 			2,
-			1,
-			6,
-			"ventral",
-			80
-		],
-		[
-			2,
-			1,
 			7,
 			"dorsal",
-			80
+			40
 		],
 		[
+			4,
 			2,
-			1,
-			7,
-			"port",
-			80
-		],
-		[
-			2,
-			1,
 			7,
 			"starboard",
-			80
+			40
 		],
 		[
+			4,
 			2,
-			1,
-			7,
-			"ventral",
-			80
-		],
-		[
-			2,
-			1,
 			8,
 			"dorsal",
-			80
+			40
 		],
 		[
+			4,
 			2,
-			1,
-			8,
-			"port",
-			80
-		],
-		[
-			2,
-			1,
 			8,
 			"starboard",
-			80
+			40
 		],
 		[
+			4,
 			2,
-			1,
-			8,
-			"ventral",
-			80
-		],
-		[
-			2,
-			1,
 			9,
 			"dorsal",
-			80
-		],
-		[
-			2,
-			1,
-			9,
-			"ventral",
-			80
-		],
-		[
-			2,
-			2,
-			11,
-			"dorsal",
-			80
-		],
-		[
-			2,
-			2,
-			12,
-			"dorsal",
-			80
-		],
-		[
-			2,
-			2,
-			13,
-			"dorsal",
-			80
-		],
-		[
-			2,
-			2,
-			14,
-			"dorsal",
-			80
-		],
-		[
-			2,
-			2,
-			15,
-			"dorsal",
-			80
-		],
-		[
-			3,
-			0,
-			11,
-			"starboard",
-			80
-		],
-		[
-			3,
-			0,
-			11,
-			"ventral",
-			80
-		],
-		[
-			3,
-			0,
-			12,
-			"starboard",
-			80
-		],
-		[
-			3,
-			0,
-			12,
-			"ventral",
-			80
-		],
-		[
-			3,
-			0,
-			13,
-			"starboard",
-			80
-		],
-		[
-			3,
-			0,
-			13,
-			"ventral",
-			80
-		],
-		[
-			3,
-			0,
-			14,
-			"starboard",
-			80
-		],
-		[
-			3,
-			0,
-			14,
-			"ventral",
-			80
-		],
-		[
-			3,
-			0,
-			15,
-			"starboard",
-			80
-		],
-		[
-			3,
-			0,
-			15,
-			"ventral",
-			80
-		],
-		[
-			3,
-			0,
-			16,
-			"starboard",
 			40
 		],
 		[
-			3,
-			0,
-			17,
-			"starboard",
-			40
-		],
-		[
-			3,
-			0,
-			18,
-			"starboard",
-			40
-		],
-		[
-			3,
-			0,
-			19,
-			"starboard",
-			40
-		],
-		[
-			3,
-			0,
-			20,
-			"starboard",
-			40
-		],
-		[
-			3,
-			0,
-			21,
-			"starboard",
-			40
-		],
-		[
-			3,
-			0,
-			22,
-			"starboard",
-			40
-		],
-		[
-			3,
-			0,
-			23,
-			"starboard",
-			40
-		],
-		[
-			3,
-			1,
-			10,
-			"dorsal",
-			80
-		],
-		[
-			3,
-			1,
-			10,
-			"starboard",
-			80
-		],
-		[
-			3,
-			1,
-			10,
-			"ventral",
-			80
-		],
-		[
-			3,
-			1,
-			9,
-			"dorsal",
-			80
-		],
-		[
-			3,
-			1,
+			4,
+			2,
 			9,
 			"starboard",
-			80
+			40
 		],
 		[
-			3,
-			1,
-			9,
+			5,
+			0,
+			11,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			0,
+			11,
+			"starboard",
+			40
+		],
+		[
+			5,
+			0,
+			11,
 			"ventral",
-			80
+			40
 		],
 		[
-			3,
+			5,
 			2,
 			11,
 			"dorsal",
-			80
+			40
 		],
 		[
-			3,
+			5,
 			2,
 			11,
 			"starboard",
-			80
-		],
-		[
-			3,
-			2,
-			12,
-			"dorsal",
-			80
-		],
-		[
-			3,
-			2,
-			12,
-			"starboard",
-			80
-		],
-		[
-			3,
-			2,
-			13,
-			"dorsal",
-			80
-		],
-		[
-			3,
-			2,
-			13,
-			"starboard",
-			80
-		],
-		[
-			3,
-			2,
-			14,
-			"dorsal",
-			80
-		],
-		[
-			3,
-			2,
-			14,
-			"starboard",
-			80
-		],
-		[
-			3,
-			2,
-			15,
-			"dorsal",
-			80
-		],
-		[
-			3,
-			2,
-			15,
-			"starboard",
-			80
-		],
-		[
-			3,
-			2,
-			16,
-			"starboard",
 			40
 		],
 		[
-			3,
+			5,
 			2,
-			17,
-			"starboard",
-			40
-		],
-		[
-			3,
-			2,
-			18,
-			"starboard",
-			40
-		],
-		[
-			3,
-			2,
-			19,
-			"starboard",
-			40
-		],
-		[
-			3,
-			2,
-			20,
-			"starboard",
-			40
-		],
-		[
-			3,
-			2,
-			21,
-			"starboard",
-			40
-		],
-		[
-			3,
-			2,
-			22,
-			"starboard",
-			40
-		],
-		[
-			3,
-			2,
-			23,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			11,
-			"dorsal",
-			80
-		],
-		[
-			4,
-			1,
-			11,
-			"starboard",
-			80
-		],
-		[
-			4,
-			1,
 			11,
 			"ventral",
-			80
-		],
-		[
-			4,
-			1,
-			12,
-			"dorsal",
-			80
-		],
-		[
-			4,
-			1,
-			12,
-			"starboard",
-			80
-		],
-		[
-			4,
-			1,
-			12,
-			"ventral",
-			80
-		],
-		[
-			4,
-			1,
-			13,
-			"dorsal",
-			80
-		],
-		[
-			4,
-			1,
-			13,
-			"starboard",
-			80
-		],
-		[
-			4,
-			1,
-			13,
-			"ventral",
-			80
-		],
-		[
-			4,
-			1,
-			14,
-			"dorsal",
-			80
-		],
-		[
-			4,
-			1,
-			14,
-			"starboard",
-			80
-		],
-		[
-			4,
-			1,
-			14,
-			"ventral",
-			80
-		],
-		[
-			4,
-			1,
-			15,
-			"dorsal",
-			80
-		],
-		[
-			4,
-			1,
-			15,
-			"starboard",
-			80
-		],
-		[
-			4,
-			1,
-			15,
-			"ventral",
-			80
-		],
-		[
-			4,
-			1,
-			16,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			17,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			18,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			19,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			20,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			21,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			22,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			23,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			24,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			25,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			26,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			27,
-			"starboard",
-			40
-		],
-		[
-			4,
-			1,
-			28,
-			"starboard",
 			40
 		]
 	],
 	"bus": [
 		[
 			0,
-			1,
-			13
-		],
-		[
 			0,
-			1,
-			20
-		],
-		[
-			0,
-			1,
-			21
-		],
-		[
-			0,
-			1,
-			22
-		],
-		[
-			0,
-			1,
-			23
-		],
-		[
-			0,
-			1,
-			24
-		],
-		[
-			0,
-			1,
-			25
-		],
-		[
-			0,
-			1,
-			26
-		],
-		[
-			0,
-			1,
-			27
-		],
-		[
-			0,
-			1,
-			28
+			29
 		],
 		[
 			0,
@@ -3680,58 +5239,13 @@
 		],
 		[
 			0,
-			1,
-			30
-		],
-		[
-			0,
-			1,
-			31
-		],
-		[
-			0,
-			1,
-			32
-		],
-		[
-			0,
-			1,
-			33
+			2,
+			29
 		],
 		[
 			1,
 			0,
-			13
-		],
-		[
-			1,
-			1,
-			10
-		],
-		[
-			1,
-			1,
-			11
-		],
-		[
-			1,
-			1,
-			12
-		],
-		[
-			1,
-			1,
-			13
-		],
-		[
-			1,
-			1,
-			14
-		],
-		[
-			1,
-			1,
-			15
+			22
 		],
 		[
 			1,
@@ -3741,57 +5255,52 @@
 		[
 			1,
 			1,
-			20
-		],
-		[
-			1,
-			1,
-			26
-		],
-		[
-			1,
-			1,
-			32
-		],
-		[
-			1,
-			1,
-			33
-		],
-		[
-			1,
-			2,
-			14
-		],
-		[
-			1,
-			2,
-			15
-		],
-		[
-			1,
-			2,
-			16
-		],
-		[
-			1,
-			2,
 			17
 		],
 		[
 			1,
-			2,
+			1,
 			18
 		],
 		[
 			1,
-			2,
+			1,
 			19
 		],
 		[
 			1,
 			2,
-			20
+			14
+		],
+		[
+			1,
+			2,
+			15
+		],
+		[
+			1,
+			2,
+			16
+		],
+		[
+			1,
+			2,
+			29
+		],
+		[
+			2,
+			0,
+			0
+		],
+		[
+			2,
+			0,
+			1
+		],
+		[
+			2,
+			0,
+			12
 		],
 		[
 			2,
@@ -3800,8 +5309,13 @@
 		],
 		[
 			2,
-			1,
-			0
+			0,
+			29
+		],
+		[
+			2,
+			0,
+			5
 		],
 		[
 			2,
@@ -3816,47 +5330,22 @@
 		[
 			2,
 			1,
+			11
+		],
+		[
+			2,
+			1,
 			12
 		],
 		[
 			2,
 			1,
-			13
+			19
 		],
 		[
 			2,
 			1,
-			16
-		],
-		[
-			2,
-			1,
-			2
-		],
-		[
-			2,
-			1,
-			22
-		],
-		[
-			2,
-			1,
-			26
-		],
-		[
-			2,
-			1,
-			3
-		],
-		[
-			2,
-			1,
-			33
-		],
-		[
-			2,
-			1,
-			4
+			29
 		],
 		[
 			2,
@@ -3886,52 +5375,87 @@
 		[
 			2,
 			2,
+			1
+		],
+		[
+			2,
+			2,
 			12
 		],
 		[
 			2,
 			2,
+			13
+		],
+		[
+			2,
+			2,
 			14
 		],
 		[
 			2,
 			2,
-			20
+			2
 		],
 		[
 			2,
 			2,
-			21
+			29
 		],
 		[
 			2,
 			2,
+			3
+		],
+		[
+			2,
+			2,
+			4
+		],
+		[
+			2,
+			2,
+			5
+		],
+		[
+			3,
+			0,
 			22
 		],
 		[
 			3,
 			0,
-			15
+			23
+		],
+		[
+			3,
+			0,
+			26
+		],
+		[
+			3,
+			0,
+			29
+		],
+		[
+			3,
+			0,
+			6
 		],
 		[
 			3,
 			1,
-			10
+			12
 		],
 		[
 			3,
 			1,
-			13
+			19
 		],
 		[
 			3,
 			1,
-			15
-		],
-		[
-			3,
-			1,
-			16
+			23
 		],
 		[
 			3,
@@ -3941,12 +5465,17 @@
 		[
 			3,
 			1,
-			32
+			29
 		],
 		[
 			3,
 			1,
-			33
+			6
+		],
+		[
+			3,
+			2,
+			1
 		],
 		[
 			3,
@@ -3956,7 +5485,67 @@
 		[
 			3,
 			2,
-			20
+			23
+		],
+		[
+			3,
+			2,
+			24
+		],
+		[
+			3,
+			2,
+			25
+		],
+		[
+			3,
+			2,
+			26
+		],
+		[
+			3,
+			2,
+			27
+		],
+		[
+			3,
+			2,
+			28
+		],
+		[
+			3,
+			2,
+			29
+		],
+		[
+			3,
+			2,
+			6
+		],
+		[
+			4,
+			0,
+			1
+		],
+		[
+			4,
+			0,
+			13
+		],
+		[
+			4,
+			0,
+			29
+		],
+		[
+			4,
+			1,
+			1
+		],
+		[
+			4,
+			1,
+			12
 		],
 		[
 			4,
@@ -3966,84 +5555,104 @@
 		[
 			4,
 			1,
-			26
+			14
 		],
 		[
 			4,
 			1,
-			33
+			15
+		],
+		[
+			4,
+			1,
+			16
+		],
+		[
+			4,
+			1,
+			19
+		],
+		[
+			4,
+			1,
+			20
+		],
+		[
+			4,
+			1,
+			21
+		],
+		[
+			4,
+			1,
+			22
+		],
+		[
+			4,
+			1,
+			23
+		],
+		[
+			4,
+			1,
+			29
+		],
+		[
+			4,
+			2,
+			1
+		],
+		[
+			4,
+			2,
+			14
+		],
+		[
+			4,
+			2,
+			29
+		],
+		[
+			5,
+			0,
+			22
+		],
+		[
+			5,
+			1,
+			22
+		],
+		[
+			5,
+			2,
+			14
+		],
+		[
+			5,
+			2,
+			29
+		],
+		[
+			6,
+			0,
+			29
+		],
+		[
+			6,
+			1,
+			29
+		],
+		[
+			6,
+			2,
+			29
 		]
 	],
 	"coolant": [
 		[
 			0,
-			1,
-			13
-		],
-		[
 			0,
-			1,
-			14
-		],
-		[
-			0,
-			1,
-			15
-		],
-		[
-			0,
-			1,
-			16
-		],
-		[
-			0,
-			1,
-			17
-		],
-		[
-			0,
-			1,
-			18
-		],
-		[
-			0,
-			1,
-			19
-		],
-		[
-			0,
-			1,
-			20
-		],
-		[
-			0,
-			1,
-			21
-		],
-		[
-			0,
-			1,
-			22
-		],
-		[
-			0,
-			1,
-			23
-		],
-		[
-			0,
-			1,
-			24
-		],
-		[
-			0,
-			1,
-			25
-		],
-		[
-			0,
-			1,
-			26
+			27
 		],
 		[
 			0,
@@ -4052,53 +5661,123 @@
 		],
 		[
 			0,
-			1,
-			28
-		],
-		[
-			0,
-			1,
-			29
+			2,
+			27
 		],
 		[
 			1,
+			1,
+			27
+		],
+		[
+			2,
 			1,
 			10
 		],
 		[
-			1,
+			2,
 			1,
 			11
 		],
 		[
-			1,
+			2,
 			1,
 			12
 		],
 		[
-			1,
+			2,
 			1,
 			13
-		],
-		[
-			1,
-			1,
-			14
-		],
-		[
-			1,
-			1,
-			29
 		],
 		[
 			2,
 			1,
-			10
+			14
 		],
 		[
 			2,
 			1,
-			29
+			15
+		],
+		[
+			2,
+			1,
+			16
+		],
+		[
+			2,
+			1,
+			17
+		],
+		[
+			2,
+			1,
+			18
+		],
+		[
+			2,
+			1,
+			19
+		],
+		[
+			2,
+			1,
+			20
+		],
+		[
+			2,
+			1,
+			21
+		],
+		[
+			2,
+			1,
+			22
+		],
+		[
+			2,
+			1,
+			23
+		],
+		[
+			2,
+			1,
+			24
+		],
+		[
+			2,
+			1,
+			25
+		],
+		[
+			2,
+			1,
+			26
+		],
+		[
+			2,
+			1,
+			27
+		],
+		[
+			2,
+			1,
+			5
+		],
+		[
+			2,
+			1,
+			6
+		],
+		[
+			2,
+			1,
+			7
+		],
+		[
+			2,
+			1,
+			9
 		],
 		[
 			3,
@@ -4108,32 +5787,47 @@
 		[
 			3,
 			1,
-			13
+			27
 		],
 		[
 			3,
 			1,
-			14
+			6
 		],
 		[
 			3,
 			1,
-			29
+			7
+		],
+		[
+			3,
+			1,
+			9
 		],
 		[
 			4,
 			1,
-			13
+			27
 		],
 		[
-			4,
+			5,
 			1,
-			14
+			27
 		],
 		[
-			4,
+			6,
+			0,
+			27
+		],
+		[
+			6,
 			1,
-			29
+			27
+		],
+		[
+			6,
+			2,
+			27
 		]
 	]
 }

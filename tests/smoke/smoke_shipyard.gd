@@ -181,7 +181,7 @@ func _run() -> void:
 	var mass_before := ed.stats.mass_kg
 	var rejection_before := ed.stats.heat_rejection_kw
 	yard.select_palette("equipment", &"radiator")
-	var target_cell := Vector3i(1, 1, 3)
+	var target_cell := Vector3i(2, 1, 3)
 	yard.change_deck(target_cell.y - yard.deck_editor.deck)
 	await _frames(2)
 	var center := yard.deck_editor.cell_rect(target_cell).get_center()

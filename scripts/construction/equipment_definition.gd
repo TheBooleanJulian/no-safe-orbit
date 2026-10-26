@@ -37,6 +37,10 @@ enum Kind {
 	## Jammer: `jam_strength` of electronic noise — enemy sensor tracks lose
 	## confidence and missiles may lose lock, outside burn-through range.
 	JAMMER,
+	## Landing leg (2026-10-26): a fixed strut standing `stand_cells` out from
+	## its face; three or more turned to the ground let a ship touch down
+	## faster (WorldSimulation.safe_landing_mps).
+	LANDING_LEG,
 }
 
 ## Kinds with control electronics an EMP can reset (engines, tanks and
@@ -59,6 +63,14 @@ enum Mount { INTERNAL, EXTERNAL }
 ## External only: cells it spans along the hull from its cell — aft, or
 ## across the ship (or up a flank) when turned with R.
 @export var length_cells: int = 1
+## External only: its tier's size — light 1, medium 2, large 3. It covers
+## an N × N patch of hull face (from its cell across the face) and stands N
+## cells out from it, so that space must be clear of hull; a turret's barrel
+## rides N m off the face.
+@export_range(1, 3) var size_cells: int = 1
+## External only: cells it stands out from its face if more than its size
+## (a landing leg: one cell across, two out).
+@export var stand_cells: int = 0
 ## Missile launchers: the missile and how many the launcher holds.
 @export var missile: MissileConfig
 @export var missile_capacity: int = 0
@@ -103,6 +115,7 @@ const DAMAGE_DEFAULTS := {
 	Kind.MISSILE_LAUNCHER: [18.0, 8.0],
 	Kind.DECOY_LAUNCHER: [12.0, 6.0],
 	Kind.JAMMER: [14.0, 4.0],
+	Kind.LANDING_LEG: [20.0, 8.0],
 }
 
 
@@ -133,6 +146,11 @@ func shielding_mm() -> float:
 @export var rarity: Rarity.Tier = Rarity.Tier.COMMON
 ## Relative chance of this part among loot drops of the same rarity.
 @export var drop_weight: float = 10.0
+
+
+## Cells it stands out from its face (that space must be clear of hull).
+func stands_out() -> int:
+	return maxi(stand_cells, size_cells)
 
 
 func is_external() -> bool:

@@ -157,13 +157,7 @@ func _run() -> void:
 	# Scaffolding: our hits above can knock out its only gun or cut the
 	# conduit feeding it (where they land depends on frame timing), and a
 	# gunless target can't shoot back. Restore both.
-	for e in tgt.systems.equipment:
-		if e.def.kind == EquipmentDefinition.Kind.CANNON and e.destroyed():
-			e.hp = e.max_hp
-	tgt.systems.bus_cut.clear()
-	tgt.systems.solve_power()
-	tgt.systems.invalidate()
-	tgt.config = tgt.systems.effective_config()
+	_restore(tgt)
 	if not main.target_hostile:
 		main.set_target_hostile(true, "smoke")
 	await process_frame
@@ -245,7 +239,9 @@ func _run() -> void:
 	while not main.track.locked and main.world.sim_time - t_lock < 10.0:
 		await process_frame
 	# Play-test batch 11 (no T): a passive contact that sees our missile
-	# locked on to it turns hostile.
+	# locked on to it turns hostile. Rounds still in flight from above may have
+	# cut the conduit to its mast since: restore it, so it can see.
+	_restore(tgt)
 	main.set_target_hostile(false)
 	_check(not main.target_hostile, "passive again, for the missile check")
 	_press_action("fire_missile")
@@ -270,6 +266,22 @@ func _run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + PlayerProfile.BACKUP_SUFFIX))
 	quit(1 if not _failures.is_empty() else 0)
+
+
+## Scaffolding: our hits can knock out the target's only gun or cut the
+## conduit feeding its systems (the conduit itself, or the hull it runs
+## through); put them back.
+func _restore(tgt: ShipState) -> void:
+	for e in tgt.systems.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.CANNON and e.destroyed():
+			e.hp = e.max_hp
+	for m in tgt.systems.modules:
+		if m.wrecked():
+			m.structure = m.max_structure
+	tgt.systems.bus_cut.clear()
+	tgt.systems.solve_power()
+	tgt.systems.invalidate()
+	tgt.config = tgt.systems.effective_config()
 
 
 func _press_action(action: String) -> void:

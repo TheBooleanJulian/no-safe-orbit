@@ -94,7 +94,7 @@ func build() -> void:
 	var vbox := yard.get_node("Margin/VBox") as VBoxContainer
 	var body := yard.get_node("Margin/VBox/Body") as Control
 	var bar := yard.get_node("Margin/VBox/TopBar")
-	for n in ["NameEdit", "TemplateList", "LoadTemplate", "DesignList", "LoadDesign", "Undo", "Redo", "Save"]:
+	for n in ["NameEdit", "DesignList", "LoadDesign", "Undo", "Redo", "Save"]:
 		_builder_bar.append(bar.get_node(n))
 	var concourse := HBoxContainer.new()
 	concourse.name = "Concourse"

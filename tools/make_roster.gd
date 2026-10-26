@@ -6,11 +6,22 @@ extends SceneTree
 ## checks below. Replaces the batch-6/10 capital generator, whose hulls were
 ## one stepped slab at nine sizes.
 ##
-## One industrial family. Every hull is drawn in the same vocabulary:
+## One industrial family, in a brutalist military idiom (after the
+## principles of the UNSC ships of the Halo games, not their shapes): long
+## axial slabs built round their main guns, flat armoured bows with the
+## spinal gun's muzzle in them, chamfered edges, stepped armour, boxy engine
+## blocks wider than the hull ahead of them, low command spaces. Every hull
+## is drawn in the same vocabulary:
 ## - 3 m cells; pressurised hull in 2 × 2 blocks paired outwards from the
 ##   centreline (1 × 1 where a pair won't fit), open structure in truss;
-## - a sloped prow ahead of every exposed front (wedges), except where a
-##   flat face carries something (a gun's muzzle, a truck's cab);
+## - skirts: sloped wedge armour along the top and bottom edges of a slab
+##   (a chamfered, hexagonal section — and spaced, angled armour to a round);
+## - a chisel prow ahead of every exposed front (long wedges for a sharp
+##   one), except where a flat face carries something (a gun's muzzle, a
+##   truck's cab);
+## - parts at their tier's size (light 1, medium 2, large 3 cells across,
+##   standing that far out) with that space clear; landing legs (1 × 1 × 2)
+##   under every hull, three or more on its keel;
 ## - a keel corridor down the main deck with the rooms either side, hatches
 ##   at the frames, ladders between decks, no hatch blocked by machinery;
 ## - engineering aft: reactor room, then engine rooms with the tanks, main
@@ -105,13 +116,16 @@ func _roster_checks(draft: Draft, bp: ShipBlueprint, grid: ShipGrid, s: ShipStat
 		var e := bp.equipment[i]
 		if def == null:
 			continue
-		# Weapons, launchers, sensors and engine plumes: three clear cells off the face.
+		# Weapons, launchers, sensors and engine plumes: three clear cells off
+		# the face (more for a bigger part) across its whole patch.
 		if def.is_external() and def.kind in [K.CANNON, K.POINT_DEFENCE, K.MISSILE_LAUNCHER, K.MAIN_ENGINE, K.SENSOR, K.DECOY_LAUNCHER]:
 			var n: Vector3i = ShipGrid.FACE_NORMALS[e.face]
-			for k in range(1, 4):
-				if grid.is_hull(e.cell + n * k):
-					out.append("%s %s: hull %d cell%s off its %s face" % [def.display_name, e.id, k, "" if k == 1 else "s", e.face])
-					break
+			var blocked := false
+			for c in grid.external_cells(i):
+				for k in range(1, maxi(def.size_cells, 3) + 1):
+					if not blocked and grid.is_hull(c + n * k):
+						out.append("%s %s: hull %d cell%s off its %s face" % [def.display_name, e.id, k, "" if k == 1 else "s", e.face])
+						blocked = true
 	# No hatch blocked by machinery.
 	for h in bp.hatches:
 		for c: Vector3i in [h.a, h.b]:
@@ -181,19 +195,44 @@ class Draft:
 	func wedge(cell: Vector3i, rotation: int = 0, flip: bool = false, def: StringName = &"wedge_short") -> void:
 		wedges[cell] = [def, rotation, flip]
 
+	## Sloped armour along a hull edge: wedges in the empty cells at column
+	## `x` of `deck`, z0…z1, leaning on the hull to their `inboard` side
+	## (&"starboard": they slope down to port; &"port": down to starboard) —
+	## from its top deck (`top`) or under its bottom one.
+	func skirt(x: int, deck: int, z0: int, z1: int, inboard: StringName, top: bool = true) -> void:
+		for z in range(z0, z1 + 1):
+			var c := Vector3i(x, deck, z)
+			if not cells.has(c) and not wedges.has(c):
+				wedges[c] = [&"wedge_short", 1 if inboard == &"starboard" else 3, not top]
+
+	## Skirts down both flanks of the slab x0…x1 on `deck` (outside it).
+	func skirts(x0: int, x1: int, deck: int, z0: int, z1: int, top: bool = true) -> void:
+		skirt(x0 - 1, deck, z0, z1, &"starboard", top)
+		skirt(x1 + 1, deck, z0, z1, &"port", top)
+
+	## Landing legs on the ventral faces of these cells.
+	func legs(at: Array) -> void:
+		for c: Vector3i in at:
+			fit(&"landing_leg", c, &"ventral")
+
 	## Wedges ahead of every pressurised cell with nothing ahead of it (where
 	## `only` agrees): sloped up with hull below, down with hull above, none
-	## between two decks (that face stays flat).
-	func prow(only: Callable = Callable()) -> void:
+	## between two decks (that face stays flat). `sharp`: two cells long.
+	func prow(only: Callable = Callable(), sharp: bool = false) -> void:
 		for c: Vector3i in cells.keys():
 			var ahead := c + Vector3i(0, 0, -1)
+			var far := c + Vector3i(0, 0, -2)
 			if not cells[c] or cells.has(ahead) or wedges.has(ahead) or (only.is_valid() and not only.call(c)):
 				continue
 			var above := cells.has(c + Vector3i.UP)
 			var below := cells.has(c + Vector3i.DOWN)
 			if above and below:
 				continue
-			wedges[ahead] = [&"wedge_short", 0, above and not below]
+			if sharp and not cells.has(far) and not wedges.has(far):
+				wedges[far] = [&"wedge_long", 0, above and not below]
+				wedges[ahead] = [&"", 0, false]  # held by the long wedge
+			else:
+				wedges[ahead] = [&"wedge_short", 0, above and not below]
 
 	func room(def: StringName, deck: int, x0: int, z0: int, w: int, d: int) -> void:
 		bp.add_room(def, deck, Rect2i(x0, z0, w, d))
@@ -273,7 +312,9 @@ class Draft:
 			return
 		if e.is_external():
 			var span: Array[Vector3i] = [cell]
-			if not ShipGrid.is_fin(e, rotation):
+			if e.size_cells > 1:
+				span = ShipGrid.patch(cell, face, e.size_cells)
+			elif not ShipGrid.is_fin(e, rotation):
 				var step := ShipGrid.external_step(face, rotation)
 				for k in range(1, maxi(e.length_cells, 1)):
 					span.append(cell + step * k)
@@ -292,7 +333,11 @@ class Draft:
 	func pair(def: StringName, cell: Vector3i, face: StringName = &"", rotation: int = 0) -> void:
 		fit(def, cell, face, rotation)
 		var e: EquipmentDefinition = cat.equipment.get(def)
-		var width := 1 if e == null or e.is_external() else (e.footprint_cells.y if posmod(rotation, 2) == 1 else e.footprint_cells.x)
+		var width := 1
+		if e != null and not e.is_external():
+			width = e.footprint_cells.y if posmod(rotation, 2) == 1 else e.footprint_cells.x
+		elif e != null and ShipGrid.face_tangents(face)[0].x != 0:
+			width = e.size_cells  # a sized part's patch runs across the ship from its cell
 		fit(def, Vector3i(mx(cell.x) - (width - 1), cell.y, cell.z), mirror_face(face), rotation)
 
 	## Plates of `mm` on the plateable `faces` of every hull cell `where` says.
@@ -304,7 +349,8 @@ class Draft:
 		var keys := wedges.keys()
 		keys.sort()
 		for c: Vector3i in keys:
-			bp.add_module(wedges[c][0], c, wedges[c][1], wedges[c][2])
+			if wedges[c][0] != &"":
+				bp.add_module(wedges[c][0], c, wedges[c][1], wedges[c][2])
 		var grid := ShipGrid.build(bp, cat)
 		var hull_cells: Array = grid.module_at.keys()
 		hull_cells.sort()
@@ -393,137 +439,151 @@ class Draft:
 
 # --- A. Interceptor -------------------------------------------------------------------
 
-## Halley-class interceptor: a two-cell dart (cockpit, four crew, a compact
-## reactor, two tanks) between two open outrigger booms on short pylons —
-## a gun on the front of each boom, a high-thrust engine at its tail, a
-## radiator fin over it. Everything for acceleration and pointing: RCS at
-## the nose and the boom tails. Short legs (600 s engines, 40 t of
-## propellant), 40 mm on the cockpit only, one PD mount, no collar: it
-## catches things, it doesn't hold them. Booms are its weak point — lose a
-## pylon and that side's gun and engine go dark (the bus runs through it).
+## Halley-class interceptor: a low armoured dart in front of a boxy engine
+## block twice its height. The cockpit rides over the nose behind a chisel
+## prow; four crew, two compact reactors, the magazine and tanks along the keel;
+## sloped strakes down both flanks (angled armour where a pursuit is shot at
+## from the side); two medium high-thrust engines in the middle of the
+## block's stern and a pair of standard ones either side, two radiator fins
+## over it like a tail. Two light guns, two PD mounts,
+## legs under the keel and the block. Short legs in the other sense too:
+## 600 s engines and three tanks. No collar: it catches, it doesn't hold.
 func _interceptor() -> Draft:
 	var s := Draft.new(cat, "Halley-class interceptor", "Earth Shipyard", 6)
-	s.hull(2, 3, 0, 0, 0, 12)
-	s.truss(0, 0, 0, 0, 4, 12)
-	s.truss(5, 5, 0, 0, 4, 12)
-	s.truss(1, 1, 0, 0, 8, 9)
-	s.truss(4, 4, 0, 0, 8, 9)
-	s.wedge(Vector3i(2, 0, -2), 0, false, &"wedge_long")
-	s.wedge(Vector3i(3, 0, -2), 0, false, &"wedge_long")
-	s.room(&"bridge", 0, 2, 0, 2, 2)
-	s.room(&"corridor", 0, 3, 2, 1, 4)
-	s.room(&"crew_quarters", 0, 2, 2, 1, 2)
-	s.room(&"life_support", 0, 2, 4, 1, 1)
-	s.room(&"magazine", 0, 2, 5, 1, 1)
-	s.room(&"reactor_room", 0, 2, 6, 2, 2)
-	s.room(&"engine_room", 0, 2, 8, 2, 5)
-	s.door(Vector3i(3, 0, 1), Vector3i(3, 0, 2))
-	s.door(Vector3i(3, 0, 2), Vector3i(2, 0, 2))
-	s.door(Vector3i(3, 0, 4), Vector3i(2, 0, 4))
-	s.door(Vector3i(3, 0, 5), Vector3i(2, 0, 5))
-	s.door(Vector3i(3, 0, 5), Vector3i(3, 0, 6))
-	s.door(Vector3i(3, 0, 7), Vector3i(3, 0, 8))
-	s.fit(&"compact_reactor", Vector3i(2, 0, 6))
-	s.fit(&"power_distribution_unit", Vector3i(2, 0, 7))
-	s.fit(&"propellant_tank", Vector3i(2, 0, 9))
-	s.fit(&"propellant_tank", Vector3i(2, 0, 11))
-	s.pair(&"main_engine_high_thrust", Vector3i(0, 0, 12), &"aft")
-	s.pair(&"main_engine", Vector3i(2, 0, 12), &"aft")
-	s.pair(&"autocannon", Vector3i(0, 0, 4), &"fore")
-	s.pair(&"rcs_block", Vector3i(2, 0, 0), &"port")
-	s.pair(&"rcs_block", Vector3i(0, 0, 11), &"port")
-	s.fit(&"rcs_block", Vector3i(3, 0, 0), &"dorsal")
-	s.fit(&"rcs_block", Vector3i(2, 0, 0), &"ventral")
-	s.fit(&"rcs_block", Vector3i(0, 0, 12), &"dorsal")
-	s.fit(&"rcs_block", Vector3i(5, 0, 12), &"ventral")
-	s.pair(&"radiator_long", Vector3i(0, 0, 7), &"dorsal", ShipGrid.FIN_ROTATION)
-	s.fit(&"sensor_mast", Vector3i(2, 0, 1), &"dorsal")
+	var tank := &"propellant_tank"
+	s.hull(2, 3, 0, 0, 0, 9)
+	s.hull(2, 3, 1, 1, 1, 4)
+	s.hull(0, 5, 0, 1, 10, 12)
+	s.skirts(2, 3, 0, 3, 9)
+	s.prow(Callable(), true)
+	s.room(&"bridge", 1, 2, 1, 2, 2)
+	s.room(&"crew_quarters", 1, 2, 3, 1, 2)
+	s.room(&"life_support", 1, 3, 3, 1, 2)
+	s.door(Vector3i(2, 1, 2), Vector3i(2, 1, 3))
+	s.door(Vector3i(3, 1, 2), Vector3i(3, 1, 3))
+	s.room(&"magazine", 0, 2, 0, 2, 1)
+	s.room(&"corridor", 0, 2, 1, 2, 3)
+	s.ladder(2, 1, 0, 1)
+	s.door(Vector3i(2, 0, 0), Vector3i(2, 0, 1))
+	s.room(&"reactor_room", 0, 2, 4, 2, 3)
+	s.door(Vector3i(2, 0, 3), Vector3i(2, 0, 4))
+	s.fit(&"power_distribution_unit", Vector3i(3, 0, 4))
+	s.fit(&"compact_reactor", Vector3i(3, 0, 5))
+	s.fit(&"compact_reactor", Vector3i(3, 0, 6))
+	s.room(&"engine_room", 0, 2, 7, 2, 3)
+	s.door(Vector3i(2, 0, 6), Vector3i(2, 0, 7))
+	s.fit(tank, Vector3i(2, 0, 8))
+	s.room(&"engine_room", 0, 0, 10, 6, 3)
+	s.room(&"engine_room", 1, 0, 10, 6, 3)
+	s.fit(tank, Vector3i(1, 0, 10))
+	s.fit(tank, Vector3i(3, 0, 10))
+	s.ladder(1, 12, 0, 1)
+	s.pair(&"main_engine_high_thrust", Vector3i(1, 0, 12), &"aft")
+	for d in [0, 1]:
+		s.pair(&"main_engine", Vector3i(0, d, 12), &"aft")
+	s.fit(&"autocannon", Vector3i(3, 1, 4), &"dorsal")
+	s.fit(&"autocannon", Vector3i(2, 0, 2), &"ventral")
+	s.fit(&"sensor_mast", Vector3i(2, 1, 4), &"dorsal")
+	s.fit(&"point_defence", Vector3i(2, 1, 12), &"dorsal")
 	s.fit(&"point_defence", Vector3i(3, 0, 6), &"ventral")
-	s.fit(&"point_defence", Vector3i(2, 0, 9), &"dorsal")
-	s.fit(&"flare_launcher", Vector3i(3, 0, 11), &"dorsal")
-	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"fore", &"dorsal", &"port", &"starboard"], func(c: Vector3i) -> bool: return c.z <= 1 and c.x >= 2 and c.x <= 3)
+	s.fit(&"flare_launcher", Vector3i(3, 1, 12), &"dorsal")
+	s.pair(&"rcs_block", Vector3i(2, 0, 0), &"port")
+	s.pair(&"rcs_block", Vector3i(0, 1, 12), &"port")
+	s.fit(&"rcs_block", Vector3i(2, 1, 1), &"dorsal")
+	s.fit(&"rcs_block", Vector3i(3, 0, 0), &"ventral")
+	s.fit(&"rcs_block", Vector3i(3, 1, 11), &"dorsal")
+	s.fit(&"rcs_block", Vector3i(2, 0, 12), &"ventral")
+	s.pair(&"radiator_long", Vector3i(1, 1, 10), &"dorsal", ShipGrid.FIN_ROTATION)
+	s.legs([Vector3i(1, 0, 11), Vector3i(4, 0, 11), Vector3i(2, 0, 5), Vector3i(3, 0, 3)])
+	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"fore", &"dorsal", &"port", &"starboard"], func(c: Vector3i) -> bool: return c.z <= 2 or (c.y == 1 and c.z <= 4))
 	return s
 
 
 # --- B. Missile corvette -------------------------------------------------------------
 
 ## Goddard-class missile corvette: three sections you can tell apart from
-## outside. A two-deck crew capsule forward (bridge, quarters, the one gun's
-## magazine, a small hold); a launcher frame amidships — an open truss cage
-## round a pressurised keel with the corridor over a tank deck — carrying
-## eight missile racks on its flanks and top, each with clear space off its
-## face; and the drive block aft (reactor, engine rooms, tanks, four engines,
-## radiators flat on its top and bottom). Two masts (one hardened) for the
-## targeting it fires on; one autocannon and three PD mounts for anything
-## that gets close. Its weapons are finite: 96 missiles, then home to rearm.
+## outside. A chamfered two-deck crew capsule forward (bridge, quarters, the
+## one gun's magazine, a small hold); a launcher cage amidships — an open
+## truss frame round a pressurised keel with the corridor over a tank deck —
+## carrying eight missile racks on its flanks and top, each with clear space
+## off its face; and a boxy drive block aft, wider than the rest (reactor,
+## engine rooms, tanks, four engines, radiators flat on its top and bottom).
+## Two masts (one hardened) for the targeting it fires on; one autocannon
+## and three PD mounts for anything that gets close. Its weapons are
+## finite: 96 missiles, then home to rearm.
 func _missile_corvette() -> Draft:
-	var s := Draft.new(cat, "Goddard-class missile corvette", "Earth Shipyard", 4)
-	s.hull(0, 3, 0, 1, 0, 4)
-	s.hull(1, 2, 0, 1, 5, 12)
-	s.truss(0, 0, 0, 1, 5, 12)
-	s.truss(3, 3, 0, 1, 5, 12)
-	s.hull(0, 3, 0, 1, 13, 17)
-	s.prow(func(c: Vector3i) -> bool: return c.z == 0)
+	var s := Draft.new(cat, "Goddard-class missile corvette", "Earth Shipyard", 6)
+	var tank := &"propellant_tank"
+	s.hull(1, 4, 0, 1, 0, 4)
+	s.hull(2, 3, 0, 1, 5, 12)
+	s.truss(1, 1, 0, 1, 5, 12)
+	s.truss(4, 4, 0, 1, 5, 12)
+	s.hull(0, 5, 0, 1, 13, 18)
+	s.skirts(1, 4, 1, 0, 4)
+	s.skirts(1, 4, 0, 0, 4, false)
+	s.prow(func(c: Vector3i) -> bool: return c.z == 0 or c.z == 13)
 	# Capsule.
-	s.room(&"bridge", 1, 0, 0, 4, 2)
-	s.room(&"corridor", 1, 1, 2, 2, 3)
-	s.room(&"crew_quarters", 1, 3, 2, 1, 3)
-	s.room(&"life_support", 1, 0, 2, 1, 3)
-	s.room(&"cargo_hold", 0, 0, 0, 4, 2)
-	s.room(&"corridor", 0, 1, 2, 2, 3)
-	s.room(&"crew_quarters", 0, 0, 2, 1, 3)
-	s.room(&"magazine", 0, 3, 2, 1, 3)
-	s.door(Vector3i(1, 1, 1), Vector3i(1, 1, 2))
-	s.door(Vector3i(1, 1, 3), Vector3i(0, 1, 3))
-	s.door(Vector3i(2, 1, 3), Vector3i(3, 1, 3))
-	s.door(Vector3i(2, 1, 4), Vector3i(2, 0, 4))
-	s.door(Vector3i(1, 0, 3), Vector3i(0, 0, 3))
-	s.door(Vector3i(2, 0, 3), Vector3i(3, 0, 3))
-	s.door(Vector3i(1, 0, 2), Vector3i(1, 0, 1))
-	# Launcher frame: the keel corridor over the tank deck.
-	s.room(&"corridor", 1, 1, 5, 2, 8)
-	s.room(&"cargo_hold", 0, 1, 5, 2, 8)
-	s.door(Vector3i(1, 1, 4), Vector3i(1, 1, 5))
-	s.door(Vector3i(2, 1, 9), Vector3i(2, 0, 9))
+	s.room(&"bridge", 1, 1, 0, 4, 2)
+	s.room(&"corridor", 1, 2, 2, 2, 3)
+	s.room(&"life_support", 1, 1, 2, 1, 3)
+	s.room(&"crew_quarters", 1, 4, 2, 1, 3)
+	s.room(&"cargo_hold", 0, 1, 0, 4, 2)
+	s.room(&"corridor", 0, 2, 2, 2, 3)
+	s.room(&"crew_quarters", 0, 1, 2, 1, 3)
+	s.room(&"magazine", 0, 4, 2, 1, 3)
+	s.door(Vector3i(2, 1, 1), Vector3i(2, 1, 2))
+	s.door(Vector3i(2, 1, 3), Vector3i(1, 1, 3))
+	s.door(Vector3i(3, 1, 3), Vector3i(4, 1, 3))
+	s.ladder(3, 4, 0, 1)
+	s.door(Vector3i(2, 0, 3), Vector3i(1, 0, 3))
+	s.door(Vector3i(3, 0, 3), Vector3i(4, 0, 3))
+	s.door(Vector3i(2, 0, 2), Vector3i(2, 0, 1))
+	# Launcher cage: the keel corridor over the tank deck.
+	s.room(&"corridor", 1, 2, 5, 2, 8)
+	s.room(&"cargo_hold", 0, 2, 5, 2, 8)
+	s.door(Vector3i(2, 1, 4), Vector3i(2, 1, 5))
+	s.ladder(3, 9, 0, 1)
 	for z in [5, 7, 10]:
-		s.fit(&"propellant_tank", Vector3i(1, 0, z))
+		s.fit(tank, Vector3i(2, 0, z))
 	# Drive block.
-	s.room(&"reactor_room", 1, 0, 13, 4, 2)
-	s.room(&"engine_room", 1, 0, 15, 4, 3)
-	s.room(&"engine_room", 0, 0, 13, 4, 5)
-	s.door(Vector3i(1, 1, 12), Vector3i(1, 1, 13))
-	s.door(Vector3i(1, 1, 14), Vector3i(1, 1, 15))
-	s.door(Vector3i(1, 1, 17), Vector3i(1, 0, 17))
-	s.fit(&"fusion_reactor", Vector3i(2, 1, 13))
-	s.fit(&"power_distribution_unit", Vector3i(0, 1, 14))
-	s.fit(&"propellant_tank", Vector3i(2, 1, 15))
-	s.fit(&"propellant_tank", Vector3i(0, 0, 13))
-	s.fit(&"propellant_tank", Vector3i(2, 0, 13))
-	s.fit(&"propellant_tank", Vector3i(2, 0, 15))
-	s.fit(&"power_distribution_unit", Vector3i(0, 0, 16))
-	for x in [1, 2]:
+	s.room(&"reactor_room", 1, 0, 13, 6, 2)
+	s.door(Vector3i(2, 1, 12), Vector3i(2, 1, 13))
+	s.fit(&"fusion_reactor", Vector3i(3, 1, 13))
+	s.fit(&"power_distribution_unit", Vector3i(0, 1, 13))
+	s.room(&"engine_room", 1, 0, 15, 6, 4)
+	s.door(Vector3i(2, 1, 14), Vector3i(2, 1, 15))
+	s.fit(tank, Vector3i(0, 1, 15))
+	s.fit(tank, Vector3i(4, 1, 15))
+	s.ladder(2, 18, 0, 1)
+	s.room(&"engine_room", 0, 0, 13, 6, 6)
+	for x in [0, 4]:
+		for z in [13, 15]:
+			s.fit(tank, Vector3i(x, 0, z))
+	s.fit(&"power_distribution_unit", Vector3i(3, 0, 13))
+	for x in [2, 3]:
 		for d in [0, 1]:
-			s.fit(&"main_engine", Vector3i(x, d, 17), &"aft")
+			s.fit(&"main_engine", Vector3i(x, d, 18), &"aft")
 	# Launchers: four on the cage's top rails, two down each flank.
 	for z in [6, 10]:
-		s.pair(&"missile_rack", Vector3i(0, 1, z), &"dorsal")
+		s.pair(&"missile_rack", Vector3i(1, 1, z), &"dorsal")
 	for z in [7, 11]:
-		s.pair(&"missile_rack", Vector3i(0, 0, z), &"port")
-	s.pair(&"rcs_block", Vector3i(0, 1, 1), &"port")
-	s.pair(&"rcs_block", Vector3i(0, 1, 16), &"port")
-	s.fit(&"rcs_block", Vector3i(1, 1, 1), &"dorsal")
-	s.fit(&"rcs_block", Vector3i(2, 0, 0), &"ventral")
-	s.fit(&"rcs_block", Vector3i(1, 1, 17), &"dorsal")
-	s.fit(&"rcs_block", Vector3i(2, 0, 17), &"ventral")
-	s.fit(&"autocannon", Vector3i(2, 1, 3), &"dorsal")
-	s.fit(&"sensor_mast", Vector3i(2, 1, 0), &"dorsal")
-	s.fit(&"sensor_mast_hardened", Vector3i(1, 0, 0), &"ventral")
-	s.fit(&"point_defence", Vector3i(0, 1, 2), &"dorsal")
-	s.fit(&"point_defence", Vector3i(2, 0, 3), &"ventral")
-	s.fit(&"point_defence", Vector3i(3, 1, 15), &"dorsal")
-	s.fit(&"radiator_long", Vector3i(1, 1, 13), &"dorsal")
-	s.fit(&"radiator_long", Vector3i(2, 0, 13), &"ventral")
-	s.pair(&"flare_launcher", Vector3i(0, 1, 17), &"dorsal")
+		s.pair(&"missile_rack", Vector3i(1, 0, z), &"port")
+	s.fit(&"autocannon", Vector3i(3, 1, 3), &"dorsal")
+	s.fit(&"sensor_mast", Vector3i(3, 1, 0), &"dorsal")
+	s.fit(&"sensor_mast_hardened", Vector3i(2, 0, 0), &"ventral")
+	s.fit(&"point_defence", Vector3i(1, 1, 2), &"dorsal")
+	s.fit(&"point_defence", Vector3i(4, 0, 3), &"ventral")
+	s.fit(&"point_defence", Vector3i(5, 1, 16), &"dorsal")
+	s.fit(&"rcs_block", Vector3i(2, 1, 0), &"dorsal")
+	s.fit(&"rcs_block", Vector3i(3, 0, 0), &"ventral")
+	s.pair(&"rcs_block", Vector3i(0, 1, 14), &"port")
+	s.pair(&"rcs_block", Vector3i(0, 0, 18), &"port")
+	s.fit(&"rcs_block", Vector3i(1, 1, 18), &"dorsal")
+	s.fit(&"rcs_block", Vector3i(4, 0, 18), &"ventral")
+	s.fit(&"radiator_long", Vector3i(1, 1, 15), &"dorsal")
+	s.fit(&"radiator_long", Vector3i(4, 0, 15), &"ventral")
+	s.pair(&"flare_launcher", Vector3i(0, 1, 18), &"dorsal")
+	s.legs([Vector3i(1, 0, 2), Vector3i(4, 0, 1), Vector3i(0, 0, 14), Vector3i(5, 0, 14)])
 	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"fore", &"dorsal", &"ventral", &"port", &"starboard"], func(c: Vector3i) -> bool: return c.z <= 4)
 	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"port", &"starboard"], func(c: Vector3i) -> bool: return c.z >= 13)
 	return s
@@ -532,186 +592,176 @@ func _missile_corvette() -> Draft:
 # --- C. Escort frigate ----------------------------------------------------------------
 
 ## Kepler-class escort frigate — every new captain's first ship and the
-## yard's reference design. A four-cell hull on two decks with a raised
-## spine on top (the gun deck: magazine inside, a turret at each end, the
-## mast between), cargo sponsons low on each flank, and a drive block aft
-## under two radiator fins. Main deck: bridge behind the sloped bow, the
-## keel corridor, quarters, life support, armoury, a big reactor room, the
-## engine room. Lower deck: the hangar (a Wasp, door underneath), the hold
-## with the tank farm, the lower engine room — a second way aft if the
-## corridor is lost, and two distribution units on the bus. Three autocannons,
-## a missile rack on the spine, four PD, flares, a fighter and a recon drone;
-## collar and grappling arm for boarding and salvage. Common parts but the
-## rack (one: the frigate is Earth's traffic too, and EnemyFactory adds no
-## rack to a template that has one).
+## yard's reference design. A chamfered slab: sloped armour skirts down the
+## main deck's edges and under the bow, a sharp chisel prow, a raised gun
+## spine on top (magazine inside, a turret at each end, the mast and the
+## missile rack between), cargo sponsons low on each flank and a boxy engine
+## block aft, wider than the hull, under two radiator fins. Main deck:
+## bridge behind the bow, the keel corridor, quarters, medbay, armoury, a
+## big reactor room with the reactor inboard, the engine room. Lower deck:
+## the hangar (a Wasp, door underneath), the hold with the tank farm, the
+## lower engine room — a second way aft if the corridor is lost — and a
+## second distribution unit. Three autocannons, a missile rack, four PD,
+## flares, a fighter and a recon drone; collar and grappling arm for
+## boarding and salvage; four legs. Common parts but the rack (one: the
+## frigate is Earth's traffic too, and EnemyFactory adds no rack to a
+## template that has one).
 func _escort_frigate() -> Draft:
-	var s := Draft.new(cat, "Kepler-class escort frigate", "Earth Shipyard", 6)
+	var s := Draft.new(cat, "Kepler-class escort frigate", "Earth Shipyard", 8)
 	s.starter = true
-	s.hull(1, 4, 1, 1, 0, 16)
-	s.hull(1, 4, 0, 0, 2, 16)
-	s.hull(2, 3, 2, 2, 4, 7)
-	s.hull(0, 0, 0, 0, 6, 13)
-	s.hull(5, 5, 0, 0, 6, 13)
-	s.prow()
+	var tank := &"propellant_tank"
+	s.hull(2, 5, 1, 1, 0, 13)
+	s.hull(2, 5, 0, 0, 2, 13)
+	s.hull(3, 4, 2, 2, 4, 7)
+	s.hull(1, 1, 0, 0, 6, 13)
+	s.hull(6, 6, 0, 0, 6, 13)
+	s.hull(1, 6, 0, 1, 14, 17)
+	s.skirts(2, 5, 1, 0, 13)
+	s.skirts(2, 5, 0, 2, 5, false)
+	s.prow(func(c: Vector3i) -> bool: return c.y == 1, true)
+	s.prow(func(c: Vector3i) -> bool: return c.y != 1)
 	# Main deck.
-	s.room(&"bridge", 1, 1, 0, 4, 2)
-	s.room(&"corridor", 1, 2, 2, 2, 7)
-	s.room(&"crew_quarters", 1, 1, 2, 1, 4)
-	s.room(&"crew_quarters", 1, 4, 2, 1, 4)
-	s.room(&"life_support", 1, 1, 6, 1, 3)
-	s.room(&"armoury", 1, 4, 6, 1, 3)
-	s.room(&"reactor_room", 1, 1, 9, 4, 5)
-	s.room(&"engine_room", 1, 1, 14, 4, 3)
-	s.door(Vector3i(2, 1, 1), Vector3i(2, 1, 2))
-	s.door(Vector3i(2, 1, 3), Vector3i(1, 1, 3))
-	s.door(Vector3i(3, 1, 3), Vector3i(4, 1, 3))
-	s.door(Vector3i(2, 1, 7), Vector3i(1, 1, 7))
-	s.door(Vector3i(3, 1, 7), Vector3i(4, 1, 7))
-	s.door(Vector3i(2, 1, 8), Vector3i(2, 1, 9))
-	s.door(Vector3i(2, 1, 13), Vector3i(2, 1, 14))
-	s.fit(&"fusion_reactor", Vector3i(2, 1, 10))  # inboard: two cells of rooms and hull either side
-	s.fit(&"power_distribution_unit", Vector3i(1, 1, 10))
-	s.fit(&"propellant_tank", Vector3i(1, 1, 15))
-	s.fit(&"propellant_tank", Vector3i(3, 1, 15))
+	s.room(&"bridge", 1, 2, 0, 4, 2)
+	s.room(&"corridor", 1, 3, 2, 2, 7)
+	s.room(&"crew_quarters", 1, 2, 2, 1, 4)
+	s.room(&"crew_quarters", 1, 5, 2, 1, 4)
+	s.room(&"life_support", 1, 2, 6, 1, 3)
+	s.room(&"armoury", 1, 5, 6, 1, 3)
+	s.room(&"reactor_room", 1, 2, 9, 4, 5)
+	s.room(&"engine_room", 1, 1, 14, 6, 4)
+	s.door(Vector3i(3, 1, 1), Vector3i(3, 1, 2))
+	s.door(Vector3i(3, 1, 3), Vector3i(2, 1, 3))
+	s.door(Vector3i(4, 1, 3), Vector3i(5, 1, 3))
+	s.door(Vector3i(3, 1, 7), Vector3i(2, 1, 7))
+	s.door(Vector3i(4, 1, 7), Vector3i(5, 1, 7))
+	s.door(Vector3i(3, 1, 8), Vector3i(3, 1, 9))
+	s.door(Vector3i(3, 1, 13), Vector3i(3, 1, 14))
+	s.fit(&"fusion_reactor", Vector3i(3, 1, 10))  # inboard: two cells of rooms and hull either side
+	s.fit(&"power_distribution_unit", Vector3i(2, 1, 10))
+	s.fit(tank, Vector3i(1, 1, 15))
+	s.fit(tank, Vector3i(5, 1, 15))
 	# Spine: the gun deck's magazine.
-	s.room(&"magazine", 2, 2, 4, 2, 4)
-	s.door(Vector3i(2, 2, 5), Vector3i(2, 1, 5))
+	s.room(&"magazine", 2, 3, 4, 2, 4)
+	s.door(Vector3i(3, 2, 5), Vector3i(3, 1, 5))
 	# Lower deck.
-	s.room(&"hangar", 0, 1, 2, 4, 6)
-	s.room(&"cargo_hold", 0, 1, 8, 4, 6)
-	s.room(&"engine_room", 0, 1, 14, 4, 3)
-	s.room(&"cargo_hold", 0, 0, 6, 1, 8)
-	s.room(&"cargo_hold", 0, 5, 6, 1, 8)
-	s.door(Vector3i(2, 1, 3), Vector3i(2, 0, 3))
-	s.door(Vector3i(2, 1, 8), Vector3i(2, 0, 8))
-	s.door(Vector3i(2, 0, 7), Vector3i(2, 0, 8))
-	s.door(Vector3i(2, 0, 13), Vector3i(2, 0, 14))
-	s.door(Vector3i(2, 1, 14), Vector3i(2, 0, 14))
-	s.door(Vector3i(1, 0, 9), Vector3i(0, 0, 9))
-	s.door(Vector3i(4, 0, 9), Vector3i(5, 0, 9))
-	s.fit(&"fighter_bay", Vector3i(3, 0, 4))
-	s.fit(&"propellant_tank", Vector3i(1, 0, 10))
-	s.fit(&"propellant_tank", Vector3i(3, 0, 10))
-	s.fit(&"propellant_tank", Vector3i(1, 0, 15))
-	s.fit(&"propellant_tank", Vector3i(3, 0, 15))
-	s.fit(&"power_distribution_unit", Vector3i(4, 0, 14))
+	s.room(&"hangar", 0, 2, 2, 4, 6)
+	s.room(&"cargo_hold", 0, 2, 8, 4, 6)
+	s.room(&"engine_room", 0, 1, 14, 6, 4)
+	s.room(&"cargo_hold", 0, 1, 6, 1, 8)
+	s.room(&"cargo_hold", 0, 6, 6, 1, 8)
+	s.ladder(3, 3, 0, 1)
+	s.ladder(3, 8, 0, 1)
+	s.door(Vector3i(3, 0, 7), Vector3i(3, 0, 8))
+	s.door(Vector3i(3, 0, 13), Vector3i(3, 0, 14))
+	s.ladder(3, 14, 0, 1)
+	s.door(Vector3i(2, 0, 9), Vector3i(1, 0, 9))
+	s.door(Vector3i(5, 0, 9), Vector3i(6, 0, 9))
+	s.fit(&"fighter_bay", Vector3i(4, 0, 4))
+	s.fit(tank, Vector3i(2, 0, 10))
+	s.fit(tank, Vector3i(4, 0, 10))
+	s.fit(tank, Vector3i(1, 0, 15))
+	s.fit(tank, Vector3i(5, 0, 15))
+	s.fit(&"power_distribution_unit", Vector3i(3, 0, 16))
 	# Drive.
-	for x in [1, 2, 3, 4]:
-		s.fit(&"main_engine", Vector3i(x, 1, 16), &"aft")
-	s.pair(&"main_engine", Vector3i(2, 0, 16), &"aft")
+	for x in [2, 3, 4, 5]:
+		s.fit(&"main_engine", Vector3i(x, 1, 17), &"aft")
+	s.pair(&"main_engine", Vector3i(3, 0, 17), &"aft")
 	s.pair(&"radiator_long", Vector3i(1, 1, 14), &"dorsal", ShipGrid.FIN_ROTATION)
-	# RCS at all four corners of bow and stern: a responsive first ship.
-	s.pair(&"rcs_block", Vector3i(1, 1, 0), &"port")
-	s.pair(&"rcs_block", Vector3i(1, 1, 0), &"dorsal")
-	s.pair(&"rcs_block", Vector3i(1, 0, 2), &"ventral")
-	s.pair(&"rcs_block", Vector3i(1, 1, 15), &"port")
-	s.pair(&"rcs_block", Vector3i(2, 1, 16), &"dorsal")
-	s.pair(&"rcs_block", Vector3i(1, 0, 16), &"ventral")
+	s.pair(&"rcs_block", Vector3i(2, 1, 0), &"dorsal")
+	s.pair(&"rcs_block", Vector3i(2, 0, 2), &"ventral")
+	s.pair(&"rcs_block", Vector3i(1, 1, 16), &"port")
+	s.pair(&"rcs_block", Vector3i(1, 0, 16), &"port")
+	s.pair(&"rcs_block", Vector3i(1, 1, 17), &"dorsal")
+	s.pair(&"rcs_block", Vector3i(1, 0, 17), &"ventral")
 	# Armament.
-	s.fit(&"autocannon", Vector3i(2, 2, 4), &"dorsal")
-	s.fit(&"autocannon", Vector3i(3, 2, 7), &"dorsal")
-	s.fit(&"autocannon", Vector3i(2, 0, 12), &"ventral")
-	s.fit(&"missile_rack", Vector3i(2, 2, 6), &"dorsal")
-	s.fit(&"point_defence", Vector3i(1, 1, 2), &"dorsal")
-	s.fit(&"point_defence", Vector3i(4, 1, 13), &"dorsal")
-	s.fit(&"point_defence", Vector3i(0, 0, 7), &"ventral")
-	s.fit(&"point_defence", Vector3i(5, 0, 12), &"ventral")
-	s.pair(&"flare_launcher", Vector3i(1, 1, 16), &"dorsal")
-	s.fit(&"sensor_mast", Vector3i(3, 2, 5), &"dorsal")
-	s.fit(&"drone_rack", Vector3i(3, 0, 8), &"ventral")
-	s.fit(&"docking_collar", Vector3i(0, 0, 7), &"port")
-	s.fit(&"grapple_arm", Vector3i(5, 0, 8), &"starboard")
+	s.fit(&"autocannon", Vector3i(3, 2, 4), &"dorsal")
+	s.fit(&"autocannon", Vector3i(4, 2, 7), &"dorsal")
+	s.fit(&"autocannon", Vector3i(3, 0, 12), &"ventral")
+	s.fit(&"missile_rack", Vector3i(3, 2, 6), &"dorsal")
+	s.fit(&"point_defence", Vector3i(2, 1, 2), &"dorsal")
+	s.fit(&"point_defence", Vector3i(5, 1, 13), &"dorsal")
+	s.fit(&"point_defence", Vector3i(1, 0, 7), &"ventral")
+	s.fit(&"point_defence", Vector3i(6, 0, 12), &"ventral")
+	s.pair(&"flare_launcher", Vector3i(2, 1, 17), &"dorsal")
+	s.fit(&"sensor_mast", Vector3i(4, 2, 5), &"dorsal")
+	s.fit(&"drone_rack", Vector3i(4, 0, 8), &"ventral")
+	s.fit(&"docking_collar", Vector3i(1, 0, 7), &"port")
+	s.fit(&"grapple_arm", Vector3i(6, 0, 8), &"starboard")
+	s.legs([Vector3i(1, 0, 10), Vector3i(6, 0, 10), Vector3i(2, 0, 16), Vector3i(5, 0, 16)])
 	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"fore", &"dorsal", &"ventral", &"port", &"starboard"], func(c: Vector3i) -> bool: return c.z <= 2)
-	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"port", &"starboard"], func(c: Vector3i) -> bool: return c.y >= 1 and c.z <= 13)
 	return s
 
 
 # --- D. Gun destroyer -----------------------------------------------------------------
 
-## Gauss-class gun destroyer: a railgun at the tip of a 30 m armoured boom,
-## on the centreline at mid-deck so its recoil goes through the centre of
-## mass. The boom is the gun's magazine — dense stowage all the way up,
-## under 80 mm — and its root the gun's power: two reactor rooms either side
-## with a distribution unit at the breech each, so the gun keeps firing on
-## one. Behind them a cruciform hull: the main deck five cells wide (bridge,
-## workshop, tanks), a three-wide crew deck above and tank deck below, then
-## a single-deck tail with the engine room and four radiator fins. Heavy RCS
-## on the boom's tip and the tail swing the whole ship onto a target (the
-## gun itself traverses 12°/s). Two autocannons, PD and flares; nothing else.
+## Gauss-class gun destroyer: a ship built round one large railgun. Its
+## muzzle fills the flat bow of a square, three-deck gun housing 36 m long,
+## on the centreline so its recoil goes through the centre of mass; inside
+## the housing the dense magazine at the breech and two reactors either side
+## of the keel feed the gun's 900 kW, with tanks above and below. Behind it a
+## chamfered three-deck hull — bridge, workshop, crew, the secondaries'
+## magazine, the tank farm — and a boxy engine block, wider still, under an
+## X of radiator fins. Heavy RCS at the gun's tip and the block's corners
+## swing the whole ship onto a target (the gun traverses only 12°/s). Two
+## autocannons, PD and flares; nothing else.
 func _gun_destroyer() -> Draft:
-	var s := Draft.new(cat, "Gauss-class gun destroyer", "Caloris Foundry", 5)
-	s.hull(2, 2, 1, 1, 0, 9)
-	s.hull(1, 3, 1, 1, 10, 11)
-	s.hull(0, 4, 1, 1, 12, 33)
-	s.hull(1, 3, 0, 0, 12, 23)
-	s.hull(1, 3, 2, 2, 12, 23)
+	var s := Draft.new(cat, "Gauss-class gun destroyer", "Caloris Foundry", 7)
+	var tank := &"propellant_tank"
+	s.hull(2, 4, 0, 2, 0, 11)
+	s.hull(1, 5, 0, 2, 12, 25)
+	s.hull(0, 6, 0, 2, 26, 29)
+	s.skirts(1, 5, 2, 12, 25)
+	s.skirts(1, 5, 0, 12, 25, false)
 	s.prow(func(c: Vector3i) -> bool: return c.z > 0)  # the muzzle's face stays flat
-	s.room(&"dense_magazine", 1, 2, 0, 1, 10)
-	# Main deck.
-	s.room(&"corridor", 1, 2, 10, 1, 20)
-	s.room(&"reactor_room", 1, 1, 10, 1, 2)
-	s.room(&"reactor_room", 1, 3, 10, 1, 2)
-	s.room(&"reactor_room", 1, 0, 12, 2, 4)
-	s.room(&"reactor_room", 1, 3, 12, 2, 4)
-	s.room(&"bridge", 1, 0, 16, 2, 4)
-	s.room(&"workshop", 1, 3, 16, 2, 4)
-	s.room(&"cargo_hold", 1, 0, 20, 2, 10)
-	s.room(&"cargo_hold", 1, 3, 20, 2, 10)
-	s.room(&"engine_room", 1, 0, 30, 5, 4)
-	s.door(Vector3i(2, 1, 9), Vector3i(2, 1, 10))
-	s.door(Vector3i(2, 1, 12), Vector3i(1, 1, 12))
-	s.door(Vector3i(2, 1, 12), Vector3i(3, 1, 12))
-	s.door(Vector3i(2, 1, 17), Vector3i(1, 1, 17))
-	s.door(Vector3i(2, 1, 17), Vector3i(3, 1, 17))
-	s.door(Vector3i(2, 1, 20), Vector3i(1, 1, 20))
-	s.door(Vector3i(2, 1, 20), Vector3i(3, 1, 20))
-	s.door(Vector3i(2, 1, 29), Vector3i(2, 1, 30))
-	for side: int in [0, 3]:
-		s.fit(&"fusion_reactor", Vector3i(side, 1, 13))
-		for z in [21, 23, 25, 27]:
-			s.fit(&"propellant_tank", Vector3i(side, 1, z))
-		s.fit(&"propellant_tank", Vector3i(side, 1, 31))
-	s.fit(&"power_distribution_unit", Vector3i(1, 1, 10))
-	s.fit(&"power_distribution_unit", Vector3i(3, 1, 10))
-	# Crew deck above, tank deck below.
-	s.room(&"magazine", 2, 1, 12, 3, 2)
-	s.room(&"corridor", 2, 2, 14, 1, 10)
-	s.room(&"crew_quarters", 2, 1, 14, 1, 6)
-	s.room(&"crew_quarters", 2, 3, 14, 1, 6)
-	s.room(&"cafeteria", 2, 1, 20, 1, 4)
-	s.room(&"life_support", 2, 3, 20, 1, 4)
-	s.door(Vector3i(2, 1, 14), Vector3i(2, 2, 14))
-	s.door(Vector3i(2, 2, 13), Vector3i(2, 2, 14))
-	s.door(Vector3i(2, 2, 16), Vector3i(1, 2, 16))
-	s.door(Vector3i(2, 2, 16), Vector3i(3, 2, 16))
-	s.door(Vector3i(2, 2, 21), Vector3i(1, 2, 21))
-	s.door(Vector3i(2, 2, 21), Vector3i(3, 2, 21))
-	s.room(&"engine_room", 0, 1, 12, 3, 12)
-	s.door(Vector3i(2, 1, 15), Vector3i(2, 0, 15))
-	for z in [12, 16, 20]:
-		s.fit(&"propellant_tank", Vector3i(1, 0, z))
+	# Gun housing: the breech's dense magazine, the gun's reactors, tanks.
+	s.room(&"dense_magazine", 1, 2, 0, 3, 5)
+	s.room(&"reactor_room", 1, 2, 5, 3, 7)
+	s.door(Vector3i(4, 1, 4), Vector3i(4, 1, 5))
+	s.fit(&"fusion_reactor", Vector3i(2, 1, 6))
+	s.fit(&"fusion_reactor", Vector3i(2, 1, 9))
+	s.fit(&"power_distribution_unit", Vector3i(2, 1, 5))
+	s.fit(&"power_distribution_unit", Vector3i(2, 1, 11))
+	for d in [0, 2]:
+		s.room(&"engine_room", d, 2, 0, 3, 12)
+		s.ladder(4, 8, mini(d, 1), maxi(d, 1))
+		s.furnish(Draft.many(tank, 4), d, Rect2i(2, 0, 3, 12), Vector3i(4, d, 8))
+	# Main hull: keel corridor on the main deck, rooms either side.
+	s.room(&"corridor", 1, 3, 12, 1, 14)
+	s.door(Vector3i(3, 1, 11), Vector3i(3, 1, 12))
+	s.run(1, 1, 2, 12, 2, 3, [[&"bridge", 4], [&"crew_quarters", 3], [&"life_support", 3], [&"magazine", 4]])
+	s.run(1, 4, 2, 12, 4, 3, [[&"workshop", 4], [&"crew_quarters", 3], [&"cafeteria", 3], [&"armoury", 4]])
+	for d in [0, 2]:
+		s.room(&"engine_room", d, 1, 12, 5, 14)
+		s.ladder(3, 18, mini(d, 1), maxi(d, 1))
+		s.furnish(Draft.many(tank, 6), d, Rect2i(1, 12, 5, 14), Vector3i(3, d, 18))
+	# Engine block.
+	for d in 3:
+		s.room(&"engine_room", d, 0, 26, 7, 4)
+		s.furnish(Draft.many(tank, 2), d, Rect2i(0, 26, 7, 4), Vector3i(3, d, 26))
+	s.door(Vector3i(3, 1, 25), Vector3i(3, 1, 26))
+	for x in [2, 3, 4]:
+		for d in 3:
+			s.fit(&"main_engine", Vector3i(x, d, 29), &"aft")
 	# The gun and what points it.
-	s.fit(&"railgun", Vector3i(2, 1, 0), &"fore")
-	for face: StringName in [&"port", &"starboard", &"dorsal", &"ventral"]:
-		s.fit(&"rcs_block_heavy", Vector3i(2, 1, 1), face)
-	s.pair(&"rcs_block_heavy", Vector3i(0, 1, 33), &"port")
-	s.fit(&"rcs_block_heavy", Vector3i(2, 1, 33), &"dorsal")
-	s.fit(&"rcs_block_heavy", Vector3i(2, 1, 33), &"ventral")
-	for x in 5:
-		s.fit(&"main_engine", Vector3i(x, 1, 33), &"aft")
-	s.pair(&"radiator_long", Vector3i(0, 1, 29), &"dorsal", ShipGrid.FIN_ROTATION)
-	s.pair(&"radiator_long", Vector3i(0, 1, 29), &"ventral", ShipGrid.FIN_ROTATION)
-	s.fit(&"autocannon", Vector3i(2, 2, 22), &"dorsal")
-	s.fit(&"autocannon", Vector3i(2, 0, 22), &"ventral")
-	s.pair(&"point_defence", Vector3i(0, 1, 13), &"dorsal")
-	s.pair(&"point_defence", Vector3i(0, 1, 26), &"ventral")
-	s.fit(&"point_defence", Vector3i(2, 2, 12), &"dorsal")
-	s.fit(&"sensor_mast", Vector3i(1, 2, 15), &"dorsal")
-	s.fit(&"sensor_mast_hardened", Vector3i(3, 0, 15), &"ventral")
-	s.fit(&"docking_collar", Vector3i(0, 1, 20), &"port")
-	s.pair(&"flare_launcher", Vector3i(1, 1, 32), &"dorsal")
-	s.armour(ShipBlueprint.PLATE_THICK_MM, [&"fore", &"dorsal", &"ventral", &"port", &"starboard"], func(c: Vector3i) -> bool: return c.z <= 15)
-	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"port", &"starboard"], func(c: Vector3i) -> bool: return c.z > 15 and c.z < 29)
+	s.fit(&"railgun", Vector3i(2, 0, 0), &"fore")
+	for d in [0, 2]:
+		s.pair(&"rcs_block_heavy", Vector3i(2, d, 1), &"port")
+		s.pair(&"rcs_block_heavy", Vector3i(0, d, 29), &"port")
+	s.fit(&"autocannon", Vector3i(3, 2, 23), &"dorsal")
+	s.fit(&"autocannon", Vector3i(3, 0, 23), &"ventral")
+	s.fit(&"point_defence", Vector3i(3, 2, 6), &"dorsal")
+	s.fit(&"point_defence", Vector3i(3, 0, 6), &"ventral")
+	s.pair(&"point_defence", Vector3i(1, 2, 14), &"dorsal")
+	s.pair(&"point_defence", Vector3i(1, 0, 22), &"ventral")
+	s.fit(&"sensor_mast", Vector3i(2, 2, 13), &"dorsal")
+	s.fit(&"sensor_mast_hardened", Vector3i(4, 0, 13), &"ventral")
+	s.fit(&"docking_collar", Vector3i(1, 1, 17), &"port")
+	s.pair(&"radiator_long", Vector3i(0, 2, 27), &"dorsal", ShipGrid.FIN_ROTATION)
+	s.pair(&"radiator_long", Vector3i(0, 0, 27), &"ventral", ShipGrid.FIN_ROTATION)
+	s.pair(&"flare_launcher", Vector3i(1, 2, 29), &"dorsal")
+	s.legs([Vector3i(1, 0, 13), Vector3i(5, 0, 13), Vector3i(1, 0, 29), Vector3i(5, 0, 29)])
+	s.armour(ShipBlueprint.PLATE_THICK_MM, [&"fore", &"dorsal", &"ventral", &"port", &"starboard"], func(c: Vector3i) -> bool: return c.z <= 4)
+	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"dorsal", &"ventral", &"port", &"starboard"], func(c: Vector3i) -> bool: return c.z > 4 and c.z <= 11)
 	return s
 
 
@@ -734,7 +784,12 @@ func _heavy_cruiser() -> Draft:
 	s.hull(0, 7, 0, 2, 14, 27)
 	s.hull(3, 4, 1, 2, 28, 31)
 	s.hull(1, 6, 0, 2, 32, 43)
-	s.prow()
+	for z: Array in [[0, 9], [32, 43]]:
+		s.skirts(1, 6, 2, z[0], z[1])
+		s.skirts(1, 6, 0, z[0], z[1], false)
+	# A flat bow over the chin: the two bow guns' ports.
+	s.prow(func(c: Vector3i) -> bool: return c.z == 0 and not (c.y >= 1 and c.x >= 2 and c.x <= 5), true)
+	s.prow(func(c: Vector3i) -> bool: return c.z > 0)
 	var tank := &"propellant_tank"
 	s.room(&"corridor", 1, 3, 2, 2, 42)
 	s.room(&"corridor", 2, 3, 0, 2, 44)
@@ -774,12 +829,11 @@ func _heavy_cruiser() -> Draft:
 		for d in [0, 2]:
 			s.fit(&"main_engine_high_isp", Vector3i(x, d, 43), &"aft")
 	# Guns: two on the bow, two turrets over the battery, two aft.
-	s.fit(&"kinetic_cannon", Vector3i(3, 1, 0), &"fore")
-	s.fit(&"kinetic_cannon", Vector3i(4, 1, 0), &"fore")
+	s.pair(&"kinetic_cannon", Vector3i(2, 1, 0), &"fore")
 	s.fit(&"kinetic_cannon", Vector3i(3, 2, 3), &"dorsal")
-	s.fit(&"kinetic_cannon", Vector3i(4, 2, 7), &"dorsal")
-	s.fit(&"kinetic_cannon", Vector3i(4, 2, 40), &"dorsal")
-	s.fit(&"kinetic_cannon", Vector3i(3, 0, 40), &"ventral")
+	s.fit(&"kinetic_cannon", Vector3i(3, 2, 7), &"dorsal")
+	s.fit(&"kinetic_cannon", Vector3i(3, 2, 39), &"dorsal")
+	s.fit(&"kinetic_cannon", Vector3i(3, 0, 39), &"ventral")
 	s.pair(&"autocannon", Vector3i(0, 2, 16), &"port")
 	s.pair(&"autocannon", Vector3i(0, 2, 25), &"port")
 	for z in [18, 21, 24]:
@@ -799,14 +853,15 @@ func _heavy_cruiser() -> Draft:
 	s.fit(&"salvage_drone_rack", Vector3i(1, 0, 22), &"ventral")
 	s.fit(&"docking_collar", Vector3i(0, 0, 20), &"port")
 	s.fit(&"grapple_arm", Vector3i(7, 0, 16), &"starboard")
-	s.pair(&"flare_launcher", Vector3i(1, 2, 43), &"dorsal")
-	s.pair(&"flare_launcher", Vector3i(1, 0, 43), &"ventral")
+	s.pair(&"flare_launcher", Vector3i(2, 2, 43), &"dorsal")
+	s.pair(&"flare_launcher", Vector3i(2, 0, 43), &"ventral")
+	s.legs([Vector3i(1, 0, 4), Vector3i(6, 0, 4), Vector3i(1, 0, 38), Vector3i(6, 0, 38)])
 	# Heavy RCS at the four corners of bow and stern, more at the citadel's.
-	for z in [0, 43]:
-		for d in [0, 2]:
-			s.pair(&"rcs_block_heavy", Vector3i(1, d, z), &"port")
-		s.pair(&"rcs_block_heavy", Vector3i(2, 2, z), &"dorsal")
-		s.pair(&"rcs_block_heavy", Vector3i(2, 0, z), &"ventral")
+	for z in [0, 9, 32, 43]:
+		s.pair(&"rcs_block_heavy", Vector3i(1, 1, z), &"port")
+	for z in [1, 43]:
+		s.pair(&"rcs_block_heavy", Vector3i(1, 2, z), &"dorsal")
+		s.pair(&"rcs_block_heavy", Vector3i(1, 0, z), &"ventral")
 	s.pair(&"rcs_block", Vector3i(0, 1, 14), &"port")
 	s.pair(&"rcs_block", Vector3i(0, 1, 27), &"port")
 	for z in [10, 28]:
@@ -836,37 +891,42 @@ func _heavy_cruiser() -> Draft:
 ## the biggest crew and the biggest repair bills in the yard.
 func _battleship() -> Draft:
 	var s := Draft.new(cat, "Newton-class battleship", "Galilean Yards", 12)
-	s.hull(4, 4, 2, 2, 0, 7)
-	s.hull(7, 7, 2, 2, 0, 7)
-	s.hull(3, 8, 2, 2, 8, 9)
-	s.hull(2, 9, 1, 3, 10, 13)
+	s.hull(2, 4, 1, 3, 0, 7)
+	s.hull(7, 9, 1, 3, 0, 7)
+	s.hull(1, 10, 1, 3, 8, 13)
 	s.hull(0, 11, 1, 3, 14, 49)
 	s.hull(3, 8, 0, 0, 16, 47)
 	s.hull(3, 8, 4, 4, 16, 47)
-	s.prow(func(c: Vector3i) -> bool: return c.z > 0)
+	s.skirts(3, 8, 4, 16, 47)
+	s.skirts(3, 8, 0, 16, 47, false)
+	s.prow(func(c: Vector3i) -> bool: return c.z > 0, true)  # the guns' muzzles stay flat
 	var tank := &"propellant_tank"
 	# Keel corridors on the three main decks; the turret decks have their own.
 	s.room(&"corridor", 2, 5, 8, 2, 42)
 	for d in [1, 3]:
-		s.room(&"corridor", d, 5, 10, 2, 40)
+		s.room(&"corridor", d, 5, 8, 2, 42)
 	for d in [0, 4]:
 		s.room(&"corridor", d, 5, 16, 2, 32)
 	for d in [1, 2, 3]:
 		for z in range(10, 50):
 			s.trunks.append(Vector3i(5, d, z))
-	# The spinal guns' magazines: booms, neck and bow block.
-	s.room(&"dense_magazine", 2, 4, 0, 1, 8)
-	s.room(&"dense_magazine", 2, 7, 0, 1, 8)
-	s.room(&"dense_magazine", 2, 3, 8, 2, 2)
-	s.room(&"dense_magazine", 2, 7, 8, 2, 2)
-	s.door(Vector3i(4, 2, 8), Vector3i(5, 2, 8))
-	s.door(Vector3i(7, 2, 8), Vector3i(6, 2, 8))
-	s.run(2, 2, 3, 10, 4, 5, [[&"magazine", 4]])
-	s.run(2, 7, 3, 10, 7, 6, [[&"magazine", 4]])
-	s.run(1, 2, 3, 10, 4, 5, [[&"crew_quarters", 4]])
-	s.run(1, 7, 3, 10, 7, 6, [[&"life_support", 4]])
-	s.run(3, 2, 3, 10, 4, 5, [[&"magazine", 4]])
-	s.run(3, 7, 3, 10, 7, 6, [[&"armoury", 4]])
+	# The spinal guns' booms: each gun's dense magazine down its middle deck,
+	# tanks above and below; the bow block's magazines behind them.
+	for b: Array in [[2, 4], [7, 7]]:
+		var x0: int = b[0]
+		var walk: int = b[1]
+		s.room(&"dense_magazine", 2, x0, 0, 3, 8)
+		s.door(Vector3i(x0 + 1, 2, 7), Vector3i(x0 + 1, 2, 8))
+		for d in [1, 3]:
+			s.room(&"engine_room", d, x0, 0, 3, 8)
+			s.ladder(walk, 3, mini(d, 2), maxi(d, 2))
+			s.furnish(Draft.many(tank, 2), d, Rect2i(x0, 0, 3, 8), Vector3i(walk, d, 3))
+	s.run(2, 1, 4, 8, 4, 5, [[&"magazine", 3], [&"cafeteria", 3]])
+	s.run(2, 7, 4, 8, 7, 6, [[&"magazine", 3], [&"workshop", 3]])
+	s.run(1, 1, 4, 8, 4, 5, [[&"crew_quarters", 6]])
+	s.run(1, 7, 4, 8, 7, 6, [[&"life_support", 6]])
+	s.run(3, 1, 4, 8, 4, 5, [[&"life_support", 6]])
+	s.run(3, 7, 4, 8, 7, 6, [[&"armoury", 6]])
 	for d in [1, 3]:
 		s.ladder(5, 11, mini(d, 2), maxi(d, 2))
 	# Main deck.
@@ -890,15 +950,12 @@ func _battleship() -> Draft:
 		s.ladder(6, z, 3, 4)
 		s.ladder(6, z, 0, 1)
 	# Guns.
-	s.fit(&"railgun", Vector3i(4, 2, 0), &"fore")
-	s.fit(&"railgun", Vector3i(7, 2, 0), &"fore")
-	s.fit(&"kinetic_cannon", Vector3i(5, 4, 18), &"dorsal")
-	s.fit(&"kinetic_cannon", Vector3i(6, 4, 23), &"dorsal")
-	s.fit(&"kinetic_cannon", Vector3i(5, 4, 28), &"dorsal")
-	s.fit(&"railgun", Vector3i(5, 4, 34), &"dorsal")
-	s.fit(&"kinetic_cannon", Vector3i(6, 4, 44), &"dorsal")
-	s.fit(&"kinetic_cannon", Vector3i(6, 0, 20), &"ventral")
-	s.fit(&"railgun", Vector3i(5, 0, 34), &"ventral")
+	s.pair(&"railgun", Vector3i(2, 1, 0), &"fore")
+	for z in [18, 23, 28, 44]:
+		s.fit(&"kinetic_cannon", Vector3i(5, 4, z), &"dorsal")
+	s.fit(&"railgun", Vector3i(4, 4, 33), &"dorsal")
+	s.fit(&"kinetic_cannon", Vector3i(5, 0, 20), &"ventral")
+	s.fit(&"railgun", Vector3i(4, 0, 33), &"ventral")
 	s.fit(&"kinetic_cannon", Vector3i(5, 0, 44), &"ventral")
 	for z in [17, 26, 37, 46]:
 		s.pair(&"autocannon", Vector3i(0, 3, z), &"port")
@@ -908,9 +965,9 @@ func _battleship() -> Draft:
 	s.pair(&"point_defence", Vector3i(3, 4, 16), &"dorsal")
 	s.pair(&"point_defence", Vector3i(3, 0, 47), &"ventral")
 	s.pair(&"point_defence", Vector3i(2, 3, 10), &"dorsal")
-	s.fit(&"sensor_mast", Vector3i(5, 4, 39), &"dorsal")
-	s.fit(&"sensor_mast_hardened", Vector3i(6, 4, 39), &"dorsal")
-	s.fit(&"sensor_mast_hardened", Vector3i(6, 0, 39), &"ventral")
+	s.fit(&"sensor_mast", Vector3i(4, 4, 39), &"dorsal")
+	s.fit(&"sensor_mast_hardened", Vector3i(7, 4, 39), &"dorsal")
+	s.fit(&"sensor_mast_hardened", Vector3i(7, 0, 39), &"ventral")
 	s.pair(&"docking_collar", Vector3i(0, 2, 27), &"port")
 	for z in [44, 48]:
 		s.pair(&"flare_launcher", Vector3i(1, 3, z), &"dorsal")
@@ -919,10 +976,9 @@ func _battleship() -> Draft:
 		for d in [1, 3]:
 			s.fit(&"main_engine", Vector3i(x, d, 49), &"aft")
 	# Heavy RCS on the booms' tips, the bow shoulders and the stern corners.
-	s.fit(&"rcs_block_heavy", Vector3i(4, 2, 0), &"port")
-	s.fit(&"rcs_block_heavy", Vector3i(7, 2, 0), &"starboard")
-	s.pair(&"rcs_block_heavy", Vector3i(4, 2, 1), &"dorsal")
-	s.pair(&"rcs_block_heavy", Vector3i(4, 2, 1), &"ventral")
+	s.pair(&"rcs_block_heavy", Vector3i(2, 2, 1), &"port")
+	s.pair(&"rcs_block_heavy", Vector3i(3, 3, 1), &"dorsal")
+	s.pair(&"rcs_block_heavy", Vector3i(3, 1, 1), &"ventral")
 	for d in [1, 3]:
 		s.pair(&"rcs_block_heavy", Vector3i(0, d, 14), &"port")
 		s.pair(&"rcs_block_heavy", Vector3i(0, d, 49), &"port")
@@ -932,6 +988,7 @@ func _battleship() -> Draft:
 	for z in [40, 45]:
 		s.pair(&"heat_pipe_radiator", Vector3i(1, 3, z), &"dorsal", ShipGrid.FIN_ROTATION)
 		s.pair(&"heat_pipe_radiator", Vector3i(1, 1, z), &"ventral", ShipGrid.FIN_ROTATION)
+	s.legs([Vector3i(3, 0, 24), Vector3i(8, 0, 24), Vector3i(3, 0, 41), Vector3i(8, 0, 41)])
 	s.armour(ShipBlueprint.PLATE_THICK_MM, [&"fore", &"dorsal", &"ventral", &"port", &"starboard"])
 	return s
 
@@ -956,7 +1013,11 @@ func _fleet_carrier() -> Draft:
 	s.hull(4, 11, 0, 1, 10, 33)
 	s.truss(4, 11, 1, 1, 2, 5)
 	s.truss(4, 11, 1, 1, 38, 41)
-	s.prow()
+	# Sloped fillets from each hull's top down onto the armoured hangar roof.
+	s.skirt(4, 2, 10, 33, &"port")
+	s.skirt(11, 2, 10, 33, &"starboard")
+	s.prow(func(c: Vector3i) -> bool: return c.x <= 3 or c.x >= 12, true)
+	s.prow(func(c: Vector3i) -> bool: return c.x > 3 and c.x < 12)
 	var tank := &"propellant_tank"
 	# Side hulls: a corridor down the inboard column of the main deck.
 	for side: Array in [[0, 3, 2], [12, 12, 13]]:
@@ -1035,6 +1096,7 @@ func _fleet_carrier() -> Draft:
 	for z in [24, 30, 36]:
 		s.pair(&"radiator_long", Vector3i(0, 0, z), &"port")
 		s.pair(&"radiator_long", Vector3i(0, 1, z), &"port")
+	s.legs([Vector3i(1, 0, 8), Vector3i(14, 0, 8), Vector3i(1, 0, 38), Vector3i(14, 0, 38)])
 	s.armour(ShipBlueprint.PLATE_THICK_MM, [&"dorsal"], func(c: Vector3i) -> bool: return c.x >= 4 and c.x <= 11 and c.z >= 10 and c.z <= 33)
 	s.armour(ShipBlueprint.PLATE_THICK_MM, [&"fore", &"dorsal", &"ventral", &"port", &"starboard"], func(c: Vector3i) -> bool: return c.z <= 0)
 	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"port", &"starboard"], func(c: Vector3i) -> bool: return (c.x <= 3 or c.x >= 12) and c.y == 2)
@@ -1056,7 +1118,8 @@ func _scout() -> Draft:
 	var s := Draft.new(cat, "Herschel-class scout", "Stickney Station", 4)
 	s.hull(0, 2, 0, 0, 0, 13)
 	s.truss(3, 7, 0, 0, 5, 6)
-	s.prow()
+	s.skirts(0, 2, 0, 2, 12)
+	s.prow(Callable(), true)
 	s.room(&"bridge", 0, 0, 0, 3, 2)
 	s.room(&"corridor", 0, 2, 2, 1, 8)
 	s.room(&"crew_quarters", 0, 0, 2, 2, 2)
@@ -1092,13 +1155,14 @@ func _scout() -> Draft:
 	s.fit(&"radiator_long", Vector3i(0, 0, 9), &"ventral")
 	s.fit(&"radiator_long", Vector3i(1, 0, 9), &"ventral")
 	s.fit(&"rcs_block", Vector3i(0, 0, 0), &"port")
-	s.fit(&"rcs_block", Vector3i(2, 0, 0), &"starboard")
+	s.fit(&"rcs_block", Vector3i(2, 0, 1), &"starboard")
 	s.fit(&"rcs_block", Vector3i(1, 0, 0), &"dorsal")
 	s.fit(&"rcs_block", Vector3i(1, 0, 0), &"ventral")
 	s.fit(&"rcs_block", Vector3i(0, 0, 13), &"port")
 	s.fit(&"rcs_block", Vector3i(2, 0, 13), &"starboard")
 	s.fit(&"rcs_block", Vector3i(0, 0, 13), &"dorsal")
 	s.fit(&"rcs_block", Vector3i(2, 0, 13), &"ventral")
+	s.legs([Vector3i(0, 0, 2), Vector3i(2, 0, 2), Vector3i(0, 0, 13), Vector3i(2, 0, 12)])
 	return s
 
 
@@ -1200,5 +1264,6 @@ func _heavy_freighter() -> Draft:
 	s.pair(&"rcs_block", Vector3i(2, 1, 0), &"port")
 	s.pair(&"rcs_block", Vector3i(1, 3, 42), &"port")
 	s.pair(&"rcs_block", Vector3i(1, 0, 42), &"port")
+	s.legs([Vector3i(2, 1, 1), Vector3i(5, 1, 1), Vector3i(1, 0, 40), Vector3i(6, 0, 40)])
 	s.armour(ShipBlueprint.PLATE_THIN_MM, [&"fore", &"dorsal"], func(c: Vector3i) -> bool: return c.z <= 0)
 	return s
