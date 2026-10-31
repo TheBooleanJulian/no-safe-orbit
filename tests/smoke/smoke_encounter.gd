@@ -150,7 +150,9 @@ func _run() -> void:
 	var fired := func() -> bool:
 		return main.encounter.contacts.all(func(c: Contact) -> bool: return world.get_ship(c.id).rounds_fired > 0)
 	await _wait(main, 90.0, fired)
-	_check(fired.call(), "every contact opens fire on its own (after %.0f s)" % world.sim_time)
+	_check(fired.call(), "every contact opens fire on its own (after %.0f s: %s)" % [world.sim_time, ", ".join(main.encounter.contacts.map(func(c: Contact) -> String:
+		var s := world.get_ship(c.id)
+		return "%s %d rounds%s" % [c.id, s.rounds_fired, "" if s.systems == null or s.systems.disabled_reason() == "" else " (%s)" % s.systems.disabled_reason()]))])
 	await _wait(main, 60.0, func() -> bool: return main.combat_log.missiles_inbound >= 2)
 	_check(main.combat_log.missiles_inbound >= 2, "the encounter fires missile salvos at us (%d inbound so far)" % main.combat_log.missiles_inbound)
 	var closer := world.get_ship(&"target_01").position.distance_to(player.position)

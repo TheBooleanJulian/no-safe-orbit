@@ -74,7 +74,7 @@ func test_acknowledge() -> void:
 
 
 func _ship(id: StringName) -> ShipState:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, ConstructionCatalog.default_catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var cfg := stats.to_ship_config(String(id))

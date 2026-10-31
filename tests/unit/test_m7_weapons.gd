@@ -11,7 +11,7 @@ func _catalog() -> ConstructionCatalog:
 	return ConstructionCatalog.default_catalog()
 
 
-func _bp(path: String = BlueprintIO.DEFAULT_TEMPLATE) -> ShipBlueprint:
+func _bp(path: String = TestCase.FRIGATE) -> ShipBlueprint:
 	var errors := PackedStringArray()
 	return BlueprintIO.load_file(path, errors)
 
@@ -46,7 +46,7 @@ func _launcher(sys: ShipSystems) -> ShipSystems.EquipmentState:
 func _duel(launcher: StringName, range_m: float, target_bp: ShipBlueprint = null) -> WorldSimulation:
 	var world := WorldSimulation.new(DT)
 	world.add_ship(_ship(&"a", _armed(launcher)))
-	world.add_ship(_ship(&"b", target_bp if target_bp != null else _bp("res://data/blueprints/cutter_mk1.json"), Vector3(0, 0, -range_m)))
+	world.add_ship(_ship(&"b", target_bp if target_bp != null else _bp("res://tests/fixtures/cutter_mk1.json"), Vector3(0, 0, -range_m)))
 	world.set_input(&"a", ShipControlInput.neutral())
 	world.set_input(&"b", ShipControlInput.neutral())
 	return world
@@ -265,7 +265,7 @@ func test_missiles_persist_and_restock_for_credits() -> void:
 
 func test_templates_and_enemy_designs_validate() -> void:
 	var cat := _catalog()
-	for path in ["res://data/blueprints/frigate_mk1.json", "res://data/blueprints/corvette_mk1.json", "res://data/blueprints/cutter_mk1.json"]:
+	for path in ["res://tests/fixtures/frigate_mk1.json", "res://tests/fixtures/corvette_mk1.json", "res://tests/fixtures/cutter_mk1.json"]:
 		var bp := _bp(path)
 		assert_true(not ShipValidator.validate(bp, cat).has_errors(), "%s is valid" % path)
 	var template := _bp()

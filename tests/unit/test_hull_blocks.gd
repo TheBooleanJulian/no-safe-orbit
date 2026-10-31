@@ -80,7 +80,7 @@ func test_a_level_shot_meets_the_slope_at_its_angle() -> void:
 
 func test_painted_plates_add_mass_cost_and_persist() -> void:
 	var errors := PackedStringArray()
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, errors)
 	var ed := ShipEditor.new(bp, _catalog())
 	var mass := ed.stats.mass_kg
 	var plates := ed.blueprint.armor.size()
@@ -90,7 +90,7 @@ func test_painted_plates_add_mass_cost_and_persist() -> void:
 	assert_near(ed.stats.mass_kg - mass, n * ShipStats.plate_mass(80.0), 1.0, "each 80 mm plate adds %.0f kg" % ShipStats.plate_mass(80.0))
 	assert_true(ed.blueprint.armor.keys().all(func(k: String) -> bool: return not (k.ends_with("dorsal") and k.begins_with("7,0"))), "sides only: no tops")
 	# A refit pays for them.
-	var vessel := ShipInstance.fresh(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors))
+	var vessel := ShipInstance.fresh(BlueprintIO.load_file(TestCase.FRIGATE, errors))
 	var jobs := ServiceYard.refit_jobs(vessel, ed.blueprint, _catalog())
 	assert_true(jobs.size() == 1 and jobs[0].cost == n * ServiceYard.plate_cost(80.0), "refit: %d plates for %d parts" % [n, n * ServiceYard.plate_cost(80.0)])
 	# Saved and loaded intact (schema 2).
@@ -109,7 +109,7 @@ func test_painted_plates_add_mass_cost_and_persist() -> void:
 
 func test_worn_plates_are_remembered_and_replated_at_the_yard() -> void:
 	var errors := PackedStringArray()
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, errors)
 	var s := _systems(bp)
 	var key := ShipBlueprint.plate_key(Vector3i(2, 2, 6), &"port")
 	assert_true(s.plates.has(key), "the template has a belt plate on the port flank")
@@ -129,7 +129,7 @@ func test_worn_plates_are_remembered_and_replated_at_the_yard() -> void:
 
 func test_the_block_built_template_flies() -> void:
 	var errors := PackedStringArray()
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, errors)
 	var catalog := _catalog()
 	assert_true(bp.modules.all(func(m: ShipBlueprint.PlacedModule) -> bool: return not catalog.hull[m.def_id].legacy),
 		"the template is built only from current blocks")
@@ -142,7 +142,7 @@ func test_the_block_built_template_flies() -> void:
 
 func test_radiators_span_three_cells_and_fighters_launch_from_a_hangar() -> void:
 	var errors := PackedStringArray()
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, errors)
 	var catalog := _catalog()
 	var grid := ShipGrid.build(bp, catalog)
 	var rad := bp.equipment.find(bp.find("e42"))

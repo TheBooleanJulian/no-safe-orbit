@@ -12,7 +12,7 @@ func _catalog() -> ConstructionCatalog:
 	return ConstructionCatalog.default_catalog()
 
 
-func _bp(path: String = BlueprintIO.DEFAULT_TEMPLATE) -> ShipBlueprint:
+func _bp(path: String = TestCase.FRIGATE) -> ShipBlueprint:
 	return BlueprintIO.load_file(path, PackedStringArray())
 
 
@@ -38,7 +38,7 @@ func _ship(id: StringName, bp: ShipBlueprint, pos: Vector3 = Vector3.ZERO) -> Sh
 func _duel(launchers: Array, range_m: float = 6000.0) -> WorldSimulation:
 	var world := WorldSimulation.new(DT)
 	world.add_ship(_ship(&"a", _armed(launchers)))
-	world.add_ship(_ship(&"b", _bp("res://data/blueprints/cutter_mk1.json"), Vector3(0, 0, -range_m)))
+	world.add_ship(_ship(&"b", _bp("res://tests/fixtures/cutter_mk1.json"), Vector3(0, 0, -range_m)))
 	return world
 
 

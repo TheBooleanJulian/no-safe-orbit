@@ -100,7 +100,7 @@ func test_eleven_locations_and_chart_chains() -> void:
 	for id in ["jupiter", "saturn", "uranus", "neptune"]:
 		assert_true(p.buy_location(id) == "", "%s in turn" % id)
 	# A Frigate can pay for the longest jump.
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	var cost := p.jump_cost_kg("neptune", _catalog())
 	var t := p.vessel_tanks(_catalog())
 	print("    measured: Earth→Neptune %.0f M km, %.1f t of %.0f t + reserve %.0f t" % [Location.distance_m(Location.by_id("earth"), Location.by_id("neptune")) / 1e9,

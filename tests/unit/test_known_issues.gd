@@ -13,7 +13,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _template() -> ShipBlueprint:
 	var errors := PackedStringArray()
-	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	return BlueprintIO.load_file(TestCase.FRIGATE, errors)
 
 
 func _ship(id: StringName, pos: Vector3 = Vector3.ZERO, bp: ShipBlueprint = null) -> ShipState:

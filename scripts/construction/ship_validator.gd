@@ -271,6 +271,13 @@ static func _check_equipment(bp: ShipBlueprint, grid: ShipGrid, report: Report) 
 							"%s %s stands out %d cells from its face as a fin; the hull at %s is in the way." % [
 								def.display_name, e.id, def.length_cells, _cell_text(cell)], e.id)
 						break
+				if def.stands_out() > 1:
+					for cell in grid.standing_cells(i):
+						if grid.is_hull(cell):
+							_add(report, Severity.ERROR, &"equipment_blocked",
+								"%s %s is a %d×%d×%d part: it stands %d cells out from its face, and the hull at %s is in the way. Move it where it has the room." % [
+									def.display_name, e.id, def.size_cells, def.size_cells, def.stands_out(), def.stands_out(), _cell_text(cell)], e.id)
+							break
 				if def.kind == EquipmentDefinition.Kind.MAIN_ENGINE and e.face != &"aft":
 					var room: int = grid.room_at.get(e.cell, -1)
 					if room < 0 or bp.rooms[room].def_id != ENGINE_ROOM_ID:
@@ -381,6 +388,15 @@ static func _check_bus(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> voi
 	if outside > 0:
 		_add(report, Severity.WARNING, &"bus_outside_hull",
 			"%d power conduit cell%s outside the hull carry nothing." % [outside, "" if outside == 1 else "s"], "")
+	# A reactor or distribution unit joins the conduit run to any of its cells.
+	var joined := {}
+	for i in bp.equipment.size():
+		var def := grid.equipment_def(i)
+		if def != null and def.kind in [EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION]:
+			var keys: Array = grid.equipment_cells(i).map(func(c: Vector3i) -> String: return ShipBlueprint.cell_key(c)).filter(
+				func(k: String) -> bool: return bp.bus.has(k))
+			for k: String in keys:
+				joined[k] = keys
 	var net_of := {}
 	var nets := 0
 	for key: String in bp.bus:
@@ -389,16 +405,19 @@ static func _check_bus(bp: ShipBlueprint, grid: ShipGrid, report: Report) -> voi
 		net_of[key] = nets
 		var queue := [key]
 		while not queue.is_empty():
-			var cell := ShipBlueprint.parse_cell_key(queue.pop_front())
+			var at: String = queue.pop_front()
+			var cell := ShipBlueprint.parse_cell_key(at)
+			var next: Array = joined.get(at, []).duplicate()
 			for face: StringName in ShipGrid.FACE_NORMALS:
-				var nk := ShipBlueprint.cell_key(cell + ShipGrid.FACE_NORMALS[face])
+				next.append(ShipBlueprint.cell_key(cell + ShipGrid.FACE_NORMALS[face]))
+			for nk: String in next:
 				if bp.bus.has(nk) and not net_of.has(nk):
 					net_of[nk] = nets
 					queue.append(nk)
 		nets += 1
 	var net_for := func(i: int) -> int:
 		var def := grid.equipment_def(i)
-		var cells: Array = [bp.equipment[i].cell] if def.is_external() else grid.equipment_cells(i)
+		var cells: Array = grid.external_cells(i) if def.is_external() else grid.equipment_cells(i)
 		for c in cells:
 			if net_of.has(ShipBlueprint.cell_key(c)):
 				return net_of[ShipBlueprint.cell_key(c)]

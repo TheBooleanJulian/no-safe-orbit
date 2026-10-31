@@ -464,7 +464,7 @@ func _draw_external_equipment() -> void:
 		var e := bp.equipment[i]
 		if def == null or not def.is_external():
 			continue
-		var out := def.length_cells if ShipGrid.is_fin(def, e.rotation) else 0
+		var out := def.length_cells if ShipGrid.is_fin(def, e.rotation) else (def.size_cells if def.size_cells > 1 else 0)
 		for cell in editor.grid.external_cells(i):
 			if cell.y == deck:
 				_draw_face_marker(cell, e.face, def.color, 1.0, out, def)

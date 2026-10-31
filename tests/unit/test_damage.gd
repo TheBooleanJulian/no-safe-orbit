@@ -131,7 +131,7 @@ func test_wrecked_module_cuts_its_network_but_not_an_independent_one() -> void:
 
 # --- Pressure and access ---------------------------------------------------------
 
-func test_breach_seals_hatches_and_cuts_crew_access() -> void:
+func test_breach_seals_hatches_and_slows_crew_access() -> void:
 	var bp := _template()
 	var ship := _ship(bp)
 	var sys := ship.systems
@@ -140,7 +140,9 @@ func test_breach_seals_hatches_and_cuts_crew_access() -> void:
 	assert_true(sys.rooms[_room_index(bp, "r7")].pressurized and sys.rooms[_room_index(bp, "r9")].pressurized,
 		"bridge and quarters keep pressure behind sealed hatches")
 	var cut := sys.cut_off_rooms()
-	assert_true(cut.has("r9") and cut.has("r13") and not cut.has("r7"), "rooms behind the corridor cut off from the bridge: %s" % cut)
+	assert_true(cut.is_empty(), "nothing is cut off: the crew go through the vented corridor in suits: %s" % cut)
+	var path := sys.route(_room_index(bp, "r7"), _room_index(bp, "r9"))
+	assert_true(path.has(_room_index(bp, "r8")) and sys.route_time_s(path) > (path.size() - 1) * sys.room_transit_s(), "slower through it")
 	sys.destroy_hatch("h18")  # bridge ↔ corridor
 	assert_true(not sys.rooms[_room_index(bp, "r7")].pressurized, "bridge vents through its destroyed hatch")
 

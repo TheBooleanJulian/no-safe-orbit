@@ -7,7 +7,7 @@ extends TestCase
 
 
 func _view() -> ShipView:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, ConstructionCatalog.default_catalog())
 	var view := ShipView.new()
 	view.blueprint = bp

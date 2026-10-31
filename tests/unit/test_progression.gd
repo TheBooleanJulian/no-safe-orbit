@@ -14,7 +14,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _template() -> ShipBlueprint:
 	var errors := PackedStringArray()
-	return BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, errors)
+	return BlueprintIO.load_file(TestCase.FRIGATE, errors)
 
 
 func _ship(bp: ShipBlueprint, id: StringName = &"s", condition: Dictionary = {}) -> ShipState:
@@ -39,6 +39,7 @@ func _report(bp: ShipBlueprint, profile: PlayerProfile) -> ShipValidator.Report:
 func _with_gun(def_id: StringName) -> ShipBlueprint:
 	var bp := _template()
 	(bp.find("e41") as ShipBlueprint.PlacedEquipment).def_id = def_id
+	BlueprintFix.fit_spans(bp, _catalog())  # a bigger gun seated as a loaded design's is
 	return bp
 
 
@@ -205,7 +206,7 @@ func test_locked_blueprints_and_unowned_parts_are_errors() -> void:
 
 func test_mixed_gun_batteries_compile_per_mount() -> void:
 	var bp := _template()
-	bp.add_equipment(&"kinetic_cannon", Vector3i(4, 2, 4), &"dorsal")
+	bp.add_equipment(&"kinetic_cannon", Vector3i(4, 2, 6), &"dorsal")  # a free 2 × 2 patch
 	var r := ShipValidator.validate(bp, _catalog())
 	assert_true(not r.has_errors(), "an autocannon and a heavy kinetic cannon can share a ship:\n%s" % r.summary())
 	var cfg := ShipStats.compute(bp, ShipGrid.build(bp, _catalog())).to_ship_config("mixed")
@@ -547,7 +548,7 @@ func test_field_repair_needs_a_working_workshop_and_patches_over_time() -> void:
 	var e := s.start_field_repair()
 	assert_true(e != null and e.id == "e28", "crew patch the damaged reactor, not the destroyed engine")
 	# Damage control walk from the workshop r9 → corridor r8 → corridor r14 → reactor room r15.
-	var walk := 3.0 * CrewRoster.ROOM_TRANSIT_S
+	var walk := 3.0 * s.room_transit_s()
 	assert_near(s.repair_task.travel_s, walk, 1e-6, "walk from the workshop to the reactor room (s)")
 	var work := (ShipSystems.FIELD_REPAIR_SETUP_S + 15.0) / s.room_bonus(&"workshop")
 	assert_near(s.repair_task.total_s, walk + work, 1e-6, "repair time = walk + (setup + 1 s per hp) ÷ workshop size bonus (s)")
@@ -560,22 +561,28 @@ func test_field_repair_needs_a_working_workshop_and_patches_over_time() -> void:
 	assert_true(s.field_repair_target() == null, "nothing left to patch: the engine is destroyed")
 
 
-func test_field_repair_is_interrupted_when_the_workshop_vents() -> void:
+func test_field_repair_goes_on_in_suits_when_the_workshop_vents() -> void:
 	var ship := _ship(_with_workshop())
 	var s := ship.systems
 	s.damage_equipment(s.equipment_by_id("e28"), 30.0)
 	s.fires.clear()  # no fire to confuse the hit points
 	s.start_field_repair()
-	s.tick(ship, 1.0)
+	var task := s.repair_task
+	var full := s.workshop_rate()
 	var workshop := -1
 	for i in s.blueprint.rooms.size():
 		if s.blueprint.rooms[i].id == "r9":
 			workshop = i
 	s.breach_room(workshop)
+	s.suited = false
+	assert_near(s.workshop_rate(), full * ShipSystems.VACUUM_WORK_RATE, 1e-6, "the vented workshop works, in suits, at half pace")
+	# Past the walk, the work goes at the slower pace.
+	task.remaining_s = task.total_s - task.travel_s
+	var before := task.remaining_s
 	s.tick(ship, 1.0)
-	assert_true(s.repair_task == null and s.event_log[-1].contains("interrupted"), "breaching the workshop stops the repair: %s" % s.event_log[-1])
-	assert_near(s.equipment_by_id("e28").hp, 30.0, 1e-6, "no hit points restored (hp)")
-	assert_true(s.field_repair_block_reason().contains("workshop"), "and no new repair can start: %s" % s.field_repair_block_reason())
+	assert_true(s.repair_task == task, "the repair goes on (2026-10-31: it used to be interrupted)")
+	assert_near(before - task.remaining_s, ShipSystems.VACUUM_WORK_RATE, 1e-3, "one second of work in suits does half a second's (s)")
+	assert_true(s.field_repair_block_reason() != "workshop unpowered or cut off", "and the workshop still counts for new ones")
 
 
 # --- Enemies ------------------------------------------------------------------------

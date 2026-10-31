@@ -324,7 +324,7 @@ func _rally_to(r: int) -> void:
 		if path.is_empty():
 			continue
 		m.location = r
-		_arrive_in[m.id] = (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S
+		_arrive_in[m.id] = defender.route_time_s(path)
 
 
 ## Security fall back to the bridge; it takes them the walk to get there.
@@ -338,7 +338,7 @@ func _rally_defenders() -> void:
 		if path.is_empty():
 			continue
 		m.location = objective
-		_arrive_in[m.id] = (path.size() - 1) * CrewRoster.ROOM_TRANSIT_S
+		_arrive_in[m.id] = defender.route_time_s(path)
 
 
 func _capture() -> void:

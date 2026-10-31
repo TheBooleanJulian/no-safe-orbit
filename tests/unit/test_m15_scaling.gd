@@ -14,7 +14,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _bp(name: String) -> ShipBlueprint:
-	return BlueprintIO.load_file("res://data/blueprints/%s.json" % name, PackedStringArray())
+	return BlueprintIO.load_file("res://tests/fixtures/%s.json" % name, PackedStringArray())
 
 
 func _ship(bp: ShipBlueprint) -> ShipState:

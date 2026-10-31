@@ -46,6 +46,13 @@ const FREIGHT := ["medical supplies", "reactor spares", "colonist mail", "ice co
 const FREIGHT_M3 := Vector2i(20, 90)
 const FREIGHT_BASE_CREDITS := 120
 const FREIGHT_CREDITS_PER_M3 := 4.0
+## Bulk freight (2026-10-26, for the heavy freighter): offered to a hold of
+## BULK_HOLD_M3 or more, BULK_M3 but no more than BULK_HOLD_SHARE of it, at
+## BULK_CREDITS_PER_M3 — more a trip than any parcel, less a cubic metre.
+const BULK_HOLD_M3 := 1000.0
+const BULK_M3 := Vector2i(300, 3000)
+const BULK_HOLD_SHARE := 0.9
+const BULK_CREDITS_PER_M3 := 0.25
 ## One offer in this many is cargo (when another location is charted).
 const CARGO_ONE_IN := 3
 ## Retrieve contracts: what is lost, its size (m³), how often it is offered
@@ -96,16 +103,31 @@ static func giver(c: Dictionary) -> Dictionary:
 	return GIVERS[clampi(int(c.get("giver", 0)), 0, GIVERS.size() - 1)]
 
 
-## A cargo contract: freight from here to another charted station.
+## The hold (m³) of the active vessel's design, 0 without one.
+static func hold_m3(profile: PlayerProfile) -> float:
+	if profile.vessel == null or profile.vessel.blueprint == null:
+		return 0.0
+	var cat := ConstructionCatalog.default_catalog()
+	return ShipStats.compute(profile.vessel.blueprint, ShipGrid.build(profile.vessel.blueprint, cat)).cargo_m3
+
+
+## A cargo contract: freight from here to another charted station. Flying a
+## hold of BULK_HOLD_M3 or more (a freighter), every other cargo offer is a
+## bulk load sized to it, at a lower rate a cubic metre.
 static func _cargo_offer(profile: PlayerProfile, rng: RandomNumberGenerator, elsewhere: Array, i: int) -> Dictionary:
 	var to := Location.by_id(str(elsewhere[rng.randi() % elsewhere.size()]))
 	var what: String = FREIGHT[rng.randi() % FREIGHT.size()]
-	var m3 := rng.randi_range(FREIGHT_M3.x, FREIGHT_M3.y)
+	var hold := hold_m3(profile) if i % 2 == 0 else 0.0
+	var bulk := hold >= BULK_HOLD_M3
+	var m3 := rng.randi_range(BULK_M3.x, mini(BULK_M3.y, floori(hold * BULK_HOLD_SHARE))) if bulk \
+		else rng.randi_range(FREIGHT_M3.x, FREIGHT_M3.y)
 	var dv := JumpDrive.standard().delta_v(Location.distance_m(Location.by_id(profile.location), to))
-	var credits := roundi((FREIGHT_BASE_CREDITS + FREIGHT_CREDITS_PER_M3 * m3 * (1.0 + dv / 500.0)) / 10.0) * 10
+	var rate := BULK_CREDITS_PER_M3 if bulk else FREIGHT_CREDITS_PER_M3
+	var credits := roundi((FREIGHT_BASE_CREDITS + rate * m3 * (1.0 + dv / 500.0)) / 10.0) * 10
 	return {
 		"id": "c%d_%d" % [profile.sorties_flown(), i],
-		"kind": "cargo", "goal": int(MissionChain.Goal.DELIVER), "title": "Freight to the %s" % to.station_name,
+		"kind": "cargo", "goal": int(MissionChain.Goal.DELIVER),
+		"title": ("Bulk freight to the %s" if bulk else "Freight to the %s") % to.station_name,
 		"brief": "Carry %d m³ of %s to the %s — no fight: it pays when you arrive there with it aboard" % [m3, what, to.station_name],
 		"giver": 1, "location": to.id, "ships": 0, "threat": 0, "waves": 0, "freight_m3": m3, "freight": what,
 		"credits": credits, "parts": 0,

@@ -4,7 +4,7 @@ extends RefCounted
 ## share a colour — the palette text and the placed cells alike — and the
 ## shape tells them apart: a kinetic gun's triangle, a laser's star, a
 ## fighter's chevron, a drone's diamond, a missile's arrow and so on. Drawn
-## in the palette (an icon in the part's rarity colour) and on the deck.
+## in the palette (an icon in the colour of its name) and on the deck.
 
 const ICON_PX := 16
 
@@ -53,6 +53,9 @@ static func shape(def: EquipmentDefinition) -> PackedVector2Array:
 				Vector2(-0.2, 1)])
 		K.DOCKING_COLLAR:
 			return _circle(8, 0.95)
+		K.LANDING_LEG:  # a strut on a foot
+			return PackedVector2Array([Vector2(-0.2, -1), Vector2(0.2, -1), Vector2(0.2, 0.55), Vector2(0.9, 0.55), Vector2(0.9, 1),
+				Vector2(-0.9, 1), Vector2(-0.9, 0.55), Vector2(-0.2, 0.55)])
 	return _circle(4, 0.8)
 
 

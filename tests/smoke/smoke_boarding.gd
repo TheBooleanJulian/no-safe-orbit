@@ -89,7 +89,8 @@ func _run() -> void:
 	_check(link.state == DockingLink.State.SEVERED, "an intact target thrusts away and tears the gangway (%s)" % link.reason)
 
 	# Power out and its security dead: it can neither run nor hold the bridge.
-	target.systems.damage_equipment(target.systems.equipment_by_id("e28"), 1000.0)
+	for id in _ids_of(target.systems, EquipmentDefinition.Kind.REACTOR):
+		target.systems.damage_equipment(target.systems.equipment_by_id(id), 1000.0)
 	for m in target.systems.crew.members:
 		if m.role == CrewRoster.Role.SECURITY:
 			m.state = CrewRoster.State.DEAD
@@ -127,17 +128,24 @@ func _run() -> void:
 	_check(main.world.get_ship(Main.TARGET_ID) != target and main.world.link_for(Main.PLAYER_ID) == null,
 		"the prize leaves and the next contact is on its way")
 
-	# Turned round: the next enemy boards us once our guns are out.
+	# Turned round: the next enemy boards us once our guns are out. (The
+	# prize's wreck drifts out along our collar's line first: placed there,
+	# the hunter would ram it.)
+	await _wait(main, 120.0, func() -> bool: return main._wrecks.all(func(w: StringName) -> bool:
+		return not main.world.has_ship(w) or main.world.get_ship(w).position.distance_to(player.position) > 400.0))
 	var hunter := main.world.get_ship(Main.TARGET_ID)
 	_alongside(player, hunter, 120.0)
 	hunter.angular_velocity = Vector3.ZERO
 	main._target_arriving = false
 	main.set_target_hostile(true)
-	player.systems.damage_equipment(player.systems.equipment_by_id("e41"), 1000.0)
+	for id in _ids_of(player.systems, EquipmentDefinition.Kind.CANNON):
+		player.systems.damage_equipment(player.systems.equipment_by_id(id), 1000.0)
 	main._on_overview_command(&"defence", BoardingAction.Defence.COUNTERATTACK)
 	await _wait(main, 300.0, func() -> bool: return main.enemy_boarding() != null)
 	var theirs := main.enemy_boarding()
-	_check(theirs != null and theirs.link.attacker_id == Main.TARGET_ID, "a beaten player is boarded: the enemy docks and sends a party")
+	_check(theirs != null and theirs.link.attacker_id == Main.TARGET_ID, "a beaten player is boarded: the enemy docks and sends a party (us: %s; them: %s, wants to board %s, %.0f m off, link %s)" % [
+		player.systems.disabled_reason(), hunter.systems.disabled_reason(), GunneryAI.wants_to_board(hunter, player),
+		hunter.position.distance_to(player.position), main.world.link_for(Main.TARGET_ID)])
 	_check(theirs != null and theirs.defence == BoardingAction.Defence.COUNTERATTACK, "our chosen defence applies to their boarding")
 	_check(main.hud.warning_label.text.contains("BOARD") and main.hud.alert_queue.has(&"boarders"), "the HUD warns of enemy boarders (%s)" % main.hud.warning_label.text)
 	await _press("dock")
@@ -151,3 +159,13 @@ func _finish() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PlayerProfile.path + PlayerProfile.BACKUP_SUFFIX))
 	print("smoke_boarding: %d failure(s)" % _failures.size())
 	quit(1 if not _failures.is_empty() else 0)
+
+
+## The ids of a ship's systems of one kind (the prebuilt designs change;
+## the smoke test shouldn't depend on their part ids).
+func _ids_of(sys: ShipSystems, kind: EquipmentDefinition.Kind) -> Array[String]:
+	var out: Array[String] = []
+	for e in sys.equipment:
+		if e.def.kind == kind:
+			out.append(e.id)
+	return out

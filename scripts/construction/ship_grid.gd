@@ -300,13 +300,74 @@ static func external_step(face: StringName, rotation: int) -> Vector3i:
 	return Vector3i(0, 1, 0) if n.x != 0 else Vector3i(1, 0, 0)
 
 
-## Hull cells an external system's face spans (one for most systems).
+## The two directions across `face` a sized part's patch grows in from its
+## cell (always the positive axes).
+static func face_tangents(face: StringName) -> Array[Vector3i]:
+	var n: Vector3i = FACE_NORMALS.get(face, Vector3i.ZERO)
+	if n.x != 0:
+		return [Vector3i(0, 0, 1), Vector3i(0, 1, 0)]
+	if n.y != 0:
+		return [Vector3i(1, 0, 0), Vector3i(0, 0, 1)]
+	return [Vector3i(1, 0, 0), Vector3i(0, 1, 0)]
+
+
+## The hull cells a part of tier `size` covers on `face` from `cell`.
+static func patch(cell: Vector3i, face: StringName, size: int) -> Array[Vector3i]:
+	var t := face_tangents(face)
+	var out: Array[Vector3i] = []
+	for a in maxi(size, 1):
+		for b in maxi(size, 1):
+			out.append(cell + t[0] * a + t[1] * b)
+	return out
+
+
+## The space a part of tier `size` stands in off `face` (`out` cells — its
+## size unless it stands taller — from every cell of its patch): it must be
+## clear of hull.
+static func standing(cell: Vector3i, face: StringName, size: int, out_cells: int = 0) -> Array[Vector3i]:
+	var n: Vector3i = FACE_NORMALS.get(face, Vector3i.ZERO)
+	var out: Array[Vector3i] = []
+	for c in patch(cell, face, size):
+		for k in range(1, maxi(maxi(size, out_cells), 1) + 1):
+			out.append(c + n * k)
+	return out
+
+
+## The space external system `index` stands in (empty for a fin, which
+## has fin_cells, and for internal equipment).
+func standing_cells(index: int) -> Array[Vector3i]:
+	var e := blueprint.equipment[index]
+	var def := equipment_def(index)
+	if def == null or not def.is_external() or is_fin(def, e.rotation):
+		return []
+	return standing(e.cell, e.face, def.size_cells, def.stands_out())
+
+
+## Whether `def` fits on `face` at `cell`: its whole patch exterior, flat
+## hull faces none of which `taken` ("cell|face" -> true) holds, and the
+## space it stands in clear of hull.
+func can_mount(def: EquipmentDefinition, cell: Vector3i, face: StringName, taken: Dictionary = {}) -> bool:
+	if not def.allowed_faces.has(face):
+		return false
+	for c in patch(cell, face, def.size_cells):
+		if not is_exterior_face(c, face) or slope_faces(c).has(face) or taken.has("%s|%s" % [c, face]):
+			return false
+	for c in standing(cell, face, def.size_cells, def.stands_out()):
+		if is_hull(c):
+			return false
+	return true
+
+
+## Hull cells an external system's face spans (one for most systems; its
+## tier's N × N patch for a sized one).
 func external_cells(index: int) -> Array[Vector3i]:
 	var e := blueprint.equipment[index]
 	var def := equipment_def(index)
 	var out: Array[Vector3i] = [e.cell]
 	if def == null or is_fin(def, e.rotation):
 		return out
+	if def.size_cells > 1:
+		return patch(e.cell, e.face, def.size_cells)
 	var step := external_step(e.face, e.rotation)
 	for k in range(1, maxi(def.length_cells, 1)):
 		out.append(e.cell + step * k)

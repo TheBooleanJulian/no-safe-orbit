@@ -51,8 +51,8 @@ func _run() -> void:
 
 	_check(main.world != null and main.world.has_ship(&"player") and main.world.has_ship(&"target_01"),
 		"world spawned player and target")
-	_check(main.world.get_ship(&"player").config.display_name == "Frigate Mk I",
-		"player flies the Frigate Mk I template compiled from its blueprint")
+	_check(main.world.get_ship(&"player").config.display_name == armed.name,
+		"player flies the starting frigate (%s) compiled from its blueprint" % armed.name)
 	var player := main.world.get_ship(&"player")
 	var alt_km := main.world.altitude_of(player) / 1000.0
 	_check(absf(alt_km - 400.0) < 1.0, "player starts in Earth orbit at 400 km (actual %.2f km)" % alt_km)
@@ -157,13 +157,7 @@ func _run() -> void:
 	# Scaffolding: our hits above can knock out its only gun or cut the
 	# conduit feeding it (where they land depends on frame timing), and a
 	# gunless target can't shoot back. Restore both.
-	for e in tgt.systems.equipment:
-		if e.def.kind == EquipmentDefinition.Kind.CANNON and e.destroyed():
-			e.hp = e.max_hp
-	tgt.systems.bus_cut.clear()
-	tgt.systems.solve_power()
-	tgt.systems.invalidate()
-	tgt.config = tgt.systems.effective_config()
+	_restore(tgt)
 	if not main.target_hostile:
 		main.set_target_hostile(true, "smoke")
 	await process_frame
@@ -181,16 +175,18 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	_check(main.hud.details_label.is_visible_in_tree() and main.hud.orbit_label.is_visible_in_tree(), "J and O open the details and orbit panels")
-	player.systems.damage_equipment(player.systems.equipment_by_id("e28"), 50.0)
+	var reactor_id: String = _ids_of(player.systems, EquipmentDefinition.Kind.REACTOR)[0]
+	var gun_id: String = _ids_of(player.systems, EquipmentDefinition.Kind.CANNON)[0]
+	player.systems.damage_equipment(player.systems.equipment_by_id(reactor_id), 50.0)
 	await process_frame
 	await process_frame
-	_check(main.hud.alert_subject == "e28" or main.hud.alert_queue.all_active().any(func(a: AlertQueue.Alert) -> bool: return a.subject == "e28"),
+	_check(main.hud.alert_subject == reactor_id or main.hud.alert_queue.all_active().any(func(a: AlertQueue.Alert) -> bool: return a.subject == reactor_id),
 		"a critical reactor raises an alert naming it")
 	_press_action("tactical_overview")
 	await process_frame
 	await process_frame
 	var drawer := main.hud.overview
-	drawer.select_subject("e41")
+	drawer.select_subject(gun_id)
 	await process_frame
 	await process_frame
 	var off_button: Button
@@ -201,7 +197,7 @@ func _run() -> void:
 	if off_button != null:
 		off_button.pressed.emit()
 		await process_frame
-		_check(player.systems.switched_off.has("e41") and not player.systems.equipment_by_id("e41").powered, "the button switches the gun off (power rerouted)")
+		_check(player.systems.switched_off.has(gun_id) and not player.systems.equipment_by_id(gun_id).powered, "the button switches the gun off (power rerouted)")
 	# A click beside the open drawer must not grab the mouse back.
 	main.player_input.suppress_fire = false
 	var click := InputEventMouseButton.new()
@@ -243,7 +239,9 @@ func _run() -> void:
 	while not main.track.locked and main.world.sim_time - t_lock < 10.0:
 		await process_frame
 	# Play-test batch 11 (no T): a passive contact that sees our missile
-	# locked on to it turns hostile.
+	# locked on to it turns hostile. Rounds still in flight from above may have
+	# cut the conduit to its mast since: restore it, so it can see.
+	_restore(tgt)
 	main.set_target_hostile(false)
 	_check(not main.target_hostile, "passive again, for the missile check")
 	_press_action("fire_missile")
@@ -253,12 +251,15 @@ func _run() -> void:
 	_check(main.target_hostile, "it sees our missile locked on and turns hostile")
 	_check(main.track.locked and (main.salvo != null or main.combat_log.missiles_launched > 0) and main.hud.weapon_label.text.contains("MSL"),
 		"M fires a volley at the locked target (strip: %s)" % main.hud.weapon_label.text.get_slice("\n", 0))
+	# The frigate's own two racks and the one fitted above: a missile from each.
+	var racks := _ids_of(player.systems, EquipmentDefinition.Kind.MISSILE_LAUNCHER).size()
+	var load := racks * 12
 	await _run_until_sim_time(main, 1.0)
-	_check(main.salvo == null and player.systems.missiles_of() == 11 and main.combat_log.missiles_launched == 1,
-		"one press, one missile from the rack (%d launched, %d left)" % [main.combat_log.missiles_launched, player.systems.missiles_of()])
+	_check(main.salvo == null and player.systems.missiles_of() == load - racks and main.combat_log.missiles_launched == racks,
+		"one press, one missile from each of the %d racks (%d launched, %d left)" % [racks, main.combat_log.missiles_launched, player.systems.missiles_of()])
 	_press_action("fire_missile")
 	await _run_until_sim_time(main, 1.0)
-	_check(main.combat_log.missiles_launched == 2 and player.systems.missiles_of() == 10, "a second press fires the next")
+	_check(main.combat_log.missiles_launched == 2 * racks and player.systems.missiles_of() == load - 2 * racks, "a second press fires the next")
 	Main.launch_blueprint = null
 
 	print("smoke: %d failure(s)" % _failures.size())
@@ -267,9 +268,34 @@ func _run() -> void:
 	quit(1 if not _failures.is_empty() else 0)
 
 
+## Scaffolding: our hits can knock out the target's only gun or cut the
+## conduit feeding its systems (the conduit itself, or the hull it runs
+## through); put them back.
+func _restore(tgt: ShipState) -> void:
+	for e in tgt.systems.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.CANNON and e.destroyed():
+			e.hp = e.max_hp
+	for m in tgt.systems.modules:
+		if m.wrecked():
+			m.structure = m.max_structure
+	tgt.systems.bus_cut.clear()
+	tgt.systems.solve_power()
+	tgt.systems.invalidate()
+	tgt.config = tgt.systems.effective_config()
+
+
 func _press_action(action: String) -> void:
 	var ev := InputEventAction.new()
 	ev.action = action
 	ev.pressed = true
 	Input.parse_input_event(ev)
 
+
+## The ids of a ship's systems of one kind (the prebuilt designs change;
+## the smoke test shouldn't depend on their part ids).
+func _ids_of(sys: ShipSystems, kind: EquipmentDefinition.Kind) -> Array[String]:
+	var out: Array[String] = []
+	for e in sys.equipment:
+		if e.def.kind == kind:
+			out.append(e.id)
+	return out

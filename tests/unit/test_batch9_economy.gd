@@ -13,7 +13,7 @@ func _catalog() -> ConstructionCatalog:
 
 func _profile() -> PlayerProfile:
 	var p := PlayerProfile.new(5)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	return p
 
 
@@ -66,7 +66,7 @@ func test_the_newer_nodes_do_what_they_say() -> void:
 	assert_near(p.jump_dv("moon"), dv * 0.85, 0.01, "jump calibration III: −15 % Δv (m/s)")
 	assert_true(p.wages() == roundi(wages * 0.8) and p.training_cost(0) == roundi(train * 0.6), "welfare −20 %, academy II −40 %")
 	# Ship systems: sensors and point defence.
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var sys := ShipSystems.create(bp, grid, stats, stats.to_ship_config("s"))

@@ -27,16 +27,19 @@ func test_a_fin_folds_along_its_length() -> void:
 
 
 func test_engine_bells_grow_with_thrust() -> void:
+	# By thrust per face: a big engine's bell is sized by that, then scales
+	# with the part (its tier).
 	var sizes := []
-	for id: StringName in [&"main_engine_high_isp", &"main_engine", &"torch_drive", &"main_engine_high_thrust"]:
+	for id: StringName in [&"main_engine_high_isp", &"torch_drive", &"main_engine", &"main_engine_high_thrust"]:
 		var def: EquipmentDefinition = _catalog().equipment[id]
-		sizes.append([def.thrust_n, ShipModelBuilder.engine_bell(def.thrust_n)])
+		var per_face := def.thrust_n / (def.size_cells * def.size_cells)
+		sizes.append([per_face, ShipModelBuilder.engine_bell(per_face)])
 	var line := ", ".join(sizes.map(func(s: Array) -> String: return "%.0f kN %.2f × %.2f m" % [s[0] / 1000.0, s[1].x, s[1].y]))
 	print("    measured: mouth × length — %s" % line)
 	for k in range(1, sizes.size()):
 		assert_true(sizes[k][1].y > sizes[k - 1][1].y and sizes[k][1].x >= sizes[k - 1][1].x, "more thrust, a bigger bell")
 	assert_true(sizes[-1][1].x <= 1.5, "the mouth stays within a cell")
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var model := ShipModelBuilder.build(bp, grid, Vector3.ZERO)
 	var engines := bp.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool:

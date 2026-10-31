@@ -101,9 +101,10 @@ func _run() -> void:
 		"Esc drops the hatch tool, then opens the settings menu (the changelog shows this version, %s), then closes it" % Credits.version())
 
 	var ed := yard.editor
-	_check(ed.blueprint.name == "Frigate Mk I" and ed.report.issues.is_empty(), "shipyard opens on the Frigate Mk I template with no issues")
+	var starter := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	_check(ed.blueprint.name == starter.name and ed.report.issues.is_empty(), "shipyard opens on the starting frigate (%s) with no issues" % starter.name)
 	_check(yard.issue_text.get_parsed_text().contains("No issues") and not yard.launch_button.disabled, "validation panel reads clean; launch enabled")
-	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   1.2 t · 1020 rounds · 600 PD rounds"), "stats panel shows mass and magazine (point defence drawing from it)")
+	_check(yard.stats_label.text.contains("MASS") and yard.stats_label.text.contains("MAGAZINE   2.4 t · 2040 rounds · 1200 PD rounds"), "stats panel shows mass and magazine (point defence drawing from it)")
 	await process_frame
 	var side := yard._crew_tab.find_child("HallAndRest", true, false)
 	_check(yard._crew_tab.find_child("CrewBoard", true, false) != null and side != null and side.find_child("Hall", true, false) != null
@@ -175,22 +176,28 @@ func _run() -> void:
 	_check(yard.deck_editor.visible and not yard.iso_view.visible, "and back to top-down")
 	yard.change_deck(deck_was - yard.deck_editor.deck)
 
-	# Place a radiator on top of the fuselage with a real mouse click.
+	# Place a radiator on top of the hull with a real mouse click (the main
+	# deck's roof, port side, behind the bow).
 	var mass_before := ed.stats.mass_kg
 	var rejection_before := ed.stats.heat_rejection_kw
 	yard.select_palette("equipment", &"radiator")
-	yard.change_deck(1)  # deck 1 → 2
+	var target_cell := Vector3i(2, 1, 3)
+	yard.change_deck(target_cell.y - yard.deck_editor.deck)
 	await _frames(2)
-	var target_cell := Vector3i(3, 2, 6)
 	var center := yard.deck_editor.cell_rect(target_cell).get_center()
 	await _click(yard.deck_editor, center)
 	var placed := ed.item_at(target_cell, &"dorsal")
 	_check(placed != "", "mouse click placed a radiator on the dorsal face of %s" % target_cell)
+	# The frigate's radiators are on a coolant loop: a new one rejects heat
+	# once the loop is routed to it.
+	_check(ed.report.has_code(&"radiator_uncooled"), "the new radiator is off the coolant loop until it is routed")
+	ed.auto_route_coolant()
 	_check(absf(ed.stats.mass_kg - mass_before - 5000.0) < 1.0 and absf(ed.stats.heat_rejection_kw - rejection_before - 1200.0) < 1e-6,
 		"stats follow the edit: +5 t, +1200 kW rejection (2-cell panel) (got %+.0f kg, %+.0f kW)" % [ed.stats.mass_kg - mass_before, ed.stats.heat_rejection_kw - rejection_before])
 
 	# Right-click the reactor away: a warning, but launch is still allowed.
-	yard.apply_at(Vector3i(3, 0, 8), &"dorsal", MOUSE_BUTTON_RIGHT)
+	var reactor_cell: Vector3i = ed.blueprint.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool: return e.def_id == &"fusion_reactor")[0].cell
+	yard.apply_at(reactor_cell, &"dorsal", MOUSE_BUTTON_RIGHT)
 	await _frames(1)
 	_check(ed.report.has_code(&"power_deficit") and yard.issue_text.get_parsed_text().contains("Power deficit"),
 		"removing the reactor shows a power-deficit warning")
@@ -206,7 +213,7 @@ func _run() -> void:
 	# Ctrl+Z twice (real key events): takes back the nose and the reactor removal.
 	for i in 2:
 		await _key(KEY_Z, true)
-	_check(not ed.report.has_errors() and not ed.report.has_code(&"power_deficit") and ed.item_at(Vector3i(3, 2, 6), &"dorsal") != "",
+	_check(not ed.report.has_errors() and not ed.report.has_code(&"power_deficit") and ed.item_at(target_cell, &"dorsal") != "",
 		"two Ctrl+Z undo the last two edits, keeping the radiator")
 	await _key(KEY_Y, true)
 	_check(ed.report.has_code(&"power_deficit"), "Ctrl+Y redoes the reactor removal")
@@ -313,7 +320,7 @@ func _dealer_and_services(yard: Shipyard) -> void:
 	_check(not buy.disabled and buy.text.contains(str(price.total)), "the dealer offers the Cutter at %d cr (%s)" % [price.total, buy.text])
 	buy.pressed.emit()
 	await _frames(2)
-	_check(p.vessels.size() == ships + 1 and p.vessel.blueprint.name == "Cutter Mk I" and p.credits == 50 and yard.sections.current == "HANGAR",
+	_check(p.vessels.size() == ships + 1 and p.vessel.blueprint.name == BlueprintIO.load_file(cutter_path, PackedStringArray()).name and p.credits == 50 and yard.sections.current == "HANGAR",
 		"bought: the Cutter is the active vessel, paid in full, and the hangar shows it")
 	var parts := p.spare_parts
 	yard.sections.refresh()

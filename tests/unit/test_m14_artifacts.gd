@@ -10,7 +10,7 @@ const AU := CelestialFrame.AU_M
 
 func _profile() -> PlayerProfile:
 	var p := PlayerProfile.new(21)
-	p.ensure_vessel(BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray()))
+	p.ensure_vessel(BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray()))
 	return p
 
 

@@ -66,7 +66,7 @@ func test_new_hull_pieces() -> void:
 
 
 func test_hangars_need_a_way_out_and_their_doors_open() -> void:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var bay := -1
 	for i in bp.equipment.size():

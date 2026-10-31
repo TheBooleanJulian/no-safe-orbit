@@ -1,0 +1,573 @@
+{
+	"schema_version": 2,
+	"name": "Cutter Mk I",
+	"designer": "Earth Shipyard",
+	"modules": [
+		{
+			"id": "m1",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m2",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m3",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m4",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m5",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m6",
+			"def": "wedge_long",
+			"pos": [
+				0,
+				0,
+				-2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m7",
+			"def": "wedge_long",
+			"pos": [
+				1,
+				0,
+				-2
+			],
+			"rot": 0
+		}
+	],
+	"rooms": [
+		{
+			"id": "r8",
+			"def": "bridge",
+			"deck": 0,
+			"rect": [
+				0,
+				0,
+				2,
+				2
+			]
+		},
+		{
+			"id": "r9",
+			"def": "corridor",
+			"deck": 0,
+			"rect": [
+				0,
+				2,
+				2,
+				1
+			]
+		},
+		{
+			"id": "r10",
+			"def": "crew_quarters",
+			"deck": 0,
+			"rect": [
+				0,
+				3,
+				1,
+				2
+			]
+		},
+		{
+			"id": "r11",
+			"def": "life_support",
+			"deck": 0,
+			"rect": [
+				1,
+				3,
+				1,
+				2
+			]
+		},
+		{
+			"id": "r12",
+			"def": "magazine",
+			"deck": 0,
+			"rect": [
+				0,
+				5,
+				1,
+				1
+			]
+		},
+		{
+			"id": "r13",
+			"def": "corridor",
+			"deck": 0,
+			"rect": [
+				1,
+				5,
+				1,
+				1
+			]
+		},
+		{
+			"id": "r14",
+			"def": "reactor_room",
+			"deck": 0,
+			"rect": [
+				0,
+				6,
+				2,
+				2
+			]
+		},
+		{
+			"id": "r15",
+			"def": "engine_room",
+			"deck": 0,
+			"rect": [
+				0,
+				8,
+				2,
+				2
+			]
+		}
+	],
+	"hatches": [
+		{
+			"id": "h16",
+			"a": [
+				0,
+				0,
+				1
+			],
+			"b": [
+				0,
+				0,
+				2
+			]
+		},
+		{
+			"id": "h17",
+			"a": [
+				0,
+				0,
+				2
+			],
+			"b": [
+				0,
+				0,
+				3
+			]
+		},
+		{
+			"id": "h18",
+			"a": [
+				1,
+				0,
+				2
+			],
+			"b": [
+				1,
+				0,
+				3
+			]
+		},
+		{
+			"id": "h19",
+			"a": [
+				1,
+				0,
+				4
+			],
+			"b": [
+				1,
+				0,
+				5
+			]
+		},
+		{
+			"id": "h20",
+			"a": [
+				1,
+				0,
+				5
+			],
+			"b": [
+				0,
+				0,
+				5
+			]
+		},
+		{
+			"id": "h21",
+			"a": [
+				1,
+				0,
+				5
+			],
+			"b": [
+				1,
+				0,
+				6
+			]
+		},
+		{
+			"id": "h22",
+			"a": [
+				1,
+				0,
+				7
+			],
+			"b": [
+				1,
+				0,
+				8
+			]
+		}
+	],
+	"equipment": [
+		{
+			"id": "e23",
+			"def": "power_distribution_unit",
+			"cell": [
+				0,
+				0,
+				0
+			]
+		},
+		{
+			"id": "e24",
+			"def": "fusion_reactor",
+			"cell": [
+				0,
+				0,
+				6
+			]
+		},
+		{
+			"id": "e25",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				0,
+				8
+			]
+		},
+		{
+			"id": "e26",
+			"def": "main_engine",
+			"cell": [
+				0,
+				0,
+				9
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e27",
+			"def": "main_engine",
+			"cell": [
+				1,
+				0,
+				9
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e28",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				1
+			],
+			"face": "port"
+		},
+		{
+			"id": "e29",
+			"def": "rcs_block",
+			"cell": [
+				1,
+				0,
+				1
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e30",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				8
+			],
+			"face": "port"
+		},
+		{
+			"id": "e31",
+			"def": "rcs_block",
+			"cell": [
+				1,
+				0,
+				8
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e32",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				0
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e33",
+			"def": "rcs_block",
+			"cell": [
+				1,
+				0,
+				9
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e34",
+			"def": "autocannon",
+			"cell": [
+				0,
+				0,
+				2
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e35",
+			"def": "autocannon",
+			"cell": [
+				1,
+				0,
+				2
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e36",
+			"def": "radiator_long",
+			"cell": [
+				0,
+				0,
+				5
+			],
+			"face": "port"
+		},
+		{
+			"id": "e37",
+			"def": "radiator_long",
+			"cell": [
+				1,
+				0,
+				5
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e38",
+			"def": "docking_collar",
+			"cell": [
+				1,
+				0,
+				4
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e39",
+			"def": "grapple_arm",
+			"cell": [
+				1,
+				0,
+				3
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e40",
+			"def": "sensor_mast",
+			"cell": [
+				1,
+				0,
+				0
+			],
+			"face": "dorsal"
+		}
+	],
+	"bus": [
+		[
+			0,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			1
+		],
+		[
+			0,
+			0,
+			2
+		],
+		[
+			0,
+			0,
+			3
+		],
+		[
+			0,
+			0,
+			8
+		],
+		[
+			0,
+			0,
+			9
+		],
+		[
+			1,
+			0,
+			0
+		],
+		[
+			1,
+			0,
+			1
+		],
+		[
+			1,
+			0,
+			2
+		],
+		[
+			1,
+			0,
+			3
+		],
+		[
+			1,
+			0,
+			4
+		],
+		[
+			1,
+			0,
+			5
+		],
+		[
+			1,
+			0,
+			6
+		],
+		[
+			1,
+			0,
+			7
+		],
+		[
+			1,
+			0,
+			8
+		],
+		[
+			1,
+			0,
+			9
+		]
+	],
+	"coolant": [
+		[
+			0,
+			0,
+			0
+		],
+		[
+			0,
+			0,
+			1
+		],
+		[
+			0,
+			0,
+			2
+		],
+		[
+			0,
+			0,
+			3
+		],
+		[
+			0,
+			0,
+			4
+		],
+		[
+			0,
+			0,
+			5
+		],
+		[
+			0,
+			0,
+			6
+		],
+		[
+			0,
+			0,
+			7
+		],
+		[
+			1,
+			0,
+			6
+		],
+		[
+			1,
+			0,
+			7
+		]
+	]
+}

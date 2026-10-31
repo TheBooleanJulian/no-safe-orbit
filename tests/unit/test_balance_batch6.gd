@@ -14,7 +14,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _ship(id: StringName, pos: Vector3) -> ShipState:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var cfg := stats.to_ship_config(String(id))
@@ -68,7 +68,7 @@ func test_enemy_leads_and_wingmen_fire_slower() -> void:
 
 
 func test_wingmen_are_fitted_as_for_earlier_missions() -> void:
-	var t := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var t := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	assert_true(EnemyFactory.kit_mission(7, 0) == 7 and EnemyFactory.kit_mission(7, 1) == 5 and EnemyFactory.kit_mission(7, 2) == 4,
 		"lead 7, wingmen 5 and 4")
 	assert_true(EnemyFactory.kit_mission(2, 2) == 1, "never below mission 1")

@@ -14,7 +14,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _armed(launchers: Array) -> ShipBlueprint:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var rng := RandomNumberGenerator.new()
 	for id: StringName in launchers:
 		EnemyFactory._fit_launcher(bp, _catalog(), id, rng)
@@ -33,7 +33,7 @@ func _ship(id: StringName, bp: ShipBlueprint, pos: Vector3 = Vector3.ZERO) -> Sh
 func _duel(launchers: Array) -> WorldSimulation:
 	var world := WorldSimulation.new(DT)
 	world.add_ship(_ship(&"a", _armed(launchers)))
-	world.add_ship(_ship(&"b", BlueprintIO.load_file("res://data/blueprints/cutter_mk1.json", PackedStringArray()), Vector3(0, 0, -6000)))
+	world.add_ship(_ship(&"b", BlueprintIO.load_file("res://tests/fixtures/cutter_mk1.json", PackedStringArray()), Vector3(0, 0, -6000)))
 	return world
 
 

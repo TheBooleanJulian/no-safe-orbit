@@ -1,0 +1,1644 @@
+{
+	"schema_version": 2,
+	"name": "Frigate Mk I",
+	"designer": "Template",
+	"modules": [
+		{
+			"id": "m54",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m55",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m56",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m57",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m58",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m59",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m60",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m61",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m62",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m63",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m64",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m65",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m66",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m67",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m68",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m69",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m70",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m71",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m72",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m73",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m74",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m75",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m76",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m77",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m78",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m79",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m80",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m81",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m82",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m83",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m84",
+			"def": "hull_block",
+			"pos": [
+				2,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m85",
+			"def": "hull_block",
+			"pos": [
+				4,
+				2,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m86",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m87",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m88",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m89",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				12
+			],
+			"rot": 0
+		},
+		{
+			"id": "m90",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m91",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m92",
+			"def": "hull_block",
+			"pos": [
+				2,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m93",
+			"def": "hull_block",
+			"pos": [
+				4,
+				1,
+				14
+			],
+			"rot": 0
+		},
+		{
+			"id": "m94",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m95",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m96",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m97",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m98",
+			"def": "hull_block",
+			"pos": [
+				0,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m99",
+			"def": "hull_block",
+			"pos": [
+				0,
+				1,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m100",
+			"def": "hull_block",
+			"pos": [
+				6,
+				0,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m101",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				6
+			],
+			"rot": 0
+		},
+		{
+			"id": "m102",
+			"def": "hull_block",
+			"pos": [
+				6,
+				0,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m103",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				8
+			],
+			"rot": 0
+		},
+		{
+			"id": "m104",
+			"def": "hull_block",
+			"pos": [
+				6,
+				0,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m105",
+			"def": "hull_block",
+			"pos": [
+				6,
+				1,
+				10
+			],
+			"rot": 0
+		},
+		{
+			"id": "m106",
+			"def": "wedge_short",
+			"pos": [
+				2,
+				1,
+				-1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m107",
+			"def": "wedge_short",
+			"pos": [
+				2,
+				0,
+				-1
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m108",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				1,
+				-1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m109",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				0,
+				-1
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m110",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				1,
+				-1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m111",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				0,
+				-1
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m112",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				1,
+				-1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m113",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				0,
+				-1
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m114",
+			"def": "wedge_long",
+			"pos": [
+				2,
+				2,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m115",
+			"def": "wedge_long",
+			"pos": [
+				3,
+				2,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m116",
+			"def": "wedge_long",
+			"pos": [
+				4,
+				2,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m117",
+			"def": "wedge_long",
+			"pos": [
+				5,
+				2,
+				2
+			],
+			"rot": 0
+		}
+	],
+	"rooms": [
+		{
+			"id": "r7",
+			"def": "bridge",
+			"deck": 1,
+			"rect": [
+				2,
+				0,
+				4,
+				3
+			]
+		},
+		{
+			"id": "r8",
+			"def": "corridor",
+			"deck": 1,
+			"rect": [
+				3,
+				3,
+				2,
+				10
+			]
+		},
+		{
+			"id": "r9",
+			"def": "crew_quarters",
+			"deck": 1,
+			"rect": [
+				2,
+				4,
+				1,
+				4
+			]
+		},
+		{
+			"id": "r10",
+			"def": "crew_quarters",
+			"deck": 1,
+			"rect": [
+				5,
+				4,
+				1,
+				4
+			]
+		},
+		{
+			"id": "r11",
+			"def": "life_support",
+			"deck": 1,
+			"rect": [
+				2,
+				8,
+				1,
+				4
+			]
+		},
+		{
+			"id": "r12",
+			"def": "magazine",
+			"deck": 1,
+			"rect": [
+				5,
+				8,
+				1,
+				4
+			]
+		},
+		{
+			"id": "r13",
+			"def": "engine_room",
+			"deck": 1,
+			"rect": [
+				2,
+				13,
+				4,
+				2
+			]
+		},
+		{
+			"id": "r14",
+			"def": "hangar",
+			"deck": 0,
+			"rect": [
+				2,
+				4,
+				4,
+				4
+			]
+		},
+		{
+			"id": "r15",
+			"def": "reactor_room",
+			"deck": 0,
+			"rect": [
+				2,
+				8,
+				4,
+				3
+			]
+		},
+		{
+			"id": "r16",
+			"def": "cargo_hold",
+			"deck": 0,
+			"rect": [
+				0,
+				6,
+				2,
+				6
+			]
+		},
+		{
+			"id": "r17",
+			"def": "cargo_hold",
+			"deck": 0,
+			"rect": [
+				6,
+				6,
+				2,
+				6
+			]
+		}
+	],
+	"hatches": [
+		{
+			"id": "h18",
+			"a": [
+				3,
+				1,
+				2
+			],
+			"b": [
+				3,
+				1,
+				3
+			]
+		},
+		{
+			"id": "h19",
+			"a": [
+				3,
+				1,
+				5
+			],
+			"b": [
+				2,
+				1,
+				5
+			]
+		},
+		{
+			"id": "h20",
+			"a": [
+				4,
+				1,
+				5
+			],
+			"b": [
+				5,
+				1,
+				5
+			]
+		},
+		{
+			"id": "h21",
+			"a": [
+				3,
+				1,
+				9
+			],
+			"b": [
+				2,
+				1,
+				9
+			]
+		},
+		{
+			"id": "h22",
+			"a": [
+				4,
+				1,
+				9
+			],
+			"b": [
+				5,
+				1,
+				9
+			]
+		},
+		{
+			"id": "h23",
+			"a": [
+				3,
+				1,
+				12
+			],
+			"b": [
+				3,
+				1,
+				13
+			]
+		},
+		{
+			"id": "h24",
+			"a": [
+				3,
+				1,
+				6
+			],
+			"b": [
+				3,
+				0,
+				6
+			]
+		},
+		{
+			"id": "h25",
+			"a": [
+				3,
+				0,
+				7
+			],
+			"b": [
+				3,
+				0,
+				8
+			]
+		},
+		{
+			"id": "h26",
+			"a": [
+				2,
+				0,
+				6
+			],
+			"b": [
+				1,
+				0,
+				6
+			]
+		},
+		{
+			"id": "h27",
+			"a": [
+				5,
+				0,
+				6
+			],
+			"b": [
+				6,
+				0,
+				6
+			]
+		}
+	],
+	"equipment": [
+		{
+			"id": "e28",
+			"def": "fusion_reactor",
+			"cell": [
+				3,
+				0,
+				8
+			]
+		},
+		{
+			"id": "e29",
+			"def": "main_engine",
+			"cell": [
+				3,
+				0,
+				15
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e30",
+			"def": "main_engine",
+			"cell": [
+				4,
+				0,
+				15
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e31",
+			"def": "main_engine",
+			"cell": [
+				3,
+				1,
+				15
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e32",
+			"def": "main_engine",
+			"cell": [
+				4,
+				1,
+				15
+			],
+			"face": "aft"
+		},
+		{
+			"id": "e33",
+			"def": "rcs_block",
+			"cell": [
+				2,
+				1,
+				1
+			],
+			"face": "port"
+		},
+		{
+			"id": "e34",
+			"def": "rcs_block",
+			"cell": [
+				5,
+				1,
+				1
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e35",
+			"def": "rcs_block",
+			"cell": [
+				3,
+				1,
+				1
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e36",
+			"def": "rcs_block",
+			"cell": [
+				4,
+				0,
+				1
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e37",
+			"def": "rcs_block",
+			"cell": [
+				2,
+				1,
+				13
+			],
+			"face": "port"
+		},
+		{
+			"id": "e38",
+			"def": "rcs_block",
+			"cell": [
+				5,
+				1,
+				13
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e39",
+			"def": "rcs_block",
+			"cell": [
+				3,
+				1,
+				13
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e40",
+			"def": "rcs_block",
+			"cell": [
+				4,
+				0,
+				13
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e41",
+			"def": "autocannon",
+			"cell": [
+				3,
+				2,
+				4
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e42",
+			"def": "radiator_long",
+			"cell": [
+				2,
+				2,
+				9
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e44",
+			"def": "radiator_long",
+			"cell": [
+				2,
+				0,
+				11
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e46",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				0,
+				7
+			]
+		},
+		{
+			"id": "e47",
+			"def": "propellant_tank",
+			"cell": [
+				0,
+				0,
+				9
+			]
+		},
+		{
+			"id": "e48",
+			"def": "propellant_tank",
+			"cell": [
+				6,
+				0,
+				7
+			]
+		},
+		{
+			"id": "e49",
+			"def": "propellant_tank",
+			"cell": [
+				6,
+				0,
+				9
+			]
+		},
+		{
+			"id": "e50",
+			"def": "docking_collar",
+			"cell": [
+				2,
+				1,
+				5
+			],
+			"face": "port"
+		},
+		{
+			"id": "e51",
+			"def": "fighter_bay",
+			"cell": [
+				3,
+				0,
+				5
+			]
+		},
+		{
+			"id": "e52",
+			"def": "drone_rack",
+			"cell": [
+				4,
+				0,
+				5
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e53",
+			"def": "sensor_mast",
+			"cell": [
+				4,
+				2,
+				8
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e118",
+			"def": "power_distribution_unit",
+			"cell": [
+				5,
+				0,
+				10
+			]
+		},
+		{
+			"id": "e119",
+			"def": "point_defence",
+			"cell": [
+				5,
+				2,
+				5
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e120",
+			"def": "point_defence",
+			"cell": [
+				3,
+				0,
+				2
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e121",
+			"def": "grapple_arm",
+			"cell": [
+				0,
+				0,
+				6
+			],
+			"face": "port"
+		}
+	],
+	"armor": [
+		[
+			2,
+			0,
+			-1,
+			"ventral",
+			40
+		],
+		[
+			2,
+			1,
+			-1,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			10,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			11,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			2,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			3,
+			"dorsal",
+			40
+		],
+		[
+			2,
+			2,
+			4,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			5,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			6,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			7,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			8,
+			"port",
+			40
+		],
+		[
+			2,
+			2,
+			9,
+			"port",
+			40
+		],
+		[
+			3,
+			0,
+			-1,
+			"ventral",
+			40
+		],
+		[
+			3,
+			1,
+			-1,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			2,
+			"dorsal",
+			40
+		],
+		[
+			3,
+			2,
+			3,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			0,
+			-1,
+			"ventral",
+			40
+		],
+		[
+			4,
+			1,
+			-1,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			2,
+			2,
+			"dorsal",
+			40
+		],
+		[
+			4,
+			2,
+			3,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			0,
+			-1,
+			"ventral",
+			40
+		],
+		[
+			5,
+			1,
+			-1,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			10,
+			"starboard",
+			40
+		],
+		[
+			5,
+			2,
+			11,
+			"starboard",
+			40
+		],
+		[
+			5,
+			2,
+			2,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			3,
+			"dorsal",
+			40
+		],
+		[
+			5,
+			2,
+			4,
+			"starboard",
+			40
+		],
+		[
+			5,
+			2,
+			5,
+			"starboard",
+			40
+		],
+		[
+			5,
+			2,
+			6,
+			"starboard",
+			40
+		],
+		[
+			5,
+			2,
+			7,
+			"starboard",
+			40
+		],
+		[
+			5,
+			2,
+			8,
+			"starboard",
+			40
+		],
+		[
+			5,
+			2,
+			9,
+			"starboard",
+			40
+		]
+	],
+	"bus": [
+		[
+			0,
+			0,
+			6
+		],
+		[
+			0,
+			1,
+			6
+		],
+		[
+			1,
+			1,
+			6
+		],
+		[
+			2,
+			1,
+			1
+		],
+		[
+			2,
+			1,
+			13
+		],
+		[
+			2,
+			1,
+			2
+		],
+		[
+			2,
+			1,
+			3
+		],
+		[
+			2,
+			1,
+			4
+		],
+		[
+			2,
+			1,
+			5
+		],
+		[
+			2,
+			1,
+			6
+		],
+		[
+			2,
+			1,
+			7
+		],
+		[
+			2,
+			1,
+			8
+		],
+		[
+			3,
+			0,
+			15
+		],
+		[
+			3,
+			0,
+			2
+		],
+		[
+			3,
+			1,
+			1
+		],
+		[
+			3,
+			1,
+			13
+		],
+		[
+			3,
+			1,
+			15
+		],
+		[
+			3,
+			1,
+			2
+		],
+		[
+			3,
+			1,
+			4
+		],
+		[
+			3,
+			1,
+			8
+		],
+		[
+			3,
+			2,
+			4
+		],
+		[
+			4,
+			0,
+			1
+		],
+		[
+			4,
+			0,
+			13
+		],
+		[
+			4,
+			0,
+			14
+		],
+		[
+			4,
+			0,
+			15
+		],
+		[
+			4,
+			0,
+			5
+		],
+		[
+			4,
+			0,
+			6
+		],
+		[
+			4,
+			0,
+			7
+		],
+		[
+			4,
+			0,
+			8
+		],
+		[
+			4,
+			0,
+			9
+		],
+		[
+			4,
+			1,
+			1
+		],
+		[
+			4,
+			1,
+			13
+		],
+		[
+			4,
+			1,
+			15
+		],
+		[
+			4,
+			1,
+			8
+		],
+		[
+			4,
+			2,
+			8
+		],
+		[
+			5,
+			0,
+			10
+		],
+		[
+			5,
+			0,
+			11
+		],
+		[
+			5,
+			0,
+			12
+		],
+		[
+			5,
+			0,
+			13
+		],
+		[
+			5,
+			0,
+			5
+		],
+		[
+			5,
+			0,
+			7
+		],
+		[
+			5,
+			0,
+			9
+		],
+		[
+			5,
+			1,
+			1
+		],
+		[
+			5,
+			1,
+			13
+		],
+		[
+			5,
+			1,
+			5
+		],
+		[
+			5,
+			1,
+			7
+		],
+		[
+			5,
+			2,
+			5
+		]
+	]
+}

@@ -5,6 +5,9 @@ extends RefCounted
 ## slid along its axis, or turned, to the nearest spot where every cell is a
 ## free, flat exterior face. If nothing fits it stays put (the validator
 ## then says so). Returns what it moved.
+## A sized part (2026-10-26: medium and large parts cover 2 × 2 / 3 × 3
+## faces and stand that far out) that no longer fits where it was is moved
+## to the nearest anchor whose patch still covers its old cell.
 ## Armour plates left on faces a later deck or module covered (or on cells
 ## that are no longer hull) are dropped by prune_plates.
 
@@ -13,6 +16,11 @@ static func fit_spans(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Packed
 	var grid := ShipGrid.build(bp, catalog)
 	for i in bp.equipment.size():
 		var def := grid.equipment_def(i)
+		if def != null and def.is_external() and def.size_cells > 1:
+			if _fit_size(grid, bp, i):
+				moved.append(bp.equipment[i].id)
+				grid = ShipGrid.build(bp, catalog)
+			continue
 		if def == null or not def.is_external() or def.length_cells <= 1 or ShipGrid.is_fin(def, bp.equipment[i].rotation):
 			continue
 		if _span_ok(grid, bp, i, bp.equipment[i].cell, bp.equipment[i].rotation):
@@ -32,6 +40,32 @@ static func fit_spans(bp: ShipBlueprint, catalog: ConstructionCatalog) -> Packed
 			moved.append(e.id)
 			grid = ShipGrid.build(bp, catalog)
 	return moved
+
+
+## Moves sized part `index` if it doesn't fit and another anchor covering
+## its cell does; true if it moved.
+static func _fit_size(grid: ShipGrid, bp: ShipBlueprint, index: int) -> bool:
+	var e := bp.equipment[index]
+	var def := grid.equipment_def(index)
+	var taken := {}
+	for j in bp.equipment.size():
+		var other := grid.equipment_def(j)
+		if j != index and other != null and other.is_external():
+			for c in grid.external_cells(j):
+				taken["%s|%s" % [c, bp.equipment[j].face]] = true
+	if grid.can_mount(def, e.cell, e.face, taken):
+		return false
+	var t := ShipGrid.face_tangents(e.face)
+	for reach in range(1, 2 * def.size_cells - 1):
+		for a in def.size_cells:
+			var b := reach - a
+			if b < 0 or b >= def.size_cells:
+				continue
+			var anchor: Vector3i = e.cell - t[0] * a - t[1] * b
+			if grid.can_mount(def, anchor, e.face, taken):
+				e.cell = anchor
+				return true
+	return false
 
 
 static func _span_ok(grid: ShipGrid, bp: ShipBlueprint, index: int, start: Vector3i, rot: int) -> bool:

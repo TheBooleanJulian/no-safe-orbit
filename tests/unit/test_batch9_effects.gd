@@ -11,7 +11,7 @@ func _catalog() -> ConstructionCatalog:
 
 
 func _view_and_systems() -> Array:
-	var bp := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var bp := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var grid := ShipGrid.build(bp, _catalog())
 	var stats := ShipStats.compute(bp, grid)
 	var sys := ShipSystems.create(bp, grid, stats, stats.to_ship_config("e"))

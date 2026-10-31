@@ -12,6 +12,7 @@ mount = 1
 footprint_cells = Vector2i(1, 1)
 allowed_room_roles = Array[StringName]([])
 allowed_faces = Array[StringName]([&"fore", &"port", &"starboard", &"dorsal", &"ventral"])
+size_cells = 3
 mass_kg = 20000.0
 power_kw = -4000.0
 heat_kw = 4000.0

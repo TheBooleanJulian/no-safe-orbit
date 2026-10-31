@@ -142,6 +142,8 @@ func _run() -> void:
 	_check(not profile.vessel.wing.has(fighter.rack_id), "replaced at the station")
 	# Its pilot was lost with it (play-test batch 9): post a new one.
 	var general := profile.vessel.crew.find_custom(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.GENERAL)
+	if general < 0:  # a hull whose berths are all specialists: a security hand flies it
+		general = profile.vessel.crew.find_custom(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.SECURITY)
 	var pilots_left := profile.vessel.crew.filter(func(c: Dictionary) -> bool: return int(c.role) == CrewRoster.Role.PILOT).size()
 	_check(pilots_left == 0, "the lost fighter's pilot was lost with it")
 	profile.set_crew_role(general, CrewRoster.Role.PILOT)
@@ -152,7 +154,8 @@ func _run() -> void:
 	for c in main.player_wing.crafts:
 		if not c.is_drone():
 			fighter = c
-	_check(fighter.status == AirWing.Status.DOCKED and main.player_wing.launch(main.world, fighter) == "", "the replacement launches")
+	var why := main.player_wing.launch(main.world, fighter) if fighter.status == AirWing.Status.DOCKED else "not docked"
+	_check(why == "", "the replacement launches (%s)" % why)
 	# Play-test batch 9: G's beacon reach follows the wing (a salvage drone carries it 8 km).
 	var has_salvage := main.player_wing.crafts.any(func(c: AirWing.Craft) -> bool: return c.config.craft_role == &"salvage")
 	_check(main.beacon_reach_m() == (AirWing.SALVAGE_RANGE_M if has_salvage else Salvage.BEACON_RANGE_M),

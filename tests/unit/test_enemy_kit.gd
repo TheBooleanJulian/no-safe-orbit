@@ -11,7 +11,7 @@ const KIT := {&"laser_turret": EnemyFactory.LASER_FROM_MISSION, &"laser_drone_ra
 
 func test_enemies_field_the_newer_kit_from_their_missions() -> void:
 	var cat := ConstructionCatalog.default_catalog()
-	var tpl := BlueprintIO.load_file(BlueprintIO.DEFAULT_TEMPLATE, PackedStringArray())
+	var tpl := BlueprintIO.load_file(TestCase.FRIGATE, PackedStringArray())
 	var first := {}
 	for m in range(1, 13):
 		for v in 3:

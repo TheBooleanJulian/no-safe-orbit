@@ -60,6 +60,9 @@ var _center := Vector3.ZERO
 var _yaw := 2.4
 var _pitch := -0.45
 var _distance := 90.0
+## The builder's view frames the hull to its own shape (_fit_distance); the
+## wheel scales that.
+var _zoom := 1.0
 var _extent := 40.0
 var _iso_turn := 0
 var _idle := true
@@ -70,6 +73,7 @@ var _hover_face: StringName = &""
 
 func _ready() -> void:
 	stretch = true
+	resized.connect(_update_camera)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_viewport = SubViewport.new()
 	_viewport.own_world_3d = true
@@ -341,8 +345,10 @@ func _gui_input(event: InputEvent) -> void:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_distance *= 0.9
+			_zoom *= 0.9
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_distance *= 1.1
+			_zoom *= 1.1
 		_update_camera()
 
 
@@ -368,7 +374,27 @@ func _update_camera() -> void:
 		return
 	_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	var d := Vector3(sin(_yaw) * cos(_pitch), -sin(_pitch), cos(_yaw) * cos(_pitch))
-	_camera.transform = Transform3D(Basis.looking_at(-d, Vector3.UP), d * _distance)
+	var basis := Basis.looking_at(-d, Vector3.UP)
+	if not still and not berth and _editor != null:
+		_distance = _fit_distance(basis) * _zoom
+	_camera.transform = Transform3D(basis, d * _distance)
+
+
+## Far enough that the hull's box, as this camera sees it, fits the pane
+## both ways (a long hull seen from three-quarters is framed by its
+## projected length and height, not by a sphere round its diagonal).
+func _fit_distance(basis: Basis) -> float:
+	var half := _editor.grid.hull_bounds_m().size * 0.5
+	var aspect := size.x / maxf(size.y, 1.0) if size.y > 0.0 else 1.0
+	var tan_v := tan(deg_to_rad(_camera.fov) * 0.5)
+	var tan_h := tan_v * aspect
+	var need := 0.0
+	for k in 8:
+		var corner := Vector3(half.x * (1 if k & 1 else -1), half.y * (1 if k & 2 else -1), half.z * (1 if k & 4 else -1))
+		var depth := corner.dot(basis.z)  # towards the camera
+		need = maxf(need, absf(corner.dot(basis.x)) / tan_h + depth)
+		need = maxf(need, absf(corner.dot(basis.y)) / tan_v + depth)
+	return maxf(need * 1.08, 30.0)
 
 
 # --- Isometric editing ------------------------------------------------------------

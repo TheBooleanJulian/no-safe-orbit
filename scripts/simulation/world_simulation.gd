@@ -913,7 +913,7 @@ func _update_cannon(ship: ShipState, input: ShipControlInput, spawned: Array[Pro
 		var dir_body := ship.turret_dirs[k]
 		var muzzle_body := muzzles[k]
 		if cfg.is_turret(k):
-			muzzle_body += cfg.cannon_mount_normals_body[k] * TURRET_HEIGHT_M
+			muzzle_body += cfg.cannon_mount_normals_body[k] * cfg.turret_height(k)
 			var spread := deg_to_rad(cannon.dispersion_deg) + cfg.cannon_extra_dispersion_rad
 			if spread > 0.0:
 				dir_body = _scatter(dir_body, spread)
@@ -1223,7 +1223,7 @@ func _train_turret(ship: ShipState, input: ShipControlInput, k: int, inv: Quater
 		ship.turret_dirs[k] = Vector3.FORWARD
 		return ShipState.Turret.READY
 	var n := cfg.cannon_mount_normals_body[k]
-	var muzzle := cfg.cannon_muzzles_body[k] + n * TURRET_HEIGHT_M
+	var muzzle := cfg.cannon_muzzles_body[k] + n * cfg.turret_height(k)
 	var gun := cfg.mount_cannon(k)
 	var want := Vector3.FORWARD
 	if input.has_aim:
@@ -1969,6 +1969,36 @@ func take_landing_events() -> PackedStringArray:
 ## Ships at the ground: slower than the body's safe landing speed they land
 ## and rest there (moving with the surface) until they thrust away; faster —
 ## or a missile — they crash.
+## Landing legs (2026-10-26): with LEGS_FOR_FOOTING or more working legs on
+## faces turned within LEG_DOWN_DEG of the ground, a ship touches down at up
+## to LEG_TOUCHDOWN_FACTOR × the body's safe landing speed.
+const LEGS_FOR_FOOTING := 3
+const LEG_DOWN_DEG := 30.0
+const LEG_TOUCHDOWN_FACTOR := 3.0
+
+
+## The fastest `ship` can touch down here without crashing (m/s).
+func safe_landing_mps(ship: ShipState) -> float:
+	var safe := body.safe_landing_mps if body != null else 0.0
+	if ship.systems == null or frame == null:
+		return safe
+	return safe * (LEG_TOUCHDOWN_FACTOR if legs_down(ship) >= LEGS_FOR_FOOTING else 1.0)
+
+
+## Working landing legs on faces turned to the ground (within LEG_DOWN_DEG).
+func legs_down(ship: ShipState) -> int:
+	if ship.systems == null or frame == null:
+		return 0
+	var down := -frame.pci_position(ship.position).to_vector3().normalized()
+	var n := 0
+	for e in ship.systems.equipment:
+		if e.def.kind == EquipmentDefinition.Kind.LANDING_LEG and not e.destroyed():
+			var normal := Vector3(ShipGrid.FACE_NORMALS.get(ship.systems.blueprint.equipment[e.index].face, Vector3i.ZERO))
+			if (ship.orientation * normal).dot(down) >= cos(deg_to_rad(LEG_DOWN_DEG)):
+				n += 1
+	return n
+
+
 func _check_terrain() -> void:
 	if frame == null or terrain == null:
 		return
@@ -1988,7 +2018,7 @@ func _check_terrain() -> void:
 		var rel := frame.pci_velocity(ship.velocity).to_vector3() - surface_v
 		if not ship.landed:
 			ship.touchdown_mps = rel.length()
-			if ship.missile != null or ship.touchdown_mps > body.safe_landing_mps:
+			if ship.missile != null or ship.touchdown_mps > safe_landing_mps(ship):
 				ship.status = ShipState.Status.ENTERED_ATMOSPHERE
 				ship.status_time = sim_time
 				_landing_events.append("%s hit the surface at %.1f m/s" % [ship.display_name, ship.touchdown_mps])
