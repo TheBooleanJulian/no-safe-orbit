@@ -10,6 +10,30 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
 
 ## [Unreleased]
 
+### Backup routes and engines that scale (2026-10-31)
+
+#### Changed
+- **Power and coolant are looped**: Auto-route lays its tree, then a way
+  round every hull block whose loss would cut part of it off, so one wrecked
+  block blacks out nothing but what it holds. A reactor or distribution
+  unit joins the conduit on any of its cells; a big part draws power
+  through any face it covers (it used to draw through its anchor only).
+  The roster is re-routed: no hull loses a system to one wrecked block
+  except one holding a reactor, and the scout's mast boom; the interceptor,
+  scout and freighter carry a second distribution unit, the scout two
+  compact reactors for its one fusion reactor.
+- **Vented rooms are never walls**: the crew suit up and go through, twice
+  as slow, and repair in one at half pace; a vented workshop works at half
+  pace, a repair slowing as its workshop or site vents. Routes take the
+  quickest way. (A vented bridge still costs command unless at battle
+  stations.)
+- **Bigger engines scale better**: new common heavy (2 × 2, 3.68 MN) and
+  capital (3 × 3, 9.36 MN) main engines give more thrust than the standard
+  engines their faces would hold, for less mass, power and heat; the
+  high-thrust engine (4.8 MN) and torch drive (7 MN) follow the same rule.
+  The roster's banks of standard engines become big ones: the destroyer
+  0.75 g, the carrier 0.47 g, the battleship 0.24 g.
+
 ### Refit bay, part sizes and a brutalist roster (2026-10-26)
 
 #### Changed

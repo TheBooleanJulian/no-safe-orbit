@@ -36,13 +36,15 @@ tabulated, with their consequences, in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
   `equipment_blocked` in the yard until it is refitted.
 - **Landing legs are new**: one rule (three legs within 30° of down), no
   leg damage on touchdown and no tipping on slopes.
-- **Roster conduit has single points of failure** (measured 2026-10-26):
-  the roster tool auto-routes each hull's power bus as a tree, so wrecking
-  one hull block on the trunk can black out most of a ship — on the Kepler
-  frigate the worst block cuts 36 of 48 systems, and its trunk runs down
-  the main deck's port flank just inside the skirt, where hits land (the
-  old frigate's worst cut 22 of 28, on the centreline). Redundant conduit
-  loops would fix it; not done yet.
+- **Backup routes stop at the hull** (2026-10-31): Auto-route can't loop
+  round a block the hull itself can't be got round (the scout's mast boom
+  is one block thick: a hit there takes its masts and jammer), and a block
+  holding a ship's only reactor or distribution unit still blacks it out.
+  Designs routed before the loops keep their tree until re-routed.
+- **Big engines are new**: the roster's capital ships accelerate faster
+  than they did (destroyer 0.57 → 0.75 g, carrier 0.24 → 0.47 g,
+  battleship 0.17 → 0.24 g); the battleship is now only a little slower
+  than the cruiser (0.24 against 0.27 g).
 
 - **Balance is still in development.** The play-test feedback pass retuned
   guns (equal damage rates, penetration tiers), magazines, engines, loot

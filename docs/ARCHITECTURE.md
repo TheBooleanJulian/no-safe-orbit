@@ -299,6 +299,20 @@ and the location's central body:
   `PlayerProfile.backup_copy` / `backup_dir`. The CHANGELOG tab reads
   `res://CHANGELOG.md` (exported via `include_filter`) through
   `SettingsMenu.changelog_bbcode`.
+- **Backup routes (2026-10-31)**: `ShipEditor._harden` (after `_route_tree`
+  in `auto_route_bus` / `auto_route_coolant`) closes loops round every hull
+  module whose loss cuts terminals off — a piece is fed while it holds a
+  cell of each of its `needs` (distribution units and reactors for the bus,
+  reactors for coolant), `_join_needs` rejoins a unit and a reactor when no
+  piece is left fed; `joins` models what `ShipSystems._junctions` does in
+  flight (a working reactor or unit joins the conduit on its cells; the
+  validator's `_check_bus` the same). External parts draw through every
+  `external_cells` cell. Crew: `ShipSystems.route` is a weighted search
+  (vented rooms cost `VACUUM_TRANSIT_FACTOR`), `route_time_s(path)` prices a
+  walk, `reachable_rooms` goes through vented rooms (`command_held` keeps
+  the "command room lost" rule), `workshop_rate` / `repair_pace` slow work
+  in vacuum to `VACUUM_WORK_RATE`, and `RepairTask.pace` / `site` let a
+  running repair follow the pressure.
 - **Refit bay and part sizes (2026-10-26)**: `EquipmentDefinition.size_cells`
   (1–3, the tier) and `stand_cells` / `stands_out()`; `ShipGrid.face_tangents`,
   `patch` (the N × N faces from a part's cell, along +tangents), `standing` /

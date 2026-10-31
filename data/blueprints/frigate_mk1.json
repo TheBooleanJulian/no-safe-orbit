@@ -4,12 +4,42 @@
 	"designer": "Earth Shipyard",
 	"modules": [
 		{
-			"id": "m78",
+			"id": "m75",
 			"def": "hull_block",
 			"pos": [
 				2,
 				0,
 				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m76",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m77",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m78",
+			"def": "hull_block",
+			"pos": [
+				4,
+				0,
+				4
 			],
 			"rot": 0
 		},
@@ -17,9 +47,9 @@
 			"id": "m79",
 			"def": "hull_block",
 			"pos": [
-				4,
+				1,
 				0,
-				2
+				6
 			],
 			"rot": 0
 		},
@@ -27,9 +57,9 @@
 			"id": "m80",
 			"def": "hull_block",
 			"pos": [
-				2,
+				3,
 				0,
-				4
+				6
 			],
 			"rot": 0
 		},
@@ -37,9 +67,9 @@
 			"id": "m81",
 			"def": "hull_block",
 			"pos": [
-				4,
+				5,
 				0,
-				4
+				6
 			],
 			"rot": 0
 		},
@@ -49,7 +79,7 @@
 			"pos": [
 				1,
 				0,
-				6
+				8
 			],
 			"rot": 0
 		},
@@ -59,7 +89,7 @@
 			"pos": [
 				3,
 				0,
-				6
+				8
 			],
 			"rot": 0
 		},
@@ -69,7 +99,7 @@
 			"pos": [
 				5,
 				0,
-				6
+				8
 			],
 			"rot": 0
 		},
@@ -79,7 +109,7 @@
 			"pos": [
 				1,
 				0,
-				8
+				10
 			],
 			"rot": 0
 		},
@@ -89,7 +119,7 @@
 			"pos": [
 				3,
 				0,
-				8
+				10
 			],
 			"rot": 0
 		},
@@ -99,7 +129,7 @@
 			"pos": [
 				5,
 				0,
-				8
+				10
 			],
 			"rot": 0
 		},
@@ -109,7 +139,7 @@
 			"pos": [
 				1,
 				0,
-				10
+				12
 			],
 			"rot": 0
 		},
@@ -119,7 +149,7 @@
 			"pos": [
 				3,
 				0,
-				10
+				12
 			],
 			"rot": 0
 		},
@@ -129,7 +159,7 @@
 			"pos": [
 				5,
 				0,
-				10
+				12
 			],
 			"rot": 0
 		},
@@ -139,7 +169,7 @@
 			"pos": [
 				1,
 				0,
-				12
+				14
 			],
 			"rot": 0
 		},
@@ -149,7 +179,7 @@
 			"pos": [
 				3,
 				0,
-				12
+				14
 			],
 			"rot": 0
 		},
@@ -159,7 +189,7 @@
 			"pos": [
 				5,
 				0,
-				12
+				14
 			],
 			"rot": 0
 		},
@@ -169,7 +199,7 @@
 			"pos": [
 				1,
 				0,
-				14
+				16
 			],
 			"rot": 0
 		},
@@ -179,7 +209,7 @@
 			"pos": [
 				3,
 				0,
-				14
+				16
 			],
 			"rot": 0
 		},
@@ -189,7 +219,7 @@
 			"pos": [
 				5,
 				0,
-				14
+				16
 			],
 			"rot": 0
 		},
@@ -197,9 +227,9 @@
 			"id": "m97",
 			"def": "hull_block",
 			"pos": [
+				2,
 				1,
-				0,
-				16
+				0
 			],
 			"rot": 0
 		},
@@ -207,9 +237,9 @@
 			"id": "m98",
 			"def": "hull_block",
 			"pos": [
-				3,
-				0,
-				16
+				4,
+				1,
+				0
 			],
 			"rot": 0
 		},
@@ -217,9 +247,9 @@
 			"id": "m99",
 			"def": "hull_block",
 			"pos": [
-				5,
-				0,
-				16
+				2,
+				1,
+				2
 			],
 			"rot": 0
 		},
@@ -227,9 +257,9 @@
 			"id": "m100",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				1,
-				0
+				2
 			],
 			"rot": 0
 		},
@@ -237,9 +267,9 @@
 			"id": "m101",
 			"def": "hull_block",
 			"pos": [
-				4,
+				2,
 				1,
-				0
+				4
 			],
 			"rot": 0
 		},
@@ -247,9 +277,9 @@
 			"id": "m102",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				1,
-				2
+				4
 			],
 			"rot": 0
 		},
@@ -257,9 +287,9 @@
 			"id": "m103",
 			"def": "hull_block",
 			"pos": [
-				4,
+				2,
 				1,
-				2
+				6
 			],
 			"rot": 0
 		},
@@ -267,9 +297,9 @@
 			"id": "m104",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				1,
-				4
+				6
 			],
 			"rot": 0
 		},
@@ -277,9 +307,9 @@
 			"id": "m105",
 			"def": "hull_block",
 			"pos": [
-				4,
+				2,
 				1,
-				4
+				8
 			],
 			"rot": 0
 		},
@@ -287,9 +317,9 @@
 			"id": "m106",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				1,
-				6
+				8
 			],
 			"rot": 0
 		},
@@ -297,9 +327,9 @@
 			"id": "m107",
 			"def": "hull_block",
 			"pos": [
-				4,
+				2,
 				1,
-				6
+				10
 			],
 			"rot": 0
 		},
@@ -307,9 +337,9 @@
 			"id": "m108",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				1,
-				8
+				10
 			],
 			"rot": 0
 		},
@@ -317,9 +347,9 @@
 			"id": "m109",
 			"def": "hull_block",
 			"pos": [
-				4,
+				2,
 				1,
-				8
+				12
 			],
 			"rot": 0
 		},
@@ -327,9 +357,9 @@
 			"id": "m110",
 			"def": "hull_block",
 			"pos": [
-				2,
+				4,
 				1,
-				10
+				12
 			],
 			"rot": 0
 		},
@@ -337,9 +367,9 @@
 			"id": "m111",
 			"def": "hull_block",
 			"pos": [
-				4,
 				1,
-				10
+				1,
+				14
 			],
 			"rot": 0
 		},
@@ -347,9 +377,9 @@
 			"id": "m112",
 			"def": "hull_block",
 			"pos": [
-				2,
+				3,
 				1,
-				12
+				14
 			],
 			"rot": 0
 		},
@@ -357,9 +387,9 @@
 			"id": "m113",
 			"def": "hull_block",
 			"pos": [
-				4,
+				5,
 				1,
-				12
+				14
 			],
 			"rot": 0
 		},
@@ -369,7 +399,7 @@
 			"pos": [
 				1,
 				1,
-				14
+				16
 			],
 			"rot": 0
 		},
@@ -379,7 +409,7 @@
 			"pos": [
 				3,
 				1,
-				14
+				16
 			],
 			"rot": 0
 		},
@@ -389,42 +419,12 @@
 			"pos": [
 				5,
 				1,
-				14
+				16
 			],
 			"rot": 0
 		},
 		{
 			"id": "m117",
-			"def": "hull_block",
-			"pos": [
-				1,
-				1,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m118",
-			"def": "hull_block",
-			"pos": [
-				3,
-				1,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m119",
-			"def": "hull_block",
-			"pos": [
-				5,
-				1,
-				16
-			],
-			"rot": 0
-		},
-		{
-			"id": "m120",
 			"def": "hull_block",
 			"pos": [
 				3,
@@ -434,7 +434,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m121",
+			"id": "m118",
 			"def": "hull_block",
 			"pos": [
 				3,
@@ -444,12 +444,45 @@
 			"rot": 0
 		},
 		{
-			"id": "m122",
+			"id": "m119",
 			"def": "wedge_short",
 			"pos": [
 				1,
 				0,
 				2
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m120",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				0,
+				3
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m121",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				0,
+				4
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m122",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				0,
+				5
 			],
 			"rot": 1,
 			"flip": true
@@ -459,46 +492,13 @@
 			"def": "wedge_short",
 			"pos": [
 				1,
-				0,
-				3
-			],
-			"rot": 1,
-			"flip": true
-		},
-		{
-			"id": "m124",
-			"def": "wedge_short",
-			"pos": [
-				1,
-				0,
-				4
-			],
-			"rot": 1,
-			"flip": true
-		},
-		{
-			"id": "m125",
-			"def": "wedge_short",
-			"pos": [
-				1,
-				0,
-				5
-			],
-			"rot": 1,
-			"flip": true
-		},
-		{
-			"id": "m126",
-			"def": "wedge_short",
-			"pos": [
-				1,
 				1,
 				0
 			],
 			"rot": 1
 		},
 		{
-			"id": "m127",
+			"id": "m124",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -508,7 +508,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m128",
+			"id": "m125",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -518,7 +518,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m129",
+			"id": "m126",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -528,7 +528,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m130",
+			"id": "m127",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -538,7 +538,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m131",
+			"id": "m128",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -548,7 +548,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m132",
+			"id": "m129",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -558,7 +558,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m133",
+			"id": "m130",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -568,7 +568,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m134",
+			"id": "m131",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -578,7 +578,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m135",
+			"id": "m132",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -588,7 +588,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m136",
+			"id": "m133",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -598,7 +598,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m137",
+			"id": "m134",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -608,7 +608,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m138",
+			"id": "m135",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -618,7 +618,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m139",
+			"id": "m136",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -628,7 +628,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m140",
+			"id": "m137",
 			"def": "wedge_short",
 			"pos": [
 				2,
@@ -639,7 +639,7 @@
 			"flip": true
 		},
 		{
-			"id": "m141",
+			"id": "m138",
 			"def": "wedge_long",
 			"pos": [
 				2,
@@ -649,10 +649,41 @@
 			"rot": 0
 		},
 		{
-			"id": "m142",
+			"id": "m139",
 			"def": "wedge_short",
 			"pos": [
 				3,
+				0,
+				1
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m140",
+			"def": "wedge_long",
+			"pos": [
+				3,
+				1,
+				-2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m141",
+			"def": "wedge_short",
+			"pos": [
+				3,
+				2,
+				3
+			],
+			"rot": 0
+		},
+		{
+			"id": "m142",
+			"def": "wedge_short",
+			"pos": [
+				4,
 				0,
 				1
 			],
@@ -663,7 +694,7 @@
 			"id": "m143",
 			"def": "wedge_long",
 			"pos": [
-				3,
+				4,
 				1,
 				-2
 			],
@@ -673,7 +704,7 @@
 			"id": "m144",
 			"def": "wedge_short",
 			"pos": [
-				3,
+				4,
 				2,
 				3
 			],
@@ -683,7 +714,7 @@
 			"id": "m145",
 			"def": "wedge_short",
 			"pos": [
-				4,
+				5,
 				0,
 				1
 			],
@@ -694,7 +725,7 @@
 			"id": "m146",
 			"def": "wedge_long",
 			"pos": [
-				4,
+				5,
 				1,
 				-2
 			],
@@ -704,32 +735,34 @@
 			"id": "m147",
 			"def": "wedge_short",
 			"pos": [
-				4,
-				2,
-				3
+				6,
+				0,
+				2
 			],
-			"rot": 0
+			"rot": 3,
+			"flip": true
 		},
 		{
 			"id": "m148",
 			"def": "wedge_short",
 			"pos": [
-				5,
+				6,
 				0,
-				1
+				3
 			],
-			"rot": 0,
+			"rot": 3,
 			"flip": true
 		},
 		{
 			"id": "m149",
-			"def": "wedge_long",
+			"def": "wedge_short",
 			"pos": [
-				5,
-				1,
-				-2
+				6,
+				0,
+				4
 			],
-			"rot": 0
+			"rot": 3,
+			"flip": true
 		},
 		{
 			"id": "m150",
@@ -737,7 +770,7 @@
 			"pos": [
 				6,
 				0,
-				2
+				5
 			],
 			"rot": 3,
 			"flip": true
@@ -747,46 +780,13 @@
 			"def": "wedge_short",
 			"pos": [
 				6,
-				0,
-				3
-			],
-			"rot": 3,
-			"flip": true
-		},
-		{
-			"id": "m152",
-			"def": "wedge_short",
-			"pos": [
-				6,
-				0,
-				4
-			],
-			"rot": 3,
-			"flip": true
-		},
-		{
-			"id": "m153",
-			"def": "wedge_short",
-			"pos": [
-				6,
-				0,
-				5
-			],
-			"rot": 3,
-			"flip": true
-		},
-		{
-			"id": "m154",
-			"def": "wedge_short",
-			"pos": [
-				6,
 				1,
 				0
 			],
 			"rot": 3
 		},
 		{
-			"id": "m155",
+			"id": "m152",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -796,7 +796,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m156",
+			"id": "m153",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -806,7 +806,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m157",
+			"id": "m154",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -816,7 +816,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m158",
+			"id": "m155",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -826,7 +826,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m159",
+			"id": "m156",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -836,7 +836,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m160",
+			"id": "m157",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -846,7 +846,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m161",
+			"id": "m158",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -856,7 +856,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m162",
+			"id": "m159",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -866,7 +866,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m163",
+			"id": "m160",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -876,7 +876,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m164",
+			"id": "m161",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -886,7 +886,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m165",
+			"id": "m162",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -896,7 +896,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m166",
+			"id": "m163",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -906,7 +906,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m167",
+			"id": "m164",
 			"def": "wedge_short",
 			"pos": [
 				6,
@@ -1362,10 +1362,10 @@
 		},
 		{
 			"id": "e40",
-			"def": "main_engine",
+			"def": "heavy_main_engine",
 			"cell": [
-				2,
-				1,
+				3,
+				0,
 				17
 			],
 			"face": "aft"
@@ -1374,7 +1374,7 @@
 			"id": "e41",
 			"def": "main_engine",
 			"cell": [
-				3,
+				2,
 				1,
 				17
 			],
@@ -1384,7 +1384,7 @@
 			"id": "e42",
 			"def": "main_engine",
 			"cell": [
-				4,
+				5,
 				1,
 				17
 			],
@@ -1392,36 +1392,6 @@
 		},
 		{
 			"id": "e43",
-			"def": "main_engine",
-			"cell": [
-				5,
-				1,
-				17
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e44",
-			"def": "main_engine",
-			"cell": [
-				3,
-				0,
-				17
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e45",
-			"def": "main_engine",
-			"cell": [
-				4,
-				0,
-				17
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e46",
 			"def": "radiator_long",
 			"cell": [
 				1,
@@ -1432,7 +1402,7 @@
 			"rot": 4
 		},
 		{
-			"id": "e47",
+			"id": "e44",
 			"def": "radiator_long",
 			"cell": [
 				6,
@@ -1441,129 +1411,129 @@
 			],
 			"face": "dorsal",
 			"rot": 4
+		},
+		{
+			"id": "e45",
+			"def": "rcs_block",
+			"cell": [
+				2,
+				1,
+				0
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e46",
+			"def": "rcs_block",
+			"cell": [
+				5,
+				1,
+				0
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e47",
+			"def": "rcs_block",
+			"cell": [
+				2,
+				0,
+				2
+			],
+			"face": "ventral"
 		},
 		{
 			"id": "e48",
 			"def": "rcs_block",
 			"cell": [
-				2,
-				1,
-				0
+				5,
+				0,
+				2
 			],
-			"face": "dorsal"
+			"face": "ventral"
 		},
 		{
 			"id": "e49",
 			"def": "rcs_block",
 			"cell": [
-				5,
 				1,
-				0
+				1,
+				16
 			],
-			"face": "dorsal"
+			"face": "port"
 		},
 		{
 			"id": "e50",
 			"def": "rcs_block",
 			"cell": [
-				2,
-				0,
-				2
+				6,
+				1,
+				16
 			],
-			"face": "ventral"
+			"face": "starboard"
 		},
 		{
 			"id": "e51",
 			"def": "rcs_block",
 			"cell": [
-				5,
+				1,
 				0,
-				2
+				16
 			],
-			"face": "ventral"
+			"face": "port"
 		},
 		{
 			"id": "e52",
 			"def": "rcs_block",
 			"cell": [
-				1,
-				1,
+				6,
+				0,
 				16
 			],
-			"face": "port"
+			"face": "starboard"
 		},
 		{
 			"id": "e53",
 			"def": "rcs_block",
 			"cell": [
-				6,
 				1,
-				16
+				1,
+				17
 			],
-			"face": "starboard"
+			"face": "dorsal"
 		},
 		{
 			"id": "e54",
 			"def": "rcs_block",
 			"cell": [
+				6,
 				1,
-				0,
-				16
+				17
 			],
-			"face": "port"
+			"face": "dorsal"
 		},
 		{
 			"id": "e55",
 			"def": "rcs_block",
 			"cell": [
-				6,
+				1,
 				0,
-				16
+				17
 			],
-			"face": "starboard"
+			"face": "ventral"
 		},
 		{
 			"id": "e56",
 			"def": "rcs_block",
 			"cell": [
-				1,
-				1,
+				6,
+				0,
 				17
 			],
-			"face": "dorsal"
+			"face": "ventral"
 		},
 		{
 			"id": "e57",
-			"def": "rcs_block",
-			"cell": [
-				6,
-				1,
-				17
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e58",
-			"def": "rcs_block",
-			"cell": [
-				1,
-				0,
-				17
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e59",
-			"def": "rcs_block",
-			"cell": [
-				6,
-				0,
-				17
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e60",
 			"def": "autocannon",
 			"cell": [
 				3,
@@ -1573,7 +1543,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e61",
+			"id": "e58",
 			"def": "autocannon",
 			"cell": [
 				4,
@@ -1583,7 +1553,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e62",
+			"id": "e59",
 			"def": "autocannon",
 			"cell": [
 				3,
@@ -1593,7 +1563,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e63",
+			"id": "e60",
 			"def": "missile_rack",
 			"cell": [
 				3,
@@ -1603,7 +1573,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e64",
+			"id": "e61",
 			"def": "point_defence",
 			"cell": [
 				2,
@@ -1613,7 +1583,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e65",
+			"id": "e62",
 			"def": "point_defence",
 			"cell": [
 				5,
@@ -1623,7 +1593,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e66",
+			"id": "e63",
 			"def": "point_defence",
 			"cell": [
 				1,
@@ -1633,7 +1603,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e67",
+			"id": "e64",
 			"def": "point_defence",
 			"cell": [
 				6,
@@ -1643,7 +1613,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e68",
+			"id": "e65",
 			"def": "flare_launcher",
 			"cell": [
 				2,
@@ -1653,7 +1623,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e69",
+			"id": "e66",
 			"def": "flare_launcher",
 			"cell": [
 				5,
@@ -1663,7 +1633,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e70",
+			"id": "e67",
 			"def": "sensor_mast",
 			"cell": [
 				4,
@@ -1673,7 +1643,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e71",
+			"id": "e68",
 			"def": "drone_rack",
 			"cell": [
 				4,
@@ -1683,7 +1653,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e72",
+			"id": "e69",
 			"def": "docking_collar",
 			"cell": [
 				1,
@@ -1693,7 +1663,7 @@
 			"face": "port"
 		},
 		{
-			"id": "e73",
+			"id": "e70",
 			"def": "grapple_arm",
 			"cell": [
 				6,
@@ -1703,7 +1673,7 @@
 			"face": "starboard"
 		},
 		{
-			"id": "e74",
+			"id": "e71",
 			"def": "landing_leg",
 			"cell": [
 				1,
@@ -1713,7 +1683,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e75",
+			"id": "e72",
 			"def": "landing_leg",
 			"cell": [
 				6,
@@ -1723,7 +1693,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e76",
+			"id": "e73",
 			"def": "landing_leg",
 			"cell": [
 				2,
@@ -1733,7 +1703,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e77",
+			"id": "e74",
 			"def": "landing_leg",
 			"cell": [
 				5,
@@ -2208,12 +2178,37 @@
 		[
 			2,
 			0,
+			1
+		],
+		[
+			2,
+			0,
+			10
+		],
+		[
+			2,
+			0,
+			16
+		],
+		[
+			2,
+			0,
 			2
 		],
 		[
 			2,
 			0,
 			7
+		],
+		[
+			2,
+			0,
+			8
+		],
+		[
+			2,
+			0,
+			9
 		],
 		[
 			2,
@@ -2278,6 +2273,16 @@
 		[
 			3,
 			0,
+			10
+		],
+		[
+			3,
+			0,
+			11
+		],
+		[
+			3,
+			0,
 			12
 		],
 		[
@@ -2328,12 +2333,22 @@
 		[
 			3,
 			1,
+			13
+		],
+		[
+			3,
+			1,
 			14
 		],
 		[
 			3,
 			1,
 			17
+		],
+		[
+			3,
+			1,
+			4
 		],
 		[
 			3,
@@ -2368,12 +2383,32 @@
 		[
 			4,
 			0,
+			11
+		],
+		[
+			4,
+			0,
 			12
 		],
 		[
 			4,
 			0,
-			17
+			16
+		],
+		[
+			4,
+			0,
+			5
+		],
+		[
+			4,
+			0,
+			6
+		],
+		[
+			4,
+			0,
+			7
 		],
 		[
 			4,
@@ -2384,6 +2419,16 @@
 			4,
 			1,
 			0
+		],
+		[
+			4,
+			1,
+			11
+		],
+		[
+			4,
+			1,
+			13
 		],
 		[
 			4,
@@ -2413,12 +2458,37 @@
 		[
 			5,
 			0,
+			1
+		],
+		[
+			5,
+			0,
+			11
+		],
+		[
+			5,
+			0,
 			12
 		],
 		[
 			5,
 			0,
 			13
+		],
+		[
+			5,
+			0,
+			14
+		],
+		[
+			5,
+			0,
+			15
+		],
+		[
+			5,
+			0,
+			16
 		],
 		[
 			5,
@@ -2453,6 +2523,11 @@
 		[
 			5,
 			1,
+			1
+		],
+		[
+			5,
+			1,
 			13
 		],
 		[
@@ -2463,12 +2538,27 @@
 		[
 			5,
 			1,
+			2
+		],
+		[
+			5,
+			1,
 			5
 		],
 		[
 			5,
 			1,
 			6
+		],
+		[
+			5,
+			1,
+			8
+		],
+		[
+			6,
+			0,
+			11
 		],
 		[
 			6,
@@ -2509,13 +2599,33 @@
 		],
 		[
 			2,
+			0,
+			16
+		],
+		[
+			2,
 			1,
 			10
 		],
 		[
 			2,
 			1,
+			13
+		],
+		[
+			2,
+			1,
 			14
+		],
+		[
+			2,
+			1,
+			15
+		],
+		[
+			2,
+			1,
+			16
 		],
 		[
 			3,
@@ -2570,7 +2680,22 @@
 		[
 			4,
 			1,
+			12
+		],
+		[
+			4,
+			1,
+			13
+		],
+		[
+			4,
+			1,
 			14
+		],
+		[
+			5,
+			1,
+			13
 		],
 		[
 			5,

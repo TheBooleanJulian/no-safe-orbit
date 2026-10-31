@@ -762,7 +762,7 @@ date (sources and uncertainty in `data/ATTRIBUTION.md`):
   the right direction, its disc shrinking to a point at 172 AU. The jump
   out and back is paid at launch and must fit in the Δv your full tanks and
   jump reserve give: the Roadster needs Δv 1,741 m/s round trip, Voyager 1
-  2,512 m/s. The starting frigate carries 1,770 m/s with its reserve, enough
+  2,512 m/s. The starting frigate carries 1,775 m/s with its reserve, enough
   for the near ones; the scout (4,172 m/s), the heavy cruiser, the missile
   corvette and the freighter reach every object — or design a long-range ship.
 - **Look, don't touch:** real objects can't be damaged, grappled or
@@ -871,8 +871,12 @@ ship, its craft still out, a missile on its way, fire taken in the last
 10 s — the crew are at **battle stations in spacesuits**, the emergency
 doors between rooms of one kind (stacked corridors, say) shut so one breach
 doesn't vent them all, and general and damage-control hands spread out to
-every room with systems in it and nobody there: they keep command of a vented bridge, cross vented rooms and survive a room venting
-around them (otherwise venting wounds or kills whoever is in it). They
+every room with systems in it and nobody there: they keep command of a vented bridge and survive a room venting
+around them (otherwise venting wounds or kills whoever is in it). A
+**vented room is never a wall**: the crew suit up and go through it, twice
+as slow, and work in it — repairs, damage control — at half the pace; a
+vented workshop still works, at half its pace (routes go the quickest way,
+round a vented room when that is quicker). They
 **stand down** only once it has been confirmed clear for 10 s. No command
 crew on a pressurised bridge hands the ship to the ship AI (half thrust and
 turn rate); no weapons crew able to reach the magazine halves the guns' rate
@@ -973,21 +977,21 @@ clear of their own hull, and no hatch blocked.
 
 | Hull | Built for | What it looks like, and why | Dry mass · g · Δv | Armament and kit | Crew · hold | Price |
 |---|---|---|---|---|---|---|
-| Halley-class interceptor | pursuit, interception | a low armoured dart ahead of an engine block twice its height and wider: cockpit over a chisel nose, sloped strakes down the flanks, two medium engines and two standard ones, twin tail fins | 358 t · 2.15 g · 1,104 m/s | 2 autocannons, 2 PD, flares | 4 · — | 3,670 cr |
-| Goddard-class missile corvette | stand-off missile attack | a chamfered crew capsule, an open launcher cage round a pressurised keel (corridor over a tank deck), a boxy drive block wider than both — three sections you can tell apart | 642 t · 0.63 g · 2,181 m/s | 8 missile racks (96 missiles), 1 autocannon, 3 PD, two masts | 12 · 324 m³ | 7,653 cr |
-| Kepler-class escort frigate | the generalist; every captain's first ship | a chamfered slab with a sharp chisel bow, sloped skirts down its main deck, a raised gun spine (magazine inside), cargo sponsons, a hangar underneath, a boxy engine block under two fins; a second way aft on the lower deck | 676 t · 0.90 g · 1,443 m/s | 3 autocannons, a missile rack, 4 PD, a Wasp and a recon drone, collar and grappling arm | 16 · 864 m³ | 3,288 cr |
-| Gauss-class gun destroyer | concentrated kinetic fire | built round one large railgun: its 3 × 3 muzzle fills the flat bow of a square, three-deck gun housing (dense magazine at the breech, two reactors either side of the keel, tanks above and below), a chamfered hull behind, a boxy engine block under an X of fins; heavy RCS at both ends to point the ship — the gun traverses 12°/s | 1,618 t · 0.57 g · 2,459 m/s | 1 railgun, 2 autocannons, 6 PD, a workshop | 24 · — | 14,177 cr |
-| Laplace-class heavy cruiser | fighting alone, far from a yard | three armoured blocks on two narrow waists lined with radiators; a flat bow with two heavy guns in it over a chisel chin; chamfered battery and engineering blocks; keel corridors on two decks bow to stern; bridge and auxiliary bridge; three reactor rooms; high-Isp engines | 3,559 t · 0.27 g · 3,278 m/s | 6 heavy guns, 6 missile racks, 4 autocannons, 14 PD, repair, salvage and recon drones, a workshop | 108 · 702 m³ | 39,171 cr |
-| Newton-class battleship | capital firepower and protection | twin square gun booms, a 3 × 3 railgun in each muzzle, ahead of a stepped chisel bow; a broad, deep hull plated 80 mm on every face but the stern, a chamfered turret deck over and under it; keel corridors on three decks, two bridges, four Mk II reactors | 9,881 t · 0.17 g · 1,309 m/s | 4 railguns (2 spinal), 6 heavy guns, 8 autocannons, 22 PD | 288 · 324 m³ | 94,924 cr |
-| Galileo-class fleet carrier | craft and reach | two hulls with the hangar deck slung low between them, sloped fillets from each hull down onto its armoured roof, doors underneath; three hangars bulkheaded by magazines; servicing deck over them | 5,072 t · 0.24 g · 1,353 m/s | 8 Wasp and 2 Mantis bays, 5 drones, 6 autocannons, 20 PD, 2 jammers | 168 · 648 m³ | 34,483 cr |
-| Herschel-class scout | reconnaissance, surveys | low, single-decked, chamfered and lopsided on purpose: masts and jammer out on a starboard boom, radiators flat underneath | 235 t · 0.95 g · 3,125 m/s | 3 masts (2 hardened), jammer, EW and recon drones, 1 autocannon, 2 PD | 8 · — | 7,068 cr |
-| Drayman-class heavy freighter | courier and bulk cargo | a semi-truck: a flat-fronted cab, ten containers clamped in pairs along a keel tunnel between truss frames, a drive unit; common, cheap kit | 1,337 t · 0.31 g · 2,995 m/s | 2 PD, 1 autocannon, flares, grappling arm, two collars | 10 · 4,671 m³ | 3,460 cr |
+| Halley-class interceptor | pursuit, interception | a low armoured dart ahead of an engine block twice its height and wider: cockpit over a chisel nose, sloped strakes down the flanks, a medium high-thrust engine and a standard one either side, twin tail fins | 351 t · 2.31 g · 1,013 m/s | 2 autocannons, 2 PD, flares | 4 · — | 3,086 cr |
+| Goddard-class missile corvette | stand-off missile attack | a chamfered crew capsule, an open launcher cage round a pressurised keel (corridor over a tank deck), a boxy drive block wider than both, one heavy engine in its stern — three sections you can tell apart | 638 t · 0.73 g · 2,194 m/s | 8 missile racks (96 missiles), 1 autocannon, 3 PD, two masts | 12 · 324 m³ | 7,653 cr |
+| Kepler-class escort frigate | the generalist; every captain's first ship | a chamfered slab with a sharp chisel bow, sloped skirts down its main deck, a raised gun spine (magazine inside), cargo sponsons, a hangar underneath, a boxy engine block (a heavy engine and two standard ones) under two fins; a second way aft on the lower deck | 673 t · 1.00 g · 1,448 m/s | 3 autocannons, a missile rack, 4 PD, a Wasp and a recon drone, collar and grappling arm | 16 · 864 m³ | 3,303 cr |
+| Gauss-class gun destroyer | concentrated kinetic fire | built round one large railgun: its 3 × 3 muzzle fills the flat bow of a square, three-deck gun housing (dense magazine at the breech, two reactors either side of the keel, tanks above and below), a chamfered hull behind, a boxy engine block, one capital engine filling its stern, under an X of fins; heavy RCS at both ends to point the ship — the gun traverses 12°/s | 1,593 t · 0.75 g · 2,493 m/s | 1 railgun, 2 autocannons, 6 PD, a workshop | 24 · — | 14,130 cr |
+| Laplace-class heavy cruiser | fighting alone, far from a yard | three armoured blocks on two narrow waists lined with radiators; a flat bow with two heavy guns in it over a chisel chin; chamfered battery and engineering blocks; keel corridors on two decks bow to stern; bridge and auxiliary bridge; three reactor rooms; high-Isp engines | 3,575 t · 0.27 g · 3,266 m/s | 6 heavy guns, 6 missile racks, 4 autocannons, 14 PD, repair, salvage and recon drones, a workshop | 108 · 702 m³ | 39,290 cr |
+| Newton-class battleship | capital firepower and protection | twin square gun booms, a 3 × 3 railgun in each muzzle, ahead of a stepped chisel bow; a broad, deep hull plated 80 mm on every face but the stern, a chamfered turret deck over and under it; keel corridors on three decks, two bridges, four Mk II reactors, two capital engines | 9,868 t · 0.24 g · 1,311 m/s | 4 railguns (2 spinal), 6 heavy guns, 8 autocannons, 22 PD | 288 · 324 m³ | 95,049 cr |
+| Galileo-class fleet carrier | craft and reach | two hulls with the hangar deck slung low between them, sloped fillets from each hull down onto its armoured roof, doors underneath; three hangars bulkheaded by magazines; servicing deck over them; a capital engine in each hull | 5,088 t · 0.47 g · 1,349 m/s | 8 Wasp and 2 Mantis bays, 5 drones, 6 autocannons, 20 PD, 2 jammers | 168 · 648 m³ | 34,662 cr |
+| Herschel-class scout | reconnaissance, surveys | low, single-decked, chamfered and lopsided on purpose: masts and jammer out on a starboard boom, radiators flat underneath; two compact reactors in different blocks | 232 t · 0.96 g · 3,153 m/s | 3 masts (2 hardened), jammer, EW and recon drones, 1 autocannon, 2 PD | 8 · — | 8,162 cr |
+| Drayman-class heavy freighter | courier and bulk cargo | a semi-truck: a flat-fronted cab, ten containers clamped in pairs along a keel tunnel between truss frames, a drive unit with one heavy engine; common, cheap kit | 1,346 t · 0.35 g · 2,978 m/s | 2 PD, 1 autocannon, flares, grappling arm, two collars | 10 · 4,671 m³ | 3,557 cr |
 
 The heavy cruiser and the battleship are not one ship at two sizes: the
 battleship has three and a half times the armour, railguns and more guns,
-but no craft and no missiles, accelerates two-thirds as fast, has less than
-half the range on standard engines and burns nearly four times the
-propellant on a jump to Mars (1,143 t against 295 t), with 2.7 times the
+but no craft and no missiles, accelerates slower, has less than half the
+range on its standard-Isp capital engines and burns nearly four times the
+propellant on a jump to Mars (1,142 t against 296 t), with 2.7 times the
 crew and 2.4 times the price. The
 freighter's hold earns from **bulk freight** (see MISSIONS). The camera sits
 back further the bigger the ship.
@@ -1013,7 +1017,7 @@ each after the one before (6,000, 8,000, 10,000 cr).
   (the real distances on the scenario date). Each ship pays it in propellant by the rocket equation at
   its own main-engine Isp: the escort frigate burns 44 t for the Moon, the
   scout 11 t. The chart, the artifacts list and the SERVICE BAY show the Δv
-  your tanks give (frigate: 1,770 m/s with full tanks and the reserve).
+  your tanks give (frigate: 1,775 m/s with full tanks and the reserve).
 - **Jump reserve**: a quarter of your tankage that only the jump drive can
   burn, used after the main tank. The SERVICE BAY shows and refills it.
 - **Not enough?** A course beyond what the ship can carry even full is
@@ -1047,10 +1051,10 @@ Each part's name and its icon are drawn in the same colour, the colour its
 cells take on the deck (its rarity is in the tooltip).
 
 **Parts come in tiers of size**: a light part sits on one cell's face; a
-medium one (heavy kinetic cannon, Nd:YAG laser, high-thrust engine,
-saturation pod, nuclear launcher) covers 2 × 2 faces and stands two cells
-out; a large one (railgun, free-electron laser, torch drive) 3 × 3, three
-out. The space it stands in must be clear of hull, and a turret's barrel
+medium one (heavy kinetic cannon, Nd:YAG laser, heavy and high-thrust
+engines, saturation pod, nuclear launcher) covers 2 × 2 faces and stands
+two cells out; a large one (railgun, free-electron laser, capital engine,
+torch drive) 3 × 3, three out. The space it stands in must be clear of hull, and a turret's barrel
 rides as many metres off its face. A design saved before the sizes is
 re-seated on loading where a nearby spot fits (its patch still covering the
 old cell); where none does, the yard flags it.
@@ -1087,15 +1091,27 @@ re-plated at the yard.
 **Power** (palette → Power & thermal): drag **power conduit** through hull
 cells (it joins between decks too). A system or room is powered when one of
 its cells is on a network with a reactor and a **power distribution unit**.
-**Auto-route power bus** lays a tree to everything. A design with no conduit
-uses automatic distribution through its hull. **Auto-route coolant** pipes
-the reactors to the radiators and heat-making systems (Clear removes it).
+**Auto-route power bus** lays conduit to everything, then loops it round
+every hull block whose loss would cut part of it off — a wrecked block
+takes the conduit through it — so one hit block blacks out nothing but what
+it holds (a block holding your only reactor or distribution unit, or a boom
+one block thick, still can: fit two, apart). A reactor or distribution unit
+joins the conduit run to any of its cells, and a big part draws power
+through any face it covers. A design with no conduit uses automatic
+distribution through its hull. **Auto-route coolant** pipes the reactors to
+the radiators and heat-making systems, looped the same way (Clear removes
+it). Designs routed before the loops keep their tree until you route again.
 
 **Engines**: aft faces always; any other face if an **engine room** is on
 the inside of that cell — it pushes the ship away from that face. Engines
 trade thrust for Isp (thrust × Isp is the budget: standard 800 kN / 900 s,
-high-Isp 620 kN / 1400 s, high-thrust 1.45 MN / 600 s; the torch drive
-1.2 MN / 1800 s). **Radiators** are 3-cell folded panels (old 2-cell ones
+high-Isp 620 kN / 1400 s). **Bigger engines scale better**: the heavy main
+engine (2 × 2, common) gives 3.68 MN — 15 % more than the four standard
+engines its faces would hold — for 80 % of their mass and 85 % of their
+power and heat; the capital main engine (3 × 3, common) 9.36 MN, 30 % more
+than nine, for 60 % of the mass and 70 % of the power and heat. The
+high-thrust engine (2 × 2) is the heavy one tuned for thrust, 4.8 MN at
+600 s; the torch drive (3 × 3) the capital one for Isp, 7 MN at 1800 s. **Radiators** are 3-cell folded panels (old 2-cell ones
 still fly). Rooms of the same type side by side are one space — no hatch
 needed between them.
 

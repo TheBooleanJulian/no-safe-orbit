@@ -103,10 +103,11 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				# A gimbal mount and combustion chamber on the hull, feed lines
 				# into it, and the bell (cylinder +Y out along the face: top =
 				# the wide mouth) with cooling bands — longer and a little wider
-				# the more thrust (play-test batch 10).
+				# the more thrust (play-test batch 10). A big engine's bell is
+				# sized by its thrust per face, then scales with the part.
 				var b := _basis_y_along(normal)
 				var dark := _mat(mats, Color(0.16, 0.17, 0.19) * tint)
-				var size := engine_bell(def.thrust_n)
+				var size := engine_bell(def.thrust_n / (def.size_cells * def.size_cells))
 				var gimbal := _cylinder(part, 0.75, 0.85, 0.35, Vector3.ZERO, dark)
 				gimbal.transform = Transform3D(b, mount + normal * 0.17)
 				var chamber := _cylinder(part, 0.5, 0.6, 0.7, Vector3.ZERO, mat)

@@ -140,23 +140,35 @@ func paint_bus(deck: int, rect: Rect2i, on: bool) -> int:
 	return changes.size()
 
 
-## Replace the bus with a tree that reaches every system that makes or
-## draws power and every room that draws it: grown from the first power
-## distribution unit (else reactor) along the shortest hull paths. Returns
-## the number of conduit cells, or 0 if there is nothing to route.
+## Replace the bus with a network that reaches every system that makes or
+## draws power and every room that draws it: a tree grown from the first
+## power distribution unit (else reactor) along the shortest hull paths,
+## then looped round every hull module whose loss would cut part of it off
+## (see `_harden`). Returns the number of conduit cells, or 0 if there is
+## nothing to route.
 func auto_route_bus() -> int:
 	var terminals: Array = []  # Array of Array[Vector3i]
 	var root: Array = []
+	var feeds: Array = []  # every distribution unit's cells
+	var reactors: Array = []
+	var joins := {}  # a reactor's or unit's cell -> its other cells (it joins the conduit to them)
 	for i in blueprint.equipment.size():
 		var def := grid.equipment_def(i)
 		if def == null or (def.power_kw == 0.0 and def.kind != EquipmentDefinition.Kind.POWER_DISTRIBUTION):
 			continue
-		var all_cells: Array = [blueprint.equipment[i].cell] if def.is_external() else grid.equipment_cells(i)
+		var all_cells: Array = grid.external_cells(i) if def.is_external() else grid.equipment_cells(i)
 		var cells: Array = all_cells.filter(func(c: Vector3i) -> bool: return grid.is_hull(c))
 		if cells.is_empty():
 			continue
-		if def.kind == EquipmentDefinition.Kind.POWER_DISTRIBUTION and root.is_empty():
-			root = cells
+		if def.kind == EquipmentDefinition.Kind.POWER_DISTRIBUTION:
+			if root.is_empty():
+				root = cells
+			feeds.append_array(cells)
+		elif def.kind == EquipmentDefinition.Kind.REACTOR:
+			reactors.append_array(cells)
+		if def.kind in [EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION]:
+			for c in cells:
+				joins[c] = cells
 		terminals.append(cells)
 	for r in blueprint.rooms:
 		var def: RoomDefinition = catalog.rooms.get(r.def_id)
@@ -171,6 +183,8 @@ func auto_route_bus() -> int:
 	if root.is_empty() or terminals.is_empty():
 		return 0
 	var tree := _route_tree(root, terminals)
+	# A network has power with a distribution unit and a reactor on it.
+	_harden(tree, [feeds if not feeds.is_empty() else root, reactors if not reactors.is_empty() else root], terminals, joins)
 	_checkpoint()
 	blueprint.bus.clear()
 	for c in tree:
@@ -180,13 +194,15 @@ func auto_route_bus() -> int:
 
 
 ## Pipe a coolant loop from the reactors to every radiator and heat-making
-## system (replaces the current one). Returns the pipe cells (0 = nothing
+## system (replaces the current one), looped like the bus so one hit pipe
+## or wrecked module cuts nothing off. Returns the pipe cells (0 = nothing
 ## to route).
 func auto_route_coolant() -> int:
 	var ends := CoolantLoop.route_ends(blueprint, grid)
 	if (ends.root as Array).is_empty() or (ends.terminals as Array).is_empty():
 		return 0
 	var tree := _route_tree(ends.root, ends.terminals)
+	_harden(tree, [ends.root], ends.terminals)
 	_checkpoint()
 	blueprint.coolant.clear()
 	for c in tree:
@@ -244,6 +260,162 @@ func _route_tree(root: Array, terminals: Array) -> Dictionary:
 			tree[c2] = true
 			c2 = came[c2]
 	return tree
+
+
+## Close loops in a routed `tree` (cell -> true, grown in place) so that no
+## single hull module's loss — a wrecked module takes the conduit through it,
+## and a hit cuts at most a cell of it — cuts a terminal off: a piece of the
+## network is fed while it holds a cell of each of `needs` (cell Arrays:
+## distribution units and reactors for the bus, reactors for coolant). For
+## each module the network runs through, the shortest hull path round it
+## from a fed piece to the part cut off. Terminals inside the lost module
+## are lost with it; a module the hull can't be got round (a waist one
+## module wide), or holding all of one need, is left. `joins`: cell -> cells
+## a part joins it to (a reactor or unit, as ShipSystems runs the bus).
+## Returns the cells added.
+func _harden(tree: Dictionary, needs: Array, terminals: Array, joins: Dictionary = {}) -> int:
+	var added := 0
+	var done := {}  # module -> true: safe, or can't be got round
+	var work: Array[int] = _modules_on(tree)
+	while not work.is_empty():
+		var m: int = work.pop_front()
+		if done.has(m):
+			continue
+		var gone := {}
+		for c in grid.module_cells(m):
+			gone[c] = true
+		var fed := _fed_cells(tree, needs, gone, joins)
+		if fed.is_empty() and needs.size() > 1:
+			# No piece left with a unit and a reactor both (the module held a
+			# cell of one): join what is left of them, if anything is.
+			var join := _join_needs(needs, gone)
+			if not join.is_empty():
+				for c in join:
+					if not tree.has(c):
+						tree[c] = true
+						added += 1
+				fed = _fed_cells(tree, needs, gone, joins)
+		var cut_off := {}
+		for c in tree:
+			if not gone.has(c) and not fed.has(c):
+				cut_off[c] = true
+		for t: Array in terminals:
+			var left: Array = t.filter(func(c: Vector3i) -> bool: return not gone.has(c))
+			if not left.is_empty() and not left.any(func(c: Vector3i) -> bool: return fed.has(c)):
+				for c in left:
+					cut_off[c] = true
+		if cut_off.is_empty() or fed.is_empty():
+			done[m] = true  # nothing lost (or the root's own module)
+			continue
+		var path := _path_round(fed, cut_off, gone)
+		if path.is_empty():
+			done[m] = true
+			continue
+		for c in path:
+			if not tree.has(c):
+				tree[c] = true
+				added += 1
+		# Check this module again (a second cut-off part may need its own
+		# way round), and the modules the new cells run through.
+		work.push_front(m)
+		for nm in _modules_on(path):
+			if not done.has(nm) and not work.has(nm):
+				work.append(nm)
+	return added
+
+
+## Hull modules the cells run through, in cell order.
+func _modules_on(cells: Variant) -> Array[int]:
+	var out: Array[int] = []
+	var keys: Array = (cells as Dictionary).keys() if cells is Dictionary else cells
+	keys.sort()
+	for c: Vector3i in keys:
+		var m: int = grid.module_at.get(c, -1)
+		if m >= 0 and not out.has(m):
+			out.append(m)
+	return out
+
+
+## Cells of `tree`, with the cells in `gone` taken out, in pieces that still
+## hold a cell of each of `needs`.
+func _fed_cells(tree: Dictionary, needs: Array, gone: Dictionary, joins: Dictionary = {}) -> Dictionary:
+	var fed := {}
+	var seen := {}
+	var keys: Array = tree.keys()
+	keys.sort()
+	for start: Vector3i in keys:
+		if gone.has(start) or seen.has(start):
+			continue
+		var piece: Array[Vector3i] = [start]
+		seen[start] = true
+		var k := 0
+		while k < piece.size():
+			var c: Vector3i = piece[k]
+			k += 1
+			var next: Array = joins.get(c, []).duplicate()
+			for face: StringName in ShipGrid.FACE_NORMALS:
+				next.append(c + ShipGrid.FACE_NORMALS[face])
+			for nc: Vector3i in next:
+				if tree.has(nc) and not gone.has(nc) and not seen.has(nc):
+					seen[nc] = true
+					piece.append(nc)
+		var cells := {}
+		for c in piece:
+			cells[c] = true
+		if needs.all(func(need: Array) -> bool: return need.any(func(c: Vector3i) -> bool: return cells.has(c))):
+			fed.merge(cells)
+	return fed
+
+
+## The shortest hull paths joining a cell of each of `needs` in turn, not
+## through `gone` (every cell, both ends included), or [] if one can't be.
+func _join_needs(needs: Array, gone: Dictionary) -> Array[Vector3i]:
+	var out: Array[Vector3i] = []
+	var from := {}
+	for c: Vector3i in needs[0]:
+		if not gone.has(c):
+			from[c] = true
+	for k in range(1, needs.size()):
+		var to := {}
+		for c: Vector3i in needs[k]:
+			if not gone.has(c):
+				to[c] = true
+		if from.is_empty() or to.is_empty():
+			return []
+		var path := _path_round(from, to, gone)
+		if path.is_empty():
+			return []
+		for c in path:
+			from[c] = true
+			out.append(c)
+	return out
+
+
+## Shortest hull path from `from` to any cell of `to`, not through `gone`:
+## its cells, the start included, or [] if there is none.
+func _path_round(from: Dictionary, to: Dictionary, gone: Dictionary) -> Array[Vector3i]:
+	var came := {}
+	var queue: Array[Vector3i] = []
+	var starts: Array = from.keys()
+	starts.sort()
+	for c: Vector3i in starts:
+		came[c] = c
+		queue.append(c)
+	while not queue.is_empty():
+		var c: Vector3i = queue.pop_front()
+		if to.has(c):
+			var path: Array[Vector3i] = []
+			while not from.has(c):
+				path.append(c)
+				c = came[c]
+			path.append(c)
+			return path
+		for face: StringName in ShipGrid.FACE_NORMALS:
+			var nc: Vector3i = c + ShipGrid.FACE_NORMALS[face]
+			if grid.is_hull(nc) and not gone.has(nc) and not came.has(nc):
+				came[nc] = c
+				queue.append(nc)
+	return []
 
 
 ## Turn a module upside down (a wedge's slope then faces down).

@@ -23,7 +23,7 @@ func _codes(bp: ShipBlueprint) -> Array:
 func test_parts_are_sized_by_tier() -> void:
 	var eq := _catalog().equipment
 	for want: Array in [[&"autocannon", 1], [&"kinetic_cannon", 2], [&"railgun", 3], [&"fibre_laser_turret", 1], [&"laser_turret", 2],
-			[&"free_electron_laser_turret", 3], [&"main_engine", 1], [&"main_engine_high_thrust", 2], [&"torch_drive", 3],
+			[&"free_electron_laser_turret", 3], [&"main_engine", 1], [&"heavy_main_engine", 2], [&"main_engine_high_thrust", 2], [&"capital_main_engine", 3], [&"torch_drive", 3],
 			[&"missile_rack", 1], [&"saturation_pod", 2]]:
 		assert_true((eq[want[0]] as EquipmentDefinition).size_cells == want[1], "%s is %d across" % want)
 	# A heavy gun on a free 2 × 2 patch: four faces, standing two out.

@@ -138,15 +138,21 @@ func test_without_gun_crew_the_guns_fire_at_half_rate() -> void:
 	assert_near(ship.config.cannon.rate_of_fire_rpm, rpm * ShipSystems.NO_GUN_CREW_RATE_FACTOR, 1e-6, "rate of fire (rpm)")
 
 
-func test_crew_cannot_pass_sealed_or_vented_connections() -> void:
+func test_crew_cannot_pass_sealed_hatches_but_go_through_vented_rooms() -> void:
 	var s := _ship(_template(), &"s").systems
 	var bridge := s.command_room()
 	var reactor := _room(s, "r15")
 	assert_true(s.route(bridge, reactor).size() == 4, "bridge → corridor → lower corridor → reactor room")
+	var walk := s.route_time_s(s.route(bridge, reactor))
 	assert_true(s.route(bridge, reactor, false, {"h24": true}).is_empty(), "the ladder h24 sealed: no way down")
 	s.breach_room(_room(s, "r8"))
-	assert_true(s.route(bridge, reactor).is_empty(), "the corridor vented: no way through without suits")
-	assert_true(s.route(_room(s, "r9"), reactor, true).size() == 4, "suited, the way is open")
+	var path := s.route(bridge, reactor)
+	print("    measured: bridge to reactor room %.0f s, %.0f s with the corridor vented" % [walk, s.route_time_s(path)])
+	assert_true(path.size() == 4 and path.has(_room(s, "r8")), "the corridor vented: the crew suit up and go through it")
+	assert_near(s.route_time_s(path), s.room_transit_s() * (path.size() - 2 + ShipSystems.VACUUM_TRANSIT_FACTOR), 1e-6,
+		"the vented room takes %.0f× as long to cross (s)" % ShipSystems.VACUUM_TRANSIT_FACTOR)
+	assert_true(s.route_time_s(path) > walk, "slower than before")
+	assert_true(s.route(_room(s, "r9"), reactor, true).size() == 4, "suited boarders, the same way")
 
 
 func test_field_repair_needs_crew_who_can_get_there() -> void:

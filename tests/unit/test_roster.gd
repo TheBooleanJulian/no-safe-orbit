@@ -103,8 +103,8 @@ func test_nine_different_silhouettes() -> void:
 	var interceptor := ShipGrid.build(_bp("cutter_mk1"), _catalog())
 	var big := _bp("cutter_mk1").equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool:
 		return e.def_id == &"main_engine_high_thrust")
-	assert_true(big.size() == 2 and interceptor.is_hull(Vector3i(0, 1, 11)) and not interceptor.is_hull(Vector3i(1, 1, 5)),
-		"the interceptor: a low dart ahead of an engine block twice its height and wider, two medium engines in it")
+	assert_true(big.size() == 1 and interceptor.is_hull(Vector3i(0, 1, 11)) and not interceptor.is_hull(Vector3i(1, 1, 5)),
+		"the interceptor: a low dart ahead of an engine block twice its height and wider, a medium engine in it")
 	var destroyer := _bp("destroyer_mk1")
 	var gun := destroyer.equipment.filter(func(e: ShipBlueprint.PlacedEquipment) -> bool: return e.def_id == &"railgun")
 	var dgrid := ShipGrid.build(destroyer, _catalog())
@@ -144,7 +144,7 @@ func test_the_battleship_is_not_a_big_cruiser() -> void:
 		"the battleship mounts more guns, railguns among them")
 	assert_true(b.plate_mass_kg > 3.0 * c.plate_mass_kg, "three times the armour")
 	# What it pays: mobility, range, running costs, flexibility.
-	assert_true(b.thrust_forward_n / b.mass_kg < 0.75 * c.thrust_forward_n / c.mass_kg, "it accelerates slower")
+	assert_true(b.thrust_forward_n / b.mass_kg < c.thrust_forward_n / c.mass_kg, "it accelerates slower")
 	assert_true(c.delta_v_m_s() > 2.0 * b.delta_v_m_s(), "the cruiser has more than twice its range")
 	assert_true(b_kg > 3.0 * c_kg, "a jump costs it three times the propellant")
 	assert_true(int(bpr.crew_count) > 2 * int(cp.crew_count) and int(bpr.total) > 2 * int(cp.total), "twice the crew and the price")

@@ -27,10 +27,13 @@ func test_a_fin_folds_along_its_length() -> void:
 
 
 func test_engine_bells_grow_with_thrust() -> void:
+	# By thrust per face: a big engine's bell is sized by that, then scales
+	# with the part (its tier).
 	var sizes := []
-	for id: StringName in [&"main_engine_high_isp", &"main_engine", &"torch_drive", &"main_engine_high_thrust"]:
+	for id: StringName in [&"main_engine_high_isp", &"torch_drive", &"main_engine", &"main_engine_high_thrust"]:
 		var def: EquipmentDefinition = _catalog().equipment[id]
-		sizes.append([def.thrust_n, ShipModelBuilder.engine_bell(def.thrust_n)])
+		var per_face := def.thrust_n / (def.size_cells * def.size_cells)
+		sizes.append([per_face, ShipModelBuilder.engine_bell(per_face)])
 	var line := ", ".join(sizes.map(func(s: Array) -> String: return "%.0f kN %.2f × %.2f m" % [s[0] / 1000.0, s[1].x, s[1].y]))
 	print("    measured: mouth × length — %s" % line)
 	for k in range(1, sizes.size()):

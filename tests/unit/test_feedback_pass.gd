@@ -149,15 +149,15 @@ func _room_index(s: ShipSystems, role: StringName) -> int:
 	return -1
 
 
-func test_suited_crew_cross_vented_rooms_and_survive_venting() -> void:
+func test_crew_cross_vented_rooms_and_suited_crew_survive_venting() -> void:
 	var s := _ship(&"s").systems
 	var bridge := s.command_room()
 	var magazine := _room_index(s, &"magazine")
 	var corridor := _room_index(s, &"access")
 	s.breach_room(corridor)
-	assert_true(s.route(bridge, magazine).is_empty() or not s.route(bridge, magazine).has(corridor), "out of suits: no way through the vented corridor")
+	assert_true(not s.route(bridge, magazine).is_empty(), "the corridor vented: the crew suit up and go through (2026-10-31)")
 	s.suited = true
-	assert_true(not s.route(bridge, magazine).is_empty(), "in suits: through it")
+	assert_true(not s.route(bridge, magazine).is_empty(), "at battle stations: the same")
 	var lsr := _room_index(s, &"life_support")
 	var dead := func() -> int: return s.crew.members.filter(func(m: CrewRoster.Member) -> bool: return m.state != CrewRoster.State.FIT).size()
 	var hurt_before: int = dead.call()
@@ -242,17 +242,39 @@ func test_same_type_rooms_side_by_side_need_no_hatch() -> void:
 
 func test_engines_trade_thrust_for_isp() -> void:
 	var cat := _catalog()
-	var budget := func(id: StringName) -> float: return cat.equipment[id].thrust_n * cat.equipment[id].isp_s
-	var base: float = budget.call(&"main_engine")
-	for id in [&"main_engine_high_isp", &"main_engine_high_thrust"]:
-		var k: float = budget.call(id) / base
-		assert_true(k > 1.0 and k < 1.4, "%s: an uncommon upgrade, a little more than the standard engine (%.2f×)" % [id, k])
-	assert_true(cat.equipment[&"main_engine_high_thrust"].thrust_n > cat.equipment[&"main_engine"].thrust_n
-		and cat.equipment[&"main_engine_high_thrust"].isp_s < cat.equipment[&"main_engine"].isp_s, "more thrust costs Isp")
-	var torch: float = budget.call(&"torch_drive") / base
-	assert_true(torch > 2.0 and torch < 4.0, "the legendary torch drive is better, not absurd (%.1f×)" % torch)
+	var eq := cat.equipment
+	var budget := func(id: StringName) -> float: return eq[id].thrust_n * eq[id].isp_s
+	var k: float = budget.call(&"main_engine_high_isp") / budget.call(&"main_engine")
+	assert_true(k > 1.0 and k < 1.4, "high-Isp: an uncommon upgrade, a little more than the standard engine (%.2f×)" % k)
+	# The medium high-thrust engine against the common one its size: more
+	# thrust for less Isp, about the same budget.
+	k = budget.call(&"main_engine_high_thrust") / budget.call(&"heavy_main_engine")
+	assert_true(eq[&"main_engine_high_thrust"].thrust_n > eq[&"heavy_main_engine"].thrust_n
+		and eq[&"main_engine_high_thrust"].isp_s < eq[&"heavy_main_engine"].isp_s and k > 0.8 and k < 1.2, "more thrust costs Isp (%.2f×)" % k)
+	var torch: float = budget.call(&"torch_drive") / budget.call(&"capital_main_engine")
+	assert_true(torch > 1.2 and torch < 2.0, "the legendary torch drive is better than the capital engine its size, not absurd (%.1f×)" % torch)
 	var rcs: float = budget.call(&"rcs_block_heavy") / budget.call(&"rcs_block")
 	assert_true(rcs > 1.0 and rcs < 1.4, "heavy RCS: double the thrust at a lower Isp (%.2f×)" % rcs)
+
+
+## Bigger engines scale better (2026-10-31): an N × N engine gives more thrust
+## than the N² standard engines its faces would hold, for less mass, power
+## and heat — and the bigger, the better — so a bank of small engines is the
+## worse use of a stern.
+func test_bigger_engines_scale_better() -> void:
+	var eq := _catalog().equipment
+	var small: EquipmentDefinition = eq[&"main_engine"]
+	var last := 1.0
+	for id: StringName in [&"heavy_main_engine", &"capital_main_engine"]:
+		var e: EquipmentDefinition = eq[id]
+		var n := float(e.size_cells * e.size_cells)
+		var thrust := e.thrust_n / (small.thrust_n * n)
+		print("    measured: %s (%d × %d) per face: thrust ×%.2f, mass ×%.2f, power ×%.2f, heat ×%.2f of a standard engine" % [id, e.size_cells,
+			e.size_cells, thrust, e.mass_kg / (small.mass_kg * n), e.power_kw / (small.power_kw * n), e.heat_kw / (small.heat_kw * n)])
+		assert_true(e.isp_s == small.isp_s and e.rarity == small.rarity, "%s: the standard engine, bigger" % id)
+		assert_true(thrust > last and e.mass_kg < small.mass_kg * n and absf(e.power_kw) < absf(small.power_kw) * n
+			and e.heat_kw < small.heat_kw * n, "%s: more thrust per face, less mass, power and heat" % id)
+		last = thrust
 
 
 func test_coolant_loops_feed_radiators() -> void:

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EquipmentDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/construction/equipment_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"heavy_main_engine"
+display_name = "Heavy main engine"
+kind = 1
+mount = 1
+footprint_cells = Vector2i(1, 1)
+allowed_room_roles = Array[StringName]([])
+allowed_faces = Array[StringName]([&"aft", &"fore", &"port", &"starboard", &"dorsal", &"ventral"])
+size_cells = 2
+mass_kg = 28800.0
+power_kw = -510.0
+heat_kw = 1020.0
+heat_rejection_kw = 0.0
+thrust_n = 3680000.0
+isp_s = 900.0
+hit_points = 100.0
+shield_mm = 30.0
+color = Color(0.3, 0.58, 0.95, 1)
+rarity = 0
+drop_weight = 10.0

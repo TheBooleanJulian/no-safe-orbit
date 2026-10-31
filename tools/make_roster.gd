@@ -25,8 +25,10 @@ extends SceneTree
 ## - a keel corridor down the main deck with the rooms either side, hatches
 ##   at the frames, ladders between decks, no hatch blocked by machinery;
 ## - engineering aft: reactor room, then engine rooms with the tanks, main
-##   engines on the aft face around the centre of mass, RCS at the
-##   extremities (more lever arm, not more blocks, turns a long hull);
+##   engines on the aft face around the centre of mass — one big engine
+##   rather than a bank of small ones where the stern takes it (they scale
+##   better) — RCS at the extremities (more lever arm, not more blocks,
+##   turns a long hull);
 ## - radiators where the armour isn't: fins off trusses and engine blocks,
 ##   or flat in the waists between armoured sections;
 ## - guns on the dorsal and ventral centreline with their arcs clear,
@@ -34,8 +36,9 @@ extends SceneTree
 ##   their face; armour where a fight comes from (bow and flanks) unless the
 ##   class says otherwise;
 ## - power and coolant auto-routed from the distribution units and the
-##   reactors (ShipEditor), with extra trunks on the ships meant to survive
-##   a cut.
+##   reactors (ShipEditor), looped round every module the hull lets them
+##   (no one wrecked block cuts systems off), two distribution units apart,
+##   and extra trunks on the ships meant to survive a cut.
 ## Rarer parts come with a bought hull (ServiceYard.dealer_price prices them,
 ## PlayerProfile.buy_ship banks them and unlocks its rarer rooms); the
 ## frigate is the starting ship, so it carries only what a new captain is
@@ -443,8 +446,8 @@ class Draft:
 ## block twice its height. The cockpit rides over the nose behind a chisel
 ## prow; four crew, two compact reactors, the magazine and tanks along the keel;
 ## sloped strakes down both flanks (angled armour where a pursuit is shot at
-## from the side); two medium high-thrust engines in the middle of the
-## block's stern and a pair of standard ones either side, two radiator fins
+## from the side); a medium high-thrust engine in the middle of the
+## block's stern and a standard one either side, two radiator fins
 ## over it like a tail. Two light guns, two PD mounts,
 ## legs under the keel and the block. Short legs in the other sense too:
 ## 600 s engines and three tanks. No collar: it catches, it doesn't hold.
@@ -470,6 +473,7 @@ func _interceptor() -> Draft:
 	s.fit(&"power_distribution_unit", Vector3i(3, 0, 4))
 	s.fit(&"compact_reactor", Vector3i(3, 0, 5))
 	s.fit(&"compact_reactor", Vector3i(3, 0, 6))
+	s.fit(&"power_distribution_unit", Vector3i(3, 0, 7))  # a second switchboard, in the next block: the conduit loops round either
 	s.room(&"engine_room", 0, 2, 7, 2, 3)
 	s.door(Vector3i(2, 0, 6), Vector3i(2, 0, 7))
 	s.fit(tank, Vector3i(2, 0, 8))
@@ -478,9 +482,8 @@ func _interceptor() -> Draft:
 	s.fit(tank, Vector3i(1, 0, 10))
 	s.fit(tank, Vector3i(3, 0, 10))
 	s.ladder(1, 12, 0, 1)
-	s.pair(&"main_engine_high_thrust", Vector3i(1, 0, 12), &"aft")
-	for d in [0, 1]:
-		s.pair(&"main_engine", Vector3i(0, d, 12), &"aft")
+	s.fit(&"main_engine_high_thrust", Vector3i(2, 0, 12), &"aft")
+	s.pair(&"main_engine", Vector3i(0, 1, 12), &"aft")
 	s.fit(&"autocannon", Vector3i(3, 1, 4), &"dorsal")
 	s.fit(&"autocannon", Vector3i(2, 0, 2), &"ventral")
 	s.fit(&"sensor_mast", Vector3i(2, 1, 4), &"dorsal")
@@ -507,7 +510,7 @@ func _interceptor() -> Draft:
 ## truss frame round a pressurised keel with the corridor over a tank deck —
 ## carrying eight missile racks on its flanks and top, each with clear space
 ## off its face; and a boxy drive block aft, wider than the rest (reactor,
-## engine rooms, tanks, four engines, radiators flat on its top and bottom).
+## engine rooms, tanks, a heavy engine, radiators flat on its top and bottom).
 ## Two masts (one hardened) for the targeting it fires on; one autocannon
 ## and three PD mounts for anything that gets close. Its weapons are
 ## finite: 96 missiles, then home to rearm.
@@ -560,9 +563,7 @@ func _missile_corvette() -> Draft:
 		for z in [13, 15]:
 			s.fit(tank, Vector3i(x, 0, z))
 	s.fit(&"power_distribution_unit", Vector3i(3, 0, 13))
-	for x in [2, 3]:
-		for d in [0, 1]:
-			s.fit(&"main_engine", Vector3i(x, d, 18), &"aft")
+	s.fit(&"heavy_main_engine", Vector3i(2, 0, 18), &"aft")
 	# Launchers: four on the cage's top rails, two down each flank.
 	for z in [6, 10]:
 		s.pair(&"missile_rack", Vector3i(1, 1, z), &"dorsal")
@@ -596,7 +597,8 @@ func _missile_corvette() -> Draft:
 ## main deck's edges and under the bow, a sharp chisel prow, a raised gun
 ## spine on top (magazine inside, a turret at each end, the mast and the
 ## missile rack between), cargo sponsons low on each flank and a boxy engine
-## block aft, wider than the hull, under two radiator fins. Main deck:
+## block aft, wider than the hull (a heavy engine and two standard ones),
+## under two radiator fins. Main deck:
 ## bridge behind the bow, the keel corridor, quarters, medbay, armoury, a
 ## big reactor room with the reactor inboard, the engine room. Lower deck:
 ## the hangar (a Wasp, door underneath), the hold with the tank farm, the
@@ -663,9 +665,8 @@ func _escort_frigate() -> Draft:
 	s.fit(tank, Vector3i(5, 0, 15))
 	s.fit(&"power_distribution_unit", Vector3i(3, 0, 16))
 	# Drive.
-	for x in [2, 3, 4, 5]:
-		s.fit(&"main_engine", Vector3i(x, 1, 17), &"aft")
-	s.pair(&"main_engine", Vector3i(3, 0, 17), &"aft")
+	s.fit(&"heavy_main_engine", Vector3i(3, 0, 17), &"aft")
+	s.pair(&"main_engine", Vector3i(2, 1, 17), &"aft")
 	s.pair(&"radiator_long", Vector3i(1, 1, 14), &"dorsal", ShipGrid.FIN_ROTATION)
 	s.pair(&"rcs_block", Vector3i(2, 1, 0), &"dorsal")
 	s.pair(&"rcs_block", Vector3i(2, 0, 2), &"ventral")
@@ -700,8 +701,8 @@ func _escort_frigate() -> Draft:
 ## the housing the dense magazine at the breech and two reactors either side
 ## of the keel feed the gun's 900 kW, with tanks above and below. Behind it a
 ## chamfered three-deck hull — bridge, workshop, crew, the secondaries'
-## magazine, the tank farm — and a boxy engine block, wider still, under an
-## X of radiator fins. Heavy RCS at the gun's tip and the block's corners
+## magazine, the tank farm — and a boxy engine block, wider still, its stern
+## one capital engine, under an X of radiator fins. Heavy RCS at the gun's tip and the block's corners
 ## swing the whole ship onto a target (the gun traverses only 12°/s). Two
 ## autocannons, PD and flares; nothing else.
 func _gun_destroyer() -> Draft:
@@ -739,9 +740,7 @@ func _gun_destroyer() -> Draft:
 		s.room(&"engine_room", d, 0, 26, 7, 4)
 		s.furnish(Draft.many(tank, 2), d, Rect2i(0, 26, 7, 4), Vector3i(3, d, 26))
 	s.door(Vector3i(3, 1, 25), Vector3i(3, 1, 26))
-	for x in [2, 3, 4]:
-		for d in 3:
-			s.fit(&"main_engine", Vector3i(x, d, 29), &"aft")
+	s.fit(&"capital_main_engine", Vector3i(2, 0, 29), &"aft")
 	# The gun and what points it.
 	s.fit(&"railgun", Vector3i(2, 0, 0), &"fore")
 	for d in [0, 2]:
@@ -886,7 +885,7 @@ func _heavy_cruiser() -> Draft:
 ## defence all round. Four Mk II reactors in two reactor rooms either side
 ## of the main keel corridor, a bridge and a second one opposite, keel
 ## corridors on all three main decks. What it gave up: no craft, no
-## missiles, a small hold, short legs on standard engines (it refuels at
+## missiles, a small hold, short legs on two capital engines (it refuels at
 ## every station: a jump to Mars burns a thousand tonnes), a slow turn,
 ## the biggest crew and the biggest repair bills in the yard.
 func _battleship() -> Draft:
@@ -972,9 +971,8 @@ func _battleship() -> Draft:
 	for z in [44, 48]:
 		s.pair(&"flare_launcher", Vector3i(1, 3, z), &"dorsal")
 	s.pair(&"flare_launcher", Vector3i(1, 1, 48), &"ventral")
-	for x in range(2, 10):
-		for d in [1, 3]:
-			s.fit(&"main_engine", Vector3i(x, d, 49), &"aft")
+	for x in [2, 7]:
+		s.fit(&"capital_main_engine", Vector3i(x, 1, 49), &"aft")
 	# Heavy RCS on the booms' tips, the bow shoulders and the stern corners.
 	s.pair(&"rcs_block_heavy", Vector3i(2, 2, 1), &"port")
 	s.pair(&"rcs_block_heavy", Vector3i(3, 3, 1), &"dorsal")
@@ -997,8 +995,8 @@ func _battleship() -> Draft:
 
 ## Galileo-class fleet carrier: two hulls and the hangar deck slung between
 ## them. The side hulls (bridge in the port one, flight control in the
-## starboard one, two reactors and the tanks in each, the engines across
-## their sterns) stand a deck taller than the hangar block, so its flanks
+## starboard one, two reactors and the tanks in each, a capital engine
+## filling each stern) stand a deck taller than the hangar block, so its flanks
 ## are covered by them and its roof is armoured. Three hangars on the lower
 ## deck, bulkheaded by magazine rows that also rearm the craft, each with
 ## its doors underneath: eight Wasp bays and two Mantis bomber bays, room to
@@ -1064,9 +1062,8 @@ func _fleet_carrier() -> Draft:
 	s.ladder(8, 26, 0, 1)
 	for z in range(0, 44):
 		s.trunks.append(Vector3i(3, 1, z))
-	for x in [0, 1, 2, 13, 14, 15]:
-		for d in [0, 2]:
-			s.fit(&"main_engine", Vector3i(x, d, 43), &"aft")
+	for x in [0, 13]:
+		s.fit(&"capital_main_engine", Vector3i(x, 0, 43), &"aft")
 	# Defence.
 	for z in [6, 20, 34]:
 		s.pair(&"autocannon", Vector3i(0, 2, z), &"port")
@@ -1134,8 +1131,12 @@ func _scout() -> Draft:
 	s.door(Vector3i(1, 0, 4), Vector3i(0, 0, 4))
 	s.door(Vector3i(2, 0, 5), Vector3i(1, 0, 5))
 	s.door(Vector3i(2, 0, 9), Vector3i(2, 0, 10))
-	s.fit(&"fusion_reactor", Vector3i(0, 0, 6))
-	s.fit(&"power_distribution_unit", Vector3i(0, 0, 5))
+	# Two compact reactors in different blocks, two switchboards apart: one
+	# hit leaves it power (it draws 1.3 MW of their 2.4).
+	s.fit(&"compact_reactor", Vector3i(0, 0, 5))
+	s.fit(&"compact_reactor", Vector3i(0, 0, 6))
+	s.fit(&"power_distribution_unit", Vector3i(0, 0, 7))
+	s.fit(&"power_distribution_unit", Vector3i(2, 0, 12))
 	s.fit(&"propellant_tank", Vector3i(0, 0, 8))
 	s.fit(&"propellant_tank", Vector3i(0, 0, 10))
 	s.fit(&"propellant_tank", Vector3i(0, 0, 12))
@@ -1175,7 +1176,7 @@ func _scout() -> Draft:
 ## side of it between open truss frames, each a two-deck hold with a hatch
 ## off the tunnel and a cargo collar under the tunnel amidships. Propellant
 ## rides in the tunnel's upper deck over the corridor; the drive unit aft
-## (reactor, engine rooms, more tanks, four standard engines, two radiator
+## (reactor, engine rooms, more tanks, a heavy engine, two radiator
 ## fins and a grappling arm for hauling) is all common, cheap kit. Two PD
 ## mounts, an autocannon covering the stern and flares: enough to discourage
 ## a raider, not to fight one. Unarmoured, slow to turn, a big hold.
@@ -1238,6 +1239,7 @@ func _heavy_freighter() -> Draft:
 	s.door(Vector3i(3, 1, 32), Vector3i(3, 1, 33))
 	s.fit(&"fusion_reactor", Vector3i(1, 1, 34))
 	s.fit(&"power_distribution_unit", Vector3i(6, 1, 33))
+	s.fit(&"power_distribution_unit", Vector3i(6, 1, 35))  # a second switchboard: the conduit loops round either
 	s.room(&"engine_room", 1, 1, 36, 6, 7)
 	s.door(Vector3i(3, 1, 35), Vector3i(3, 1, 36))
 	s.furnish(Draft.many(tank, 4), 1, Rect2i(1, 36, 6, 7), Vector3i(3, 1, 36))
@@ -1248,9 +1250,7 @@ func _heavy_freighter() -> Draft:
 		else:
 			s.ladder(4, 34 if d == 2 else 38, d - 1, d)
 		s.furnish(Draft.many(tank, 4 if d != 2 else 2), d, Rect2i(1, 33, 6, 10), Vector3i(4, d, 34 if d != 3 else 38))
-	for x in [2, 5]:
-		for d in [1, 2]:
-			s.fit(&"main_engine", Vector3i(x, d, 42), &"aft")
+	s.fit(&"heavy_main_engine", Vector3i(3, 1, 42), &"aft")
 	s.pair(&"radiator_long", Vector3i(2, 3, 38), &"dorsal", ShipGrid.FIN_ROTATION)
 	s.fit(&"grapple_arm", Vector3i(1, 3, 33), &"dorsal")
 	s.fit(&"docking_collar", Vector3i(2, 1, 3), &"port")

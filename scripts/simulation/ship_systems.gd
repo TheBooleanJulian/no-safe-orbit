@@ -101,6 +101,11 @@ const CORRIDOR_PER_CELL := 0.01
 const CORRIDOR_MAX := 0.4
 ## Crew reach external systems on EVA from rooms this close (cells).
 const EVA_REACH_CELLS := 2
+## A vented room is no wall (2026-10-31): the crew suit up and go through,
+## this many times slower (cycling the hatches, tethered, past the holes),
+## and work in one — patching, repairing — at VACUUM_WORK_RATE of the pace.
+const VACUUM_TRANSIT_FACTOR := 2.0
+const VACUUM_WORK_RATE := 0.5
 ## A medic treats one wounded crew member in this long (s), with a working
 ## life support room (the medbay; bigger is faster, see room_bonus) — twice
 ## as long without one.
@@ -213,6 +218,10 @@ class RepairTask:
 	var total_s: float
 	var remaining_s: float
 	var target_hp: float
+	## The work's pace when it started (ShipSystems.repair_pace): it speeds
+	## up or slows down from there if the workshop or the site vents or seals.
+	var pace: float = 1.0
+	var site: int = -1
 
 	func progress() -> float:
 		return 1.0 - remaining_s / maxf(total_s, 1e-6)
@@ -397,20 +406,14 @@ func count(kind: EquipmentDefinition.Kind, working_only: bool) -> int:
 	return n
 
 
-## Rooms the crew can reach from a pressurised command room, through
-## hatches between pressurised rooms.
+## Rooms the crew can reach from the command room, through hatches —
+## vented rooms included (in suits, slower: VACUUM_TRANSIT_FACTOR). Empty
+## while the command room is lost (see command_held).
 func reachable_rooms() -> Dictionary:
-	var start := -1
-	for i in blueprint.rooms.size():
-		var def: RoomDefinition = grid.catalog.rooms.get(blueprint.rooms[i].def_id)
-		# Suited crew (battle stations) keep command of a vented bridge
-		# (play-test batch 6: one breach of the bridge disabled the ship).
-		if def != null and def.role == &"command" and (rooms[i].pressurized or suited):
-			start = i
-			break
 	var seen := {}
-	if start < 0:
+	if not command_held():
 		return seen
+	var start := command_room()
 	seen[start] = true
 	var queue := [start]
 	while not queue.is_empty():
@@ -419,14 +422,22 @@ func reachable_rooms() -> Dictionary:
 			var ra: int = grid.room_at.get(h.a, -1)
 			var rb: int = grid.room_at.get(h.b, -1)
 			var other := rb if ra == i else (ra if rb == i else -1)
-			if other >= 0 and not seen.has(other) and (suited or rooms[other].pressurized):
+			if other >= 0 and not seen.has(other):
 				seen[other] = true
 				queue.append(other)
 		for other: int in grid.open_rooms.get(i, []):
-			if not seen.has(other) and (suited or rooms[other].pressurized):
+			if not seen.has(other):
 				seen[other] = true
 				queue.append(other)
 	return seen
+
+
+## The command room is held: there is one, pressurised — or vented with the
+## crew suited at battle stations (play-test batch 6: one breach of the
+## bridge disabled the ship).
+func command_held() -> bool:
+	var i := command_room()
+	return i >= 0 and (rooms[i].pressurized or suited)
 
 
 ## Pressurised rooms the crew can no longer reach.
@@ -654,6 +665,7 @@ func solve_power() -> void:
 ## distribution unit on it; short networks shed loads by priority.
 func _solve_bus_power() -> void:
 	bus_network.clear()
+	var joined := _junctions()
 	var networks := 0
 	for key: String in blueprint.bus:
 		if bus_network.has(key) or not _bus_alive(key):
@@ -661,9 +673,12 @@ func _solve_bus_power() -> void:
 		bus_network[key] = networks
 		var queue := [key]
 		while not queue.is_empty():
-			var cell := ShipBlueprint.parse_cell_key(queue.pop_front())
+			var at: String = queue.pop_front()
+			var cell := ShipBlueprint.parse_cell_key(at)
+			var next: Array = joined.get(at, []).duplicate()
 			for face: StringName in ShipGrid.FACE_NORMALS:
-				var nk := ShipBlueprint.cell_key(cell + ShipGrid.FACE_NORMALS[face])
+				next.append(ShipBlueprint.cell_key(cell + ShipGrid.FACE_NORMALS[face]))
+			for nk: String in next:
 				if blueprint.bus.has(nk) and not bus_network.has(nk) and _bus_alive(nk):
 					bus_network[nk] = networks
 					queue.append(nk)
@@ -729,6 +744,21 @@ func _solve_bus_power() -> void:
 	_config = null
 
 
+## A working reactor or distribution unit is a switchboard: conduit run to
+## any of its cells is one network (cell key -> the part's other bus cells).
+func _junctions() -> Dictionary:
+	var out := {}
+	for e in equipment:
+		if e.destroyed() or not e.def.kind in [EquipmentDefinition.Kind.REACTOR, EquipmentDefinition.Kind.POWER_DISTRIBUTION]:
+			continue
+		var keys: Array = grid.equipment_cells(e.index).map(func(c: Vector3i) -> String: return ShipBlueprint.cell_key(c)).filter(
+			func(k: String) -> bool: return blueprint.bus.has(k))
+		if keys.size() > 1:
+			for k: String in keys:
+				out[k] = keys
+	return out
+
+
 func _bus_alive(key: String) -> bool:
 	if bus_cut.has(key):
 		return false
@@ -746,7 +776,7 @@ func _network_of_cells(cells: Array) -> int:
 
 func _network_of_equipment(e: EquipmentState) -> int:
 	if e.def.is_external():
-		return bus_network.get(ShipBlueprint.cell_key(blueprint.equipment[e.index].cell), -1)
+		return _network_of_cells(grid.external_cells(e.index))  # a big part draws through any face it covers
 	return _network_of_cells(grid.equipment_cells(e.index))
 
 
@@ -860,7 +890,7 @@ func reassign(id: String, role: int) -> String:
 	if path.is_empty():
 		return "%s can't get to the %s station" % [m.label(), CrewRoster.ROLE_NAMES[role]]
 	m.busy = true
-	crew_orders[m.id] = {"role": role, "room": dest, "left_s": (path.size() - 1) * room_transit_s()}
+	crew_orders[m.id] = {"role": role, "room": dest, "left_s": route_time_s(path)}
 	_note("%s heading off to %s — %.0f s" % [m.label(), CrewRoster.ROLE_NAMES[role], crew_orders[m.id].left_s])
 	return ""
 
@@ -1254,6 +1284,15 @@ func room_transit_s() -> float:
 	return CrewRoster.ROOM_TRANSIT_S * (1.0 - minf(CORRIDOR_PER_CELL * cells, CORRIDOR_MAX))
 
 
+## Seconds to walk `path` (rooms, from `route`): room_transit_s for each room
+## entered, VACUUM_TRANSIT_FACTOR times that for a vented one.
+func route_time_s(path: Array) -> float:
+	var t := 0.0
+	for k in range(1, path.size()):
+		t += room_transit_s() * (1.0 if rooms[path[k]].pressurized else VACUUM_TRANSIT_FACTOR)
+	return t
+
+
 ## The cafeteria's lift to everything the crew's skill touches (1 without one).
 func crew_skill_factor() -> float:
 	return 1.0 + minf(CAFETERIA_PER_CELL * working_cells(&"cafeteria"), CAFETERIA_MAX)
@@ -1264,10 +1303,12 @@ func armoury_factor() -> float:
 	return 1.0 + minf(ARMOURY_PER_CELL * working_cells(&"armoury"), ARMOURY_MAX)
 
 
-func room_bonus(role: StringName) -> float:
+## `vented_too`: count powered rooms of `role` that are vented as well
+## (the crew working there in suits, see workshop_rate).
+func room_bonus(role: StringName, vented_too: bool = false) -> float:
 	var cells := 0
 	for i in blueprint.rooms.size():
-		if room_role(i) == role and rooms[i].powered and (suited or rooms[i].pressurized):
+		if room_role(i) == role and rooms[i].powered and (suited or vented_too or rooms[i].pressurized):
 			cells += blueprint.rooms[i].rect.size.x * blueprint.rooms[i].rect.size.y
 	if cells == 0:
 		return 0.0
@@ -1276,21 +1317,22 @@ func room_bonus(role: StringName) -> float:
 
 ## Damage control patches breached hulls one room at a time — the
 ## workshop's sealant drones and foam reach a breach even where the crew
-## can't — with a working workshop, fit damage-control or engineering crew
-## aboard and life support to put the air back. Returns true when a room is
-## sealed (and re-pressurised).
+## can't — with a working workshop (a vented one at VACUUM_WORK_RATE), fit
+## damage-control or engineering crew aboard and life support to put the
+## air back. Returns true when a room is sealed (and re-pressurised).
 func _advance_hull_sealing(dt: float) -> bool:
 	var room := -1
 	for i in rooms.size():
 		if rooms[i].breached:
 			room = i
 			break
-	if room < 0 or crew == null or room_bonus(&"workshop") <= 0.0 or room_bonus(&"life_support") <= 0.0:
+	var rate := workshop_rate()
+	if room < 0 or crew == null or rate <= 0.0 or room_bonus(&"life_support") <= 0.0:
 		return false
 	if not crew.members.any(func(m: CrewRoster.Member) -> bool:
 			return m.fit() and m.location >= 0 and (m.role == CrewRoster.Role.DAMAGE_CONTROL or m.role == CrewRoster.Role.ENGINEERING)):
 		return false
-	_seal_s[room] = float(_seal_s.get(room, 0.0)) + dt * room_bonus(&"workshop") * tech_factor("damage_control")
+	_seal_s[room] = float(_seal_s.get(room, 0.0)) + dt * rate * tech_factor("damage_control")
 	if _seal_s[room] < HULL_SEAL_S:
 		return false
 	_seal_s.erase(room)
@@ -1298,6 +1340,23 @@ func _advance_hull_sealing(dt: float) -> bool:
 	_note("%s %s: hull breach sealed by damage control; life support re-pressurises it" % [_room_name(room), blueprint.rooms[room].id])
 	update_pressure()
 	return true
+
+
+## How fast damage control works from the workshop: its room bonus (at
+## least 1), at VACUUM_WORK_RATE of that while it is vented (the crew in
+## suits); 0 with no working (powered, reachable) workshop.
+func workshop_rate() -> float:
+	var w := working_workshop()
+	if w < 0:
+		return 0.0
+	return maxf(room_bonus(&"workshop", true), 1.0) * (1.0 if rooms[w].pressurized else VACUUM_WORK_RATE)
+
+
+## The pace of repair work in `room`: the workshop's rate, slowed again to
+## VACUUM_WORK_RATE where the room itself is vented (work in suits).
+func repair_pace(room: int) -> float:
+	var site := 1.0 if room < 0 or rooms[room].pressurized else VACUUM_WORK_RATE
+	return workshop_rate() * site
 
 
 ## Progress (0..1) on sealing the room being patched, or -1 if none.
@@ -1458,13 +1517,13 @@ func cover_role(role: int) -> String:
 		if m.role != CrewRoster.Role.GENERAL or not m.available() or m.location < 0 or crew_orders.has(m.id):
 			continue
 		var path := route(m.location, dest)
-		if not path.is_empty() and (best == null or path.size() < best_path.size()):
+		if not path.is_empty() and (best == null or route_time_s(path) < route_time_s(best_path)):
 			best = m
 			best_path = path
 	if best == null:
 		return "no free general crew can reach the %s station" % CrewRoster.ROLE_NAMES[role]
 	best.busy = true
-	crew_orders[best.id] = {"role": role, "room": dest, "left_s": (best_path.size() - 1) * room_transit_s()}
+	crew_orders[best.id] = {"role": role, "room": dest, "left_s": route_time_s(best_path)}
 	_note("%s (general) heading to cover %s — %.0f s" % [best.id, CrewRoster.ROLE_NAMES[role], crew_orders[best.id].left_s])
 	return ""
 
@@ -1575,23 +1634,28 @@ func set_isolated(room: int, isolated: bool) -> void:
 	_config = null
 
 
-## Rooms from `from` to `to` (inclusive) through hatches, or [] if there is
-## no way. Unsuited crew need every room pressurised; `blocked` hatch ids
-## (sealed doors) are impassable; destroyed hatches are open holes.
-## Isolated compartments can't be entered or left (suited boarders cut through).
-## `suited`: boarders in suits (they also ignore our isolated compartments).
-## Our own crew in suits (battle stations) go through vented rooms too.
+## The quickest rooms from `from` to `to` (inclusive) through hatches, or []
+## if there is no way. Vented rooms are passable — the crew suit up — but
+## cost VACUUM_TRANSIT_FACTOR rooms' time, so a pressurised way round wins
+## when it is quicker; `blocked` hatch ids (sealed doors) are impassable;
+## destroyed hatches are open holes. Isolated compartments can't be entered
+## or left. `suited`: boarders (they cut through our isolated compartments).
 func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -> Array[int]:
 	var none: Array[int] = []
-	var eva := suited or self.suited
-	if from < 0 or to < 0 or (not eva and (not rooms[from].pressurized or not rooms[to].pressurized)):
+	if from < 0 or to < 0:
 		return none
 	var prev := {from: -1}
-	var queue := [from]
-	while not queue.is_empty():
-		var i: int = queue.pop_front()
-		if i == to:
+	var cost := {from: 0.0}
+	var done := {}
+	while true:
+		var i := -1
+		for r: int in cost:
+			if not done.has(r) and (i < 0 or float(cost[r]) < float(cost[i])):
+				i = r
+		if i < 0 or i == to:
 			break
+		done[i] = true
+		var next: Array[int] = []
 		for h in blueprint.hatches:
 			if blocked.has(h.id) and not destroyed_hatches.has(h.id):
 				continue
@@ -1600,15 +1664,17 @@ func route(from: int, to: int, suited: bool = false, blocked: Dictionary = {}) -
 			var other := rb if ra == i else (ra if rb == i else -1)
 			if other >= 0 and not suited and (isolated_rooms.has(other) or isolated_rooms.has(i)) and not destroyed_hatches.has(h.id):
 				continue
-			if other >= 0 and not prev.has(other) and (eva or rooms[other].pressurized):
-				prev[other] = i
-				queue.append(other)
+			if other >= 0:
+				next.append(other)
 		for other: int in grid.open_rooms.get(i, []):
 			if not suited and (isolated_rooms.has(other) or isolated_rooms.has(i)):
 				continue
-			if not prev.has(other) and (eva or rooms[other].pressurized):
+			next.append(other)
+		for other in next:
+			var c: float = float(cost[i]) + (1.0 if rooms[other].pressurized else VACUUM_TRANSIT_FACTOR)
+			if not done.has(other) and (not cost.has(other) or c < float(cost[other])):
+				cost[other] = c
 				prev[other] = i
-				queue.append(other)
 	if not prev.has(to):
 		return none
 	var path: Array[int] = []
@@ -1706,7 +1772,7 @@ func disabled_reason() -> String:
 func _compute_disabled_reason() -> String:
 	if power_supply_kw <= 0.0:
 		return "no power"
-	if reachable_rooms().is_empty():
+	if not command_held():
 		return "command room lost"
 	if count(EquipmentDefinition.Kind.CANNON, false) > 0 and count(EquipmentDefinition.Kind.CANNON, true) == 0:
 		return "all guns out"
@@ -1903,17 +1969,18 @@ func _advance_in_place_repairs(dt: float) -> bool:
 	in_place_repairs.clear()
 	if crew == null or working_workshop() < 0:
 		return false
-	var rate := dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * maxf(room_bonus(&"workshop"), 1.0) * crew_skill_factor()
+	var rate := dt * channel_factor(Channel.SYS) * tech_factor("damage_control") * crew_skill_factor()
 	var changed := false
 	for m in crew.members:
-		if not m.available() or m.location < 0 or not (suited or rooms[m.location].pressurized):
+		if not m.available() or m.location < 0:
 			continue
+		var pace := repair_pace(m.location)
 		var e := _damaged_in_room(m.location)
 		if e == null:
 			continue
 		var trained := m.role == CrewRoster.Role.DAMAGE_CONTROL or m.role == CrewRoster.Role.ENGINEERING
 		var limit := FIELD_REPAIR_LIMIT * e.max_hp
-		e.hp = minf(e.hp + IN_PLACE_HP_PER_S * (1.0 if trained else IN_PLACE_UNTRAINED) * rate, limit)
+		e.hp = minf(e.hp + IN_PLACE_HP_PER_S * (1.0 if trained else IN_PLACE_UNTRAINED) * rate * pace, limit)
 		in_place_repairs[e.id] = int(in_place_repairs.get(e.id, 0)) + 1
 		if e.hp >= limit - 1e-6:
 			_note("%s %s patched to %d%% by the crew in %s %s" % [e.def.display_name, e.id, roundi(FIELD_REPAIR_LIMIT * 100.0),
@@ -1936,7 +2003,8 @@ func _damaged_in_room(room: int) -> EquipmentState:
 	return best
 
 
-## Index of a workshop room that is powered, pressurised and reachable, or -1.
+## Index of a workshop room that is powered and reachable, or -1 (a vented
+## one works, in suits: see workshop_rate).
 func working_workshop() -> int:
 	var reach := reachable_rooms()
 	for i in blueprint.rooms.size():
@@ -1968,7 +2036,7 @@ func field_repair_block_reason() -> String:
 	if not has_workshop:
 		return "no workshop aboard"
 	if working_workshop() < 0:
-		return "workshop unpowered, depressurised or cut off"
+		return "workshop unpowered or cut off"
 	var e := field_repair_target()
 	if e == null:
 		return "nothing the crew can patch (destroyed parts need the yard)"
@@ -1989,7 +2057,7 @@ func _repair_crew(e: EquipmentState) -> Array:
 				continue
 			for room in _access_rooms(e):
 				var path := route(m.location, room)
-				if not path.is_empty() and (best.is_empty() or path.size() < (best[1] as Array).size()):
+				if not path.is_empty() and (best.is_empty() or route_time_s(path) < route_time_s(best[1])):
 					best = [m, path]
 		if not best.is_empty():
 			return best
@@ -2052,8 +2120,10 @@ func start_field_repair() -> EquipmentState:
 	task.equipment_id = e.id
 	task.member_id = m.id
 	task.target_hp = FIELD_REPAIR_LIMIT * e.max_hp
-	task.travel_s = (path.size() - 1) * room_transit_s()
-	task.total_s = task.travel_s + (FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)) / maxf(room_bonus(&"workshop"), 1.0)
+	task.travel_s = route_time_s(path)
+	task.site = path[-1]
+	task.pace = repair_pace(task.site)
+	task.total_s = task.travel_s + (FIELD_REPAIR_SETUP_S + FIELD_REPAIR_S_PER_HP * field_repair_hp(e)) / task.pace
 	task.remaining_s = task.total_s
 	repair_tasks.append(task)
 	m.busy = true
@@ -2082,7 +2152,9 @@ func _advance_repair(task: RepairTask, dt: float) -> bool:
 			m.busy = false
 		repair_tasks.erase(task)
 		return false
-	task.remaining_s -= dt
+	# The walk is the walk; the work goes at the pace it can now.
+	var at_work := task.remaining_s <= task.total_s - task.travel_s
+	task.remaining_s -= dt * (repair_pace(task.site) / task.pace if at_work and task.pace > 0.0 else 1.0)
 	if task.remaining_s > 0.0:
 		return false
 	m.busy = false

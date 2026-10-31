@@ -4,47 +4,47 @@
 	"designer": "Earth Shipyard",
 	"modules": [
 		{
-			"id": "m72",
+			"id": "m69",
 			"def": "hull_block",
 			"pos": [
 				1,
 				0,
 				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m70",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				0
+			],
+			"rot": 0
+		},
+		{
+			"id": "m71",
+			"def": "hull_block",
+			"pos": [
+				1,
+				0,
+				2
+			],
+			"rot": 0
+		},
+		{
+			"id": "m72",
+			"def": "hull_block",
+			"pos": [
+				3,
+				0,
+				2
 			],
 			"rot": 0
 		},
 		{
 			"id": "m73",
-			"def": "hull_block",
-			"pos": [
-				3,
-				0,
-				0
-			],
-			"rot": 0
-		},
-		{
-			"id": "m74",
-			"def": "hull_block",
-			"pos": [
-				1,
-				0,
-				2
-			],
-			"rot": 0
-		},
-		{
-			"id": "m75",
-			"def": "hull_block",
-			"pos": [
-				3,
-				0,
-				2
-			],
-			"rot": 0
-		},
-		{
-			"id": "m76",
 			"def": "hull_block_1x1",
 			"pos": [
 				1,
@@ -54,7 +54,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m77",
+			"id": "m74",
 			"def": "hull_block",
 			"pos": [
 				2,
@@ -64,12 +64,42 @@
 			"rot": 0
 		},
 		{
-			"id": "m78",
+			"id": "m75",
 			"def": "hull_block_1x1",
 			"pos": [
 				4,
 				0,
 				4
+			],
+			"rot": 0
+		},
+		{
+			"id": "m76",
+			"def": "truss_block",
+			"pos": [
+				1,
+				0,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m77",
+			"def": "truss_block",
+			"pos": [
+				4,
+				0,
+				5
+			],
+			"rot": 0
+		},
+		{
+			"id": "m78",
+			"def": "hull_block",
+			"pos": [
+				2,
+				0,
+				6
 			],
 			"rot": 0
 		},
@@ -79,7 +109,7 @@
 			"pos": [
 				1,
 				0,
-				5
+				7
 			],
 			"rot": 0
 		},
@@ -89,7 +119,7 @@
 			"pos": [
 				4,
 				0,
-				5
+				7
 			],
 			"rot": 0
 		},
@@ -99,7 +129,7 @@
 			"pos": [
 				2,
 				0,
-				6
+				8
 			],
 			"rot": 0
 		},
@@ -109,7 +139,7 @@
 			"pos": [
 				1,
 				0,
-				7
+				9
 			],
 			"rot": 0
 		},
@@ -119,7 +149,7 @@
 			"pos": [
 				4,
 				0,
-				7
+				9
 			],
 			"rot": 0
 		},
@@ -129,7 +159,7 @@
 			"pos": [
 				2,
 				0,
-				8
+				10
 			],
 			"rot": 0
 		},
@@ -139,7 +169,7 @@
 			"pos": [
 				1,
 				0,
-				9
+				11
 			],
 			"rot": 0
 		},
@@ -149,7 +179,7 @@
 			"pos": [
 				4,
 				0,
-				9
+				11
 			],
 			"rot": 0
 		},
@@ -159,27 +189,27 @@
 			"pos": [
 				2,
 				0,
-				10
+				12
 			],
 			"rot": 0
 		},
 		{
 			"id": "m88",
-			"def": "truss_block",
+			"def": "hull_block",
 			"pos": [
-				1,
 				0,
-				11
+				0,
+				13
 			],
 			"rot": 0
 		},
 		{
 			"id": "m89",
-			"def": "truss_block",
+			"def": "hull_block",
 			"pos": [
 				4,
 				0,
-				11
+				13
 			],
 			"rot": 0
 		},
@@ -189,7 +219,7 @@
 			"pos": [
 				2,
 				0,
-				12
+				14
 			],
 			"rot": 0
 		},
@@ -199,7 +229,7 @@
 			"pos": [
 				0,
 				0,
-				13
+				15
 			],
 			"rot": 0
 		},
@@ -209,7 +239,7 @@
 			"pos": [
 				4,
 				0,
-				13
+				15
 			],
 			"rot": 0
 		},
@@ -219,7 +249,7 @@
 			"pos": [
 				2,
 				0,
-				14
+				16
 			],
 			"rot": 0
 		},
@@ -229,7 +259,7 @@
 			"pos": [
 				0,
 				0,
-				15
+				17
 			],
 			"rot": 0
 		},
@@ -239,27 +269,27 @@
 			"pos": [
 				4,
 				0,
-				15
+				17
 			],
 			"rot": 0
 		},
 		{
 			"id": "m96",
-			"def": "hull_block",
+			"def": "hull_block_1x1",
 			"pos": [
 				2,
 				0,
-				16
+				18
 			],
 			"rot": 0
 		},
 		{
 			"id": "m97",
-			"def": "hull_block",
+			"def": "hull_block_1x1",
 			"pos": [
+				3,
 				0,
-				0,
-				17
+				18
 			],
 			"rot": 0
 		},
@@ -267,29 +297,29 @@
 			"id": "m98",
 			"def": "hull_block",
 			"pos": [
-				4,
-				0,
-				17
+				1,
+				1,
+				0
 			],
 			"rot": 0
 		},
 		{
 			"id": "m99",
-			"def": "hull_block_1x1",
+			"def": "hull_block",
 			"pos": [
-				2,
-				0,
-				18
+				3,
+				1,
+				0
 			],
 			"rot": 0
 		},
 		{
 			"id": "m100",
-			"def": "hull_block_1x1",
+			"def": "hull_block",
 			"pos": [
-				3,
-				0,
-				18
+				1,
+				1,
+				2
 			],
 			"rot": 0
 		},
@@ -297,44 +327,14 @@
 			"id": "m101",
 			"def": "hull_block",
 			"pos": [
+				3,
 				1,
-				1,
-				0
+				2
 			],
 			"rot": 0
 		},
 		{
 			"id": "m102",
-			"def": "hull_block",
-			"pos": [
-				3,
-				1,
-				0
-			],
-			"rot": 0
-		},
-		{
-			"id": "m103",
-			"def": "hull_block",
-			"pos": [
-				1,
-				1,
-				2
-			],
-			"rot": 0
-		},
-		{
-			"id": "m104",
-			"def": "hull_block",
-			"pos": [
-				3,
-				1,
-				2
-			],
-			"rot": 0
-		},
-		{
-			"id": "m105",
 			"def": "hull_block_1x1",
 			"pos": [
 				1,
@@ -344,7 +344,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m106",
+			"id": "m103",
 			"def": "hull_block",
 			"pos": [
 				2,
@@ -354,7 +354,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m107",
+			"id": "m104",
 			"def": "hull_block_1x1",
 			"pos": [
 				4,
@@ -364,7 +364,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m108",
+			"id": "m105",
 			"def": "truss_block",
 			"pos": [
 				1,
@@ -374,7 +374,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m109",
+			"id": "m106",
 			"def": "truss_block",
 			"pos": [
 				4,
@@ -384,7 +384,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m110",
+			"id": "m107",
 			"def": "hull_block",
 			"pos": [
 				2,
@@ -394,7 +394,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m111",
+			"id": "m108",
 			"def": "truss_block",
 			"pos": [
 				1,
@@ -404,7 +404,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m112",
+			"id": "m109",
 			"def": "truss_block",
 			"pos": [
 				4,
@@ -414,7 +414,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m113",
+			"id": "m110",
 			"def": "hull_block",
 			"pos": [
 				2,
@@ -424,7 +424,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m114",
+			"id": "m111",
 			"def": "truss_block",
 			"pos": [
 				1,
@@ -434,7 +434,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m115",
+			"id": "m112",
 			"def": "truss_block",
 			"pos": [
 				4,
@@ -444,7 +444,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m116",
+			"id": "m113",
 			"def": "hull_block",
 			"pos": [
 				2,
@@ -454,7 +454,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m117",
+			"id": "m114",
 			"def": "truss_block",
 			"pos": [
 				1,
@@ -464,7 +464,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m118",
+			"id": "m115",
 			"def": "truss_block",
 			"pos": [
 				4,
@@ -474,7 +474,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m119",
+			"id": "m116",
 			"def": "hull_block",
 			"pos": [
 				2,
@@ -484,7 +484,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m120",
+			"id": "m117",
 			"def": "hull_block",
 			"pos": [
 				0,
@@ -494,7 +494,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m121",
+			"id": "m118",
 			"def": "hull_block",
 			"pos": [
 				4,
@@ -504,7 +504,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m122",
+			"id": "m119",
 			"def": "hull_block",
 			"pos": [
 				2,
@@ -514,7 +514,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m123",
+			"id": "m120",
 			"def": "hull_block",
 			"pos": [
 				0,
@@ -524,7 +524,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m124",
+			"id": "m121",
 			"def": "hull_block",
 			"pos": [
 				4,
@@ -534,7 +534,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m125",
+			"id": "m122",
 			"def": "hull_block",
 			"pos": [
 				2,
@@ -544,7 +544,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m126",
+			"id": "m123",
 			"def": "hull_block",
 			"pos": [
 				0,
@@ -554,7 +554,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m127",
+			"id": "m124",
 			"def": "hull_block",
 			"pos": [
 				4,
@@ -564,7 +564,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m128",
+			"id": "m125",
 			"def": "hull_block_1x1",
 			"pos": [
 				2,
@@ -574,7 +574,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m129",
+			"id": "m126",
 			"def": "hull_block_1x1",
 			"pos": [
 				3,
@@ -584,12 +584,45 @@
 			"rot": 0
 		},
 		{
-			"id": "m130",
+			"id": "m127",
 			"def": "wedge_short",
 			"pos": [
 				0,
 				0,
 				0
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m128",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				1
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m129",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				2
+			],
+			"rot": 1,
+			"flip": true
+		},
+		{
+			"id": "m130",
+			"def": "wedge_short",
+			"pos": [
+				0,
+				0,
+				3
 			],
 			"rot": 1,
 			"flip": true
@@ -600,7 +633,7 @@
 			"pos": [
 				0,
 				0,
-				1
+				4
 			],
 			"rot": 1,
 			"flip": true
@@ -611,46 +644,13 @@
 			"pos": [
 				0,
 				0,
-				2
-			],
-			"rot": 1,
-			"flip": true
-		},
-		{
-			"id": "m133",
-			"def": "wedge_short",
-			"pos": [
-				0,
-				0,
-				3
-			],
-			"rot": 1,
-			"flip": true
-		},
-		{
-			"id": "m134",
-			"def": "wedge_short",
-			"pos": [
-				0,
-				0,
-				4
-			],
-			"rot": 1,
-			"flip": true
-		},
-		{
-			"id": "m135",
-			"def": "wedge_short",
-			"pos": [
-				0,
-				0,
 				12
 			],
 			"rot": 0,
 			"flip": true
 		},
 		{
-			"id": "m136",
+			"id": "m133",
 			"def": "wedge_short",
 			"pos": [
 				0,
@@ -660,7 +660,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m137",
+			"id": "m134",
 			"def": "wedge_short",
 			"pos": [
 				0,
@@ -670,7 +670,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m138",
+			"id": "m135",
 			"def": "wedge_short",
 			"pos": [
 				0,
@@ -680,7 +680,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m139",
+			"id": "m136",
 			"def": "wedge_short",
 			"pos": [
 				0,
@@ -690,7 +690,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m140",
+			"id": "m137",
 			"def": "wedge_short",
 			"pos": [
 				0,
@@ -700,7 +700,7 @@
 			"rot": 1
 		},
 		{
-			"id": "m141",
+			"id": "m138",
 			"def": "wedge_short",
 			"pos": [
 				0,
@@ -710,7 +710,7 @@
 			"rot": 0
 		},
 		{
-			"id": "m142",
+			"id": "m139",
 			"def": "wedge_short",
 			"pos": [
 				1,
@@ -719,61 +719,61 @@
 			],
 			"rot": 0,
 			"flip": true
+		},
+		{
+			"id": "m140",
+			"def": "wedge_short",
+			"pos": [
+				1,
+				1,
+				-1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m141",
+			"def": "wedge_short",
+			"pos": [
+				2,
+				0,
+				-1
+			],
+			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m142",
+			"def": "wedge_short",
+			"pos": [
+				2,
+				1,
+				-1
+			],
+			"rot": 0
 		},
 		{
 			"id": "m143",
 			"def": "wedge_short",
 			"pos": [
-				1,
-				1,
+				3,
+				0,
 				-1
 			],
-			"rot": 0
+			"rot": 0,
+			"flip": true
 		},
 		{
 			"id": "m144",
 			"def": "wedge_short",
 			"pos": [
-				2,
-				0,
+				3,
+				1,
 				-1
 			],
-			"rot": 0,
-			"flip": true
+			"rot": 0
 		},
 		{
 			"id": "m145",
-			"def": "wedge_short",
-			"pos": [
-				2,
-				1,
-				-1
-			],
-			"rot": 0
-		},
-		{
-			"id": "m146",
-			"def": "wedge_short",
-			"pos": [
-				3,
-				0,
-				-1
-			],
-			"rot": 0,
-			"flip": true
-		},
-		{
-			"id": "m147",
-			"def": "wedge_short",
-			"pos": [
-				3,
-				1,
-				-1
-			],
-			"rot": 0
-		},
-		{
-			"id": "m148",
 			"def": "wedge_short",
 			"pos": [
 				4,
@@ -781,17 +781,50 @@
 				-1
 			],
 			"rot": 0,
+			"flip": true
+		},
+		{
+			"id": "m146",
+			"def": "wedge_short",
+			"pos": [
+				4,
+				1,
+				-1
+			],
+			"rot": 0
+		},
+		{
+			"id": "m147",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				0,
+				0
+			],
+			"rot": 3,
+			"flip": true
+		},
+		{
+			"id": "m148",
+			"def": "wedge_short",
+			"pos": [
+				5,
+				0,
+				1
+			],
+			"rot": 3,
 			"flip": true
 		},
 		{
 			"id": "m149",
 			"def": "wedge_short",
 			"pos": [
-				4,
-				1,
-				-1
+				5,
+				0,
+				2
 			],
-			"rot": 0
+			"rot": 3,
+			"flip": true
 		},
 		{
 			"id": "m150",
@@ -799,7 +832,7 @@
 			"pos": [
 				5,
 				0,
-				0
+				3
 			],
 			"rot": 3,
 			"flip": true
@@ -810,7 +843,7 @@
 			"pos": [
 				5,
 				0,
-				1
+				4
 			],
 			"rot": 3,
 			"flip": true
@@ -821,46 +854,13 @@
 			"pos": [
 				5,
 				0,
-				2
-			],
-			"rot": 3,
-			"flip": true
-		},
-		{
-			"id": "m153",
-			"def": "wedge_short",
-			"pos": [
-				5,
-				0,
-				3
-			],
-			"rot": 3,
-			"flip": true
-		},
-		{
-			"id": "m154",
-			"def": "wedge_short",
-			"pos": [
-				5,
-				0,
-				4
-			],
-			"rot": 3,
-			"flip": true
-		},
-		{
-			"id": "m155",
-			"def": "wedge_short",
-			"pos": [
-				5,
-				0,
 				12
 			],
 			"rot": 0,
 			"flip": true
 		},
 		{
-			"id": "m156",
+			"id": "m153",
 			"def": "wedge_short",
 			"pos": [
 				5,
@@ -870,7 +870,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m157",
+			"id": "m154",
 			"def": "wedge_short",
 			"pos": [
 				5,
@@ -880,7 +880,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m158",
+			"id": "m155",
 			"def": "wedge_short",
 			"pos": [
 				5,
@@ -890,7 +890,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m159",
+			"id": "m156",
 			"def": "wedge_short",
 			"pos": [
 				5,
@@ -900,7 +900,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m160",
+			"id": "m157",
 			"def": "wedge_short",
 			"pos": [
 				5,
@@ -910,7 +910,7 @@
 			"rot": 3
 		},
 		{
-			"id": "m161",
+			"id": "m158",
 			"def": "wedge_short",
 			"pos": [
 				5,
@@ -1334,7 +1334,7 @@
 		},
 		{
 			"id": "e38",
-			"def": "main_engine",
+			"def": "heavy_main_engine",
 			"cell": [
 				2,
 				0,
@@ -1344,41 +1344,41 @@
 		},
 		{
 			"id": "e39",
-			"def": "main_engine",
-			"cell": [
-				2,
-				1,
-				18
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e40",
-			"def": "main_engine",
-			"cell": [
-				3,
-				0,
-				18
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e41",
-			"def": "main_engine",
-			"cell": [
-				3,
-				1,
-				18
-			],
-			"face": "aft"
-		},
-		{
-			"id": "e42",
 			"def": "missile_rack",
 			"cell": [
 				1,
 				1,
 				6
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e40",
+			"def": "missile_rack",
+			"cell": [
+				4,
+				1,
+				6
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e41",
+			"def": "missile_rack",
+			"cell": [
+				1,
+				1,
+				10
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e42",
+			"def": "missile_rack",
+			"cell": [
+				4,
+				1,
+				10
 			],
 			"face": "dorsal"
 		},
@@ -1386,74 +1386,44 @@
 			"id": "e43",
 			"def": "missile_rack",
 			"cell": [
-				4,
 				1,
-				6
+				0,
+				7
 			],
-			"face": "dorsal"
+			"face": "port"
 		},
 		{
 			"id": "e44",
 			"def": "missile_rack",
 			"cell": [
-				1,
-				1,
-				10
+				4,
+				0,
+				7
 			],
-			"face": "dorsal"
+			"face": "starboard"
 		},
 		{
 			"id": "e45",
 			"def": "missile_rack",
 			"cell": [
-				4,
 				1,
-				10
+				0,
+				11
 			],
-			"face": "dorsal"
+			"face": "port"
 		},
 		{
 			"id": "e46",
 			"def": "missile_rack",
 			"cell": [
-				1,
+				4,
 				0,
-				7
+				11
 			],
-			"face": "port"
+			"face": "starboard"
 		},
 		{
 			"id": "e47",
-			"def": "missile_rack",
-			"cell": [
-				4,
-				0,
-				7
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e48",
-			"def": "missile_rack",
-			"cell": [
-				1,
-				0,
-				11
-			],
-			"face": "port"
-		},
-		{
-			"id": "e49",
-			"def": "missile_rack",
-			"cell": [
-				4,
-				0,
-				11
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e50",
 			"def": "autocannon",
 			"cell": [
 				3,
@@ -1463,7 +1433,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e51",
+			"id": "e48",
 			"def": "sensor_mast",
 			"cell": [
 				3,
@@ -1473,7 +1443,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e52",
+			"id": "e49",
 			"def": "sensor_mast_hardened",
 			"cell": [
 				2,
@@ -1483,7 +1453,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e53",
+			"id": "e50",
 			"def": "point_defence",
 			"cell": [
 				1,
@@ -1493,7 +1463,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e54",
+			"id": "e51",
 			"def": "point_defence",
 			"cell": [
 				4,
@@ -1503,7 +1473,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e55",
+			"id": "e52",
 			"def": "point_defence",
 			"cell": [
 				5,
@@ -1513,7 +1483,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e56",
+			"id": "e53",
 			"def": "rcs_block",
 			"cell": [
 				2,
@@ -1523,7 +1493,7 @@
 			"face": "dorsal"
 		},
 		{
-			"id": "e57",
+			"id": "e54",
 			"def": "rcs_block",
 			"cell": [
 				3,
@@ -1533,7 +1503,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e58",
+			"id": "e55",
 			"def": "rcs_block",
 			"cell": [
 				0,
@@ -1541,51 +1511,51 @@
 				14
 			],
 			"face": "port"
+		},
+		{
+			"id": "e56",
+			"def": "rcs_block",
+			"cell": [
+				5,
+				1,
+				14
+			],
+			"face": "starboard"
+		},
+		{
+			"id": "e57",
+			"def": "rcs_block",
+			"cell": [
+				0,
+				0,
+				18
+			],
+			"face": "port"
+		},
+		{
+			"id": "e58",
+			"def": "rcs_block",
+			"cell": [
+				5,
+				0,
+				18
+			],
+			"face": "starboard"
 		},
 		{
 			"id": "e59",
 			"def": "rcs_block",
 			"cell": [
-				5,
 				1,
-				14
+				1,
+				18
 			],
-			"face": "starboard"
+			"face": "dorsal"
 		},
 		{
 			"id": "e60",
 			"def": "rcs_block",
 			"cell": [
-				0,
-				0,
-				18
-			],
-			"face": "port"
-		},
-		{
-			"id": "e61",
-			"def": "rcs_block",
-			"cell": [
-				5,
-				0,
-				18
-			],
-			"face": "starboard"
-		},
-		{
-			"id": "e62",
-			"def": "rcs_block",
-			"cell": [
-				1,
-				1,
-				18
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e63",
-			"def": "rcs_block",
-			"cell": [
 				4,
 				0,
 				18
@@ -1593,47 +1563,47 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e64",
+			"id": "e61",
 			"def": "radiator_long",
 			"cell": [
 				1,
 				1,
 				15
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e62",
+			"def": "radiator_long",
+			"cell": [
+				4,
+				0,
+				15
+			],
+			"face": "ventral"
+		},
+		{
+			"id": "e63",
+			"def": "flare_launcher",
+			"cell": [
+				0,
+				1,
+				18
+			],
+			"face": "dorsal"
+		},
+		{
+			"id": "e64",
+			"def": "flare_launcher",
+			"cell": [
+				5,
+				1,
+				18
 			],
 			"face": "dorsal"
 		},
 		{
 			"id": "e65",
-			"def": "radiator_long",
-			"cell": [
-				4,
-				0,
-				15
-			],
-			"face": "ventral"
-		},
-		{
-			"id": "e66",
-			"def": "flare_launcher",
-			"cell": [
-				0,
-				1,
-				18
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e67",
-			"def": "flare_launcher",
-			"cell": [
-				5,
-				1,
-				18
-			],
-			"face": "dorsal"
-		},
-		{
-			"id": "e68",
 			"def": "landing_leg",
 			"cell": [
 				1,
@@ -1643,7 +1613,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e69",
+			"id": "e66",
 			"def": "landing_leg",
 			"cell": [
 				4,
@@ -1653,7 +1623,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e70",
+			"id": "e67",
 			"def": "landing_leg",
 			"cell": [
 				0,
@@ -1663,7 +1633,7 @@
 			"face": "ventral"
 		},
 		{
-			"id": "e71",
+			"id": "e68",
 			"def": "landing_leg",
 			"cell": [
 				5,
@@ -2394,6 +2364,11 @@
 		[
 			0,
 			1,
+			12
+		],
+		[
+			0,
+			1,
 			13
 		],
 		[
@@ -2439,6 +2414,26 @@
 		[
 			1,
 			0,
+			13
+		],
+		[
+			1,
+			0,
+			18
+		],
+		[
+			1,
+			0,
+			2
+		],
+		[
+			1,
+			0,
+			3
+		],
+		[
+			1,
+			0,
 			4
 		],
 		[
@@ -2479,6 +2474,11 @@
 		[
 			1,
 			1,
+			11
+		],
+		[
+			1,
+			1,
 			13
 		],
 		[
@@ -2512,9 +2512,19 @@
 			6
 		],
 		[
+			1,
+			1,
+			7
+		],
+		[
 			2,
 			0,
 			0
+		],
+		[
+			2,
+			0,
+			13
 		],
 		[
 			2,
@@ -2574,12 +2584,22 @@
 		[
 			3,
 			1,
+			1
+		],
+		[
+			3,
+			1,
 			13
 		],
 		[
 			3,
 			1,
-			18
+			14
+		],
+		[
+			3,
+			1,
+			2
 		],
 		[
 			3,
@@ -2609,6 +2629,11 @@
 		[
 			4,
 			0,
+			4
+		],
+		[
+			4,
+			0,
 			6
 		],
 		[
@@ -2634,7 +2659,27 @@
 		[
 			4,
 			1,
+			11
+		],
+		[
+			4,
+			1,
+			14
+		],
+		[
+			4,
+			1,
 			3
+		],
+		[
+			4,
+			1,
+			4
+		],
+		[
+			4,
+			1,
+			5
 		],
 		[
 			4,
@@ -2694,14 +2739,54 @@
 			15
 		],
 		[
+			1,
+			1,
+			16
+		],
+		[
+			1,
+			1,
+			17
+		],
+		[
 			2,
 			1,
 			13
 		],
 		[
+			2,
+			1,
+			14
+		],
+		[
+			2,
+			1,
+			15
+		],
+		[
+			2,
+			1,
+			16
+		],
+		[
+			2,
+			1,
+			17
+		],
+		[
 			3,
 			0,
 			13
+		],
+		[
+			3,
+			0,
+			14
+		],
+		[
+			3,
+			0,
+			15
 		],
 		[
 			3,
@@ -2714,9 +2799,29 @@
 			14
 		],
 		[
+			3,
+			1,
+			15
+		],
+		[
+			3,
+			1,
+			17
+		],
+		[
 			4,
 			0,
 			15
+		],
+		[
+			4,
+			0,
+			16
+		],
+		[
+			4,
+			0,
+			17
 		],
 		[
 			4,
@@ -2732,6 +2837,11 @@
 			4,
 			1,
 			15
+		],
+		[
+			4,
+			1,
+			17
 		]
 	]
 }
