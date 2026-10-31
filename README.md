@@ -408,8 +408,10 @@ is no sound in vacuum:
 - an alarm for each alert class.
 
 These are recorded CC0 samples (Kenney's Sci-Fi, Impact and Interface packs;
-see `data/ATTRIBUTION.md`); any slot without one is synthesised. Alarms play
-on their own bus and duck everything else, so they are always heard.
+see `data/ATTRIBUTION.md`); any slot without one is synthesised — and any
+slot can be your own recording (see "Your own sounds, textures and models",
+further down). Alarms play on their own bus and duck everything else, so
+they are always heard.
 
 **Scans:** hold a lock (inside 10 km) with a working sensor mast for 4 s to
 read a contact's cargo — spare parts and crates aboard — its scrap value and
@@ -1151,6 +1153,33 @@ unattached modules, rooms outside the pressurised hull, equipment that doesn't
 fit, no bridge. Warnings (▲) are trade-offs you may accept: power or heat
 deficits, rooms the crew can't reach, a cannon firing into your own hull,
 off-axis engines. Click an issue to highlight the part.
+
+## Your own sounds, textures and models
+
+Every sound, texture and external part model can be replaced by your own
+without touching code: a file named for its slot in `data/custom/` takes it
+over, and with none the game uses what it has now.
+
+| What | Where | Slots |
+|---|---|---|
+| Sounds | `data/custom/audio/<slot>.ogg` (`.wav`, `.mp3`); variants `<slot>_2` … `_4` | 19: ten one-shots (gun, laser, hit, ricochet, explosion, detonation, launch, dock, tick, ack), five alarms, three loops (engine, RCS, ambience), the jump spool |
+| Textures | `data/custom/textures/<slot>.png` (`.jpg`) | hull plating, armour plates, part surfaces (none today: flat colours), hazard stripes, gangway ribs |
+| Models | `data/custom/models/<part id>.glb` (`.gltf`); `<part id>_turret.glb` for a gun's head | the 36 external parts |
+
+`art_templates/` has what you need to make them:
+`custom_assets.xlsx` (every slot, when it plays or where it shows, the file
+name to save, how to record it, a status column to track progress),
+`textures/<slot>_base.png` (today's texture, to paint over) with a
+`_guide.png` overlay (tile edges, metre grid, notes), and
+`models/<part id>.png` (each part from above, the side and the bow on a 1 m
+grid, with its origin and turret pivot). Conventions: textures tile and,
+where the game tints them, are painted in greys; models are in metres at
+real size, the origin at the centre of what the part covers on the hull,
++Y out of the hull, as if on a top face (bow −Z; a long part runs along Z);
+a model replaces the part's fixed pieces and what moves stays. Godot
+imports a new file the next time the editor opens the project (or
+`godot --headless --path . --import`). `tools/make_art_templates.gd`
+regenerates the templates and `manifest.json` (it renders: needs a display).
 
 ## Tests
 

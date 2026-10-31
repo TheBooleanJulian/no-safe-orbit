@@ -287,6 +287,7 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				craft.transform = Transform3D(_basis_y_along(normal), mount + normal * 0.9)
 				CraftView.build_model(craft, def.craft, def.craft.cannon != null, false)
 				model.docked_craft[bp.equipment[i].id] = craft
+		_use_custom_model(part, bp, grid, i, def, mount, normal)
 		# A medium or large part (its tier's size): the same model, that many
 		# times bigger about its mount — a turret's pivot rides as high as the
 		# simulation's (ShipConfig.turret_height), a plume is as wide as its bell.
@@ -298,6 +299,49 @@ static func build(bp: ShipBlueprint, grid: ShipGrid, origin_m: Vector3, tint: Co
 				model.engine_widths[p] *= k
 		_merge_static(part)
 	return model
+
+
+## Your model for this part (CustomAssets.model: `<part id>`), in place of
+## the built one's fixed pieces — the direct meshes with nothing hung on
+## them; what moves (a turret's head, a radar turntable, missiles in their
+## tubes, beacons, the grappling arm, a docked craft) stays. It is made at
+## its real size, its origin the centre of what the part covers on the
+## hull, +Y out of the face (on a top face its axes are the ship's: the bow
+## toward −Z; a long part runs along Z), so it is shrunk by the part's tier
+## here: the part is scaled up by it after.
+## `<part id>_turret` replaces a gun's or PD turret's head on its pivot.
+static func _use_custom_model(part: Node3D, bp: ShipBlueprint, grid: ShipGrid, i: int, def: EquipmentDefinition,
+		mount: Vector3, normal: Vector3) -> void:
+	var k := 1.0 / float(maxi(def.size_cells, 1))
+	var head := CustomAssets.model(String(def.id) + "_turret")
+	if head != null:
+		for pivot in part.get_children():
+			if pivot.name in ["TurretPivot", "PdPivot"]:
+				_drop_fixed_meshes(pivot)
+				var top := head.instantiate() as Node3D
+				top.name = "CustomTurret"
+				top.scale = Vector3.ONE * k
+				pivot.add_child(top)
+	var scene := CustomAssets.model(String(def.id))
+	if scene == null:
+		return
+	_drop_fixed_meshes(part)
+	var basis := _basis_y_along(normal)
+	if def.length_cells > 1 or ShipGrid.is_fin(def, bp.equipment[i].rotation):
+		# A long part (radiator, arm): its Z along the run.
+		var along := Vector3(ShipGrid.external_step(bp.equipment[i].face, bp.equipment[i].rotation))
+		basis = Basis(normal.cross(along), normal, along).orthonormalized() if absf(along.dot(normal)) < 0.9 else basis
+	var inst := scene.instantiate() as Node3D
+	inst.name = "CustomModel"
+	inst.transform = Transform3D(basis.scaled(Vector3.ONE * k), mount)
+	part.add_child(inst)
+
+
+static func _drop_fixed_meshes(node: Node3D) -> void:
+	for child in node.get_children():
+		if child is MeshInstance3D and child.get_child_count() == 0:
+			node.remove_child(child)
+			child.free()
 
 
 ## A radiator's accordion: [centre, size, basis] per panel (model space).
@@ -960,7 +1004,8 @@ static func _armour_mat(cache: Dictionary, color: Color) -> StandardMaterial3D:
 	if not cache.has(key):
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = color
-		mat.albedo_texture = _plates()
+		var own := CustomAssets.texture("armour_plates")
+		mat.albedo_texture = own if own != null else _plates()
 		mat.uv1_triplanar = true
 		mat.uv1_scale = Vector3.ONE / ShipGrid.CELL_SIZE_M
 		mat.metallic = 0.75
@@ -1016,9 +1061,18 @@ static func dented(mesh: Mesh, seed_value: int) -> ArrayMesh:
 	return st.commit()
 
 
-## Hull plating: panels with dark seams, rivet lines, a few weathered
-## plates and access hatches (seeded, so every run looks the same).
-static func _plates() -> ImageTexture:
+## Hull plating: yours (CustomAssets "hull_plates"), else panels with dark
+## seams, rivet lines, a few weathered plates and access hatches (seeded, so
+## every run looks the same).
+static func _plates() -> Texture2D:
+	var own := CustomAssets.texture("hull_plates")
+	if own != null:
+		return own
+	return plates_image_texture()
+
+
+## The generated plating (art templates start from it).
+static func plates_image_texture() -> ImageTexture:
 	if _plate_texture != null:
 		return _plate_texture
 	var n := 256
@@ -1056,8 +1110,15 @@ static func _plates() -> ImageTexture:
 	return _plate_texture
 
 
-## Yellow and black diagonal hazard stripes.
-static func _hazard() -> ImageTexture:
+## Yellow and black diagonal hazard stripes (yours: "hazard_stripes").
+static func _hazard() -> Texture2D:
+	var own := CustomAssets.texture("hazard_stripes")
+	if own != null:
+		return own
+	return hazard_image_texture()
+
+
+static func hazard_image_texture() -> ImageTexture:
 	if _hazard_texture != null:
 		return _hazard_texture
 	var n := 64
@@ -1076,6 +1137,11 @@ static func _mat(cache: Dictionary, color: Color) -> StandardMaterial3D:
 		mat.albedo_color = color
 		mat.metallic = 0.4
 		mat.roughness = 0.55
+		var own := CustomAssets.texture("part_surface")  # none by default: flat colours
+		if own != null:
+			mat.albedo_texture = own
+			mat.uv1_triplanar = true
+			mat.uv1_scale = Vector3.ONE / CustomAssets.PART_SURFACE_TILE_M
 		cache[color] = mat
 	return cache[color]
 

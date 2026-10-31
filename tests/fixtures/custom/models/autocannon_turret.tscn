@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_vigkd"]
+size = Vector3(1, 1, 3)
+
+[node name="Turret" type="Node3D" unique_id=1476310086]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=712079055]
+mesh = SubResource("BoxMesh_vigkd")
