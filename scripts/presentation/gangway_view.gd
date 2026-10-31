@@ -50,8 +50,16 @@ func sync(world: WorldSimulation, alpha: float, render_origin: Vector3) -> void:
 			_tubes.erase(link)
 
 
-## A dark band in eight: the ribs, repeated along the tube.
-static func rib_texture() -> ImageTexture:
+## A dark band in eight: the ribs, repeated along the tube (yours:
+## CustomAssets "gangway_ribs").
+static func rib_texture() -> Texture2D:
+	var own := CustomAssets.texture("gangway_ribs")
+	if own != null:
+		return own
+	return rib_image_texture()
+
+
+static func rib_image_texture() -> ImageTexture:
 	if _ribs == null:
 		var img := Image.create(1, 8, false, Image.FORMAT_RGB8)
 		for y in 8:

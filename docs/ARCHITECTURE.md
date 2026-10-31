@@ -299,6 +299,17 @@ and the location's central body:
   `PlayerProfile.backup_copy` / `backup_dir`. The CHANGELOG tab reads
   `res://CHANGELOG.md` (exported via `include_filter`) through
   `SettingsMenu.changelog_bbcode`.
+- **Custom assets (2026-10-31)**: `CustomAssets` (scripts/presentation) is
+  the slot list (`AUDIO_SLOTS`, `TEXTURE_SLOTS`) and the loader (`audio`,
+  `looped`, `texture`, `model`; `dir` points at data/custom/, tests at
+  tests/fixtures/custom/). `ShipAudio` asks it first for every one-shot,
+  alarm (`alarm_<class>`), loop and the jump spool (`custom` lists which);
+  `ShipModelBuilder._plates` / `_armour_mat` / `_hazard` / `_mat` and
+  `GangwayView.rib_texture` for textures (the generated ones stay as
+  `plates_image_texture` etc.); `_use_custom_model` swaps a part's fixed
+  meshes (direct mesh children with none of their own) for the model and a
+  turret pivot's for `<id>_turret`, before the tier scaling.
+  `tools/make_art_templates.gd` writes art_templates/ (ignored by Godot).
 - **Backup routes (2026-10-31)**: `ShipEditor._harden` (after `_route_tree`
   in `auto_route_bus` / `auto_route_coolant`) closes loops round every hull
   module whose loss cuts terminals off — a piece is fed while it holds a

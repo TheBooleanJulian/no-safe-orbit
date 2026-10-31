@@ -10,6 +10,19 @@ sits under [Unreleased]. `application/config/version` in `project.godot`
 
 ## [Unreleased]
 
+### Your own sounds, textures and models (2026-10-31)
+
+#### Added
+- **Custom assets**: a file in `data/custom/` named for its slot replaces
+  the game's own — 19 sound slots (one-shots, alarms, loops, the jump
+  spool; variants `_2`…`_4`), five texture slots (hull plating, armour,
+  part surfaces, hazard stripes, gangway ribs) and a model per external
+  part (a gun's head separately). With none, nothing changes.
+- `art_templates/`: `custom_assets.xlsx` (every slot, the file to save,
+  how to record it, progress), texture bases and guide overlays to paint
+  over, and a reference sheet per part (three views on a 1 m grid);
+  `tools/make_art_templates.gd` regenerates them.
+
 ### Backup routes and engines that scale (2026-10-31)
 
 #### Changed

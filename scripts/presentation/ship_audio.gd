@@ -7,9 +7,11 @@ extends Node
 ## the enemy's, picked up through the sensors), the machinery's hum, the
 ## jump drive spooling up, and the alarms (a sound per alert class, Pass A).
 ##
-## Recorded CC0 samples (data/audio, Kenney's Sci-Fi, Impact and Interface
-## packs; data/ATTRIBUTION.md) where a slot has one; any slot without one —
-## or a sample that fails to load — is synthesised at startup instead.
+## Your own recordings first (data/custom/audio, one file per slot:
+## CustomAssets.AUDIO_SLOTS), else recorded CC0 samples (data/audio, Kenney's
+## Sci-Fi, Impact and Interface packs; data/ATTRIBUTION.md) where a slot has
+## one; any slot without either — or a sample that fails to load — is
+## synthesised at startup instead.
 ## Three buses: Effects (one-shots and engines), Alarms and Ambience; an
 ## alarm ducks the other two so it is always heard.
 
@@ -59,8 +61,11 @@ var use_samples := true
 ## retires a playback, so anything played would still be held at exit:
 ## there, nothing is actually played (the logic still runs).
 var silent := DisplayServer.get_name() == "headless"
-## Slots served by a recorded sample (the rest are synthesised).
+## Slots served by a recorded sample (the rest are synthesised), and those
+## served by your own (CustomAssets: one-shots by name, alarms as
+## alarm_<class>, loops as engine_loop / rcs_loop / ambience_loop, jump_spool).
 var sampled: Dictionary = {}
+var custom: Dictionary = {}
 
 var _streams: Dictionary = {}  # name -> AudioStream (first variant)
 var _variants: Dictionary = {}  # name -> Array[AudioStream]
@@ -92,7 +97,11 @@ func _ready() -> void:
 	}
 	for n: String in synth:
 		var variants: Array[AudioStream] = []
-		if use_samples:
+		if use_samples and n != "alert":
+			variants = CustomAssets.audio(n)
+			if not variants.is_empty():
+				custom[n] = true
+		if use_samples and variants.is_empty():
 			for f: String in SAMPLES.get(n, []):
 				var s := _load(f)
 				if s != null:
@@ -111,7 +120,10 @@ func _ready() -> void:
 		add_child(p)
 		_players[n] = p
 	for cls: StringName in ALARMS:
-		var s := _load(ALARMS[cls]) if use_samples else null
+		var own := CustomAssets.audio("alarm_%s" % cls) if use_samples else ([] as Array[AudioStream])
+		if not own.is_empty():
+			custom["alarm_%s" % cls] = true
+		var s: AudioStream = own[0] if not own.is_empty() else (_load(ALARMS[cls]) if use_samples else null)
 		if s != null:
 			sampled["alarm_%s" % cls] = true
 		var p := AudioStreamPlayer.new()
@@ -121,9 +133,9 @@ func _ready() -> void:
 		p.bus = BUS_ALARMS
 		add_child(p)
 		_alarms[cls] = p
-	_engine = _loop_player(ENGINE_SAMPLE, _make(2.0, _rumble, true), BUS_EFFECTS)
-	_rcs = _loop_player(RCS_SAMPLE, _make(1.0, _hiss, true), BUS_EFFECTS)
-	_ambience = _loop_player(AMBIENCE_SAMPLE, null, BUS_AMBIENCE)
+	_engine = _loop_player("engine_loop", ENGINE_SAMPLE, _make(2.0, _rumble, true), BUS_EFFECTS)
+	_rcs = _loop_player("rcs_loop", RCS_SAMPLE, _make(1.0, _hiss, true), BUS_EFFECTS)
+	_ambience = _loop_player("ambience_loop", AMBIENCE_SAMPLE, null, BUS_AMBIENCE)
 	if _ambience != null:
 		_ambience.volume_db = AMBIENCE_DB
 	if is_inside_tree() and not silent:
@@ -132,7 +144,10 @@ func _ready() -> void:
 		if _ambience != null:
 			_ambience.play()
 	_jump = AudioStreamPlayer.new()
-	_jump.stream = _make(5.0, _spool)
+	var spool := CustomAssets.audio("jump_spool") if use_samples else ([] as Array[AudioStream])
+	if not spool.is_empty():
+		custom["jump_spool"] = true
+	_jump.stream = spool[0] if not spool.is_empty() else _make(5.0, _spool)
 	_jump.volume_db = VOLUME_DB - 2.0
 	_jump.bus = BUS_EFFECTS
 	add_child(_jump)
@@ -230,13 +245,15 @@ func _load(file: String) -> AudioStream:
 	return load(path) as AudioStream
 
 
-## A looping player: the sample (looped) if there is one, else `fallback`
-## (null: no player).
-func _loop_player(file: String, fallback: AudioStream, bus: StringName) -> AudioStreamPlayer:
-	var s: AudioStream = _load(file) if use_samples else null
-	if s is AudioStreamOggVorbis:
-		s = (s as AudioStreamOggVorbis).duplicate()
-		(s as AudioStreamOggVorbis).loop = true
+## A looping player: your recording for `slot` or the sample `file`
+## (looped) if there is one, else `fallback` (null: no player).
+func _loop_player(slot: String, file: String, fallback: AudioStream, bus: StringName) -> AudioStreamPlayer:
+	var own := CustomAssets.audio(slot) if use_samples else ([] as Array[AudioStream])
+	var s: AudioStream = own[0] if not own.is_empty() else (_load(file) if use_samples else null)
+	if not own.is_empty():
+		custom[slot] = true
+	if s != null:
+		s = CustomAssets.looped(s)
 		sampled[file] = true
 	elif fallback == null:
 		return null
@@ -277,7 +294,7 @@ func set_jump(progress: float) -> void:
 			_jump.stop()
 		return
 	if not _jump.playing and not silent:
-		_jump.play(progress * 5.0)
+		_jump.play(progress * minf(_jump.stream.get_length(), 5.0))
 
 
 func has_sound(sound: String) -> bool:
